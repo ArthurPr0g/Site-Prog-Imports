@@ -100,3 +100,11 @@ textarea::placeholder {
 .stripe-placeholder {
   background-image: repeating-linear-gradient(135deg, #17171b 0 14px, #1b1b20 14px 28px);
 }
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

@@ -119,6 +119,7 @@ export type Database = {
           created_at: string
           glyph: string
           id: string
+          image_url: string | null
           name: string
           position: number
         }
@@ -126,6 +127,7 @@ export type Database = {
           created_at?: string
           glyph?: string
           id?: string
+          image_url?: string | null
           name: string
           position?: number
         }
@@ -133,6 +135,7 @@ export type Database = {
           created_at?: string
           glyph?: string
           id?: string
+          image_url?: string | null
           name?: string
           position?: number
         }

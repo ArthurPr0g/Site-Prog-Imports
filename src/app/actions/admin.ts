@@ -280,7 +280,16 @@ export async function deleteCatalogItemAction(table: CatalogTable, id: string): 
 }
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-const COLLECTION_IMAGE_BUCKET = 'collection-images';
+
+type CoverImageTable = 'collections' | 'categories';
+const COVER_IMAGE_BUCKET: Record<CoverImageTable, string> = {
+  collections: 'collection-images',
+  categories: 'category-images',
+};
+const COVER_IMAGE_LABEL: Record<CoverImageTable, string> = {
+  collections: 'coleção',
+  categories: 'categoria',
+};
 
 function storagePathFromPublicUrl(url: string, bucket: string): string | null {
   const marker = `/object/public/${bucket}/`;
@@ -288,7 +297,7 @@ function storagePathFromPublicUrl(url: string, bucket: string): string | null {
   return i === -1 ? null : url.slice(i + marker.length);
 }
 
-export async function uploadCollectionImageAction(collectionId: string, formData: FormData): Promise<ActionResult> {
+async function uploadCoverImageAction(table: CoverImageTable, id: string, formData: FormData): Promise<ActionResult> {
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
 
@@ -297,49 +306,68 @@ export async function uploadCollectionImageAction(collectionId: string, formData
   if (!file.type.startsWith('image/')) return errResult('O arquivo precisa ser uma imagem (PNG, JPG, WEBP...).');
   if (file.size > MAX_IMAGE_BYTES) return errResult('A imagem deve ter no máximo 5MB.');
 
-  const { data: current } = await supabase.from('collections').select('image_url').eq('id', collectionId).maybeSingle();
+  const bucket = COVER_IMAGE_BUCKET[table];
+  const { data: current } = await supabase.from(table).select('image_url').eq('id', id).maybeSingle();
 
   const ext = file.name.includes('.') ? file.name.split('.').pop() : 'jpg';
-  const path = `${collectionId}-${Date.now()}.${ext}`;
+  const path = `${id}-${Date.now()}.${ext}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from(COLLECTION_IMAGE_BUCKET)
-    .upload(path, file, { contentType: file.type, upsert: false });
+  const { error: uploadError } = await supabase.storage.from(bucket).upload(path, file, {
+    contentType: file.type,
+    upsert: false,
+  });
   if (uploadError) return errResult('Não foi possível enviar a imagem. Tente novamente.');
 
-  const { data: pub } = supabase.storage.from(COLLECTION_IMAGE_BUCKET).getPublicUrl(path);
+  const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
 
-  const { error } = await supabase.from('collections').update({ image_url: pub.publicUrl }).eq('id', collectionId);
+  const { error } = await supabase.from(table).update({ image_url: pub.publicUrl }).eq('id', id);
   if (error) {
-    await supabase.storage.from(COLLECTION_IMAGE_BUCKET).remove([path]);
-    return errResult(friendlyDbError(error, 'Não foi possível salvar a capa da coleção.'));
+    await supabase.storage.from(bucket).remove([path]);
+    return errResult(friendlyDbError(error, `Não foi possível salvar a capa da ${COVER_IMAGE_LABEL[table]}.`));
   }
 
   if (current?.image_url) {
-    const oldPath = storagePathFromPublicUrl(current.image_url, COLLECTION_IMAGE_BUCKET);
-    if (oldPath) await supabase.storage.from(COLLECTION_IMAGE_BUCKET).remove([oldPath]);
+    const oldPath = storagePathFromPublicUrl(current.image_url, bucket);
+    if (oldPath) await supabase.storage.from(bucket).remove([oldPath]);
   }
 
   revalidatePath('/admin/catalogo');
-  return okResult('Capa da coleção atualizada.');
+  revalidatePath('/');
+  return okResult('Capa atualizada.');
 }
 
-export async function removeCollectionImageAction(collectionId: string): Promise<ActionResult> {
+async function removeCoverImageAction(table: CoverImageTable, id: string): Promise<ActionResult> {
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
 
-  const { data: current } = await supabase.from('collections').select('image_url').eq('id', collectionId).maybeSingle();
+  const bucket = COVER_IMAGE_BUCKET[table];
+  const { data: current } = await supabase.from(table).select('image_url').eq('id', id).maybeSingle();
 
-  const { error } = await supabase.from('collections').update({ image_url: null }).eq('id', collectionId);
+  const { error } = await supabase.from(table).update({ image_url: null }).eq('id', id);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível remover a capa.'));
 
   if (current?.image_url) {
-    const oldPath = storagePathFromPublicUrl(current.image_url, COLLECTION_IMAGE_BUCKET);
-    if (oldPath) await supabase.storage.from(COLLECTION_IMAGE_BUCKET).remove([oldPath]);
+    const oldPath = storagePathFromPublicUrl(current.image_url, bucket);
+    if (oldPath) await supabase.storage.from(bucket).remove([oldPath]);
   }
 
   revalidatePath('/admin/catalogo');
+  revalidatePath('/');
   return okResult('Capa removida.');
+}
+
+export async function uploadCollectionImageAction(id: string, formData: FormData): Promise<ActionResult> {
+  return uploadCoverImageAction('collections', id, formData);
+}
+export async function removeCollectionImageAction(id: string): Promise<ActionResult> {
+  return removeCoverImageAction('collections', id);
+}
+
+export async function uploadCategoryImageAction(id: string, formData: FormData): Promise<ActionResult> {
+  return uploadCoverImageAction('categories', id, formData);
+}
+export async function removeCategoryImageAction(id: string): Promise<ActionResult> {
+  return removeCoverImageAction('categories', id);
 }
 
 // ============ BANNERS ============
