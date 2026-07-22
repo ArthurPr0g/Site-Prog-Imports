@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher';
 
 export function AdminPageHeader({
   title,
@@ -17,6 +18,7 @@ export function AdminPageHeader({
       </div>
       <div className="flex items-center gap-3">
         {action}
+        <WorkspaceSwitcher active="admin" />
         <div className="flex items-center gap-2.5 rounded-full border border-border bg-card py-1.75 pl-2 pr-4">
           <div className="grid h-7.5 w-7.5 place-items-center rounded-full border border-accent/40 bg-accent/15 text-xs font-extrabold text-accent">
             P

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Logo } from '@/components/ui/Logo';
 import { useCart } from '@/lib/cart-context';
 import { formatBRL } from '@/lib/format';
+import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher';
 
 export type SearchIndexItem = {
   sku: string;
@@ -18,7 +19,7 @@ export function Header({
   user,
 }: {
   searchIndex: SearchIndexItem[];
-  user: { name: string } | null;
+  user: { name: string; role: string } | null;
 }) {
   const [query, setQuery] = useState('');
   const { count, favCount, openCart } = useCart();
@@ -76,6 +77,7 @@ export function Header({
           )}
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
+          {user?.role === 'admin' && <WorkspaceSwitcher active="loja" />}
           <Link
             href={user ? '/conta' : '/entrar'}
             className="rounded-full border border-border-strong px-4 py-2.5 text-[13px] font-bold hover:border-accent hover:text-accent"
