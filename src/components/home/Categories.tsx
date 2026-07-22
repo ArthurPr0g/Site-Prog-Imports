@@ -21,41 +21,36 @@ export function Categories({ categories }: { categories: CategoryCard[] }) {
         </div>
       </div>
       <div
-        className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-2"
+        className="no-scrollbar flex snap-x snap-mandatory gap-9 overflow-x-auto px-6 pb-3"
         style={{ scrollBehavior: 'smooth' }}
       >
         {categories.map((c) => (
           <Link
             key={c.name}
             href={c.href}
-            className="group relative flex h-70 w-55 flex-shrink-0 snap-start flex-col justify-end overflow-hidden rounded-[20px] border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-accent/55"
+            className="group flex w-44 flex-shrink-0 snap-start flex-col items-start gap-4"
           >
-            {c.imageUrl ? (
-              <>
+            <div className="relative h-44 w-44">
+              {c.imageUrl ? (
                 <Image
                   src={c.imageUrl}
                   alt={c.name}
                   fill
-                  sizes="220px"
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  sizes="176px"
+                  className="object-contain transition-transform duration-500 ease-out group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-                <div className="relative z-1 p-5">
-                  <div className="mb-1 text-base font-extrabold text-fg">{c.name}</div>
-                  <div className="text-xs text-[#d8d8dc]">{c.count}</div>
+              ) : (
+                <div className="grid h-full w-full place-items-center">
+                  <div className="grid h-20 w-20 place-items-center rounded-2xl border border-accent/30 bg-accent/10 font-display text-lg font-bold text-accent">
+                    {c.glyph}
+                  </div>
                 </div>
-              </>
-            ) : (
-              <div className="flex h-full flex-col justify-between p-6">
-                <div className="grid h-11 w-11 place-items-center rounded-xl border border-accent/30 bg-accent/10 font-display text-[15px] font-bold text-accent">
-                  {c.glyph}
-                </div>
-                <div>
-                  <div className="mb-1 text-[15px] font-extrabold">{c.name}</div>
-                  <div className="text-xs text-fg-tertiary">{c.count}</div>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 text-[15px] font-bold text-fg transition-colors duration-200 group-hover:text-accent">
+              {c.name}
+              <span className="transition-transform duration-300 ease-out group-hover:translate-x-1">→</span>
+            </div>
           </Link>
         ))}
       </div>
