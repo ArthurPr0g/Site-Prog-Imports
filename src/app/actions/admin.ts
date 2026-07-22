@@ -209,6 +209,16 @@ export async function createOrderAction(input: {
   return okResult('Pedido lançado com sucesso.');
 }
 
+export async function deleteOrderAction(orderId: string): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const { error } = await supabase.from('orders').delete().eq('id', orderId);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível excluir o pedido.'));
+  revalidatePath('/admin/pedidos');
+  revalidatePath('/admin');
+  return okResult('Pedido excluído.');
+}
+
 // ============ COUPONS ============
 export async function createCouponAction(code: string, pct: number): Promise<ActionResult> {
   const supabase = await adminClient();
@@ -267,6 +277,69 @@ export async function deleteCatalogItemAction(table: CatalogTable, id: string): 
   }
   revalidatePath('/admin/catalogo');
   return okResult();
+}
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const COLLECTION_IMAGE_BUCKET = 'collection-images';
+
+function storagePathFromPublicUrl(url: string, bucket: string): string | null {
+  const marker = `/object/public/${bucket}/`;
+  const i = url.indexOf(marker);
+  return i === -1 ? null : url.slice(i + marker.length);
+}
+
+export async function uploadCollectionImageAction(collectionId: string, formData: FormData): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) return errResult('Selecione uma imagem.');
+  if (!file.type.startsWith('image/')) return errResult('O arquivo precisa ser uma imagem (PNG, JPG, WEBP...).');
+  if (file.size > MAX_IMAGE_BYTES) return errResult('A imagem deve ter no máximo 5MB.');
+
+  const { data: current } = await supabase.from('collections').select('image_url').eq('id', collectionId).maybeSingle();
+
+  const ext = file.name.includes('.') ? file.name.split('.').pop() : 'jpg';
+  const path = `${collectionId}-${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(COLLECTION_IMAGE_BUCKET)
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (uploadError) return errResult('Não foi possível enviar a imagem. Tente novamente.');
+
+  const { data: pub } = supabase.storage.from(COLLECTION_IMAGE_BUCKET).getPublicUrl(path);
+
+  const { error } = await supabase.from('collections').update({ image_url: pub.publicUrl }).eq('id', collectionId);
+  if (error) {
+    await supabase.storage.from(COLLECTION_IMAGE_BUCKET).remove([path]);
+    return errResult(friendlyDbError(error, 'Não foi possível salvar a capa da coleção.'));
+  }
+
+  if (current?.image_url) {
+    const oldPath = storagePathFromPublicUrl(current.image_url, COLLECTION_IMAGE_BUCKET);
+    if (oldPath) await supabase.storage.from(COLLECTION_IMAGE_BUCKET).remove([oldPath]);
+  }
+
+  revalidatePath('/admin/catalogo');
+  return okResult('Capa da coleção atualizada.');
+}
+
+export async function removeCollectionImageAction(collectionId: string): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  const { data: current } = await supabase.from('collections').select('image_url').eq('id', collectionId).maybeSingle();
+
+  const { error } = await supabase.from('collections').update({ image_url: null }).eq('id', collectionId);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível remover a capa.'));
+
+  if (current?.image_url) {
+    const oldPath = storagePathFromPublicUrl(current.image_url, COLLECTION_IMAGE_BUCKET);
+    if (oldPath) await supabase.storage.from(COLLECTION_IMAGE_BUCKET).remove([oldPath]);
+  }
+
+  revalidatePath('/admin/catalogo');
+  return okResult('Capa removida.');
 }
 
 // ============ BANNERS ============
