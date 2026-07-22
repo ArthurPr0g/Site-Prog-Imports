@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { PlaceholderImage } from '@/components/ui/PlaceholderImage';
 import { formatBRL, formatParcel } from '@/lib/format';
 import { toggleFavoriteAction } from '@/app/actions/account';
+import { useToast } from '@/components/ui/Toast';
 
 export function FavoriteCard({
   productId,
@@ -24,6 +25,7 @@ export function FavoriteCard({
 }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const toast = useToast();
 
   return (
     <div className="overflow-hidden rounded-[20px] border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-border-hover">
@@ -33,7 +35,11 @@ export function FavoriteCard({
           disabled={pending}
           onClick={() =>
             startTransition(async () => {
-              await toggleFavoriteAction(productId, true);
+              const result = await toggleFavoriteAction(productId, true);
+              if (!result.ok) {
+                toast(result.message);
+                return;
+              }
               router.refresh();
             })
           }

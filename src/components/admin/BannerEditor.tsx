@@ -2,19 +2,24 @@
 
 import { useState, useTransition } from 'react';
 import { updateBannerAction } from '@/app/actions/admin';
+import { useToast } from '@/components/ui/Toast';
 
 type Banner = { id: string; tag: string; title: string; subtitle: string; image_label: string };
 
 export function BannerEditor({ banners }: { banners: Banner[] }) {
   const [state, setState] = useState(banners);
   const [, startTransition] = useTransition();
+  const toast = useToast();
 
   function update(id: string, patch: Partial<Banner>) {
     setState((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
   }
 
   function commit(id: string, patch: Partial<Banner>) {
-    startTransition(() => updateBannerAction(id, patch));
+    startTransition(async () => {
+      const result = await updateBannerAction(id, patch);
+      if (!result.ok) toast(result.message);
+    });
   }
 
   return (

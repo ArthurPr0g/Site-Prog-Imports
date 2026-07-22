@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import { createOrderAction } from '@/app/actions/admin';
 import { formatBRL } from '@/lib/format';
 import { ORDER_STATUSES, type OrderStatus } from '@/lib/constants';
+import { useToast } from '@/components/ui/Toast';
 
 type ProductOption = { id: string; name: string; price: number };
 type Item = { productId: string; qty: number };
@@ -16,6 +17,8 @@ export function NewOrderModal({ open, onClose, products }: { open: boolean; onCl
   const [status, setStatus] = useState<OrderStatus>('Aguardando pagamento');
   const [items, setItems] = useState<Item[]>([{ productId: products[0]?.id ?? '', qty: 1 }]);
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState('');
+  const toast = useToast();
 
   const byId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
   const total = items.reduce((sum, it) => sum + (byId.get(it.productId)?.price ?? 0) * it.qty, 0);
@@ -27,9 +30,18 @@ export function NewOrderModal({ open, onClose, products }: { open: boolean; onCl
   }
 
   function save() {
-    if (!clientName.trim()) return;
+    setError('');
+    if (!clientName.trim()) return setError('Informe o nome do cliente.');
+    if (products.length === 0) return setError('Cadastre ao menos um produto antes de lançar um pedido.');
+    if (items.some((it) => !it.productId)) return setError('Selecione um produto em cada item.');
+
     startTransition(async () => {
-      await createOrderAction({ clientName: clientName.trim(), status, items });
+      const result = await createOrderAction({ clientName: clientName.trim(), status, items });
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      toast(result.message);
       setClientName('');
       setItems([{ productId: products[0]?.id ?? '', qty: 1 }]);
       setStatus('Aguardando pagamento');
@@ -95,6 +107,7 @@ export function NewOrderModal({ open, onClose, products }: { open: boolean; onCl
             <span className="font-display text-[19px] font-bold text-accent">{formatBRL(total)}</span>
           </div>
         </div>
+        {error && <div className="mt-3 text-[13px] font-semibold text-error">{error}</div>}
         <div className="mt-6 flex justify-end gap-2.5">
           <button onClick={onClose} className="rounded-control border border-border-strong px-5.5 py-3 text-[13.5px] font-bold text-fg-secondary">
             Cancelar

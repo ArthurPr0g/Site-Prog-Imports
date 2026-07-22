@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { saveProductAction, type ProductFormInput } from '@/app/actions/admin';
 import { CATEGORY_OPTIONS } from '@/lib/constants';
+import { useToast } from '@/components/ui/Toast';
 
 export type ProductModalData = {
   id?: string;
@@ -45,6 +46,8 @@ export function ProductModal({
     }
   );
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState('');
+  const toast = useToast();
 
   if (!open) return null;
 
@@ -52,21 +55,40 @@ export function ProductModal({
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
   function save() {
-    if (!form.name.trim()) return;
+    setError('');
+    if (!form.name.trim()) return setError('Informe o nome do produto.');
+    if (!form.sku.trim()) return setError('Informe o SKU do produto.');
+
+    const price = parseFloat(form.price.replace(',', '.'));
+    if (!Number.isFinite(price) || price <= 0) return setError('Informe um preço válido, maior que zero.');
+
+    const promoPrice = form.promoPrice.trim() ? parseFloat(form.promoPrice.replace(',', '.')) : null;
+    if (promoPrice !== null && (!Number.isFinite(promoPrice) || promoPrice <= 0)) {
+      return setError('O preço promocional precisa ser um número válido.');
+    }
+
+    const stock = parseInt(form.stock, 10);
+    if (form.stock.trim() && !Number.isFinite(stock)) return setError('Informe um estoque válido.');
+
     const input: ProductFormInput = {
       id: form.id,
       name: form.name.trim(),
-      sku: form.sku.trim() || 'NOVO-SKU',
+      sku: form.sku.trim(),
       brand: form.brand.trim(),
       category: form.category,
       collection: form.collection,
-      price: parseFloat(form.price.replace(',', '.')) || 0,
-      promoPrice: form.promoPrice.trim() ? parseFloat(form.promoPrice.replace(',', '.')) : null,
-      stock: parseInt(form.stock) || 0,
+      price,
+      promoPrice,
+      stock: Number.isFinite(stock) ? stock : 0,
       description: form.description.trim(),
     };
     startTransition(async () => {
-      await saveProductAction(input);
+      const result = await saveProductAction(input);
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      toast(result.message);
       onClose();
     });
   }
@@ -110,6 +132,7 @@ export function ProductModal({
             Arraste até 8 imagens ou clique para enviar
           </div>
         </div>
+        {error && <div className="mt-3 text-[13px] font-semibold text-error">{error}</div>}
         <div className="mt-6 flex justify-end gap-2.5">
           <button onClick={onClose} className="rounded-control border border-border-strong px-5.5 py-3 text-[13.5px] font-bold text-fg-secondary">
             Cancelar

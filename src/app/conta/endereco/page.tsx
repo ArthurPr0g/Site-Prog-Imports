@@ -1,10 +1,11 @@
+import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { AddressForm } from '@/components/account/AddressForm';
 
 export default async function AddressPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user) redirect('/entrar?next=/conta');
 
   const supabase = await createClient();
   const { data: address } = await supabase.from('addresses').select('*').eq('customer_id', user.id).maybeSingle();

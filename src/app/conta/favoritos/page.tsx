@@ -1,10 +1,11 @@
+import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { FavoriteCard } from '@/components/account/FavoriteCard';
 
 export default async function FavoritesPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user) redirect('/entrar?next=/conta');
 
   const supabase = await createClient();
   const { data } = await supabase

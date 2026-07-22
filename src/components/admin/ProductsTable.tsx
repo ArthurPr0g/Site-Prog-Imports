@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { formatBRL } from '@/lib/format';
 import { toggleProductActiveAction, deleteProductAction } from '@/app/actions/admin';
 import { ProductModal, type ProductModalData } from './ProductModal';
+import { useToast } from '@/components/ui/Toast';
 
 type Row = {
   id: string;
@@ -22,6 +23,22 @@ export function ProductsTable({ products, collections }: { products: Row[]; coll
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ProductModalData | null>(null);
   const [, startTransition] = useTransition();
+  const toast = useToast();
+
+  function toggleActive(p: Row) {
+    startTransition(async () => {
+      const result = await toggleProductActiveAction(p.id, p.active);
+      if (!result.ok) toast(result.message);
+    });
+  }
+
+  function removeProduct(p: Row) {
+    if (!window.confirm(`Excluir "${p.name}"? Essa ação não pode ser desfeita.`)) return;
+    startTransition(async () => {
+      const result = await deleteProductAction(p.id);
+      if (!result.ok) toast(result.message);
+    });
+  }
 
   function openNew() {
     setEditing(null);
@@ -82,7 +99,7 @@ export function ProductsTable({ products, collections }: { products: Row[]; coll
                 <div className="font-extrabold" style={{ color: stockColor }}>{p.stock}</div>
                 <div>
                   <button
-                    onClick={() => startTransition(() => toggleProductActiveAction(p.id, p.active))}
+                    onClick={() => toggleActive(p)}
                     className="rounded-full border px-2.75 py-1.25 text-[11px] font-extrabold"
                     style={{
                       background: p.active ? 'rgba(74,222,128,.1)' : 'rgba(168,168,176,.08)',
@@ -101,7 +118,7 @@ export function ProductsTable({ products, collections }: { products: Row[]; coll
                     Editar
                   </button>
                   <button
-                    onClick={() => startTransition(() => deleteProductAction(p.id))}
+                    onClick={() => removeProduct(p)}
                     className="rounded-[9px] border border-border-hover px-2.5 py-1.5 text-xs text-fg-tertiary hover:border-error hover:text-error"
                   >
                     ✕

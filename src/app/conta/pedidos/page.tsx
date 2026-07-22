@@ -1,11 +1,12 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { listCustomerOrders } from '@/lib/data/orders';
 import { PlaceholderImage } from '@/components/ui/PlaceholderImage';
 
 export default async function OrdersPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user) redirect('/entrar?next=/conta');
   const orders = await listCustomerOrders(user.id);
 
   return (

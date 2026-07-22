@@ -1,9 +1,10 @@
+import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { ProfileForm, PasswordForm } from '@/components/account/ProfileForms';
 
 export default async function MyAccountPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user) redirect('/entrar?next=/conta');
 
   return (
     <div>

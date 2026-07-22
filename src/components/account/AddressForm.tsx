@@ -16,11 +16,11 @@ export function AddressForm({ address }: { address: Tables<'addresses'> | null }
   return (
     <form action={formAction} className="max-w-[560px] rounded-[20px] border border-border bg-card p-7">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <input name="rua" defaultValue={address?.rua} placeholder="Rua e número" className={`sm:col-span-2 ${inputClass}`} />
+        <input name="rua" defaultValue={address?.rua} required placeholder="Rua e número" className={`sm:col-span-2 ${inputClass}`} />
         <input name="complemento" defaultValue={address?.complemento} placeholder="Complemento" className={inputClass} />
         <input name="bairro" defaultValue={address?.bairro} placeholder="Bairro" className={inputClass} />
-        <input name="cidade" defaultValue={address?.cidade} placeholder="Cidade / UF" className={inputClass} />
-        <input name="cep" defaultValue={address?.cep} placeholder="CEP" className={inputClass} />
+        <input name="cidade" defaultValue={address?.cidade} required placeholder="Cidade / UF" className={inputClass} />
+        <input name="cep" defaultValue={address?.cep} required placeholder="CEP" className={inputClass} />
       </div>
       {state.message && (
         <div className={`mt-3 text-[13px] font-semibold ${state.ok ? 'text-accent' : 'text-error'}`}>{state.message}</div>

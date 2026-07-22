@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { listCustomerOrders } from '@/lib/data/orders';
 import { createClient } from '@/lib/supabase/server';
@@ -6,7 +7,7 @@ import { TIMELINE_STEPS } from '@/lib/constants';
 
 export default async function AccountSummaryPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user) redirect('/entrar?next=/conta');
 
   const supabase = await createClient();
   const [orders, { count: favCount }] = await Promise.all([

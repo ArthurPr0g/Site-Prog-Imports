@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { getCustomerOrderDetail } from '@/lib/data/orders';
 import { OrderTimeline } from '@/components/account/OrderTimeline';
@@ -9,9 +9,12 @@ import { buildWhatsAppLink } from '@/lib/whatsapp';
 export default async function OrderDetailPage({ params }: { params: Promise<{ numero: string }> }) {
   const { numero } = await params;
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user) redirect('/entrar?next=/conta/pedidos');
 
-  const order = await getCustomerOrderDetail(user.id, Number(numero));
+  const orderNumber = Number(numero);
+  if (!Number.isInteger(orderNumber)) notFound();
+
+  const order = await getCustomerOrderDetail(user.id, orderNumber);
   if (!order) notFound();
 
   const supportLink = buildWhatsAppLink(`Olá! Preciso de ajuda com meu pedido ${order.id}.`, WHATSAPP_NUMBER);

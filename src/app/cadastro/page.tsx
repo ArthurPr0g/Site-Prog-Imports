@@ -37,13 +37,16 @@ export default function SignupPage() {
               name="password"
               type="password"
               required
-              placeholder="Senha (mín. 6 caracteres)"
+              minLength={8}
+              autoComplete="new-password"
+              placeholder="Senha (mín. 8 caracteres)"
               className="rounded-control border border-border-strong bg-input px-4 py-3 text-[13.5px] outline-none focus:border-accent"
             />
             <input
               name="confirm"
               type="password"
               required
+              autoComplete="new-password"
               placeholder="Confirmar senha"
               className="rounded-control border border-border-strong bg-input px-4 py-3 text-[13.5px] outline-none focus:border-accent"
             />
