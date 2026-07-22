@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="utf-8"></meta>
+<title>Prog Imports — Tecnologia Importada Premium</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"></link>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"></link>
+<style>
+html{scroll-behavior:smooth}
+body{margin:0;background:#0a0a0c;color:#f4f4f5;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#f4f4f5;text-decoration:none}
+a:hover{color:#F28705}
+::selection{background:#F28705;color:#0a0a0c}
+::-webkit-scrollbar{width:10px;background:#0a0a0c}
+::-webkit-scrollbar-thumb{background:#26262b;border-radius:6px}
+input::placeholder{color:#5b5b63}
+@keyframes heroGlow{0%,100%{opacity:.5;transform:translate(-50%,-50%) scale(1)}50%{opacity:.85;transform:translate(-50%,-50%) scale(1.12)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes toastIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#0a0a0c;overflow-x:clip">
+
+<!-- Promo bar -->
+<div style="background:#F28705;color:#0a0a0c;font-size:13px;font-weight:700;letter-spacing:.04em;text-align:center;padding:9px 16px">
+FRETE GRÁTIS em compras acima de R$ 5.000 · Importados direto dos EUA · Parcele em até 12x
+</div>
+
+<!-- Header -->
+<header style="position:sticky;top:0;z-index:90;background:rgba(10,10,12,.82);backdrop-filter:blur(18px);border-bottom:1px solid #1c1c21">
+  <div style="max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:28px;padding:14px 24px">
+    <a href="#" style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <img src="assets/logo.png" alt="Prog Imports" style="height:52px;width:auto;display:block"></img>
+    </a>
+    <nav style="display:flex;gap:22px;font-size:14px;font-weight:600;color:#a8a8b0" data-screen-label="nav">
+      <a href="#categorias" style="color:#a8a8b0" style-hover="color:#F28705">MacBooks</a>
+      <a href="#categorias" style="color:#a8a8b0" style-hover="color:#F28705">iPhones</a>
+      <a href="#produtos" style="color:#a8a8b0" style-hover="color:#F28705">Notebooks Gamer</a>
+      <a href="#produtos" style="color:#a8a8b0" style-hover="color:#F28705">Monitores</a>
+      <a href="#servicos" style="color:#a8a8b0" style-hover="color:#F28705">Serviços</a>
+    </nav>
+    <div style="flex:1;position:relative;max-width:420px;margin-left:auto">
+      <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Buscar iPhone, MacBook, Alienware…" style="width:100%;box-sizing:border-box;background:#151518;border:1px solid #26262b;border-radius:99px;padding:10px 18px;color:#f4f4f5;font-size:14px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+      <sc-if value="{{ showSuggestions }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;top:calc(100% + 8px);left:0;right:0;background:#151518;border:1px solid #26262b;border-radius:16px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.6)">
+          <sc-for list="{{ suggestions }}" as="s" hint-placeholder-count="0">
+            <div onClick="{{ s.pick }}" style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;cursor:pointer;border-bottom:1px solid #1c1c21" style-hover="background:#1c1c21">
+              <div>
+                <div style="font-size:14px;font-weight:600">{{ s.name }}</div>
+                <div style="font-size:12px;color:#7a7a84">{{ s.cat }}</div>
+              </div>
+              <div style="font-size:13px;font-weight:700;color:#F28705">{{ s.priceFmt }}</div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:14px 18px;font-size:13px;color:#7a7a84">Nenhum produto encontrado</div>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+      <button onClick="{{ noop }}" title="Entrar" style="background:none;border:1px solid #26262b;border-radius:99px;padding:9px 16px;color:#f4f4f5;font-size:13px;font-weight:700;font-family:'Manrope',sans-serif;cursor:pointer;transition:all .2s" style-hover="border-color:#F28705;color:#F28705">Entrar</button>
+      <button onClick="{{ noop }}" title="Favoritos" style="position:relative;background:#151518;border:1px solid #26262b;border-radius:99px;width:40px;height:40px;color:#f4f4f5;font-size:16px;cursor:pointer;transition:all .2s" style-hover="border-color:#F28705">♡<sc-if value="{{ hasFavs }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:-4px;right:-4px;background:#F28705;color:#0a0a0c;font-size:10px;font-weight:800;border-radius:99px;min-width:17px;height:17px;display:grid;place-items:center;font-family:'Manrope',sans-serif">{{ favCount }}</span></sc-if></button>
+      <button onClick="{{ openCart }}" title="Carrinho" style="position:relative;background:#151518;border:1px solid #26262b;border-radius:99px;width:40px;height:40px;color:#f4f4f5;font-size:15px;cursor:pointer;transition:all .2s" style-hover="border-color:#F28705">▢<sc-if value="{{ hasCart }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:-4px;right:-4px;background:#F28705;color:#0a0a0c;font-size:10px;font-weight:800;border-radius:99px;min-width:17px;height:17px;display:grid;place-items:center;font-family:'Manrope',sans-serif">{{ cartCount }}</span></sc-if></button>
+    </div>
+  </div>
+</header>
+
+<!-- Hero -->
+<section data-screen-label="Hero" style="position:relative;max-width:1280px;margin:24px auto 0;padding:0 24px">
+  <div style="position:relative;border-radius:28px;overflow:hidden;background:linear-gradient(145deg,#101014 0%,#0c0c10 60%,#141018 100%);border:1px solid #1f1f26;min-height:520px;display:flex;align-items:center">
+    <div style="position:absolute;left:70%;top:50%;width:640px;height:640px;border-radius:50%;background:radial-gradient(circle,rgba(242,135,5,.18) 0%,rgba(242,135,5,0) 65%);animation:heroGlow 7s ease-in-out infinite;pointer-events:none"></div>
+    <div style="position:relative;z-index:2;display:grid;grid-template-columns:1.05fr .95fr;gap:32px;align-items:center;width:100%;padding:56px 64px">
+      <div style="animation:slideUp .7s ease both" key="{{ heroKey }}">
+        <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(242,135,5,.12);border:1px solid rgba(242,135,5,.35);color:#F28705;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:7px 14px;border-radius:99px;margin-bottom:22px">{{ heroTag }}</div>
+        <h1 style="font-family:'Space Grotesk',sans-serif;font-size:56px;line-height:1.05;font-weight:700;margin:0 0 18px;letter-spacing:-.02em">{{ heroTitle }}</h1>
+        <p style="font-size:17px;line-height:1.6;color:#a8a8b0;margin:0 0 32px;max-width:440px;text-wrap:pretty">{{ heroSub }}</p>
+        <div style="display:flex;gap:14px;align-items:center">
+          <button onClick="{{ heroBuy }}" style="background:#F28705;color:#0a0a0c;border:none;border-radius:99px;padding:15px 32px;font-size:15px;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer;transition:all .25s;box-shadow:0 8px 32px rgba(242,135,5,.35)" style-hover="transform:translateY(-2px);box-shadow:0 14px 44px rgba(242,135,5,.5)">Comprar agora</button>
+          <div style="font-size:14px;color:#7a7a84"><span style="color:#f4f4f5;font-weight:800;font-size:18px">{{ heroPrice }}</span><br></br>ou 12x de {{ heroParcel }}</div>
+        </div>
+      </div>
+      <div style="height:380px;border-radius:20px;background:repeating-linear-gradient(135deg,#17171b 0 14px,#1b1b20 14px 28px);border:1px solid #26262b;display:grid;place-items:center;animation:slideUp .7s .1s ease both" key="{{ heroImgKey }}">
+        <div style="font-family:monospace;font-size:13px;color:#5b5b63">[ foto: {{ heroImg }} ]</div>
+      </div>
+    </div>
+    <div style="position:absolute;bottom:24px;left:64px;z-index:3;display:flex;gap:8px">
+      <sc-for list="{{ heroDots }}" as="d" hint-placeholder-count="3">
+        <button onClick="{{ d.go }}" style="width:{{ d.w }};height:6px;border-radius:99px;border:none;background:{{ d.bg }};cursor:pointer;transition:all .35s;padding:0"></button>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- Marcas marquee -->
+<div style="overflow:hidden;border-bottom:1px solid #1c1c21;margin-top:40px;padding:22px 0;mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)">
+  <div style="display:flex;gap:72px;width:max-content;animation:marquee 26s linear infinite;font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:600;color:#3c3c44;letter-spacing:.08em">
+    <span>APPLE</span><span>ALIENWARE</span><span>ASUS ROG</span><span>ACER</span><span>LENOVO</span><span>LG</span><span>SAMSUNG</span><span>LOGITECH</span><span>DELL</span>
+    <span>APPLE</span><span>ALIENWARE</span><span>ASUS ROG</span><span>ACER</span><span>LENOVO</span><span>LG</span><span>SAMSUNG</span><span>LOGITECH</span><span>DELL</span>
+  </div>
+</div>
+
+<!-- Categorias -->
+<section id="categorias" data-screen-label="Categorias" style="max-width:1280px;margin:0 auto;padding:72px 24px 0">
+  <div style="display:flex;align-items:end;justify-content:space-between;margin-bottom:32px">
+    <div>
+      <div style="color:#F28705;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px">Navegue por categoria</div>
+      <h2 style="font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:700;margin:0;letter-spacing:-.02em">O que você procura hoje?</h2>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px">
+    <sc-for list="{{ categories }}" as="c" hint-placeholder-count="9">
+      <a href="#produtos" style="background:#111114;border:1px solid #1f1f26;border-radius:20px;padding:26px 22px;display:flex;flex-direction:column;gap:44px;transition:all .3s;cursor:pointer" style-hover="border-color:rgba(242,135,5,.55);transform:translateY(-4px);background:#141418">
+        <div style="width:44px;height:44px;border-radius:12px;background:rgba(242,135,5,.1);border:1px solid rgba(242,135,5,.3);display:grid;place-items:center;color:#F28705;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px">{{ c.glyph }}</div>
+        <div>
+          <div style="font-weight:800;font-size:15px;margin-bottom:4px">{{ c.name }}</div>
+          <div style="font-size:12px;color:#7a7a84">{{ c.count }}</div>
+        </div>
+      </a>
+    </sc-for>
+  </div>
+</section>
+
+<!-- Produtos em destaque -->
+<section id="produtos" data-screen-label="Produtos" style="max-width:1280px;margin:0 auto;padding:80px 24px 0">
+  <div style="display:flex;align-items:end;justify-content:space-between;margin-bottom:32px;gap:20px;flex-wrap:wrap">
+    <div>
+      <div style="color:#F28705;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px">Destaques da semana</div>
+      <h2 style="font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:700;margin:0;letter-spacing:-.02em">Produtos em destaque</h2>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <sc-for list="{{ collections }}" as="col" hint-placeholder-count="5">
+        <button onClick="{{ col.pick }}" style="background:{{ col.bg }};color:{{ col.color }};border:1px solid {{ col.border }};border-radius:99px;padding:9px 18px;font-size:13px;font-weight:700;font-family:'Manrope',sans-serif;cursor:pointer;transition:all .2s">{{ col.name }}</button>
+      </sc-for>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px">
+    <sc-for list="{{ products }}" as="p" hint-placeholder-count="8">
+      <div style="background:#111114;border:1px solid #1f1f26;border-radius:22px;overflow:hidden;transition:all .3s;display:flex;flex-direction:column" style-hover="border-color:#2e2e36;transform:translateY(-5px);box-shadow:0 24px 48px rgba(0,0,0,.45)">
+        <div style="position:relative;height:210px;background:repeating-linear-gradient(135deg,#17171b 0 14px,#1b1b20 14px 28px);display:grid;place-items:center">
+          <div style="font-family:monospace;font-size:12px;color:#5b5b63;padding:0 16px;text-align:center">[ foto: {{ p.img }} ]</div>
+          <sc-if value="{{ p.hasPromo }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:14px;left:14px;background:#F28705;color:#0a0a0c;font-size:11px;font-weight:800;letter-spacing:.06em;padding:5px 11px;border-radius:99px">{{ p.badge }}</div>
+          </sc-if>
+          <button onClick="{{ p.toggleFav }}" style="position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:99px;background:rgba(10,10,12,.7);backdrop-filter:blur(8px);border:1px solid #2e2e36;color:{{ p.favColor }};font-size:15px;cursor:pointer;transition:all .2s" style-hover="border-color:#F28705;transform:scale(1.1)">{{ p.favGlyph }}</button>
+        </div>
+        <div style="padding:20px;display:flex;flex-direction:column;gap:4px;flex:1">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7a7a84">{{ p.cat }}</div>
+          <a href="Prog Imports - Produto.dc.html" style="font-weight:800;font-size:16px;line-height:1.3;min-height:42px;display:block">{{ p.name }}</a>
+          <div style="margin-top:8px">
+            <sc-if value="{{ p.hasPromo }}" hint-placeholder-val="{{ false }}">
+              <span style="font-size:13px;color:#7a7a84;text-decoration:line-through;margin-right:8px">{{ p.oldFmt }}</span>
+            </sc-if>
+            <span style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:#f4f4f5">{{ p.priceFmt }}</span>
+            <div style="font-size:12px;color:#7a7a84;margin-top:2px">ou 12x de {{ p.parcelFmt }} sem juros</div>
+          </div>
+          <button onClick="{{ p.addToCart }}" style="margin-top:16px;background:#1c1c21;color:#f4f4f5;border:1px solid #2e2e36;border-radius:14px;padding:12px;font-size:14px;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer;transition:all .25s" style-hover="background:#F28705;color:#0a0a0c;border-color:#F28705">Adicionar ao carrinho</button>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<!-- Institucional -->
+<section data-screen-label="Institucional" style="max-width:1280px;margin:0 auto;padding:88px 24px 0">
+  <div style="background:linear-gradient(145deg,#111114,#0d0d11);border:1px solid #1f1f26;border-radius:28px;padding:56px 64px">
+    <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:56px;align-items:center">
+      <div>
+        <div style="color:#F28705;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px">Por que a Prog Imports?</div>
+        <h2 style="font-family:'Space Grotesk',sans-serif;font-size:34px;font-weight:700;margin:0 0 16px;letter-spacing:-.02em;line-height:1.15">Tecnologia dos EUA, com a confiança que você merece</h2>
+        <p style="color:#a8a8b0;font-size:15px;line-height:1.7;margin:0;text-wrap:pretty">Importamos os produtos mais desejados do mundo com procedência garantida, atendimento personalizado e suporte completo antes, durante e depois da compra.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <sc-for list="{{ diffs }}" as="d" hint-placeholder-count="6">
+          <div style="background:#0a0a0c;border:1px solid #1f1f26;border-radius:16px;padding:20px;transition:all .25s" style-hover="border-color:rgba(242,135,5,.4)">
+            <div style="color:#F28705;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px;margin-bottom:8px">{{ d.num }}</div>
+            <div style="font-weight:800;font-size:14px;margin-bottom:4px">{{ d.title }}</div>
+            <div style="font-size:12.5px;color:#7a7a84;line-height:1.5">{{ d.sub }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Serviços -->
+<section id="servicos" data-screen-label="Serviços" style="max-width:1280px;margin:0 auto;padding:88px 24px 0">
+  <div style="text-align:center;margin-bottom:36px">
+    <div style="color:#F28705;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px">Assistência especializada</div>
+    <h2 style="font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:700;margin:0;letter-spacing:-.02em">Serviços técnicos</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px">
+    <sc-for list="{{ services }}" as="s" hint-placeholder-count="5">
+      <div style="background:#111114;border:1px solid #1f1f26;border-radius:20px;padding:28px 24px;transition:all .3s;cursor:pointer" style-hover="border-color:rgba(242,135,5,.55);transform:translateY(-4px)">
+        <div style="width:40px;height:40px;border-radius:12px;background:rgba(242,135,5,.1);border:1px solid rgba(242,135,5,.3);display:grid;place-items:center;color:#F28705;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;margin-bottom:18px">{{ s.glyph }}</div>
+        <div style="font-weight:800;font-size:15px;margin-bottom:6px">{{ s.name }}</div>
+        <div style="font-size:13px;color:#7a7a84;line-height:1.55">{{ s.sub }}</div>
+        <div style="margin-top:16px;font-size:13px;font-weight:800;color:#F28705">{{ s.price }}</div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<!-- Depoimentos -->
+<section data-screen-label="Depoimentos" style="max-width:1280px;margin:0 auto;padding:88px 24px 0">
+  <div style="display:flex;align-items:end;justify-content:space-between;margin-bottom:32px">
+    <div>
+      <div style="color:#F28705;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px">Quem compra, confia</div>
+      <h2 style="font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:700;margin:0;letter-spacing:-.02em">Depoimentos</h2>
+    </div>
+    <a href="https://instagram.com/Prog.imports" target="_blank" style="font-size:14px;font-weight:700;color:#F28705">@Prog.imports ↗</a>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
+    <sc-for list="{{ reviews }}" as="r" hint-placeholder-count="3">
+      <div style="background:#111114;border:1px solid #1f1f26;border-radius:20px;padding:28px;transition:all .3s" style-hover="border-color:#2e2e36;transform:translateY(-3px)">
+        <div style="color:#F28705;font-size:14px;letter-spacing:3px;margin-bottom:14px">★★★★★</div>
+        <p style="font-size:14.5px;line-height:1.65;color:#c9c9d1;margin:0 0 20px;text-wrap:pretty">{{ r.text }}</p>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:40px;height:40px;border-radius:99px;background:#1c1c21;border:1px solid #2e2e36;display:grid;place-items:center;font-weight:800;font-size:14px;color:#F28705">{{ r.initial }}</div>
+          <div>
+            <div style="font-weight:800;font-size:14px">{{ r.name }}</div>
+            <div style="font-size:12px;color:#7a7a84">{{ r.bought }}</div>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<!-- Newsletter -->
+<section data-screen-label="Newsletter" style="max-width:1280px;margin:0 auto;padding:88px 24px">
+  <div style="position:relative;overflow:hidden;background:linear-gradient(135deg,#181014,#0f0f13 55%);border:1px solid rgba(242,135,5,.25);border-radius:28px;padding:56px;text-align:center">
+    <div style="position:absolute;left:50%;top:-160px;width:520px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(242,135,5,.16),transparent 70%);transform:translateX(-50%);pointer-events:none"></div>
+    <h2 style="font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700;margin:0 0 12px;letter-spacing:-.02em">Chegou primeiro, comprou primeiro</h2>
+    <p style="color:#a8a8b0;font-size:15px;margin:0 0 28px">Receba lançamentos exclusivos dos EUA e promoções antes de todo mundo.</p>
+    <sc-if value="{{ notSubscribed }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;gap:10px;justify-content:center;max-width:460px;margin:0 auto">
+        <input value="{{ email }}" onChange="{{ onEmail }}" placeholder="Seu melhor e-mail" style="flex:1;background:#0a0a0c;border:1px solid #2e2e36;border-radius:99px;padding:14px 22px;color:#f4f4f5;font-size:14px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+        <button onClick="{{ subscribe }}" style="background:#F28705;color:#0a0a0c;border:none;border-radius:99px;padding:14px 28px;font-size:14px;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer;transition:all .25s" style-hover="transform:translateY(-2px);box-shadow:0 10px 30px rgba(242,135,5,.4)">Cadastrar</button>
+      </div>
+    </sc-if>
+    <sc-if value="{{ subscribed }}" hint-placeholder-val="{{ false }}">
+      <div style="display:inline-block;background:rgba(242,135,5,.12);border:1px solid rgba(242,135,5,.4);color:#F28705;font-weight:800;font-size:14px;padding:14px 28px;border-radius:99px">✓ Cadastro realizado — bem-vindo à Prog Imports!</div>
+    </sc-if>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer style="border-top:1px solid #1c1c21;background:#0c0c0f">
+  <div style="max-width:1280px;margin:0 auto;padding:56px 24px 32px;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:40px">
+    <div>
+      <img src="assets/logo.png" alt="Prog Imports" style="height:64px;width:auto;margin-bottom:16px"></img>
+      <p style="font-size:13.5px;color:#7a7a84;line-height:1.7;margin:0;max-width:280px">Importação de tecnologia premium direto dos Estados Unidos. Confiança, exclusividade e atendimento personalizado.</p>
+    </div>
+    <div>
+      <div style="font-weight:800;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#f4f4f5;margin-bottom:16px">Institucional</div>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:14px">
+        <a href="#" style="color:#a8a8b0">Sobre nós</a>
+        <a href="#" style="color:#a8a8b0">Como funciona a importação</a>
+        <a href="#" style="color:#a8a8b0">Garantia</a>
+        <a href="#" style="color:#a8a8b0">Trocas e devoluções</a>
+        <a href="#" style="color:#a8a8b0">Política de privacidade</a>
+      </div>
+    </div>
+    <div>
+      <div style="font-weight:800;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#f4f4f5;margin-bottom:16px">Contato</div>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:14px">
+        <a href="https://wa.me/5562982133188" target="_blank" style="color:#a8a8b0">WhatsApp (62) 98213-3188</a>
+        <a href="https://instagram.com/Prog.imports" target="_blank" style="color:#a8a8b0">Instagram @Prog.imports</a>
+        <span style="color:#7a7a84">Atendimento seg–sáb, 9h às 19h</span>
+      </div>
+    </div>
+    <div>
+      <div style="font-weight:800;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#f4f4f5;margin-bottom:16px">Pagamento</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <span style="background:#151518;border:1px solid #26262b;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;color:#a8a8b0">Pix</span>
+        <span style="background:#151518;border:1px solid #26262b;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;color:#a8a8b0">Visa</span>
+        <span style="background:#151518;border:1px solid #26262b;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;color:#a8a8b0">Mastercard</span>
+        <span style="background:#151518;border:1px solid #26262b;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;color:#a8a8b0">Boleto</span>
+        <span style="background:#151518;border:1px solid #26262b;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;color:#a8a8b0">12x sem juros</span>
+      </div>
+    </div>
+  </div>
+  <div style="border-top:1px solid #1c1c21;text-align:center;padding:20px;font-size:12.5px;color:#5b5b63">© 2026 Prog Imports — Tecnologia importada com confiança.</div>
+</footer>
+
+<!-- Cart overlay -->
+<sc-if value="{{ cartOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeCart }}" style="position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:99"></div>
+</sc-if>
+
+<!-- Cart drawer -->
+<aside data-screen-label="Carrinho" style="position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);background:#111114;border-left:1px solid #26262b;z-index:100;transform:translateX({{ cartTx }});transition:transform .4s cubic-bezier(.22,1,.36,1);display:flex;flex-direction:column">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:22px 24px;border-bottom:1px solid #1f1f26">
+    <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px">Seu carrinho <span style="color:#F28705">({{ cartCount }})</span></div>
+    <button onClick="{{ closeCart }}" style="background:none;border:1px solid #26262b;border-radius:99px;width:34px;height:34px;color:#a8a8b0;font-size:14px;cursor:pointer" style-hover="border-color:#F28705;color:#F28705">✕</button>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:16px 24px;display:flex;flex-direction:column;gap:14px">
+    <sc-if value="{{ cartEmpty }}" hint-placeholder-val="{{ true }}">
+      <div style="text-align:center;padding:64px 20px;color:#7a7a84;font-size:14px">Seu carrinho está vazio.<br></br><span style="font-size:13px">Adicione produtos para continuar.</span></div>
+    </sc-if>
+    <sc-for list="{{ cartItems }}" as="it" hint-placeholder-count="0">
+      <div style="display:flex;gap:14px;background:#0a0a0c;border:1px solid #1f1f26;border-radius:16px;padding:14px">
+        <div style="width:64px;height:64px;border-radius:12px;background:repeating-linear-gradient(135deg,#17171b 0 8px,#1b1b20 8px 16px);flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:13.5px;line-height:1.3">{{ it.name }}</div>
+          <div style="font-size:13px;color:#F28705;font-weight:800;margin-top:4px">{{ it.lineFmt }}</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+            <button onClick="{{ it.dec }}" style="width:26px;height:26px;border-radius:8px;background:#1c1c21;border:1px solid #2e2e36;color:#f4f4f5;cursor:pointer;font-size:13px">−</button>
+            <span style="font-weight:800;font-size:13px;min-width:16px;text-align:center">{{ it.qty }}</span>
+            <button onClick="{{ it.inc }}" style="width:26px;height:26px;border-radius:8px;background:#1c1c21;border:1px solid #2e2e36;color:#f4f4f5;cursor:pointer;font-size:13px">+</button>
+            <button onClick="{{ it.remove }}" style="margin-left:auto;background:none;border:none;color:#7a7a84;font-size:12px;cursor:pointer;font-family:'Manrope',sans-serif;text-decoration:underline" style-hover="color:#F28705">remover</button>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+  <sc-if value="{{ hasCart }}" hint-placeholder-val="{{ false }}">
+    <div style="border-top:1px solid #1f1f26;padding:18px 24px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:8px">
+        <input value="{{ coupon }}" onChange="{{ onCoupon }}" placeholder="Cupom (ex: PROG10)" style="flex:1;background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:11px 16px;color:#f4f4f5;font-size:13px;font-family:'Manrope',sans-serif;outline:none;text-transform:uppercase" style-focus="border-color:#F28705"></input>
+        <button onClick="{{ applyCoupon }}" style="background:#1c1c21;border:1px solid #2e2e36;border-radius:12px;padding:11px 18px;color:#f4f4f5;font-size:13px;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer" style-hover="border-color:#F28705">Aplicar</button>
+      </div>
+      <sc-if value="{{ couponMsgShow }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:12.5px;font-weight:700;color:{{ couponMsgColor }}">{{ couponMsg }}</div>
+      </sc-if>
+      <div style="display:flex;gap:8px">
+        <input value="{{ cep }}" onChange="{{ onCep }}" placeholder="CEP para frete" style="flex:1;background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:11px 16px;color:#f4f4f5;font-size:13px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+        <button onClick="{{ calcFrete }}" style="background:#1c1c21;border:1px solid #2e2e36;border-radius:12px;padding:11px 18px;color:#f4f4f5;font-size:13px;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer" style-hover="border-color:#F28705">Calcular</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:13.5px;color:#a8a8b0;margin-top:4px">
+        <div style="display:flex;justify-content:space-between"><span>Subtotal</span><span style="color:#f4f4f5;font-weight:700">{{ subtotalFmt }}</span></div>
+        <sc-if value="{{ hasDiscount }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;justify-content:space-between"><span>Desconto</span><span style="color:#F28705;font-weight:700">−{{ discountFmt }}</span></div>
+        </sc-if>
+        <div style="display:flex;justify-content:space-between"><span>Frete</span><span style="color:#f4f4f5;font-weight:700">{{ freteFmt }}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:16px;margin-top:6px;padding-top:10px;border-top:1px solid #1f1f26"><span style="color:#f4f4f5;font-weight:800">Total</span><span style="color:#F28705;font-weight:800;font-family:'Space Grotesk',sans-serif;font-size:19px">{{ totalFmt }}</span></div>
+      </div>
+      <a href="{{ waLink }}" target="_blank" style="display:block;text-align:center;background:#F28705;color:#0a0a0c;border-radius:14px;padding:15px;font-size:15px;font-weight:800;transition:all .25s;box-shadow:0 8px 28px rgba(242,135,5,.3)" style-hover="transform:translateY(-2px);color:#0a0a0c;box-shadow:0 12px 36px rgba(242,135,5,.45)">Finalizar pelo WhatsApp</a>
+    </div>
+  </sc-if>
+</aside>
+
+<!-- Toast -->
+<sc-if value="{{ toastShow }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#151518;border:1px solid rgba(242,135,5,.5);color:#f4f4f5;font-size:14px;font-weight:700;padding:14px 26px;border-radius:99px;z-index:110;box-shadow:0 16px 48px rgba(0,0,0,.6);animation:toastIn .3s ease both"><span style="color:#F28705;margin-right:8px">✓</span>{{ toastMsg }}</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;heroAutoplay&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Comportamento&quot;}, &quot;freteGratisAcima&quot;: {&quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 5000, &quot;min&quot;: 0, &quot;max&quot;: 20000, &quot;step&quot;: 500, &quot;unit&quot;: &quot;R$&quot;, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Comportamento&quot;}, &quot;whatsappNumero&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;5562982133188&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Contato&quot;}}">
+class Component extends DCLogic {
+  state = {
+    query: '', cartOpen: false, cart: {}, favs: {}, heroIdx: 0,
+    coupon: '', couponApplied: false, couponMsg: '', cep: '', frete: null,
+    email: '', subscribed: false, toastMsg: '', toastShow: false, activeCol: 'Todos'
+  };
+
+  PRODUCTS = [
+    { id: 'ip16', name: 'iPhone 16 Pro Max 256GB Titânio', cat: 'iPhone', price: 8999, old: 9899, badge: 'PROMOÇÃO', img: 'iphone 16 pro max', cols: ['Promoções', 'Mais vendidos'] },
+    { id: 'mbp14', name: 'MacBook Pro 14" M4 Pro 24GB/512GB', cat: 'MacBook', price: 16499, old: null, badge: '', img: 'macbook pro 14 m4', cols: ['Lançamentos', 'Mais vendidos'] },
+    { id: 'aw51', name: 'Alienware Area-51 16" RTX 5080 32GB', cat: 'Notebook Gamer', price: 24999, old: null, badge: 'EXCLUSIVO EUA', img: 'alienware area-51 16', cols: ['Lançamentos'], forceBadge: true },
+    { id: 'ipad13', name: 'iPad Pro 13" M4 256GB Wi-Fi', cat: 'iPad / Tablet', price: 10499, old: null, badge: '', img: 'ipad pro 13 m4', cols: ['Lançamentos'] },
+    { id: 'rog16', name: 'ASUS ROG Strix G16 RTX 4070 16GB', cat: 'Notebook Gamer', price: 9799, old: 10999, badge: 'PROMOÇÃO', img: 'asus rog strix g16', cols: ['Promoções', 'Mais vendidos'] },
+    { id: 'lg27', name: 'Monitor LG UltraGear 27" QHD 240Hz', cat: 'Monitores', price: 2899, old: null, badge: '', img: 'monitor lg ultragear 27', cols: ['Mais vendidos'] },
+    { id: 'kq1', name: 'Teclado Keychron Q1 Pro Mecânico', cat: 'Periféricos', price: 1299, old: null, badge: '', img: 'teclado keychron q1 pro', cols: [] },
+    { id: 'ssd2t', name: 'SSD Samsung 990 Pro 2TB NVMe', cat: 'Peças e upgrades', price: 1199, old: 1449, badge: 'PROMOÇÃO', img: 'ssd samsung 990 pro', cols: ['Promoções'] }
+  ];
+
+  HERO = [
+    { tag: 'Novo · Direto dos EUA', title: 'iPhone 16 Pro Max', sub: 'O iPhone mais avançado de todos os tempos, importado com procedência e garantia. Titânio, câmera de 48MP e o chip A18 Pro.', price: 8999, img: 'iphone 16 pro max hero', id: 'ip16' },
+    { tag: 'Exclusivo Estados Unidos', title: 'Alienware Area-51 16"', sub: 'O notebook gamer definitivo, exclusivo do mercado americano. RTX 5080, tela QHD+ 240Hz e refrigeração Cryo-tech.', price: 24999, img: 'alienware area-51 hero', id: 'aw51' },
+    { tag: 'Performance profissional', title: 'MacBook Pro M4 Pro', sub: 'Potência para criadores, devs e empresários. Chip M4 Pro, tela Liquid Retina XDR e até 22h de bateria.', price: 16499, img: 'macbook pro hero', id: 'mbp14' }
+  ];
+
+  componentDidMount() {
+    if ((this.props.heroAutoplay ?? true)) {
+      this.heroTimer = setInterval(() => {
+        this.setState(s => ({ heroIdx: (s.heroIdx + 1) % this.HERO.length }));
+      }, 6000);
+    }
+  }
+  componentWillUnmount() { clearInterval(this.heroTimer); clearTimeout(this.toastTimer); }
+
+  fmt(v) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+
+  toast(msg) {
+    clearTimeout(this.toastTimer);
+    this.setState({ toastMsg: msg, toastShow: true });
+    this.toastTimer = setTimeout(() => this.setState({ toastShow: false }), 2400);
+  }
+
+  add(id, name) {
+    this.setState(s => ({ cart: { ...s.cart, [id]: (s.cart[id] || 0) + 1 } }));
+    this.toast(name + ' adicionado ao carrinho');
+  }
+
+  renderVals() {
+    const s = this.state, fmt = this.fmt.bind(this);
+    const freteGratis = this.props.freteGratisAcima ?? 5000;
+    const wa = this.props.whatsappNumero ?? '5562982133188';
+    const q = s.query.trim().toLowerCase();
+    const suggestions = q ? this.PRODUCTS.filter(p => (p.name + ' ' + p.cat).toLowerCase().includes(q)).slice(0, 5).map(p => ({
+      name: p.name, cat: p.cat, priceFmt: fmt(p.price),
+      pick: () => { this.setState({ query: '' }); this.add(p.id, p.name); }
+    })) : [];
+
+    const colNames = ['Todos', 'Lançamentos', 'Promoções', 'Mais vendidos'];
+    const collections = colNames.map(n => ({
+      name: n,
+      bg: s.activeCol === n ? '#F28705' : '#151518',
+      color: s.activeCol === n ? '#0a0a0c' : '#a8a8b0',
+      border: s.activeCol === n ? '#F28705' : '#26262b',
+      pick: () => this.setState({ activeCol: n })
+    }));
+
+    const shown = s.activeCol === 'Todos' ? this.PRODUCTS : this.PRODUCTS.filter(p => p.cols.includes(s.activeCol));
+    const products = shown.map(p => ({
+      name: p.name, cat: p.cat, img: p.img,
+      hasPromo: !!p.old || !!p.forceBadge,
+      badge: p.badge, oldFmt: p.old ? fmt(p.old) : '',
+      priceFmt: fmt(p.price), parcelFmt: fmt(p.price / 12),
+      favColor: s.favs[p.id] ? '#F28705' : '#a8a8b0',
+      favGlyph: s.favs[p.id] ? '♥' : '♡',
+      toggleFav: () => this.setState(st => ({ favs: { ...st.favs, [p.id]: !st.favs[p.id] } })),
+      addToCart: () => this.add(p.id, p.name)
+    }));
+
+    const hero = this.HERO[s.heroIdx];
+    const heroDots = this.HERO.map((h, i) => ({
+      w: i === s.heroIdx ? '28px' : '10px',
+      bg: i === s.heroIdx ? '#F28705' : '#3c3c44',
+      go: () => this.setState({ heroIdx: i })
+    }));
+
+    const entries = Object.entries(s.cart).filter(([, n]) => n > 0);
+    const byId = Object.fromEntries(this.PRODUCTS.map(p => [p.id, p]));
+    const cartItems = entries.map(([id, n]) => ({
+      name: byId[id].name, qty: n, lineFmt: fmt(byId[id].price * n),
+      inc: () => this.setState(st => ({ cart: { ...st.cart, [id]: n + 1 } })),
+      dec: () => this.setState(st => ({ cart: { ...st.cart, [id]: Math.max(0, n - 1) } })),
+      remove: () => this.setState(st => { const c = { ...st.cart }; delete c[id]; return { cart: c }; })
+    }));
+    const cartCount = entries.reduce((a, [, n]) => a + n, 0);
+    const subtotal = entries.reduce((a, [id, n]) => a + byId[id].price * n, 0);
+    const discount = s.couponApplied ? subtotal * 0.10 : 0;
+    const frete = s.frete === null ? null : (subtotal - discount >= freteGratis ? 0 : s.frete);
+    const total = subtotal - discount + (frete || 0);
+
+    const msg = encodeURIComponent('Olá! Quero finalizar minha compra na Prog Imports:\n' +
+      entries.map(([id, n]) => `• ${n}x ${byId[id].name} — ${fmt(byId[id].price * n)}`).join('\n') +
+      `\nTotal: ${fmt(total)}`);
+
+    const favCount = Object.values(s.favs).filter(Boolean).length;
+
+    return {
+      query: s.query, onQuery: e => this.setState({ query: e.target.value }),
+      showSuggestions: q.length > 0, suggestions, noResults: suggestions.length === 0,
+      noop: () => this.toast('Disponível em breve — protótipo'),
+      hasFavs: favCount > 0, favCount,
+      hasCart: cartCount > 0, cartCount, cartEmpty: cartCount === 0,
+      openCart: () => this.setState({ cartOpen: true }),
+      closeCart: () => this.setState({ cartOpen: false }),
+      cartOpen: s.cartOpen, cartTx: s.cartOpen ? '0' : '105%',
+      heroKey: 'h' + s.heroIdx, heroImgKey: 'hi' + s.heroIdx,
+      heroTag: hero.tag, heroTitle: hero.title, heroSub: hero.sub,
+      heroPrice: fmt(hero.price), heroParcel: fmt(hero.price / 12), heroImg: hero.img,
+      heroBuy: () => { this.add(hero.id, hero.title); this.setState({ cartOpen: true }); },
+      heroDots,
+      categories: [
+        { name: 'MacBook', count: '12 produtos', glyph: 'MB' },
+        { name: 'iPad / Tablet', count: '9 produtos', glyph: 'iP' },
+        { name: 'Notebooks Gamer', count: '18 produtos', glyph: 'NG' },
+        { name: 'Notebook Trabalho', count: '14 produtos', glyph: 'NT' },
+        { name: 'Notebook Estudos', count: '11 produtos', glyph: 'NE' },
+        { name: 'Notebooks para IA', count: '7 produtos', glyph: 'IA' },
+        { name: 'Monitores', count: '10 produtos', glyph: 'MO' },
+        { name: 'Periféricos', count: '26 produtos', glyph: 'PF' },
+        { name: 'Serviços', count: '5 serviços', glyph: 'SV' }
+      ],
+      collections, products,
+      diffs: [
+        { num: '01', title: 'Importação legalizada', sub: 'Produtos com procedência e nota fiscal.' },
+        { num: '02', title: 'Garantia real', sub: 'Cobertura completa em todos os produtos.' },
+        { num: '03', title: 'Exclusivos dos EUA', sub: 'Modelos que não chegam ao Brasil.' },
+        { num: '04', title: 'Atendimento personalizado', sub: 'Você fala direto com quem entende.' },
+        { num: '05', title: 'Suporte pós-venda', sub: 'Acompanhamento após a entrega.' },
+        { num: '06', title: 'Qualidade garantida', sub: 'Só trabalhamos com o melhor.' }
+      ],
+      services: [
+        { name: 'Limpeza preventiva', sub: 'Limpeza interna completa com troca de pasta térmica.', price: 'a partir de R$ 149', glyph: 'LP' },
+        { name: 'Troca de SSD', sub: 'Upgrade de armazenamento com clonagem de dados.', price: 'a partir de R$ 99', glyph: 'SD' },
+        { name: 'Upgrade de RAM', sub: 'Mais memória para multitarefa e jogos.', price: 'a partir de R$ 89', glyph: 'RM' },
+        { name: 'Formatação', sub: 'Sistema limpo, rápido e com backup dos seus arquivos.', price: 'a partir de R$ 129', glyph: 'FM' },
+        { name: 'Manutenção especializada', sub: 'Diagnóstico e reparo por técnicos experientes.', price: 'sob consulta', glyph: 'MT' }
+      ],
+      reviews: [
+        { name: 'Rafael M.', initial: 'R', bought: 'Comprou MacBook Pro M4', text: 'Atendimento impecável do início ao fim. Acompanhei cada etapa da importação e o MacBook chegou lacrado, antes do prazo. Virei cliente fiel.' },
+        { name: 'Lucas T.', initial: 'L', bought: 'Comprou Alienware Area-51', text: 'Consegui um modelo que não existe no Brasil por um preço muito melhor que qualquer importadora. Transparência total no rastreamento.' },
+        { name: 'Amanda S.', initial: 'A', bought: 'Comprou iPhone 16 Pro', text: 'Tinha receio de comprar importado, mas a Prog me passou segurança o tempo todo. iPhone original, com nota e garantia. Recomendo demais!' }
+      ],
+      cartItems, subtotalFmt: fmt(subtotal),
+      hasDiscount: discount > 0, discountFmt: fmt(discount),
+      freteFmt: s.frete === null ? 'calcule acima' : (frete === 0 ? 'Grátis' : fmt(frete)),
+      totalFmt: fmt(total),
+      coupon: s.coupon, onCoupon: e => this.setState({ coupon: e.target.value, couponMsg: '' }),
+      applyCoupon: () => {
+        const ok = s.coupon.trim().toUpperCase() === 'PROG10';
+        this.setState({ couponApplied: ok, couponMsg: ok ? 'Cupom PROG10 aplicado: 10% de desconto!' : 'Cupom inválido.' });
+      },
+      couponMsgShow: !!s.couponMsg, couponMsg: s.couponMsg,
+      couponMsgColor: s.couponApplied ? '#F28705' : '#e05555',
+      cep: s.cep, onCep: e => this.setState({ cep: e.target.value }),
+      calcFrete: () => {
+        if (s.cep.replace(/\D/g, '').length < 8) { this.toast('Digite um CEP válido'); return; }
+        this.setState({ frete: 49.9 });
+      },
+      email: s.email, onEmail: e => this.setState({ email: e.target.value }),
+      subscribed: s.subscribed, notSubscribed: !s.subscribed,
+      subscribe: () => { if (s.email.includes('@')) this.setState({ subscribed: true }); else this.toast('Digite um e-mail válido'); },
+      toastShow: s.toastShow, toastMsg: s.toastMsg,
+      waLink: 'https://wa.me/' + wa + '?text=' + msg
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="utf-8"></meta>
+<title>Minha Conta — Prog Imports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"></link>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"></link>
+<style>
+body{margin:0;background:#0a0a0c;color:#f4f4f5;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#f4f4f5;text-decoration:none}
+a:hover{color:#F28705}
+::selection{background:#F28705;color:#0a0a0c}
+input::placeholder{color:#5b5b63}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(242,135,5,.5)}50%{box-shadow:0 0 0 9px rgba(242,135,5,0)}}
+@keyframes toastIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#0a0a0c">
+
+<header style="position:sticky;top:0;z-index:90;background:rgba(10,10,12,.82);backdrop-filter:blur(18px);border-bottom:1px solid #1c1c21">
+  <div style="max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:14px 24px">
+    <a href="Prog Imports - Home.dc.html" style="display:flex;align-items:center;gap:10px">
+      <img src="assets/logo.png" alt="Prog Imports" style="height:52px;width:auto;display:block"></img>
+    </a>
+    <div style="display:flex;align-items:center;gap:16px">
+      <a href="Prog Imports - Home.dc.html" style="font-size:14px;font-weight:700;color:#a8a8b0">← Voltar para a loja</a>
+      <div style="display:flex;align-items:center;gap:10px;background:#111114;border:1px solid #1f1f26;border-radius:99px;padding:6px 16px 6px 7px">
+        <div style="width:30px;height:30px;border-radius:99px;background:rgba(242,135,5,.15);border:1px solid rgba(242,135,5,.4);display:grid;place-items:center;color:#F28705;font-weight:800;font-size:12px">R</div>
+        <div style="font-size:13px;font-weight:700">Rafael Moreira</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div style="max-width:1180px;margin:0 auto;padding:32px 24px 64px;display:grid;grid-template-columns:230px 1fr;gap:28px;align-items:start">
+
+<aside data-screen-label="Menu conta" style="background:#111114;border:1px solid #1f1f26;border-radius:20px;padding:12px;position:sticky;top:96px;display:flex;flex-direction:column;gap:2px">
+  <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="5">
+    <button onClick="{{ n.go }}" style="display:flex;align-items:center;gap:12px;background:{{ n.bg }};border:none;border-radius:12px;padding:12px 14px;color:{{ n.color }};font-size:13.5px;font-weight:700;font-family:'Manrope',sans-serif;cursor:pointer;text-align:left;transition:all .15s" style-hover="color:#F28705">
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;width:24px;height:24px;border-radius:8px;background:{{ n.chipBg }};color:{{ n.chipColor }};display:grid;place-items:center;flex-shrink:0">{{ n.glyph }}</span>{{ n.name }}
+    </button>
+  </sc-for>
+</aside>
+
+<main style="min-width:0">
+
+<!-- RESUMO -->
+<sc-if value="{{ isResumo }}" hint-placeholder-val="{{ true }}">
+  <h1 style="font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;margin:0 0 4px;letter-spacing:-.02em">Olá, Rafael</h1>
+  <div style="font-size:14px;color:#7a7a84;margin-bottom:24px">Acompanhe seus pedidos e gerencie sua conta.</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px">
+    <div style="background:#111114;border:1px solid #1f1f26;border-radius:18px;padding:22px">
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7a7a84;margin-bottom:8px">Pedidos</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700">3</div>
+    </div>
+    <div style="background:#111114;border:1px solid rgba(242,135,5,.35);border-radius:18px;padding:22px">
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#F28705;margin-bottom:8px">Em andamento</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700">1</div>
+    </div>
+    <div style="background:#111114;border:1px solid #1f1f26;border-radius:18px;padding:22px">
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7a7a84;margin-bottom:8px">Entregues</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700">2</div>
+    </div>
+    <div style="background:#111114;border:1px solid #1f1f26;border-radius:18px;padding:22px">
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7a7a84;margin-bottom:8px">Favoritos</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700">{{ favTotal }}</div>
+    </div>
+  </div>
+  <div style="background:linear-gradient(135deg,#181014,#111114 60%);border:1px solid rgba(242,135,5,.3);border-radius:20px;padding:26px;margin-bottom:24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#F28705;margin-bottom:8px">Pedido em andamento · {{ activeOrder.id }}</div>
+        <div style="font-weight:800;font-size:17px;margin-bottom:4px">{{ activeOrder.items }}</div>
+        <div style="font-size:13.5px;color:#a8a8b0">{{ activeOrder.stageLabel }} · atualizado {{ activeOrder.updated }}</div>
+      </div>
+      <button onClick="{{ activeOrder.open }}" style="background:#F28705;color:#0a0a0c;border:none;border-radius:12px;padding:12px 22px;font-size:13.5px;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer;transition:all .2s" style-hover="transform:translateY(-2px);box-shadow:0 10px 28px rgba(242,135,5,.4)">Rastrear pedido</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:0;margin-top:22px">
+      <sc-for list="{{ activeOrder.miniSteps }}" as="m" hint-placeholder-count="10">
+        <div style="flex:1;height:5px;background:{{ m.bg }};border-radius:99px;margin-right:4px"></div>
+      </sc-for>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:11.5px;color:#5b5b63;margin-top:8px">
+      <span>Pedido realizado</span><span style="color:#F28705;font-weight:700">{{ activeOrder.stageShort }}</span><span>Entregue</span>
+    </div>
+  </div>
+  <div style="background:#111114;border:1px solid #1f1f26;border-radius:20px;padding:24px">
+    <div style="font-weight:800;font-size:15px;margin-bottom:14px">Últimos pedidos</div>
+    <sc-for list="{{ orderRows }}" as="o" hint-placeholder-count="3">
+      <div onClick="{{ o.open }}" style="display:flex;align-items:center;gap:16px;padding:13px 0;border-bottom:1px solid #17171b;cursor:pointer" style-hover="background:#141418">
+        <div style="font-weight:800;color:#F28705;font-size:13.5px;width:60px">{{ o.id }}</div>
+        <div style="flex:1;font-size:13.5px;font-weight:700">{{ o.items }}</div>
+        <div style="font-size:13px;color:#7a7a84">{{ o.date }}</div>
+        <div style="font-size:13.5px;font-weight:700;width:110px;text-align:right">{{ o.total }}</div>
+        <span style="background:{{ o.stBg }};border:1px solid {{ o.stBorder }};color:{{ o.stColor }};font-size:11px;font-weight:800;padding:5px 12px;border-radius:99px;width:120px;text-align:center">{{ o.status }}</span>
+      </div>
+    </sc-for>
+  </div>
+</sc-if>
+
+<!-- PEDIDOS -->
+<sc-if value="{{ isPedidos }}" hint-placeholder-val="{{ false }}">
+  <h1 style="font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;margin:0 0 24px;letter-spacing:-.02em">Meus pedidos</h1>
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <sc-for list="{{ orderCards }}" as="o" hint-placeholder-count="3">
+      <div style="background:#111114;border:1px solid #1f1f26;border-radius:20px;padding:24px;transition:all .25s" style-hover="border-color:rgba(242,135,5,.4)">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:16px;flex-wrap:wrap">
+          <div style="display:flex;gap:16px;align-items:center">
+            <div style="width:64px;height:64px;border-radius:14px;background:repeating-linear-gradient(135deg,#17171b 0 8px,#1b1b20 8px 16px);border:1px solid #26262b;flex-shrink:0"></div>
+            <div>
+              <div style="font-size:12px;font-weight:800;color:#F28705;margin-bottom:4px">{{ o.id }} · {{ o.date }}</div>
+              <div style="font-weight:800;font-size:15.5px">{{ o.items }}</div>
+              <div style="font-size:13px;color:#7a7a84;margin-top:2px">{{ o.total }} · {{ o.payment }}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="background:{{ o.stBg }};border:1px solid {{ o.stBorder }};color:{{ o.stColor }};font-size:11.5px;font-weight:800;padding:6px 14px;border-radius:99px">{{ o.status }}</span>
+            <button onClick="{{ o.open }}" style="background:#1c1c21;border:1px solid #2e2e36;border-radius:12px;padding:10px 18px;color:#f4f4f5;font-size:13px;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer;transition:all .2s" style-hover="border-color:#F28705;color:#F28705">Ver detalhes</button>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</sc-if>
+
+<!-- DETALHE / TIMELINE -->
+<sc-if value="{{ isDetalhe }}" hint-placeholder-val="{{ false }}">
+  <button onClick="{{ backToPedidos }}" style="background:none;border:none;color:#7a7a84;font-size:13.5px;font-weight:700;font-family:'Manrope',sans-serif;cursor:pointer;padding:0;margin-bottom:16px" style-hover="color:#F28705">← Voltar aos pedidos</button>
+  <div style="display:flex;justify-content:space-between;align-items:start;gap:16px;flex-wrap:wrap;margin-bottom:20px">
+    <div>
+      <h1 style="font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;margin:0 0 4px;letter-spacing:-.02em">Pedido {{ det.id }}</h1>
+      <div style="font-size:14px;color:#7a7a84">Realizado em {{ det.date }} · {{ det.payment }}</div>
+    </div>
+    <span style="background:{{ det.stBg }};border:1px solid {{ det.stBorder }};color:{{ det.stColor }};font-size:12px;font-weight:800;padding:8px 16px;border-radius:99px">{{ det.status }}</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:14px;align-items:start">
+    <div style="background:#111114;border:1px solid #1f1f26;border-radius:20px;padding:28px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;gap:12px;flex-wrap:wrap">
+        <div style="font-weight:800;font-size:16px">Rastreamento do pedido</div>
+        <sc-if value="{{ det.hasTracking }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-family:monospace;font-size:13px;background:#0a0a0c;border:1px dashed rgba(242,135,5,.5);color:#F28705;padding:7px 14px;border-radius:10px">{{ det.tracking }}</span>
+            <a href="{{ det.trackingUrl }}" target="_blank" style="font-size:12.5px;font-weight:800;color:#F28705">Ver na transportadora ↗</a>
+          </div>
+        </sc-if>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <sc-for list="{{ det.steps }}" as="st" hint-placeholder-count="10">
+          <div style="display:flex;gap:18px">
+            <div style="display:flex;flex-direction:column;align-items:center;width:36px;flex-shrink:0">
+              <div style="width:34px;height:34px;border-radius:99px;background:{{ st.dotBg }};border:2px solid {{ st.dotBorder }};display:grid;place-items:center;font-size:12px;font-weight:800;color:{{ st.dotColor }};font-family:'Space Grotesk',sans-serif;animation:{{ st.anim }};flex-shrink:0">{{ st.glyph }}</div>
+              <sc-if value="{{ st.hasLine }}" hint-placeholder-val="{{ true }}">
+                <div style="width:2px;flex:1;min-height:26px;background:{{ st.lineBg }}"></div>
+              </sc-if>
+            </div>
+            <div style="padding:6px 0 22px">
+              <div style="font-weight:800;font-size:14.5px;color:{{ st.titleColor }}">{{ st.title }}</div>
+              <sc-if value="{{ st.hasWhen }}" hint-placeholder-val="{{ true }}">
+                <div style="font-size:12.5px;color:#7a7a84;margin-top:3px">{{ st.when }}</div>
+              </sc-if>
+              <sc-if value="{{ st.hasInfo }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:13px;color:#a8a8b0;margin-top:6px;background:#0a0a0c;border:1px solid #1c1c21;border-radius:10px;padding:10px 14px;max-width:440px;line-height:1.5">{{ st.info }}</div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="background:#111114;border:1px solid #1f1f26;border-radius:20px;padding:24px">
+        <div style="font-weight:800;font-size:14px;margin-bottom:14px">Itens do pedido</div>
+        <sc-for list="{{ det.lineItems }}" as="li" hint-placeholder-count="1">
+          <div style="display:flex;gap:12px;align-items:center;padding:8px 0">
+            <div style="width:48px;height:48px;border-radius:12px;background:repeating-linear-gradient(135deg,#17171b 0 8px,#1b1b20 8px 16px);border:1px solid #26262b;flex-shrink:0"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:13px;line-height:1.35">{{ li.name }}</div>
+              <div style="font-size:12.5px;color:#F28705;font-weight:800;margin-top:2px">{{ li.price }}</div>
+            </div>
+          </div>
+        </sc-for>
+        <div style="border-top:1px solid #1f1f26;margin-top:12px;padding-top:12px;display:flex;justify-content:space-between;font-size:14px"><span style="color:#7a7a84;font-weight:700">Total</span><span style="font-weight:800;color:#F28705">{{ det.total }}</span></div>
+      </div>
+      <div style="background:#111114;border:1px solid #1f1f26;border-radius:20px;padding:24px">
+        <div style="font-weight:800;font-size:14px;margin-bottom:12px">Endereço de entrega</div>
+        <div style="font-size:13.5px;color:#a8a8b0;line-height:1.7">Rafael Moreira<br></br>Rua T-38, 1200 — Apto 704<br></br>Setor Bueno, Goiânia — GO<br></br>CEP 74223-045</div>
+      </div>
+      <a href="https://wa.me/5562982133188?text=Ol%C3%A1!%20Preciso%20de%20ajuda%20com%20meu%20pedido." target="_blank" style="display:block;text-align:center;background:#1c1c21;border:1px solid #2e2e36;border-radius:14px;padding:13px;font-size:13.5px;font-weight:800;transition:all .2s" style-hover="border-color:#F28705;color:#F28705">Falar com o suporte</a>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ENDEREÇO -->
+<sc-if value="{{ isEndereco }}" hint-placeholder-val="{{ false }}">
+  <h1 style="font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;margin:0 0 24px;letter-spacing:-.02em">Endereço de entrega</h1>
+  <div style="background:#111114;border:1px solid #1f1f26;border-radius:20px;padding:28px;max-width:560px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <input value="{{ addr.rua }}" onChange="{{ addr.onRua }}" placeholder="Rua e número" style="grid-column:1/-1;background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+      <input value="{{ addr.comp }}" onChange="{{ addr.onComp }}" placeholder="Complemento" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+      <input value="{{ addr.bairro }}" onChange="{{ addr.onBairro }}" placeholder="Bairro" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+      <input value="{{ addr.cidade }}" onChange="{{ addr.onCidade }}" placeholder="Cidade / UF" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+      <input value="{{ addr.cep }}" onChange="{{ addr.onCep }}" placeholder="CEP" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+    </div>
+    <button onClick="{{ saveAddr }}" style="margin-top:16px;background:#F28705;color:#0a0a0c;border:none;border-radius:12px;padding:12px 26px;font-size:13.5px;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer">Salvar endereço</button>
+  </div>
+</sc-if>
+
+<!-- CONTA -->
+<sc-if value="{{ isConta }}" hint-placeholder-val="{{ false }}">
+  <h1 style="font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;margin:0 0 24px;letter-spacing:-.02em">Dados da conta</h1>
+  <div style="display:flex;flex-direction:column;gap:14px;max-width:560px">
+    <div style="background:#111114;border:1px solid #1f1f26;border-radius:20px;padding:28px">
+      <div style="font-weight:800;font-size:14px;margin-bottom:14px">Informações pessoais</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <input value="{{ acct.nome }}" onChange="{{ acct.onNome }}" placeholder="Nome completo" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+        <input value="{{ acct.email }}" onChange="{{ acct.onEmail }}" placeholder="E-mail" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+        <input value="{{ acct.fone }}" onChange="{{ acct.onFone }}" placeholder="Telefone" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+      </div>
+    </div>
+    <div style="background:#111114;border:1px solid #1f1f26;border-radius:20px;padding:28px">
+      <div style="font-weight:800;font-size:14px;margin-bottom:14px">Alterar senha</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <input type="password" value="{{ pwd.atual }}" onChange="{{ pwd.onAtual }}" placeholder="Senha atual" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+        <input type="password" value="{{ pwd.nova }}" onChange="{{ pwd.onNova }}" placeholder="Nova senha" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+        <input type="password" value="{{ pwd.conf }}" onChange="{{ pwd.onConf }}" placeholder="Confirmar nova senha" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+      </div>
+      <button onClick="{{ savePwd }}" style="margin-top:16px;background:#F28705;color:#0a0a0c;border:none;border-radius:12px;padding:12px 26px;font-size:13.5px;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer">Salvar alterações</button>
+    </div>
+  </div>
+</sc-if>
+
+<!-- FAVORITOS -->
+<sc-if value="{{ isFavoritos }}" hint-placeholder-val="{{ false }}">
+  <h1 style="font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;margin:0 0 24px;letter-spacing:-.02em">Meus favoritos</h1>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px">
+    <sc-for list="{{ favItems }}" as="f" hint-placeholder-count="4">
+      <div style="background:#111114;border:1px solid #1f1f26;border-radius:20px;overflow:hidden;transition:all .3s" style-hover="border-color:#2e2e36;transform:translateY(-4px)">
+        <div style="position:relative;height:150px;background:repeating-linear-gradient(135deg,#17171b 0 12px,#1b1b20 12px 24px);display:grid;place-items:center">
+          <span style="font-family:monospace;font-size:11px;color:#5b5b63">[ foto: {{ f.img }} ]</span>
+          <button onClick="{{ f.remove }}" style="position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:99px;background:rgba(10,10,12,.7);border:1px solid #2e2e36;color:#F28705;font-size:14px;cursor:pointer" style-hover="border-color:#F28705">♥</button>
+        </div>
+        <div style="padding:18px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7a7a84;margin-bottom:4px">{{ f.cat }}</div>
+          <a href="Prog Imports - Produto.dc.html" style="font-weight:800;font-size:14px;line-height:1.35;display:block;margin-bottom:8px">{{ f.name }}</a>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700">{{ f.price }}</div>
+          <div style="font-size:12px;color:#7a7a84">12x de {{ f.parcel }}</div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</sc-if>
+
+</main>
+</div>
+
+<sc-if value="{{ toastShow }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#151518;border:1px solid rgba(242,135,5,.5);color:#f4f4f5;font-size:14px;font-weight:700;padding:14px 26px;border-radius:99px;z-index:110;box-shadow:0 16px 48px rgba(0,0,0,.6);animation:toastIn .3s ease both"><span style="color:#F28705;margin-right:8px">✓</span>{{ toastMsg }}</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    view: 'resumo', orderId: null, toastShow: false, toastMsg: '',
+    addr: { rua: 'Rua T-38, 1200', comp: 'Apto 704', bairro: 'Setor Bueno', cidade: 'Goiânia / GO', cep: '74223-045' },
+    acct: { nome: 'Rafael Moreira', email: 'rafael.m@gmail.com', fone: '(62) 99812-4455' },
+    pwd: { atual: '', nova: '', conf: '' },
+    favs: [
+      { id: 1, name: 'Alienware Area-51 16" RTX 5080', cat: 'Notebook Gamer', price: 'R$ 24.999,00', parcel: 'R$ 2.083,25', img: 'alienware area-51' },
+      { id: 2, name: 'Monitor LG UltraGear 27" 240Hz', cat: 'Monitores', price: 'R$ 2.899,00', parcel: 'R$ 241,58', img: 'monitor lg ultragear' },
+      { id: 3, name: 'iPad Pro 13" M4 256GB', cat: 'iPad / Tablet', price: 'R$ 10.499,00', parcel: 'R$ 874,92', img: 'ipad pro 13 m4' },
+      { id: 4, name: 'Teclado Keychron Q1 Pro', cat: 'Periféricos', price: 'R$ 1.299,00', parcel: 'R$ 108,25', img: 'teclado keychron q1' }
+    ]
+  };
+
+  STEP_NAMES = [
+    ['Pedido realizado', 'PR'], ['Pagamento aprovado', 'PA'], ['Produto reservado', 'RS'],
+    ['Produto em preparação', 'PP'], ['Transporte internacional', 'TI'], ['Desembaraço aduaneiro', 'DA'],
+    ['Recebido no Brasil', 'BR'], ['Enviado à transportadora', 'TR'], ['Em rota de entrega', 'RE'], ['Entregue', 'OK']
+  ];
+
+  ORDERS = [
+    {
+      id: '#1047', date: '10/07/2026', payment: 'Pix', total: 'R$ 16.499,00', status: 'Em transporte', currentStep: 4,
+      items: 'MacBook Pro 14" M4 Pro 24GB/512GB', updated: 'hoje às 08:12',
+      lineItems: [{ name: 'MacBook Pro 14" M4 Pro 24GB/512GB', price: 'R$ 16.499,00' }],
+      tracking: 'UX748291045BR', trackingUrl: 'https://rastreamento.correios.com.br',
+      whens: ['10/07/2026 · 14:32', '10/07/2026 · 14:35', '11/07/2026 · 09:10', '12/07/2026 · 16:48', '15/07/2026 · 03:22', '', '', '', '', ''],
+      infos: { 4: 'Voo MIA → GRU. Previsão de chegada ao Brasil: 24/07/2026.', 5: 'Etapa aplicável a produtos importados — pode levar de 3 a 7 dias úteis.' }
+    },
+    {
+      id: '#1032', date: '02/05/2026', payment: 'Cartão 12x', total: 'R$ 8.999,00', status: 'Entregue', currentStep: 10,
+      items: 'iPhone 16 Pro Max 256GB Titânio', updated: '18/05/2026',
+      lineItems: [{ name: 'iPhone 16 Pro Max 256GB Titânio', price: 'R$ 8.999,00' }],
+      tracking: 'UX701558712BR', trackingUrl: 'https://rastreamento.correios.com.br',
+      whens: ['02/05 · 11:04', '02/05 · 11:06', '03/05 · 10:22', '04/05 · 15:40', '06/05 · 02:15', '12/05 · 09:30', '13/05 · 18:05', '15/05 · 08:44', '18/05 · 07:50', '18/05 · 14:22'],
+      infos: { 9: 'Recebido por Rafael Moreira.' }
+    },
+    {
+      id: '#1018', date: '14/03/2026', payment: 'Pix', total: 'R$ 1.199,00', status: 'Entregue', currentStep: 10,
+      items: 'SSD Samsung 990 Pro 2TB', updated: '25/03/2026',
+      lineItems: [{ name: 'SSD Samsung 990 Pro 2TB NVMe', price: 'R$ 1.199,00' }],
+      tracking: 'UX688204133BR', trackingUrl: 'https://rastreamento.correios.com.br',
+      whens: ['14/03 · 16:20', '14/03 · 16:21', '15/03 · 09:00', '16/03 · 11:35', '18/03 · 04:10', '21/03 · 10:15', '22/03 · 19:40', '23/03 · 09:12', '25/03 · 08:05', '25/03 · 11:47'],
+      infos: {}
+    }
+  ];
+
+  componentWillUnmount() { clearTimeout(this.toastTimer); }
+  toast(msg) {
+    clearTimeout(this.toastTimer);
+    this.setState({ toastMsg: msg, toastShow: true });
+    this.toastTimer = setTimeout(() => this.setState({ toastShow: false }), 2400);
+  }
+
+  statusStyle(st) {
+    const map = {
+      'Em transporte': ['rgba(96,165,250,.1)', 'rgba(96,165,250,.35)', '#60a5fa'],
+      'Entregue': ['rgba(74,222,128,.1)', 'rgba(74,222,128,.35)', '#4ade80']
+    };
+    return map[st] || ['rgba(217,164,65,.1)', 'rgba(217,164,65,.4)', '#d9a441'];
+  }
+
+  renderVals() {
+    const s = this.state;
+    const views = [
+      ['resumo', 'Resumo', 'RS'], ['pedidos', 'Meus pedidos', 'PD'], ['favoritos', 'Favoritos', 'FV'],
+      ['endereco', 'Endereço', 'EN'], ['conta', 'Minha conta', 'CT']
+    ];
+    const navView = s.view === 'detalhe' ? 'pedidos' : s.view;
+    const navItems = views.map(([id, name, glyph]) => ({
+      name, glyph,
+      bg: navView === id ? 'rgba(242,135,5,.1)' : 'transparent',
+      color: navView === id ? '#F28705' : '#a8a8b0',
+      chipBg: navView === id ? '#F28705' : '#1c1c21',
+      chipColor: navView === id ? '#0a0a0c' : '#7a7a84',
+      go: () => this.setState({ view: id })
+    }));
+
+    const openOrder = id => this.setState({ view: 'detalhe', orderId: id });
+    const active = this.ORDERS[0];
+
+    const orderRow = o => {
+      const [bg, border, color] = this.statusStyle(o.status);
+      return { id: o.id, items: o.items, date: o.date, total: o.total, payment: o.payment, status: o.status, stBg: bg, stBorder: border, stColor: color, open: () => openOrder(o.id) };
+    };
+
+    const detOrder = this.ORDERS.find(o => o.id === s.orderId) || active;
+    const [dBg, dBorder, dColor] = this.statusStyle(detOrder.status);
+    const steps = this.STEP_NAMES.map(([title, glyph], i) => {
+      const done = i < detOrder.currentStep;
+      const current = i === detOrder.currentStep;
+      return {
+        title, glyph: done ? '✓' : glyph,
+        dotBg: done ? '#F28705' : (current ? 'rgba(242,135,5,.15)' : '#141418'),
+        dotBorder: done || current ? '#F28705' : '#26262b',
+        dotColor: done ? '#0a0a0c' : (current ? '#F28705' : '#5b5b63'),
+        anim: current ? 'pulse 2s ease-in-out infinite' : 'none',
+        titleColor: done || current ? '#f4f4f5' : '#5b5b63',
+        hasLine: i < 9, lineBg: i < detOrder.currentStep - 0 ? (i < detOrder.currentStep - 1 || detOrder.currentStep === 10 ? '#F28705' : 'linear-gradient(#F28705,#26262b)') : '#26262b',
+        hasWhen: !!detOrder.whens[i], when: detOrder.whens[i] || '',
+        hasInfo: detOrder.infos[i] !== undefined && (done || current), info: detOrder.infos[i] || ''
+      };
+    });
+
+    const curStage = this.STEP_NAMES[Math.min(active.currentStep, 9)][0];
+
+    const bind = (obj, key, field) => e => this.setState(st => ({ [obj]: { ...st[obj], [field]: e.target.value } }));
+
+    return {
+      navItems,
+      isResumo: s.view === 'resumo', isPedidos: s.view === 'pedidos', isDetalhe: s.view === 'detalhe',
+      isEndereco: s.view === 'endereco', isConta: s.view === 'conta', isFavoritos: s.view === 'favoritos',
+      favTotal: s.favs.length,
+      activeOrder: {
+        id: active.id, items: active.items, updated: active.updated,
+        stageLabel: curStage, stageShort: curStage,
+        open: () => openOrder(active.id),
+        miniSteps: this.STEP_NAMES.map((_, i) => ({ bg: i < active.currentStep ? '#F28705' : (i === active.currentStep ? 'rgba(242,135,5,.35)' : '#1c1c21') }))
+      },
+      orderRows: this.ORDERS.map(orderRow),
+      orderCards: this.ORDERS.map(orderRow),
+      backToPedidos: () => this.setState({ view: 'pedidos' }),
+      det: {
+        id: detOrder.id, date: detOrder.date, payment: detOrder.payment, total: detOrder.total,
+        status: detOrder.status, stBg: dBg, stBorder: dBorder, stColor: dColor,
+        hasTracking: !!detOrder.tracking, tracking: detOrder.tracking, trackingUrl: detOrder.trackingUrl,
+        steps, lineItems: detOrder.lineItems
+      },
+      addr: {
+        rua: s.addr.rua, comp: s.addr.comp, bairro: s.addr.bairro, cidade: s.addr.cidade, cep: s.addr.cep,
+        onRua: bind('addr', 'addr', 'rua'), onComp: bind('addr', 'addr', 'comp'), onBairro: bind('addr', 'addr', 'bairro'),
+        onCidade: bind('addr', 'addr', 'cidade'), onCep: bind('addr', 'addr', 'cep')
+      },
+      saveAddr: () => this.toast('Endereço atualizado'),
+      acct: {
+        nome: s.acct.nome, email: s.acct.email, fone: s.acct.fone,
+        onNome: bind('acct', 'acct', 'nome'), onEmail: bind('acct', 'acct', 'email'), onFone: bind('acct', 'acct', 'fone')
+      },
+      pwd: {
+        atual: s.pwd.atual, nova: s.pwd.nova, conf: s.pwd.conf,
+        onAtual: bind('pwd', 'pwd', 'atual'), onNova: bind('pwd', 'pwd', 'nova'), onConf: bind('pwd', 'pwd', 'conf')
+      },
+      savePwd: () => {
+        if (s.pwd.nova && s.pwd.nova === s.pwd.conf) { this.toast('Senha alterada com sucesso'); this.setState({ pwd: { atual: '', nova: '', conf: '' } }); }
+        else this.toast('As senhas não conferem');
+      },
+      favItems: s.favs.map(f => ({
+        ...f,
+        remove: () => { this.setState(st => ({ favs: st.favs.filter(x => x.id !== f.id) })); this.toast('Removido dos favoritos'); }
+      })),
+      toastShow: s.toastShow, toastMsg: s.toastMsg
+    };
+  }
+}
+</script>
+</body>
+</html>

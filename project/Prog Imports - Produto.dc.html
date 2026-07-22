@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="utf-8"></meta>
+<title>Alienware Area-51 16" — Prog Imports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"></link>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"></link>
+<style>
+body{margin:0;background:#0a0a0c;color:#f4f4f5;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#f4f4f5;text-decoration:none}
+a:hover{color:#F28705}
+::selection{background:#F28705;color:#0a0a0c}
+input::placeholder{color:#5b5b63}
+@keyframes toastIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#0a0a0c">
+
+<header style="position:sticky;top:0;z-index:90;background:rgba(10,10,12,.82);backdrop-filter:blur(18px);border-bottom:1px solid #1c1c21">
+  <div style="max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:14px 24px">
+    <a href="Prog Imports - Home.dc.html" style="display:flex;align-items:center;gap:10px">
+      <img src="assets/logo.png" alt="Prog Imports" style="height:52px;width:auto;display:block"></img>
+    </a>
+    <a href="Prog Imports - Home.dc.html" style="font-size:14px;font-weight:700;color:#a8a8b0">← Voltar para a loja</a>
+  </div>
+</header>
+
+<div style="max-width:1280px;margin:0 auto;padding:24px 24px 0;font-size:13px;color:#7a7a84">
+  <a href="Prog Imports - Home.dc.html" style="color:#7a7a84">Home</a> / <a href="Prog Imports - Home.dc.html" style="color:#7a7a84">Notebooks Gamer</a> / <span style="color:#f4f4f5">Alienware Area-51 16"</span>
+</div>
+
+<section data-screen-label="Produto" style="max-width:1280px;margin:0 auto;padding:24px 24px 0;display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:start">
+  <div>
+    <div onMouseMove="{{ onZoomMove }}" onMouseLeave="{{ onZoomOut }}" style="position:relative;height:460px;border-radius:24px;border:1px solid #26262b;overflow:hidden;cursor:zoom-in;background:repeating-linear-gradient(135deg,#17171b 0 14px,#1b1b20 14px 28px)">
+      <div style="position:absolute;inset:0;display:grid;place-items:center;transform:scale({{ zoomScale }});transform-origin:{{ zoomOrigin }};transition:transform .25s ease-out;background:repeating-linear-gradient(135deg,#17171b 0 14px,#1b1b20 14px 28px)">
+        <div style="font-family:monospace;font-size:14px;color:#5b5b63">[ foto: {{ mainImg }} ]</div>
+      </div>
+      <div style="position:absolute;top:16px;left:16px;background:#F28705;color:#0a0a0c;font-size:11px;font-weight:800;letter-spacing:.06em;padding:6px 12px;border-radius:99px">EXCLUSIVO EUA</div>
+      <div style="position:absolute;bottom:14px;right:16px;font-size:11px;color:#5b5b63;background:rgba(10,10,12,.7);padding:5px 10px;border-radius:99px">passe o mouse para dar zoom</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:12px">
+      <sc-for list="{{ thumbs }}" as="t" hint-placeholder-count="5">
+        <button onClick="{{ t.pick }}" style="height:76px;border-radius:14px;border:1px solid {{ t.border }};background:repeating-linear-gradient(135deg,#17171b 0 8px,#1b1b20 8px 16px);cursor:pointer;display:grid;place-items:center;transition:all .2s;padding:0" style-hover="border-color:#F28705">
+          <span style="font-family:monospace;font-size:10px;color:#5b5b63">{{ t.label }}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div>
+    <div style="font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#F28705;margin-bottom:10px">Notebook Gamer · Alienware</div>
+    <h1 style="font-family:'Space Grotesk',sans-serif;font-size:34px;font-weight:700;margin:0 0 10px;letter-spacing:-.02em;line-height:1.15">Alienware Area-51 16" RTX 5080 · 32GB · 2TB</h1>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px">
+      <span style="color:#F28705;letter-spacing:2px;font-size:14px">★★★★★</span>
+      <span style="font-size:13px;color:#7a7a84">4.9 · 23 avaliações</span>
+      <span style="font-size:13px;color:#7a7a84">· SKU AW51-5080-BR</span>
+    </div>
+    <div style="background:#111114;border:1px solid #1f1f26;border-radius:20px;padding:24px;margin-bottom:18px">
+      <div style="font-size:14px;color:#7a7a84;text-decoration:line-through">R$ 27.499,00</div>
+      <div style="display:flex;align-items:baseline;gap:12px">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:38px;font-weight:700">R$ 24.999,00</span>
+        <span style="background:rgba(242,135,5,.12);border:1px solid rgba(242,135,5,.4);color:#F28705;font-size:12px;font-weight:800;padding:4px 10px;border-radius:99px">−9%</span>
+      </div>
+      <div style="font-size:14px;color:#a8a8b0;margin-top:6px">ou <strong style="color:#f4f4f5">12x de R$ 2.083,25</strong> sem juros · <span style="color:#F28705;font-weight:700">R$ 23.749 no Pix</span></div>
+    </div>
+    <div style="display:flex;gap:12px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:12px;background:#111114;border:1px solid #26262b;border-radius:14px;padding:0 8px">
+        <button onClick="{{ dec }}" style="width:36px;height:48px;background:none;border:none;color:#f4f4f5;font-size:17px;cursor:pointer">−</button>
+        <span style="font-weight:800;font-size:15px;min-width:18px;text-align:center">{{ qty }}</span>
+        <button onClick="{{ inc }}" style="width:36px;height:48px;background:none;border:none;color:#f4f4f5;font-size:17px;cursor:pointer">+</button>
+      </div>
+      <a href="{{ waLink }}" target="_blank" style="flex:1;display:grid;place-items:center;background:#F28705;color:#0a0a0c;border-radius:14px;font-size:15px;font-weight:800;transition:all .25s;box-shadow:0 8px 28px rgba(242,135,5,.3)" style-hover="transform:translateY(-2px);color:#0a0a0c;box-shadow:0 12px 36px rgba(242,135,5,.45)">Comprar agora</a>
+      <button onClick="{{ toggleFav }}" style="width:48px;height:48px;border-radius:14px;background:#111114;border:1px solid #26262b;color:{{ favColor }};font-size:18px;cursor:pointer;transition:all .2s" style-hover="border-color:#F28705">{{ favGlyph }}</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;font-size:13.5px;color:#a8a8b0;background:#0d0d11;border:1px solid #1c1c21;border-radius:16px;padding:18px 20px">
+      <div><span style="color:#F28705;font-weight:800;margin-right:8px">✓</span>Modelo exclusivo do mercado americano — não vendido no Brasil</div>
+      <div><span style="color:#F28705;font-weight:800;margin-right:8px">✓</span>Garantia de 12 meses + suporte pós-venda Prog Imports</div>
+      <div><span style="color:#F28705;font-weight:800;margin-right:8px">✓</span>Rastreamento completo da importação, etapa por etapa</div>
+      <div><span style="color:#F28705;font-weight:800;margin-right:8px">✓</span>Frete grátis — envio segurado para todo o Brasil</div>
+    </div>
+  </div>
+</section>
+
+<section data-screen-label="Detalhes" style="max-width:1280px;margin:0 auto;padding:64px 24px 0">
+  <div style="display:flex;gap:8px;border-bottom:1px solid #1f1f26;margin-bottom:28px">
+    <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="3">
+      <button onClick="{{ tb.pick }}" style="background:none;border:none;border-bottom:2px solid {{ tb.line }};color:{{ tb.color }};font-size:15px;font-weight:800;font-family:'Manrope',sans-serif;padding:14px 22px;cursor:pointer;transition:all .2s">{{ tb.name }}</button>
+    </sc-for>
+  </div>
+
+  <sc-if value="{{ tabDesc }}" hint-placeholder-val="{{ true }}">
+    <div style="max-width:760px;font-size:15.5px;line-height:1.8;color:#c9c9d1">
+      <p style="margin:0 0 18px;text-wrap:pretty">O <strong style="color:#f4f4f5">Alienware Area-51 16"</strong> é o notebook gamer definitivo — um modelo exclusivo do mercado americano que a Prog Imports traz direto dos EUA para você. Equipado com a nova <strong style="color:#f4f4f5">NVIDIA GeForce RTX 5080</strong> e processador Intel Core Ultra 9, ele entrega performance de desktop em um chassi portátil com o lendário design Legend 3.</p>
+      <p style="margin:0 0 18px;text-wrap:pretty">A tela QHD+ de 16" com <strong style="color:#f4f4f5">240Hz</strong> e 100% DCI-P3 garante imagens fluidas e cores precisas tanto para jogos competitivos quanto para criação de conteúdo. O sistema de refrigeração <strong style="color:#f4f4f5">Cryo-tech</strong> com câmara de vapor mantém o desempenho máximo mesmo em sessões longas.</p>
+      <p style="margin:0;text-wrap:pretty">Com 32GB de memória DDR5 e SSD de 2TB, é a máquina ideal para gamers exigentes, criadores de conteúdo e profissionais que trabalham com IA.</p>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ tabSpecs }}" hint-placeholder-val="{{ false }}">
+    <div style="max-width:760px;border:1px solid #1f1f26;border-radius:18px;overflow:hidden">
+      <sc-for list="{{ specs }}" as="sp" hint-placeholder-count="10">
+        <div style="display:grid;grid-template-columns:220px 1fr;border-bottom:1px solid #1f1f26">
+          <div style="padding:14px 22px;background:#111114;font-size:13px;font-weight:800;color:#a8a8b0">{{ sp.k }}</div>
+          <div style="padding:14px 22px;font-size:14px;color:#f4f4f5">{{ sp.v }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ tabReviews }}" hint-placeholder-val="{{ false }}">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;max-width:1000px">
+      <sc-for list="{{ reviews }}" as="r" hint-placeholder-count="3">
+        <div style="background:#111114;border:1px solid #1f1f26;border-radius:20px;padding:26px">
+          <div style="color:#F28705;font-size:13px;letter-spacing:3px;margin-bottom:12px">{{ r.stars }}</div>
+          <p style="font-size:14px;line-height:1.65;color:#c9c9d1;margin:0 0 16px;text-wrap:pretty">{{ r.text }}</p>
+          <div style="font-weight:800;font-size:13.5px">{{ r.name }} <span style="color:#7a7a84;font-weight:600">· {{ r.date }}</span></div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+</section>
+
+<section data-screen-label="Relacionados" style="max-width:1280px;margin:0 auto;padding:80px 24px 80px">
+  <h2 style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;margin:0 0 24px;letter-spacing:-.02em">Produtos relacionados</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px">
+    <sc-for list="{{ related }}" as="p" hint-placeholder-count="4">
+      <a href="Prog Imports - Home.dc.html#produtos" style="background:#111114;border:1px solid #1f1f26;border-radius:20px;overflow:hidden;transition:all .3s;display:block" style-hover="border-color:#2e2e36;transform:translateY(-4px);color:#f4f4f5">
+        <div style="height:160px;background:repeating-linear-gradient(135deg,#17171b 0 12px,#1b1b20 12px 24px);display:grid;place-items:center">
+          <span style="font-family:monospace;font-size:11px;color:#5b5b63">[ foto: {{ p.img }} ]</span>
+        </div>
+        <div style="padding:18px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7a7a84;margin-bottom:4px">{{ p.cat }}</div>
+          <div style="font-weight:800;font-size:14.5px;line-height:1.35;margin-bottom:10px">{{ p.name }}</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700">{{ p.price }}</div>
+          <div style="font-size:12px;color:#7a7a84">12x de {{ p.parcel }}</div>
+        </div>
+      </a>
+    </sc-for>
+  </div>
+</section>
+
+<footer style="border-top:1px solid #1c1c21;text-align:center;padding:24px;font-size:12.5px;color:#5b5b63">© 2026 Prog Imports — Tecnologia importada com confiança. · <a href="https://wa.me/5562982133188" target="_blank" style="color:#7a7a84">WhatsApp</a> · <a href="https://instagram.com/Prog.imports" target="_blank" style="color:#7a7a84">@Prog.imports</a></footer>
+
+<sc-if value="{{ toastShow }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#151518;border:1px solid rgba(242,135,5,.5);color:#f4f4f5;font-size:14px;font-weight:700;padding:14px 26px;border-radius:99px;z-index:110;box-shadow:0 16px 48px rgba(0,0,0,.6);animation:toastIn .3s ease both"><span style="color:#F28705;margin-right:8px">✓</span>{{ toastMsg }}</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;whatsappNumero&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;5562982133188&quot;, &quot;tsType&quot;: &quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { imgIdx: 0, zoom: false, zx: 50, zy: 50, qty: 1, fav: false, tab: 0, toastShow: false, toastMsg: '' };
+
+  IMGS = ['alienware area-51 frontal', 'alienware area-51 aberto', 'alienware area-51 teclado rgb', 'alienware area-51 traseira', 'alienware area-51 lateral portas'];
+
+  componentWillUnmount() { clearTimeout(this.toastTimer); }
+  toast(msg) {
+    clearTimeout(this.toastTimer);
+    this.setState({ toastMsg: msg, toastShow: true });
+    this.toastTimer = setTimeout(() => this.setState({ toastShow: false }), 2400);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const tabNames = ['Descrição', 'Especificações', 'Avaliações (23)'];
+    const price = 24999;
+    const msg = encodeURIComponent(`Olá! Tenho interesse no Alienware Area-51 16" RTX 5080 (${s.qty}x) — R$ ${(price * s.qty).toLocaleString('pt-BR')}. Pode me passar mais detalhes?`);
+    return {
+      mainImg: this.IMGS[s.imgIdx],
+      zoomScale: s.zoom ? '1.8' : '1',
+      zoomOrigin: s.zx + '% ' + s.zy + '%',
+      onZoomMove: e => {
+        const r = e.currentTarget.getBoundingClientRect();
+        this.setState({ zoom: true, zx: Math.round((e.clientX - r.left) / r.width * 100), zy: Math.round((e.clientY - r.top) / r.height * 100) });
+      },
+      onZoomOut: () => this.setState({ zoom: false }),
+      thumbs: this.IMGS.map((img, i) => ({
+        label: 'foto ' + (i + 1),
+        border: i === s.imgIdx ? '#F28705' : '#26262b',
+        pick: () => this.setState({ imgIdx: i })
+      })),
+      qty: s.qty,
+      inc: () => this.setState(st => ({ qty: st.qty + 1 })),
+      dec: () => this.setState(st => ({ qty: Math.max(1, st.qty - 1) })),
+      favColor: s.fav ? '#F28705' : '#a8a8b0',
+      favGlyph: s.fav ? '♥' : '♡',
+      toggleFav: () => { this.setState(st => ({ fav: !st.fav })); this.toast(s.fav ? 'Removido dos favoritos' : 'Adicionado aos favoritos'); },
+      waLink: 'https://wa.me/' + (this.props.whatsappNumero ?? '5562982133188') + '?text=' + msg,
+      tabs: tabNames.map((n, i) => ({
+        name: n,
+        line: i === s.tab ? '#F28705' : 'transparent',
+        color: i === s.tab ? '#f4f4f5' : '#7a7a84',
+        pick: () => this.setState({ tab: i })
+      })),
+      tabDesc: s.tab === 0, tabSpecs: s.tab === 1, tabReviews: s.tab === 2,
+      specs: [
+        { k: 'Processador', v: 'Intel Core Ultra 9 275HX (24 núcleos, até 5.4GHz)' },
+        { k: 'Placa de vídeo', v: 'NVIDIA GeForce RTX 5080 16GB GDDR7' },
+        { k: 'Memória', v: '32GB DDR5 6400MT/s (2x16GB, expansível até 64GB)' },
+        { k: 'Armazenamento', v: 'SSD 2TB NVMe PCIe Gen5' },
+        { k: 'Tela', v: '16" QHD+ (2560x1600) 240Hz, 100% DCI-P3, G-Sync' },
+        { k: 'Teclado', v: 'Mecânico Cherry MX ultra low-profile, RGB por tecla' },
+        { k: 'Refrigeração', v: 'Alienware Cryo-tech com câmara de vapor' },
+        { k: 'Conectividade', v: 'Wi-Fi 7, Bluetooth 5.4, Thunderbolt 5, HDMI 2.1' },
+        { k: 'Sistema', v: 'Windows 11 Pro (em português)' },
+        { k: 'Garantia', v: '12 meses Prog Imports + suporte pós-venda' }
+      ],
+      reviews: [
+        { stars: '★★★★★', name: 'Pedro H.', date: 'jun 2026', text: 'Máquina absurda. Roda tudo no ultra em QHD acima de 200fps. A importação foi acompanhada passo a passo pelo site, transparência total.' },
+        { stars: '★★★★★', name: 'Marcos V.', date: 'mai 2026', text: 'Comprei para trabalhar com IA e renderização. A RTX 5080 mobile surpreende. Chegou em 18 dias, lacrado e com nota.' },
+        { stars: '★★★★☆', name: 'Thiago R.', date: 'mai 2026', text: 'Notebook impecável, atendimento nota 10. Só achei o carregador grande, mas é o preço da potência. Recomendo a Prog.' }
+      ],
+      related: [
+        { name: 'ASUS ROG Strix G16 RTX 4070', cat: 'Notebook Gamer', price: 'R$ 9.799,00', parcel: 'R$ 816,58', img: 'asus rog strix g16' },
+        { name: 'Monitor LG UltraGear 27" 240Hz', cat: 'Monitores', price: 'R$ 2.899,00', parcel: 'R$ 241,58', img: 'monitor lg ultragear' },
+        { name: 'Teclado Keychron Q1 Pro', cat: 'Periféricos', price: 'R$ 1.299,00', parcel: 'R$ 108,25', img: 'teclado keychron q1' },
+        { name: 'SSD Samsung 990 Pro 2TB', cat: 'Peças e upgrades', price: 'R$ 1.199,00', parcel: 'R$ 99,92', img: 'ssd samsung 990 pro' }
+      ],
+      toastShow: s.toastShow, toastMsg: s.toastMsg
+    };
+  }
+}
+</script>
+</body>
+</html>

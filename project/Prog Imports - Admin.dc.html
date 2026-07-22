@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="utf-8"></meta>
+<title>Painel Administrativo — Prog Imports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"></link>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"></link>
+<style>
+body{margin:0;background:#0a0a0c;color:#f4f4f5;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#f4f4f5;text-decoration:none}
+a:hover{color:#F28705}
+::selection{background:#F28705;color:#0a0a0c}
+input::placeholder,textarea::placeholder{color:#5b5b63}
+::-webkit-scrollbar{width:10px;height:10px;background:#0a0a0c}
+::-webkit-scrollbar-thumb{background:#26262b;border-radius:6px}
+</style>
+</helmet>
+
+<div style="display:flex;min-height:100vh;background:#0a0a0c">
+
+<!-- Sidebar -->
+<aside data-screen-label="Sidebar" style="width:240px;flex-shrink:0;background:#0d0d11;border-right:1px solid #1c1c21;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;box-sizing:border-box">
+  <div style="padding:20px 20px 14px;border-bottom:1px solid #1c1c21;display:flex;align-items:center;gap:10px">
+    <img src="assets/logo.png" alt="Prog Imports" style="height:44px;width:auto"></img>
+    <div style="font-size:10px;font-weight:800;letter-spacing:.14em;color:#F28705;text-transform:uppercase">Admin</div>
+  </div>
+  <nav style="flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:2px">
+    <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="10">
+      <button onClick="{{ n.go }}" style="display:flex;align-items:center;gap:12px;background:{{ n.bg }};border:none;border-radius:12px;padding:11px 14px;color:{{ n.color }};font-size:13.5px;font-weight:700;font-family:'Manrope',sans-serif;cursor:pointer;text-align:left;transition:all .15s" style-hover="color:#F28705">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;width:24px;height:24px;border-radius:8px;background:{{ n.chipBg }};color:{{ n.chipColor }};display:grid;place-items:center;flex-shrink:0">{{ n.glyph }}</span>{{ n.name }}
+      </button>
+    </sc-for>
+  </nav>
+  <div style="padding:16px 20px;border-top:1px solid #1c1c21;font-size:12px;color:#5b5b63">
+    <a href="Prog Imports - Home.dc.html" style="color:#7a7a84;font-weight:700">← Ver loja</a>
+  </div>
+</aside>
+
+<!-- Main -->
+<main style="flex:1;min-width:0;padding:28px 32px 48px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px">
+    <div>
+      <h1 style="font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;margin:0;letter-spacing:-.02em">{{ viewTitle }}</h1>
+      <div style="font-size:13px;color:#7a7a84;margin-top:4px">{{ viewSub }}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <sc-if value="{{ isProdutos }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ newProduct }}" style="background:#F28705;color:#0a0a0c;border:none;border-radius:12px;padding:11px 20px;font-size:13.5px;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer;transition:all .2s" style-hover="transform:translateY(-1px);box-shadow:0 8px 24px rgba(242,135,5,.35)">+ Novo produto</button>
+      </sc-if>
+      <sc-if value="{{ isPedidos }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ newOrder }}" style="background:#F28705;color:#0a0a0c;border:none;border-radius:12px;padding:11px 20px;font-size:13.5px;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer;transition:all .2s" style-hover="transform:translateY(-1px);box-shadow:0 8px 24px rgba(242,135,5,.35)">+ Lançar pedido</button>
+      </sc-if>
+      <div style="display:flex;align-items:center;gap:10px;background:#111114;border:1px solid #1f1f26;border-radius:99px;padding:7px 16px 7px 8px">
+        <div style="width:30px;height:30px;border-radius:99px;background:rgba(242,135,5,.15);border:1px solid rgba(242,135,5,.4);display:grid;place-items:center;color:#F28705;font-weight:800;font-size:12px">P</div>
+        <div style="font-size:13px;font-weight:700">Prog Admin</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px">
+      <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+        <div style="background:#111114;border:1px solid #1f1f26;border-radius:18px;padding:22px;transition:all .25s" style-hover="border-color:rgba(242,135,5,.4)">
+          <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7a7a84;margin-bottom:10px">{{ k.label }}</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700">{{ k.value }}</div>
+          <div style="font-size:12.5px;font-weight:700;color:{{ k.deltaColor }};margin-top:6px">{{ k.delta }}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:14px;margin-bottom:24px">
+      <div style="background:#111114;border:1px solid #1f1f26;border-radius:18px;padding:24px">
+        <div style="font-weight:800;font-size:15px;margin-bottom:18px">Mais vendidos do mês</div>
+        <sc-for list="{{ topSellers }}" as="t" hint-placeholder-count="5">
+          <div style="display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid #17171b">
+            <div style="font-family:'Space Grotesk',sans-serif;color:#F28705;font-weight:700;font-size:13px;width:24px">{{ t.rank }}</div>
+            <div style="flex:1;font-size:13.5px;font-weight:700">{{ t.name }}</div>
+            <div style="font-size:13px;color:#7a7a84">{{ t.sold }} vendas</div>
+            <div style="width:110px;height:6px;background:#1c1c21;border-radius:99px;overflow:hidden"><div style="height:100%;width:{{ t.pct }};background:#F28705;border-radius:99px"></div></div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="background:#111114;border:1px solid #1f1f26;border-radius:18px;padding:24px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+          <div style="font-weight:800;font-size:15px">Estoque baixo</div>
+          <span style="background:rgba(224,85,85,.12);border:1px solid rgba(224,85,85,.4);color:#e05555;font-size:11px;font-weight:800;padding:4px 10px;border-radius:99px">{{ lowCount }} itens</span>
+        </div>
+        <sc-for list="{{ lowStock }}" as="l" hint-placeholder-count="4">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #17171b">
+            <div style="font-size:13.5px;font-weight:700">{{ l.name }}</div>
+            <div style="font-size:13px;font-weight:800;color:#e05555">{{ l.stock }} un.</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="background:#111114;border:1px solid #1f1f26;border-radius:18px;padding:24px;overflow-x:auto">
+      <div style="font-weight:800;font-size:15px;margin-bottom:16px">Pedidos recentes</div>
+      <div style="min-width:640px">
+      <div style="display:grid;grid-template-columns:90px 1.4fr 1fr 120px 160px;gap:12px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#5b5b63;padding-bottom:10px;border-bottom:1px solid #1f1f26">
+        <div>Pedido</div><div>Cliente</div><div>Itens</div><div>Total</div><div>Status</div>
+      </div>
+      <sc-for list="{{ recentOrders }}" as="o" hint-placeholder-count="5">
+        <div style="display:grid;grid-template-columns:90px 1.4fr 1fr 120px 160px;gap:12px;align-items:center;padding:13px 0;border-bottom:1px solid #17171b;font-size:13.5px">
+          <div style="font-weight:800;color:#F28705">{{ o.id }}</div>
+          <div style="font-weight:700">{{ o.client }}</div>
+          <div style="color:#a8a8b0;font-size:13px">{{ o.items }}</div>
+          <div style="font-weight:700">{{ o.total }}</div>
+          <div><span style="background:{{ o.stBg }};border:1px solid {{ o.stBorder }};color:{{ o.stColor }};font-size:11.5px;font-weight:800;padding:5px 12px;border-radius:99px">{{ o.status }}</span></div>
+        </div>
+      </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- PRODUTOS -->
+  <sc-if value="{{ isProdutos }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#111114;border:1px solid #1f1f26;border-radius:18px;padding:24px;overflow-x:auto">
+      <div style="min-width:940px">
+      <div style="display:grid;grid-template-columns:1.8fr 110px 1fr .8fr 110px 80px 90px 130px;gap:12px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#5b5b63;padding-bottom:10px;border-bottom:1px solid #1f1f26">
+        <div>Produto</div><div>SKU</div><div>Categoria</div><div>Marca</div><div>Preço</div><div>Estoque</div><div>Status</div><div>Ações</div>
+      </div>
+      <sc-for list="{{ productRows }}" as="p" hint-placeholder-count="8">
+        <div style="display:grid;grid-template-columns:1.8fr 110px 1fr .8fr 110px 80px 90px 130px;gap:12px;align-items:center;padding:13px 0;border-bottom:1px solid #17171b;font-size:13.5px;opacity:{{ p.rowOpacity }}">
+          <div style="font-weight:700">{{ p.name }}</div>
+          <div style="font-size:12px;color:#7a7a84;font-family:monospace">{{ p.sku }}</div>
+          <div style="color:#a8a8b0;font-size:13px">{{ p.cat }}</div>
+          <div style="color:#a8a8b0;font-size:13px">{{ p.brand }}</div>
+          <div style="font-weight:700">{{ p.priceFmt }}</div>
+          <div style="font-weight:800;color:{{ p.stockColor }}">{{ p.stock }}</div>
+          <div><button onClick="{{ p.toggle }}" style="background:{{ p.stBg }};border:1px solid {{ p.stBorder }};color:{{ p.stColor }};font-size:11px;font-weight:800;padding:5px 11px;border-radius:99px;cursor:pointer;font-family:'Manrope',sans-serif">{{ p.stLabel }}</button></div>
+          <div style="display:flex;gap:6px">
+            <button onClick="{{ p.edit }}" style="background:#1c1c21;border:1px solid #2e2e36;border-radius:9px;padding:6px 12px;color:#f4f4f5;font-size:12px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif" style-hover="border-color:#F28705">Editar</button>
+            <button onClick="{{ p.del }}" style="background:none;border:1px solid #2e2e36;border-radius:9px;padding:6px 10px;color:#7a7a84;font-size:12px;cursor:pointer;font-family:'Manrope',sans-serif" style-hover="border-color:#e05555;color:#e05555">✕</button>
+          </div>
+        </div>
+      </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- PEDIDOS -->
+  <sc-if value="{{ isPedidos }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#111114;border:1px solid #1f1f26;border-radius:18px;padding:24px;overflow-x:auto">
+      <div style="min-width:860px">
+      <div style="display:grid;grid-template-columns:90px 1.2fr 1.6fr 110px 120px 190px;gap:12px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#5b5b63;padding-bottom:10px;border-bottom:1px solid #1f1f26">
+        <div>Pedido</div><div>Cliente</div><div>Itens</div><div>Data</div><div>Total</div><div>Status</div>
+      </div>
+      <sc-for list="{{ orderRows }}" as="o" hint-placeholder-count="6">
+        <div style="display:grid;grid-template-columns:90px 1.2fr 1.6fr 110px 120px 190px;gap:12px;align-items:center;padding:13px 0;border-bottom:1px solid #17171b;font-size:13.5px">
+          <div style="font-weight:800;color:#F28705">{{ o.id }}</div>
+          <div style="font-weight:700">{{ o.client }}</div>
+          <div style="color:#a8a8b0;font-size:13px">{{ o.items }}</div>
+          <div style="color:#7a7a84;font-size:13px">{{ o.date }}</div>
+          <div style="font-weight:700">{{ o.total }}</div>
+          <select value="{{ o.status }}" onChange="{{ o.setStatus }}" style="background:{{ o.stBg }};border:1px solid {{ o.stBorder }};color:{{ o.stColor }};font-size:12px;font-weight:800;padding:8px 10px;border-radius:10px;font-family:'Manrope',sans-serif;cursor:pointer;outline:none">
+            <option value="Aguardando pagamento">Aguardando pagamento</option>
+            <option value="Pago">Pago</option>
+            <option value="Enviado">Enviado</option>
+            <option value="Entregue">Entregue</option>
+            <option value="Cancelado">Cancelado</option>
+          </select>
+        </div>
+      </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- CLIENTES -->
+  <sc-if value="{{ isClientes }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#111114;border:1px solid #1f1f26;border-radius:18px;padding:24px;overflow-x:auto">
+      <div style="min-width:720px">
+      <div style="display:grid;grid-template-columns:1.4fr 1.6fr 1fr 110px 120px;gap:12px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#5b5b63;padding-bottom:10px;border-bottom:1px solid #1f1f26">
+        <div>Cliente</div><div>E-mail</div><div>Cidade</div><div>Pedidos</div><div>Total gasto</div>
+      </div>
+      <sc-for list="{{ clients }}" as="c" hint-placeholder-count="6">
+        <div style="display:grid;grid-template-columns:1.4fr 1.6fr 1fr 110px 120px;gap:12px;align-items:center;padding:13px 0;border-bottom:1px solid #17171b;font-size:13.5px">
+          <div style="display:flex;align-items:center;gap:10px"><div style="width:30px;height:30px;border-radius:99px;background:#1c1c21;border:1px solid #2e2e36;display:grid;place-items:center;font-weight:800;font-size:12px;color:#F28705">{{ c.initial }}</div><span style="font-weight:700">{{ c.name }}</span></div>
+          <div style="color:#a8a8b0;font-size:13px">{{ c.email }}</div>
+          <div style="color:#a8a8b0;font-size:13px">{{ c.city }}</div>
+          <div style="font-weight:700">{{ c.orders }}</div>
+          <div style="font-weight:700;color:#F28705">{{ c.spent }}</div>
+        </div>
+      </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- CUPONS -->
+  <sc-if value="{{ isCupons }}" hint-placeholder-val="{{ false }}">
+    <div style="display:grid;grid-template-columns:340px 1fr;gap:14px;align-items:start">
+      <div style="background:#111114;border:1px solid #1f1f26;border-radius:18px;padding:24px">
+        <div style="font-weight:800;font-size:15px;margin-bottom:16px">Novo cupom</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <input value="{{ cupCode }}" onChange="{{ onCupCode }}" placeholder="Código (ex: BLACKFRIDAY)" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13px;font-family:'Manrope',sans-serif;outline:none;text-transform:uppercase" style-focus="border-color:#F28705"></input>
+          <input value="{{ cupPct }}" onChange="{{ onCupPct }}" placeholder="Desconto % (ex: 10)" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+          <button onClick="{{ addCoupon }}" style="background:#F28705;color:#0a0a0c;border:none;border-radius:12px;padding:12px;font-size:13.5px;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer">Criar cupom</button>
+        </div>
+      </div>
+      <div style="background:#111114;border:1px solid #1f1f26;border-radius:18px;padding:24px">
+        <div style="font-weight:800;font-size:15px;margin-bottom:16px">Cupons ativos</div>
+        <sc-for list="{{ coupons }}" as="cp" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #17171b">
+            <div style="font-family:monospace;font-weight:700;font-size:14px;background:rgba(242,135,5,.1);border:1px dashed rgba(242,135,5,.5);color:#F28705;padding:7px 14px;border-radius:10px">{{ cp.code }}</div>
+            <div style="font-size:13.5px;font-weight:700">{{ cp.pct }} de desconto</div>
+            <div style="font-size:12.5px;color:#7a7a84">{{ cp.uses }} usos</div>
+            <button onClick="{{ cp.toggle }}" style="margin-left:auto;background:{{ cp.stBg }};border:1px solid {{ cp.stBorder }};color:{{ cp.stColor }};font-size:11px;font-weight:800;padding:5px 11px;border-radius:99px;cursor:pointer;font-family:'Manrope',sans-serif">{{ cp.stLabel }}</button>
+            <button onClick="{{ cp.del }}" style="background:none;border:1px solid #2e2e36;border-radius:9px;padding:6px 10px;color:#7a7a84;font-size:12px;cursor:pointer;font-family:'Manrope',sans-serif" style-hover="border-color:#e05555;color:#e05555">✕</button>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- CATÁLOGO (coleções/categorias/marcas) -->
+  <sc-if value="{{ isCatalogo }}" hint-placeholder-val="{{ false }}">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;align-items:start">
+      <sc-for list="{{ catalogGroups }}" as="g" hint-placeholder-count="3">
+        <div style="background:#111114;border:1px solid #1f1f26;border-radius:18px;padding:24px">
+          <div style="font-weight:800;font-size:15px;margin-bottom:16px">{{ g.title }}</div>
+          <div style="display:flex;gap:8px;margin-bottom:14px">
+            <input value="{{ g.draft }}" onChange="{{ g.onDraft }}" placeholder="{{ g.placeholder }}" style="flex:1;min-width:0;background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:10px 14px;color:#f4f4f5;font-size:13px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+            <button onClick="{{ g.add }}" style="background:#F28705;color:#0a0a0c;border:none;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer">+</button>
+          </div>
+          <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="5">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #17171b;font-size:13.5px">
+              <span style="font-weight:700">{{ it.name }}</span>
+              <button onClick="{{ it.del }}" style="background:none;border:none;color:#5b5b63;font-size:13px;cursor:pointer;font-family:'Manrope',sans-serif" style-hover="color:#e05555">✕</button>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- BANNERS -->
+  <sc-if value="{{ isBanners }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <sc-for list="{{ banners }}" as="b" hint-placeholder-count="3">
+        <div style="background:#111114;border:1px solid #1f1f26;border-radius:18px;padding:24px;display:grid;grid-template-columns:180px 1fr;gap:24px;align-items:center">
+          <div style="height:110px;border-radius:14px;background:repeating-linear-gradient(135deg,#17171b 0 10px,#1b1b20 10px 20px);border:1px solid #26262b;display:grid;place-items:center"><span style="font-family:monospace;font-size:10.5px;color:#5b5b63;text-align:center;padding:0 10px">[ banner {{ b.n }} ]</span></div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <input value="{{ b.tag }}" onChange="{{ b.onTag }}" placeholder="Tag (ex: Novo · Direto dos EUA)" style="background:#0a0a0c;border:1px solid #26262b;border-radius:10px;padding:9px 14px;color:#F28705;font-size:12px;font-weight:800;font-family:'Manrope',sans-serif;outline:none;max-width:340px" style-focus="border-color:#F28705"></input>
+            <input value="{{ b.title }}" onChange="{{ b.onTitle }}" placeholder="Título do banner" style="background:#0a0a0c;border:1px solid #26262b;border-radius:10px;padding:11px 14px;color:#f4f4f5;font-size:16px;font-weight:800;font-family:'Space Grotesk',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+            <input value="{{ b.sub }}" onChange="{{ b.onSub }}" placeholder="Subtítulo" style="background:#0a0a0c;border:1px solid #26262b;border-radius:10px;padding:9px 14px;color:#a8a8b0;font-size:13px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+          </div>
+        </div>
+      </sc-for>
+      <div style="font-size:12.5px;color:#5b5b63">As alterações são aplicadas ao carrossel da home automaticamente (simulado no protótipo).</div>
+    </div>
+  </sc-if>
+
+  <!-- SERVIÇOS -->
+  <sc-if value="{{ isServicos }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#111114;border:1px solid #1f1f26;border-radius:18px;padding:24px">
+      <div style="display:flex;gap:8px;margin-bottom:18px;max-width:560px">
+        <input value="{{ svcName }}" onChange="{{ onSvcName }}" placeholder="Nome do serviço" style="flex:1.4;background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:11px 14px;color:#f4f4f5;font-size:13px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+        <input value="{{ svcPrice }}" onChange="{{ onSvcPrice }}" placeholder="Preço (ex: R$ 149)" style="flex:1;background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:11px 14px;color:#f4f4f5;font-size:13px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+        <button onClick="{{ addSvc }}" style="background:#F28705;color:#0a0a0c;border:none;border-radius:12px;padding:11px 18px;font-size:13px;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer">Adicionar</button>
+      </div>
+      <sc-for list="{{ svcRows }}" as="s" hint-placeholder-count="5">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #17171b;font-size:13.5px">
+          <span style="font-weight:700">{{ s.name }}</span>
+          <div style="display:flex;align-items:center;gap:16px">
+            <span style="color:#F28705;font-weight:800;font-size:13px">{{ s.price }}</span>
+            <button onClick="{{ s.del }}" style="background:none;border:1px solid #2e2e36;border-radius:9px;padding:6px 10px;color:#7a7a84;font-size:12px;cursor:pointer;font-family:'Manrope',sans-serif" style-hover="border-color:#e05555;color:#e05555">✕</button>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- DEPOIMENTOS -->
+  <sc-if value="{{ isDepoimentos }}" hint-placeholder-val="{{ false }}">
+    <div style="display:grid;grid-template-columns:340px 1fr;gap:14px;align-items:start">
+      <div style="background:#111114;border:1px solid #1f1f26;border-radius:18px;padding:24px">
+        <div style="font-weight:800;font-size:15px;margin-bottom:16px">Novo depoimento</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <input value="{{ depName }}" onChange="{{ onDepName }}" placeholder="Nome do cliente" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+          <textarea value="{{ depText }}" onChange="{{ onDepText }}" placeholder="Depoimento…" rows="4" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13px;font-family:'Manrope',sans-serif;outline:none;resize:vertical" style-focus="border-color:#F28705"></textarea>
+          <button onClick="{{ addDep }}" style="background:#F28705;color:#0a0a0c;border:none;border-radius:12px;padding:12px;font-size:13.5px;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer">Publicar</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <sc-for list="{{ depRows }}" as="d" hint-placeholder-count="3">
+          <div style="background:#111114;border:1px solid #1f1f26;border-radius:18px;padding:20px 24px;display:flex;gap:16px;align-items:start">
+            <div style="width:36px;height:36px;border-radius:99px;background:#1c1c21;border:1px solid #2e2e36;display:grid;place-items:center;font-weight:800;font-size:13px;color:#F28705;flex-shrink:0">{{ d.initial }}</div>
+            <div style="flex:1">
+              <div style="font-weight:800;font-size:14px;margin-bottom:4px">{{ d.name }} <span style="color:#F28705;font-size:12px;letter-spacing:2px;margin-left:6px">★★★★★</span></div>
+              <div style="font-size:13.5px;color:#a8a8b0;line-height:1.6">{{ d.text }}</div>
+            </div>
+            <button onClick="{{ d.del }}" style="background:none;border:1px solid #2e2e36;border-radius:9px;padding:6px 10px;color:#7a7a84;font-size:12px;cursor:pointer;font-family:'Manrope',sans-serif;flex-shrink:0" style-hover="border-color:#e05555;color:#e05555">✕</button>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+</main>
+
+<!-- Modal pedido -->
+<sc-if value="{{ orderModalOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeOrderModal }}" style="position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);z-index:99"></div>
+  <div data-screen-label="Modal pedido" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(560px,94vw);max-height:88vh;overflow-y:auto;background:#111114;border:1px solid #26262b;border-radius:22px;padding:32px;z-index:100;box-shadow:0 40px 100px rgba(0,0,0,.7)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:20px">Lançar pedido</div>
+      <button onClick="{{ closeOrderModal }}" style="background:none;border:1px solid #26262b;border-radius:99px;width:34px;height:34px;color:#a8a8b0;font-size:14px;cursor:pointer" style-hover="border-color:#F28705;color:#F28705">✕</button>
+    </div>
+    <div style="font-size:13px;color:#7a7a84;margin-bottom:22px">Para vendas fechadas pelo WhatsApp — o pedido entra no rastreamento do cliente.</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <input value="{{ oClient }}" onChange="{{ onOClient }}" placeholder="Nome do cliente" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+      <div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#7a7a84;margin-top:6px">Itens do pedido</div>
+      <sc-for list="{{ oItems }}" as="oi" hint-placeholder-count="1">
+        <div style="display:flex;gap:8px;align-items:center">
+          <select value="{{ oi.prodId }}" onChange="{{ oi.setProd }}" style="flex:1;min-width:0;background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 14px;color:#f4f4f5;font-size:13px;font-family:'Manrope',sans-serif;outline:none;cursor:pointer">
+            <sc-for list="{{ productOptions }}" as="po" hint-placeholder-count="8">
+              <option value="{{ po.id }}">{{ po.label }}</option>
+            </sc-for>
+          </select>
+          <input value="{{ oi.qty }}" onChange="{{ oi.setQty }}" style="width:56px;text-align:center;background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 8px;color:#f4f4f5;font-size:13px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+          <button onClick="{{ oi.remove }}" style="background:none;border:1px solid #2e2e36;border-radius:9px;padding:9px 11px;color:#7a7a84;font-size:12px;cursor:pointer;font-family:'Manrope',sans-serif;flex-shrink:0" style-hover="border-color:#e05555;color:#e05555">✕</button>
+        </div>
+      </sc-for>
+      <button onClick="{{ addOrderItem }}" style="align-self:start;background:#1c1c21;border:1px solid #2e2e36;border-radius:10px;padding:9px 16px;color:#a8a8b0;font-size:12.5px;font-weight:700;font-family:'Manrope',sans-serif;cursor:pointer" style-hover="border-color:#F28705;color:#F28705">+ Adicionar item</button>
+      <select value="{{ oStatus }}" onChange="{{ onOStatus }}" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none;cursor:pointer">
+        <option value="Aguardando pagamento">Aguardando pagamento</option>
+        <option value="Pago">Pago</option>
+        <option value="Enviado">Enviado</option>
+        <option value="Entregue">Entregue</option>
+      </select>
+      <div style="display:flex;justify-content:space-between;align-items:center;background:#0a0a0c;border:1px solid #1f1f26;border-radius:12px;padding:14px 16px">
+        <span style="font-size:13px;color:#7a7a84;font-weight:700">Total do pedido</span>
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;color:#F28705">{{ oTotalFmt }}</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:end;margin-top:24px">
+      <button onClick="{{ closeOrderModal }}" style="background:none;border:1px solid #26262b;border-radius:12px;padding:12px 22px;color:#a8a8b0;font-size:13.5px;font-weight:700;font-family:'Manrope',sans-serif;cursor:pointer">Cancelar</button>
+      <button onClick="{{ saveOrder }}" style="background:#F28705;color:#0a0a0c;border:none;border-radius:12px;padding:12px 26px;font-size:13.5px;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer">Lançar pedido</button>
+    </div>
+  </div>
+</sc-if>
+
+<!-- Modal produto -->
+<sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);z-index:99"></div>
+  <div data-screen-label="Modal produto" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(620px,94vw);max-height:88vh;overflow-y:auto;background:#111114;border:1px solid #26262b;border-radius:22px;padding:32px;z-index:100;box-shadow:0 40px 100px rgba(0,0,0,.7)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:20px">{{ modalTitle }}</div>
+      <button onClick="{{ closeModal }}" style="background:none;border:1px solid #26262b;border-radius:99px;width:34px;height:34px;color:#a8a8b0;font-size:14px;cursor:pointer" style-hover="border-color:#F28705;color:#F28705">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <input value="{{ fName }}" onChange="{{ onFName }}" placeholder="Nome do produto" style="grid-column:1/-1;background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+      <input value="{{ fSku }}" onChange="{{ onFSku }}" placeholder="SKU" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+      <input value="{{ fBrand }}" onChange="{{ onFBrand }}" placeholder="Marca" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+      <select value="{{ fCat }}" onChange="{{ onFCat }}" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none;cursor:pointer">
+        <option value="MacBook">MacBook</option>
+        <option value="iPhone">iPhone</option>
+        <option value="iPad / Tablet">iPad / Tablet</option>
+        <option value="Notebook Gamer">Notebook Gamer</option>
+        <option value="Notebook Trabalho">Notebook Trabalho</option>
+        <option value="Notebook Estudos">Notebook Estudos</option>
+        <option value="Notebooks para IA">Notebooks para IA</option>
+        <option value="Monitores">Monitores</option>
+        <option value="Periféricos">Periféricos</option>
+        <option value="Peças e upgrades">Peças e upgrades</option>
+      </select>
+      <select value="{{ fCol }}" onChange="{{ onFCol }}" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none;cursor:pointer">
+        <option value="">Sem coleção</option>
+        <option value="Lançamentos">Lançamentos</option>
+        <option value="Promoções">Promoções</option>
+        <option value="Mais vendidos">Mais vendidos</option>
+      </select>
+      <input value="{{ fPrice }}" onChange="{{ onFPrice }}" placeholder="Preço (R$)" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+      <input value="{{ fPromo }}" onChange="{{ onFPromo }}" placeholder="Preço promocional (opcional)" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+      <input value="{{ fStock }}" onChange="{{ onFStock }}" placeholder="Estoque" style="background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none" style-focus="border-color:#F28705"></input>
+      <textarea value="{{ fDesc }}" onChange="{{ onFDesc }}" placeholder="Descrição do produto…" rows="3" style="grid-column:1/-1;background:#0a0a0c;border:1px solid #26262b;border-radius:12px;padding:12px 16px;color:#f4f4f5;font-size:13.5px;font-family:'Manrope',sans-serif;outline:none;resize:vertical" style-focus="border-color:#F28705"></textarea>
+      <div style="grid-column:1/-1;border:1px dashed #2e2e36;border-radius:14px;padding:22px;text-align:center;font-size:13px;color:#7a7a84;cursor:pointer" style-hover="border-color:#F28705;color:#F28705">Arraste até 8 imagens ou clique para enviar</div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:end;margin-top:24px">
+      <button onClick="{{ closeModal }}" style="background:none;border:1px solid #26262b;border-radius:12px;padding:12px 22px;color:#a8a8b0;font-size:13.5px;font-weight:700;font-family:'Manrope',sans-serif;cursor:pointer">Cancelar</button>
+      <button onClick="{{ saveProduct }}" style="background:#F28705;color:#0a0a0c;border:none;border-radius:12px;padding:12px 26px;font-size:13.5px;font-weight:800;font-family:'Manrope',sans-serif;cursor:pointer">Salvar produto</button>
+    </div>
+  </div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    view: 'dashboard', modalOpen: false, editId: null,
+    orderModalOpen: false, oClient: '', oStatus: 'Aguardando pagamento', oItems: [{ prodId: 1, qty: 1 }],
+    nextOrderNum: 1048,
+    fName: '', fSku: '', fBrand: '', fCat: 'MacBook', fCol: '', fPrice: '', fPromo: '', fStock: '', fDesc: '',
+    cupCode: '', cupPct: '',
+    svcName: '', svcPrice: '',
+    depName: '', depText: '',
+    catalogDrafts: { colecoes: '', categorias: '', marcas: '' },
+    products: [
+      { id: 1, name: 'iPhone 16 Pro Max 256GB Titânio', sku: 'IP16PM-256', cat: 'iPhone', brand: 'Apple', price: 8999, stock: 7, active: true },
+      { id: 2, name: 'MacBook Pro 14" M4 Pro 24GB/512GB', sku: 'MBP14-M4P', cat: 'MacBook', brand: 'Apple', price: 16499, stock: 4, active: true },
+      { id: 3, name: 'Alienware Area-51 16" RTX 5080', sku: 'AW51-5080', cat: 'Notebook Gamer', brand: 'Alienware', price: 24999, stock: 2, active: true },
+      { id: 4, name: 'iPad Pro 13" M4 256GB Wi-Fi', sku: 'IPD13-M4', cat: 'iPad / Tablet', brand: 'Apple', price: 10499, stock: 9, active: true },
+      { id: 5, name: 'ASUS ROG Strix G16 RTX 4070', sku: 'ROG16-4070', cat: 'Notebook Gamer', brand: 'ASUS', price: 9799, stock: 6, active: true },
+      { id: 6, name: 'Monitor LG UltraGear 27" 240Hz', sku: 'LG27-240', cat: 'Monitores', brand: 'LG', price: 2899, stock: 12, active: true },
+      { id: 7, name: 'Teclado Keychron Q1 Pro', sku: 'KC-Q1P', cat: 'Periféricos', brand: 'Keychron', price: 1299, stock: 3, active: false },
+      { id: 8, name: 'SSD Samsung 990 Pro 2TB', sku: 'SS990-2T', cat: 'Peças e upgrades', brand: 'Samsung', price: 1199, stock: 21, active: true }
+    ],
+    orders: [
+      { id: '#1047', client: 'Rafael Moreira', items: 'MacBook Pro 14" M4 Pro', date: '20/07/2026', total: 16499, status: 'Pago' },
+      { id: '#1046', client: 'Lucas Teixeira', items: 'Alienware Area-51 16"', date: '19/07/2026', total: 24999, status: 'Enviado' },
+      { id: '#1045', client: 'Amanda Souza', items: 'iPhone 16 Pro Max + capa', date: '18/07/2026', total: 9148, status: 'Entregue' },
+      { id: '#1044', client: 'Pedro Henrique', items: 'Monitor LG + Teclado Keychron', date: '18/07/2026', total: 4198, status: 'Aguardando pagamento' },
+      { id: '#1043', client: 'Marcos Vinícius', items: 'SSD Samsung 990 Pro 2TB (2x)', date: '16/07/2026', total: 2398, status: 'Entregue' },
+      { id: '#1042', client: 'Thiago Ramos', items: 'ASUS ROG Strix G16', date: '15/07/2026', total: 9799, status: 'Cancelado' }
+    ],
+    coupons: [
+      { id: 1, code: 'PROG10', pct: 10, uses: 132, active: true },
+      { id: 2, code: 'BEMVINDO', pct: 5, uses: 89, active: true },
+      { id: 3, code: 'GAMER15', pct: 15, uses: 24, active: false }
+    ],
+    catalog: {
+      colecoes: ['Lançamentos', 'Promoções', 'Mais vendidos', 'MacBook', 'iPad/Tablet', 'Notebook Gamer', 'Notebooks para IA'],
+      categorias: ['MacBook', 'iPhone', 'iPad / Tablet', 'Notebook Gamer', 'Notebook Trabalho', 'Notebook Estudos', 'Notebooks para IA', 'Monitores', 'Periféricos', 'Peças e upgrades'],
+      marcas: ['Apple', 'Alienware', 'ASUS', 'Acer', 'Lenovo', 'LG', 'Samsung', 'Keychron', 'Logitech', 'Dell']
+    },
+    banners: [
+      { n: 1, tag: 'Novo · Direto dos EUA', title: 'iPhone 16 Pro Max', sub: 'O iPhone mais avançado de todos os tempos, importado com procedência e garantia.' },
+      { n: 2, tag: 'Exclusivo Estados Unidos', title: 'Alienware Area-51 16"', sub: 'O notebook gamer definitivo, exclusivo do mercado americano.' },
+      { n: 3, tag: 'Performance profissional', title: 'MacBook Pro M4 Pro', sub: 'Potência para criadores, devs e empresários.' }
+    ],
+    services: [
+      { id: 1, name: 'Limpeza preventiva', price: 'a partir de R$ 149' },
+      { id: 2, name: 'Troca de SSD', price: 'a partir de R$ 99' },
+      { id: 3, name: 'Upgrade de RAM', price: 'a partir de R$ 89' },
+      { id: 4, name: 'Formatação', price: 'a partir de R$ 129' },
+      { id: 5, name: 'Manutenção especializada', price: 'sob consulta' }
+    ],
+    testimonials: [
+      { id: 1, name: 'Rafael M.', text: 'Atendimento impecável do início ao fim. O MacBook chegou lacrado, antes do prazo.' },
+      { id: 2, name: 'Lucas T.', text: 'Consegui um modelo que não existe no Brasil. Transparência total no rastreamento.' },
+      { id: 3, name: 'Amanda S.', text: 'iPhone original, com nota e garantia. Recomendo demais!' }
+    ]
+  };
+
+  fmt(v) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+
+  statusStyle(st) {
+    const map = {
+      'Aguardando pagamento': ['rgba(217,164,65,.1)', 'rgba(217,164,65,.4)', '#d9a441'],
+      'Pago': ['rgba(74,222,128,.1)', 'rgba(74,222,128,.35)', '#4ade80'],
+      'Enviado': ['rgba(96,165,250,.1)', 'rgba(96,165,250,.35)', '#60a5fa'],
+      'Entregue': ['rgba(168,168,176,.08)', 'rgba(168,168,176,.3)', '#a8a8b0'],
+      'Cancelado': ['rgba(224,85,85,.1)', 'rgba(224,85,85,.35)', '#e05555']
+    };
+    return map[st] || map['Pago'];
+  }
+
+  renderVals() {
+    const s = this.state, fmt = this.fmt.bind(this);
+    const views = [
+      ['dashboard', 'Dashboard', 'DB', 'Visão geral da loja'],
+      ['produtos', 'Produtos', 'PR', s.products.length + ' produtos cadastrados'],
+      ['pedidos', 'Pedidos', 'PD', s.orders.length + ' pedidos'],
+      ['clientes', 'Clientes', 'CL', 'Clientes cadastrados na loja'],
+      ['cupons', 'Cupons', 'CP', 'Cupons promocionais'],
+      ['catalogo', 'Coleções · Categorias · Marcas', 'CT', 'Organização do catálogo'],
+      ['banners', 'Banners da home', 'BN', 'Edite o carrossel sem tocar em código'],
+      ['servicos', 'Serviços', 'SV', 'Serviços técnicos oferecidos'],
+      ['depoimentos', 'Depoimentos', 'DP', 'Avaliações exibidas na home']
+    ];
+    const cur = views.find(v => v[0] === s.view);
+    const navItems = views.map(([id, name, glyph]) => ({
+      name: id === 'catalogo' ? 'Catálogo' : name, glyph,
+      bg: s.view === id ? 'rgba(242,135,5,.1)' : 'transparent',
+      color: s.view === id ? '#F28705' : '#a8a8b0',
+      chipBg: s.view === id ? '#F28705' : '#1c1c21',
+      chipColor: s.view === id ? '#0a0a0c' : '#7a7a84',
+      go: () => this.setState({ view: id })
+    }));
+
+    const upd = (key, id, patch) => this.setState(st => ({ [key]: st[key].map(x => x.id === id ? { ...x, ...patch } : x) }));
+    const del = (key, id) => this.setState(st => ({ [key]: st[key].filter(x => x.id !== id) }));
+
+    const productRows = s.products.map(p => ({
+      name: p.name, sku: p.sku, cat: p.cat, brand: p.brand,
+      priceFmt: fmt(p.price), stock: p.stock,
+      stockColor: p.stock <= 3 ? '#e05555' : (p.stock <= 6 ? '#d9a441' : '#4ade80'),
+      rowOpacity: p.active ? '1' : '.45',
+      stLabel: p.active ? 'Ativo' : 'Inativo',
+      stBg: p.active ? 'rgba(74,222,128,.1)' : 'rgba(168,168,176,.08)',
+      stBorder: p.active ? 'rgba(74,222,128,.35)' : 'rgba(168,168,176,.3)',
+      stColor: p.active ? '#4ade80' : '#a8a8b0',
+      toggle: () => upd('products', p.id, { active: !p.active }),
+      edit: () => this.setState({ modalOpen: true, editId: p.id, fName: p.name, fSku: p.sku, fBrand: p.brand, fCat: p.cat, fCol: '', fPrice: String(p.price), fPromo: '', fStock: String(p.stock), fDesc: '' }),
+      del: () => del('products', p.id)
+    }));
+
+    const orderRows = s.orders.map(o => {
+      const [bg, border, color] = this.statusStyle(o.status);
+      return {
+        id: o.id, client: o.client, items: o.items, date: o.date, total: fmt(o.total),
+        status: o.status, stBg: bg, stBorder: border, stColor: color,
+        setStatus: e => this.setState(st => ({ orders: st.orders.map(x => x.id === o.id ? { ...x, status: e.target.value } : x) }))
+      };
+    });
+
+    const recentOrders = s.orders.slice(0, 5).map(o => {
+      const [bg, border, color] = this.statusStyle(o.status);
+      return { id: o.id, client: o.client, items: o.items, total: fmt(o.total), status: o.status, stBg: bg, stBorder: border, stColor: color };
+    });
+
+    const lowStock = s.products.filter(p => p.stock <= 6).sort((a, b) => a.stock - b.stock);
+
+    const coupons = s.coupons.map(c => ({
+      code: c.code, pct: c.pct + '%', uses: c.uses,
+      stLabel: c.active ? 'Ativo' : 'Pausado',
+      stBg: c.active ? 'rgba(74,222,128,.1)' : 'rgba(168,168,176,.08)',
+      stBorder: c.active ? 'rgba(74,222,128,.35)' : 'rgba(168,168,176,.3)',
+      stColor: c.active ? '#4ade80' : '#a8a8b0',
+      toggle: () => upd('coupons', c.id, { active: !c.active }),
+      del: () => del('coupons', c.id)
+    }));
+
+    const catalogGroups = [
+      ['colecoes', 'Coleções', 'Nova coleção…'],
+      ['categorias', 'Categorias', 'Nova categoria…'],
+      ['marcas', 'Marcas', 'Nova marca…']
+    ].map(([key, title, placeholder]) => ({
+      title, placeholder, draft: s.catalogDrafts[key],
+      onDraft: e => this.setState(st => ({ catalogDrafts: { ...st.catalogDrafts, [key]: e.target.value } })),
+      add: () => {
+        const v = s.catalogDrafts[key].trim();
+        if (!v) return;
+        this.setState(st => ({ catalog: { ...st.catalog, [key]: [...st.catalog[key], v] }, catalogDrafts: { ...st.catalogDrafts, [key]: '' } }));
+      },
+      items: s.catalog[key].map((name, i) => ({
+        name,
+        del: () => this.setState(st => ({ catalog: { ...st.catalog, [key]: st.catalog[key].filter((_, j) => j !== i) } }))
+      }))
+    }));
+
+    const banners = s.banners.map((b, i) => ({
+      n: b.n, tag: b.tag, title: b.title, sub: b.sub,
+      onTag: e => this.setState(st => ({ banners: st.banners.map((x, j) => j === i ? { ...x, tag: e.target.value } : x) })),
+      onTitle: e => this.setState(st => ({ banners: st.banners.map((x, j) => j === i ? { ...x, title: e.target.value } : x) })),
+      onSub: e => this.setState(st => ({ banners: st.banners.map((x, j) => j === i ? { ...x, sub: e.target.value } : x) }))
+    }));
+
+    return {
+      navItems, viewTitle: cur[1], viewSub: cur[3],
+      isDashboard: s.view === 'dashboard', isProdutos: s.view === 'produtos',
+      isPedidos: s.view === 'pedidos', isClientes: s.view === 'clientes',
+      isCupons: s.view === 'cupons', isCatalogo: s.view === 'catalogo',
+      isBanners: s.view === 'banners', isServicos: s.view === 'servicos',
+      isDepoimentos: s.view === 'depoimentos',
+      kpis: [
+        { label: 'Vendas do mês', value: 'R$ 186,4 mil', delta: '↑ 23% vs junho', deltaColor: '#4ade80' },
+        { label: 'Pedidos', value: '47', delta: '↑ 12% vs junho', deltaColor: '#4ade80' },
+        { label: 'Produtos ativos', value: String(s.products.filter(p => p.active).length), delta: s.products.length + ' cadastrados', deltaColor: '#7a7a84' },
+        { label: 'Clientes', value: '384', delta: '↑ 31 novos este mês', deltaColor: '#4ade80' }
+      ],
+      topSellers: [
+        { rank: '01', name: 'iPhone 16 Pro Max', sold: 14, pct: '100%' },
+        { rank: '02', name: 'MacBook Pro 14" M4 Pro', sold: 9, pct: '64%' },
+        { rank: '03', name: 'SSD Samsung 990 Pro 2TB', sold: 8, pct: '57%' },
+        { rank: '04', name: 'ASUS ROG Strix G16', sold: 6, pct: '43%' },
+        { rank: '05', name: 'Alienware Area-51 16"', sold: 4, pct: '29%' }
+      ],
+      lowCount: lowStock.length,
+      lowStock: lowStock.map(p => ({ name: p.name, stock: p.stock })),
+      recentOrders, productRows, orderRows,
+      clients: [
+        { name: 'Rafael Moreira', initial: 'R', email: 'rafael.m@gmail.com', city: 'Goiânia, GO', orders: 3, spent: fmt(28497) },
+        { name: 'Lucas Teixeira', initial: 'L', email: 'lucas.tx@gmail.com', city: 'São Paulo, SP', orders: 1, spent: fmt(24999) },
+        { name: 'Amanda Souza', initial: 'A', email: 'amanda.souza@hotmail.com', city: 'Brasília, DF', orders: 2, spent: fmt(12047) },
+        { name: 'Pedro Henrique', initial: 'P', email: 'ph.gamer@gmail.com', city: 'Goiânia, GO', orders: 4, spent: fmt(9846) },
+        { name: 'Marcos Vinícius', initial: 'M', email: 'marcos.v@outlook.com', city: 'Belo Horizonte, MG', orders: 2, spent: fmt(4797) },
+        { name: 'Thiago Ramos', initial: 'T', email: 'thiago.ramos@gmail.com', city: 'Anápolis, GO', orders: 1, spent: fmt(1299) }
+      ],
+      coupons,
+      cupCode: s.cupCode, onCupCode: e => this.setState({ cupCode: e.target.value }),
+      cupPct: s.cupPct, onCupPct: e => this.setState({ cupPct: e.target.value }),
+      addCoupon: () => {
+        const code = s.cupCode.trim().toUpperCase(), pct = parseInt(s.cupPct);
+        if (!code || !pct) return;
+        this.setState(st => ({ coupons: [...st.coupons, { id: Date.now(), code, pct, uses: 0, active: true }], cupCode: '', cupPct: '' }));
+      },
+      catalogGroups, banners,
+      svcName: s.svcName, onSvcName: e => this.setState({ svcName: e.target.value }),
+      svcPrice: s.svcPrice, onSvcPrice: e => this.setState({ svcPrice: e.target.value }),
+      addSvc: () => {
+        if (!s.svcName.trim()) return;
+        this.setState(st => ({ services: [...st.services, { id: Date.now(), name: s.svcName.trim(), price: s.svcPrice.trim() || 'sob consulta' }], svcName: '', svcPrice: '' }));
+      },
+      svcRows: s.services.map(x => ({ name: x.name, price: x.price, del: () => del('services', x.id) })),
+      depName: s.depName, onDepName: e => this.setState({ depName: e.target.value }),
+      depText: s.depText, onDepText: e => this.setState({ depText: e.target.value }),
+      addDep: () => {
+        if (!s.depName.trim() || !s.depText.trim()) return;
+        this.setState(st => ({ testimonials: [...st.testimonials, { id: Date.now(), name: s.depName.trim(), text: s.depText.trim() }], depName: '', depText: '' }));
+      },
+      depRows: s.testimonials.map(x => ({ name: x.name, initial: x.name[0], text: x.text, del: () => del('testimonials', x.id) })),
+      orderModalOpen: s.orderModalOpen,
+      newOrder: () => this.setState({ orderModalOpen: true, oClient: '', oStatus: 'Aguardando pagamento', oItems: [{ prodId: s.products[0].id, qty: 1 }] }),
+      closeOrderModal: () => this.setState({ orderModalOpen: false }),
+      oClient: s.oClient, onOClient: e => this.setState({ oClient: e.target.value }),
+      oStatus: s.oStatus, onOStatus: e => this.setState({ oStatus: e.target.value }),
+      productOptions: s.products.map(p => ({ id: p.id, label: p.name + ' — ' + fmt(p.price) })),
+      oItems: s.oItems.map((it, i) => ({
+        prodId: it.prodId, qty: String(it.qty),
+        setProd: e => this.setState(st => ({ oItems: st.oItems.map((x, j) => j === i ? { ...x, prodId: parseInt(e.target.value) } : x) })),
+        setQty: e => this.setState(st => ({ oItems: st.oItems.map((x, j) => j === i ? { ...x, qty: Math.max(1, parseInt(e.target.value) || 1) } : x) })),
+        remove: () => this.setState(st => ({ oItems: st.oItems.length > 1 ? st.oItems.filter((_, j) => j !== i) : st.oItems }))
+      })),
+      addOrderItem: () => this.setState(st => ({ oItems: [...st.oItems, { prodId: s.products[0].id, qty: 1 }] })),
+      oTotalFmt: fmt(s.oItems.reduce((a, it) => {
+        const p = s.products.find(x => x.id === it.prodId);
+        return a + (p ? p.price * it.qty : 0);
+      }, 0)),
+      saveOrder: () => {
+        if (!s.oClient.trim()) return;
+        const byId = Object.fromEntries(s.products.map(p => [p.id, p]));
+        const total = s.oItems.reduce((a, it) => a + (byId[it.prodId] ? byId[it.prodId].price * it.qty : 0), 0);
+        const itemsLabel = s.oItems.map(it => (it.qty > 1 ? it.qty + 'x ' : '') + (byId[it.prodId] ? byId[it.prodId].name : '?')).join(' + ');
+        const today = new Date().toLocaleDateString('pt-BR');
+        this.setState(st => ({
+          orders: [{ id: '#' + st.nextOrderNum, client: s.oClient.trim(), items: itemsLabel, date: today, total, status: s.oStatus }, ...st.orders],
+          nextOrderNum: st.nextOrderNum + 1,
+          orderModalOpen: false
+        }));
+      },
+      modalOpen: s.modalOpen,
+      modalTitle: s.editId ? 'Editar produto' : 'Novo produto',
+      newProduct: () => this.setState({ modalOpen: true, editId: null, fName: '', fSku: '', fBrand: '', fCat: 'MacBook', fCol: '', fPrice: '', fPromo: '', fStock: '', fDesc: '' }),
+      closeModal: () => this.setState({ modalOpen: false }),
+      fName: s.fName, onFName: e => this.setState({ fName: e.target.value }),
+      fSku: s.fSku, onFSku: e => this.setState({ fSku: e.target.value }),
+      fBrand: s.fBrand, onFBrand: e => this.setState({ fBrand: e.target.value }),
+      fCat: s.fCat, onFCat: e => this.setState({ fCat: e.target.value }),
+      fCol: s.fCol, onFCol: e => this.setState({ fCol: e.target.value }),
+      fPrice: s.fPrice, onFPrice: e => this.setState({ fPrice: e.target.value }),
+      fPromo: s.fPromo, onFPromo: e => this.setState({ fPromo: e.target.value }),
+      fStock: s.fStock, onFStock: e => this.setState({ fStock: e.target.value }),
+      fDesc: s.fDesc, onFDesc: e => this.setState({ fDesc: e.target.value }),
+      saveProduct: () => {
+        const price = parseFloat(s.fPrice.replace(',', '.')) || 0;
+        const stock = parseInt(s.fStock) || 0;
+        if (!s.fName.trim()) return;
+        if (s.editId) {
+          upd('products', s.editId, { name: s.fName, sku: s.fSku, brand: s.fBrand, cat: s.fCat, price, stock });
+          this.setState({ modalOpen: false });
+        } else {
+          this.setState(st => ({
+            products: [{ id: Date.now(), name: s.fName, sku: s.fSku || 'NOVO-SKU', cat: s.fCat, brand: s.fBrand || '—', price, stock, active: true }, ...st.products],
+            modalOpen: false
+          }));
+        }
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
