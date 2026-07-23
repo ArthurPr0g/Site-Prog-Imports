@@ -26,7 +26,7 @@ export type ProductFormInput = {
   description: string;
 };
 
-export async function saveProductAction(input: ProductFormInput): Promise<ActionResult> {
+export async function saveProductAction(input: ProductFormInput): Promise<ActionResult & { id?: string }> {
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
 
@@ -96,7 +96,7 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
 
   revalidatePath('/admin/produtos');
   revalidatePath('/');
-  return okResult('Produto salvo com sucesso.');
+  return { ...okResult('Produto salvo com sucesso.'), id: productId };
 }
 
 export async function toggleProductActiveAction(id: string, active: boolean): Promise<ActionResult> {
@@ -368,6 +368,85 @@ export async function uploadCategoryImageAction(id: string, formData: FormData):
 }
 export async function removeCategoryImageAction(id: string): Promise<ActionResult> {
   return removeCoverImageAction('categories', id);
+}
+
+const PRODUCT_IMAGES_BUCKET = 'product-images';
+const MAX_PRODUCT_IMAGES = 8;
+
+export async function uploadProductImageAction(
+  productId: string,
+  formData: FormData
+): Promise<ActionResult & { image?: { id: string; url: string; label: string } }> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) return errResult('Selecione uma imagem.');
+  if (!file.type.startsWith('image/')) return errResult('O arquivo precisa ser uma imagem (PNG, JPG, WEBP...).');
+  if (file.size > MAX_IMAGE_BYTES) return errResult('A imagem deve ter no máximo 5MB.');
+
+  const { data: product } = await supabase.from('products').select('name').eq('id', productId).maybeSingle();
+  if (!product) return errResult('Produto não encontrado.');
+
+  const { count } = await supabase
+    .from('product_images')
+    .select('id', { count: 'exact', head: true })
+    .eq('product_id', productId);
+  if ((count ?? 0) >= MAX_PRODUCT_IMAGES) return errResult(`Cada produto pode ter no máximo ${MAX_PRODUCT_IMAGES} imagens.`);
+
+  const ext = file.name.includes('.') ? file.name.split('.').pop() : 'jpg';
+  const path = `${productId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage.from(PRODUCT_IMAGES_BUCKET).upload(path, file, {
+    contentType: file.type,
+    upsert: false,
+  });
+  if (uploadError) return errResult('Não foi possível enviar a imagem. Tente novamente.');
+
+  const { data: pub } = supabase.storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(path);
+
+  const { data: last } = await supabase
+    .from('product_images')
+    .select('position')
+    .eq('product_id', productId)
+    .order('position', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const nextPosition = (last?.position ?? -1) + 1;
+
+  const { data: inserted, error } = await supabase
+    .from('product_images')
+    .insert({ product_id: productId, label: product.name.toLowerCase(), url: pub.publicUrl, position: nextPosition })
+    .select('id, url, label')
+    .single();
+  if (error || !inserted) {
+    await supabase.storage.from(PRODUCT_IMAGES_BUCKET).remove([path]);
+    return errResult(friendlyDbError(error, 'Não foi possível salvar a imagem.'));
+  }
+
+  revalidatePath('/admin/produtos');
+  revalidatePath('/');
+  return { ...okResult('Imagem adicionada.'), image: { id: inserted.id, url: inserted.url ?? pub.publicUrl, label: inserted.label } };
+}
+
+export async function removeProductImageAction(imageId: string): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  const { data: image } = await supabase.from('product_images').select('url').eq('id', imageId).maybeSingle();
+  if (!image) return errResult('Imagem não encontrada.');
+
+  const { error } = await supabase.from('product_images').delete().eq('id', imageId);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível remover a imagem.'));
+
+  if (image.url) {
+    const oldPath = storagePathFromPublicUrl(image.url, PRODUCT_IMAGES_BUCKET);
+    if (oldPath) await supabase.storage.from(PRODUCT_IMAGES_BUCKET).remove([oldPath]);
+  }
+
+  revalidatePath('/admin/produtos');
+  revalidatePath('/');
+  return okResult('Imagem removida.');
 }
 
 // ============ BANNERS ============

@@ -16,6 +16,8 @@ export default async function AdminProductsPage() {
     stock: p.stock,
     active: p.active,
     description: p.description,
+    imageUrl: p.product_images.find((img) => img.url)?.url ?? null,
+    images: p.product_images.map((img) => ({ id: img.id, url: img.url, label: img.label })),
   }));
 
   return (

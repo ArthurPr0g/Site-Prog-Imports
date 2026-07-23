@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { saveProductAction, type ProductFormInput } from '@/app/actions/admin';
+import { useRef, useState, useTransition } from 'react';
+import Image from 'next/image';
+import { saveProductAction, uploadProductImageAction, removeProductImageAction, type ProductFormInput } from '@/app/actions/admin';
 import { CATEGORY_OPTIONS } from '@/lib/constants';
 import { useToast } from '@/components/ui/Toast';
+
+export type ProductImageData = { id: string; url: string | null; label: string };
 
 export type ProductModalData = {
   id?: string;
@@ -16,10 +19,14 @@ export type ProductModalData = {
   promoPrice: string;
   stock: string;
   description: string;
+  images?: ProductImageData[];
 };
 
 const inputClass =
   'rounded-control border border-border-strong bg-input px-4 py-3 text-[13.5px] outline-none focus:border-accent';
+
+const MAX_IMAGES = 8;
+const MAX_IMAGE_MB = 5;
 
 export function ProductModal({
   open,
@@ -45,8 +52,12 @@ export function ProductModal({
       description: '',
     }
   );
+  const [images, setImages] = useState<ProductImageData[]>(initial?.images ?? []);
   const [pending, startTransition] = useTransition();
+  const [uploading, startUpload] = useTransition();
   const [error, setError] = useState('');
+  const [imageError, setImageError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
   if (!open) return null;
@@ -82,6 +93,7 @@ export function ProductModal({
       stock: Number.isFinite(stock) ? stock : 0,
       description: form.description.trim(),
     };
+    const wasNew = !form.id;
     startTransition(async () => {
       const result = await saveProductAction(input);
       if (!result.ok) {
@@ -89,7 +101,72 @@ export function ProductModal({
         return;
       }
       toast(result.message);
+      if (wasNew && result.id) {
+        setForm((f) => ({ ...f, id: result.id }));
+        return;
+      }
       onClose();
+    });
+  }
+
+  function handlePickFiles() {
+    if (!form.id) {
+      setImageError('Salve o produto antes de anexar fotos.');
+      return;
+    }
+    fileInputRef.current?.click();
+  }
+
+  function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = '';
+    if (files.length === 0 || !form.id) return;
+
+    setImageError('');
+    const room = MAX_IMAGES - images.length;
+    if (room <= 0) {
+      setImageError(`Cada produto pode ter no máximo ${MAX_IMAGES} imagens.`);
+      return;
+    }
+    const toUpload = files.slice(0, room);
+    if (files.length > room) {
+      setImageError(`Só cabiam mais ${room} imagem(ns) — o restante foi ignorado.`);
+    }
+
+    const productId = form.id;
+    startUpload(async () => {
+      for (const file of toUpload) {
+        if (!file.type.startsWith('image/')) {
+          setImageError('Um dos arquivos não é uma imagem válida.');
+          continue;
+        }
+        if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
+          setImageError(`"${file.name}" excede ${MAX_IMAGE_MB}MB e não foi enviada.`);
+          continue;
+        }
+        const fd = new FormData();
+        fd.set('file', file);
+        const result = await uploadProductImageAction(productId, fd);
+        if (!result.ok) {
+          setImageError(result.message);
+          continue;
+        }
+        if (result.image) {
+          setImages((imgs) => [...imgs, result.image!]);
+        }
+      }
+    });
+  }
+
+  function handleRemoveImage(imageId: string) {
+    setImageError('');
+    startUpload(async () => {
+      const result = await removeProductImageAction(imageId);
+      if (!result.ok) {
+        setImageError(result.message);
+        return;
+      }
+      setImages((imgs) => imgs.filter((img) => img.id !== imageId));
     });
   }
 
@@ -128,8 +205,42 @@ export function ProductModal({
             rows={3}
             className={`resize-y sm:col-span-2 ${inputClass}`}
           />
-          <div className="rounded-2xl border border-dashed border-border-hover p-5.5 text-center text-[13px] text-fg-tertiary hover:border-accent hover:text-accent sm:col-span-2">
-            Arraste até 8 imagens ou clique para enviar
+
+          <div className="sm:col-span-2">
+            {images.length > 0 && (
+              <div className="mb-3 grid grid-cols-4 gap-2.5">
+                {images.map((img) => (
+                  <div key={img.id} className="group relative aspect-square overflow-hidden rounded-xl border border-border-strong">
+                    {img.url && <Image src={img.url} alt={img.label} fill className="object-cover" sizes="120px" />}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(img.id)}
+                      disabled={uploading}
+                      aria-label="Remover imagem"
+                      className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-black/70 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-error disabled:opacity-50"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <input ref={fileInputRef} type="file" accept="image/*" multiple hidden onChange={handleFilesSelected} />
+            <button
+              type="button"
+              onClick={handlePickFiles}
+              disabled={uploading || images.length >= MAX_IMAGES}
+              className="w-full rounded-2xl border border-dashed border-border-hover p-5.5 text-center text-[13px] text-fg-tertiary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {!form.id
+                ? 'Salve o produto antes de anexar fotos'
+                : uploading
+                  ? 'Enviando…'
+                  : images.length >= MAX_IMAGES
+                    ? `Limite de ${MAX_IMAGES} imagens atingido`
+                    : `Clique para enviar fotos (${images.length}/${MAX_IMAGES})`}
+            </button>
+            {imageError && <div className="mt-2 text-[13px] font-semibold text-error">{imageError}</div>}
           </div>
         </div>
         {error && <div className="mt-3 text-[13px] font-semibold text-error">{error}</div>}

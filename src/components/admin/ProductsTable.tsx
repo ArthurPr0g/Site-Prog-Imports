@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import Image from 'next/image';
 import { formatBRL } from '@/lib/format';
 import { toggleProductActiveAction, deleteProductAction } from '@/app/actions/admin';
 import { ProductModal, type ProductModalData } from './ProductModal';
@@ -17,6 +18,8 @@ type Row = {
   stock: number;
   active: boolean;
   description: string;
+  imageUrl: string | null;
+  images: { id: string; url: string | null; label: string }[];
 };
 
 export function ProductsTable({ products, collections }: { products: Row[]; collections: string[] }) {
@@ -57,6 +60,7 @@ export function ProductsTable({ products, collections }: { products: Row[]; coll
       promoPrice: '',
       stock: String(p.stock),
       description: p.description,
+      images: p.images,
     });
     setModalOpen(true);
   }
@@ -73,7 +77,8 @@ export function ProductsTable({ products, collections }: { products: Row[]; coll
       </div>
       <div className="overflow-x-auto rounded-[18px] border border-border bg-card p-6">
         <div className="min-w-[940px]">
-          <div className="grid grid-cols-[1.8fr_110px_1fr_.8fr_110px_80px_90px_130px] gap-3 border-b border-border pb-2.5 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+          <div className="grid grid-cols-[52px_1.8fr_110px_1fr_.8fr_110px_80px_90px_130px] gap-3 border-b border-border pb-2.5 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+            <div>Foto</div>
             <div>Produto</div>
             <div>SKU</div>
             <div>Categoria</div>
@@ -88,9 +93,16 @@ export function ProductsTable({ products, collections }: { products: Row[]; coll
             return (
               <div
                 key={p.id}
-                className="grid grid-cols-[1.8fr_110px_1fr_.8fr_110px_80px_90px_130px] items-center gap-3 border-b border-divider py-3 text-[13.5px] last:border-b-0"
+                className="grid grid-cols-[52px_1.8fr_110px_1fr_.8fr_110px_80px_90px_130px] items-center gap-3 border-b border-divider py-3 text-[13.5px] last:border-b-0"
                 style={{ opacity: p.active ? 1 : 0.45 }}
               >
+                <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-[10px] border border-border bg-input-alt">
+                  {p.imageUrl ? (
+                    <Image src={p.imageUrl} alt={p.name} width={44} height={44} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="font-mono text-[9px] text-fg-faded">s/ foto</span>
+                  )}
+                </div>
                 <div className="font-bold">{p.name}</div>
                 <div className="font-mono text-xs text-fg-tertiary">{p.sku}</div>
                 <div className="text-[13px] text-fg-secondary">{p.category}</div>

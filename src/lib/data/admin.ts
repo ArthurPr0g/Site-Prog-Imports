@@ -75,9 +75,14 @@ export async function listAdminProducts() {
   const supabase = await createClient();
   const { data } = await supabase
     .from('products')
-    .select('*, brands(name), categories(name), product_collections(collections(name))')
+    .select(
+      '*, brands(name), categories(name), product_collections(collections(name)), product_images(id, label, url, position)'
+    )
     .order('created_at', { ascending: false });
-  return data ?? [];
+  return (data ?? []).map((p) => ({
+    ...p,
+    product_images: (p.product_images ?? []).sort((a, b) => a.position - b.position),
+  }));
 }
 
 export async function listAdminOrders() {
