@@ -516,6 +516,7 @@ export type Database = {
           category_id: string | null
           created_at: string
           description: string
+          highlights: string[]
           id: string
           name: string
           price: number
@@ -531,6 +532,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description?: string
+          highlights?: string[]
           id?: string
           name: string
           price: number
@@ -546,6 +548,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description?: string
+          highlights?: string[]
           id?: string
           name?: string
           price?: number

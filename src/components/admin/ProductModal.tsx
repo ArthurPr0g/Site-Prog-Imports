@@ -20,6 +20,9 @@ export type ProductModalData = {
   stock: string;
   description: string;
   images?: ProductImageData[];
+  rating?: string;
+  reviewCount?: string;
+  highlights?: string[];
 };
 
 const inputClass =
@@ -27,6 +30,13 @@ const inputClass =
 
 const MAX_IMAGES = 8;
 const MAX_IMAGE_MB = 5;
+const MAX_HIGHLIGHTS = 8;
+const DEFAULT_HIGHLIGHTS = [
+  'Modelo exclusivo do mercado americano — não vendido no Brasil',
+  'Garantia de 12 meses + suporte pós-venda Prog Imports',
+  'Rastreamento completo da importação, etapa por etapa',
+  'Frete grátis — envio segurado para todo o Brasil',
+];
 
 export function ProductModal({
   open,
@@ -50,9 +60,12 @@ export function ProductModal({
       promoPrice: '',
       stock: '',
       description: '',
+      rating: '4.9',
+      reviewCount: '0',
     }
   );
   const [images, setImages] = useState<ProductImageData[]>(initial?.images ?? []);
+  const [highlights, setHighlights] = useState<string[]>(initial?.highlights ?? DEFAULT_HIGHLIGHTS);
   const [pending, startTransition] = useTransition();
   const [uploading, startUpload] = useTransition();
   const [error, setError] = useState('');
@@ -64,6 +77,16 @@ export function ProductModal({
 
   const set = (key: keyof ProductModalData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  function updateHighlight(i: number, value: string) {
+    setHighlights((hs) => hs.map((h, idx) => (idx === i ? value : h)));
+  }
+  function removeHighlight(i: number) {
+    setHighlights((hs) => hs.filter((_, idx) => idx !== i));
+  }
+  function addHighlight() {
+    setHighlights((hs) => (hs.length >= MAX_HIGHLIGHTS ? hs : [...hs, '']));
+  }
 
   function save() {
     setError('');
@@ -81,6 +104,16 @@ export function ProductModal({
     const stock = parseInt(form.stock, 10);
     if (form.stock.trim() && !Number.isFinite(stock)) return setError('Informe um estoque válido.');
 
+    const rating = parseFloat((form.rating ?? '').replace(',', '.'));
+    if (!Number.isFinite(rating) || rating < 0 || rating > 5) {
+      return setError('A avaliação precisa ser um número entre 0 e 5.');
+    }
+
+    const reviewCount = parseInt(form.reviewCount ?? '', 10);
+    if (!Number.isFinite(reviewCount) || reviewCount < 0) {
+      return setError('Informe um número de avaliações válido (0 ou mais).');
+    }
+
     const input: ProductFormInput = {
       id: form.id,
       name: form.name.trim(),
@@ -92,6 +125,9 @@ export function ProductModal({
       promoPrice,
       stock: Number.isFinite(stock) ? stock : 0,
       description: form.description.trim(),
+      rating,
+      reviewCount,
+      highlights,
     };
     const wasNew = !form.id;
     startTransition(async () => {
@@ -198,6 +234,8 @@ export function ProductModal({
           <input value={form.price} onChange={set('price')} placeholder="Preço (R$)" className={inputClass} />
           <input value={form.promoPrice} onChange={set('promoPrice')} placeholder="Preço promocional (opcional)" className={inputClass} />
           <input value={form.stock} onChange={set('stock')} placeholder="Estoque" className={inputClass} />
+          <input value={form.rating ?? ''} onChange={set('rating')} placeholder="Avaliação (0 a 5, ex: 4.9)" className={inputClass} />
+          <input value={form.reviewCount ?? ''} onChange={set('reviewCount')} placeholder="Nº de avaliações" className={inputClass} />
           <textarea
             value={form.description}
             onChange={set('description')}
@@ -241,6 +279,40 @@ export function ProductModal({
                     : `Clique para enviar fotos (${images.length}/${MAX_IMAGES})`}
             </button>
             {imageError && <div className="mt-2 text-[13px] font-semibold text-error">{imageError}</div>}
+          </div>
+
+          <div className="sm:col-span-2">
+            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+              Destaques (lista de benefícios exibida na página do produto)
+            </div>
+            <div className="flex flex-col gap-2">
+              {highlights.map((h, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    value={h}
+                    onChange={(e) => updateHighlight(i, e.target.value)}
+                    placeholder="Ex: Garantia de 12 meses + suporte pós-venda"
+                    className={`flex-1 ${inputClass}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeHighlight(i)}
+                    className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-control border border-border-strong text-fg-tertiary hover:border-error hover:text-error"
+                    aria-label="Remover destaque"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={addHighlight}
+              disabled={highlights.length >= MAX_HIGHLIGHTS}
+              className="mt-2 rounded-control border border-dashed border-border-hover px-4 py-2.5 text-[13px] font-bold text-fg-tertiary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              + Adicionar linha
+            </button>
           </div>
         </div>
         {error && <div className="mt-3 text-[13px] font-semibold text-error">{error}</div>}

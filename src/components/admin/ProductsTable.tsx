@@ -20,6 +20,9 @@ type Row = {
   description: string;
   imageUrl: string | null;
   images: { id: string; url: string | null; label: string }[];
+  rating: number;
+  reviewCount: number;
+  highlights: string[];
 };
 
 export function ProductsTable({ products, collections }: { products: Row[]; collections: string[] }) {
@@ -61,6 +64,9 @@ export function ProductsTable({ products, collections }: { products: Row[]; coll
       stock: String(p.stock),
       description: p.description,
       images: p.images,
+      rating: String(p.rating),
+      reviewCount: String(p.reviewCount),
+      highlights: p.highlights,
     });
     setModalOpen(true);
   }

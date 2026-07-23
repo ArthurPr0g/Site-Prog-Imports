@@ -18,6 +18,9 @@ export default async function AdminProductsPage() {
     description: p.description,
     imageUrl: p.product_images.find((img) => img.url)?.url ?? null,
     images: p.product_images.map((img) => ({ id: img.id, url: img.url, label: img.label })),
+    rating: Number(p.rating),
+    reviewCount: p.review_count,
+    highlights: p.highlights ?? [],
   }));
 
   return (

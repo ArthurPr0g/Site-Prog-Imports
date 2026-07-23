@@ -70,6 +70,7 @@ export default async function ProductPage({ params }: { params: Promise<{ sku: s
             promoPrice={product.promoPrice}
             image={product.images[0]?.label ?? product.name.toLowerCase()}
             imageUrl={product.images.find((img) => img.url)?.url ?? null}
+            highlights={product.highlights ?? []}
           />
         </div>
       </section>

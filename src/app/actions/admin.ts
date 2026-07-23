@@ -24,6 +24,9 @@ export type ProductFormInput = {
   promoPrice: number | null;
   stock: number;
   description: string;
+  rating: number;
+  reviewCount: number;
+  highlights: string[];
 };
 
 export async function saveProductAction(input: ProductFormInput): Promise<ActionResult & { id?: string }> {
@@ -40,6 +43,12 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
     return errResult('O preço promocional precisa ser menor que o preço original.');
   }
   if (!Number.isFinite(input.stock) || input.stock < 0) return errResult('Informe um estoque válido (0 ou mais).');
+  if (!Number.isFinite(input.rating) || input.rating < 0 || input.rating > 5) {
+    return errResult('A avaliação precisa ser um número entre 0 e 5.');
+  }
+  if (!Number.isFinite(input.reviewCount) || input.reviewCount < 0) {
+    return errResult('Informe um número de avaliações válido (0 ou mais).');
+  }
 
   let brandId: string | null = null;
   if (input.brand.trim()) {
@@ -59,6 +68,8 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
     .maybeSingle();
   if (categoryError) return errResult('Não foi possível validar a categoria selecionada.');
 
+  const highlights = input.highlights.map((h) => h.trim()).filter(Boolean).slice(0, 8);
+
   const payload = {
     name: input.name.trim(),
     sku: input.sku.trim(),
@@ -68,6 +79,9 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
     promo_price: input.promoPrice,
     stock: input.stock,
     description: input.description.trim(),
+    rating: input.rating,
+    review_count: input.reviewCount,
+    highlights,
   };
 
   let productId = input.id;

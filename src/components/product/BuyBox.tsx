@@ -13,6 +13,7 @@ export function BuyBox({
   promoPrice,
   image,
   imageUrl,
+  highlights,
 }: {
   productId: string;
   sku: string;
@@ -21,6 +22,7 @@ export function BuyBox({
   promoPrice: number | null;
   image: string;
   imageUrl: string | null;
+  highlights: string[];
 }) {
   const [qty, setQty] = useState(1);
   const { favorites, toggleFavorite, add, openCart } = useCart();
@@ -101,12 +103,16 @@ export function BuyBox({
       >
         Comprar agora
       </a>
-      <div className="flex flex-col gap-2.5 rounded-2xl border border-divider-strong bg-card-dark px-5 py-4.5 text-[13.5px] text-fg-secondary">
-        <div><span className="mr-2 font-extrabold text-accent">✓</span>Modelo exclusivo do mercado americano — não vendido no Brasil</div>
-        <div><span className="mr-2 font-extrabold text-accent">✓</span>Garantia de 12 meses + suporte pós-venda Prog Imports</div>
-        <div><span className="mr-2 font-extrabold text-accent">✓</span>Rastreamento completo da importação, etapa por etapa</div>
-        <div><span className="mr-2 font-extrabold text-accent">✓</span>Frete grátis — envio segurado para todo o Brasil</div>
-      </div>
+      {highlights.length > 0 && (
+        <div className="flex flex-col gap-2.5 rounded-2xl border border-divider-strong bg-card-dark px-5 py-4.5 text-[13.5px] text-fg-secondary">
+          {highlights.map((h, i) => (
+            <div key={i}>
+              <span className="mr-2 font-extrabold text-accent">✓</span>
+              {h}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
