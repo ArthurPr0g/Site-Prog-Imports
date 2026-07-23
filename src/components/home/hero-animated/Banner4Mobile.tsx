@@ -65,18 +65,18 @@ function SetM4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msg
 
       <div style={{ position: 'absolute', left: 60, right: 60, top: 78, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
         <img src="/images/logo.png" alt="Prog Imports" style={{ width: 160, opacity: baseP, transform: `translateY(${(1 - baseP) * -12}px)` }} />
-        <div style={{ fontFamily: F.mono, fontSize: 12, letterSpacing: '0.32em', color: C.orange, opacity: baseP }}>DA COMPRA À ENTREGA</div>
+        <div style={{ fontFamily: F.mono, fontSize: 15, letterSpacing: '0.3em', color: C.orange, opacity: baseP }}>DA COMPRA À ENTREGA</div>
         <div style={{ overflow: 'hidden' }}>
           <h1
             style={{
               margin: 0,
               fontFamily: F.display,
               fontWeight: 600,
-              fontSize: 40,
+              fontSize: 46,
               lineHeight: 1.14,
               color: C.white,
               letterSpacing: '-0.02em',
-              maxWidth: 820,
+              maxWidth: 900,
               transform: `translateY(${(1 - msgP) * 115}%)`,
             }}
           >
@@ -84,7 +84,7 @@ function SetM4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msg
           </h1>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, opacity: sg(msgP, 0.4, 0.85), transform: `translateY(${(1 - sg(msgP, 0.4, 0.85)) * 14}px)` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: F.mono, fontSize: 12, letterSpacing: '0.12em', color: C.gray, border: '1px solid #2A2B31', borderRadius: 999, padding: '9px 18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: F.mono, fontSize: 14, letterSpacing: '0.1em', color: C.gray, border: '1px solid #2A2B31', borderRadius: 999, padding: '9px 18px' }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: C.orange, display: 'inline-block' }} />
             RASTREIO EM TEMPO REAL, DIRETO PELO SITE
           </div>
@@ -97,7 +97,7 @@ function SetM4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msg
               textDecoration: 'none',
               fontFamily: F.display,
               fontWeight: 600,
-              fontSize: 16,
+              fontSize: 18,
               letterSpacing: '0.06em',
               padding: '14px 30px',
               borderRadius: 3,
@@ -160,7 +160,7 @@ function SetM4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msg
               >
                 {isCheck ? '✓' : `0${i + 1}`}
               </div>
-              <div style={{ position: 'absolute', left: 44, top: '50%', transform: 'translateY(-50%)', whiteSpace: 'nowrap', fontSize: 21, color: active ? C.white : '#5B5D64', fontWeight: 500, marginLeft: 22 }}>
+              <div style={{ position: 'absolute', left: 44, top: '50%', transform: 'translateY(-50%)', whiteSpace: 'nowrap', fontSize: 24, color: active ? C.white : '#5B5D64', fontWeight: 500, marginLeft: 22 }}>
                 {n.label}
               </div>
             </div>

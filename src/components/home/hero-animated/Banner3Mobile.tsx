@@ -107,7 +107,7 @@ function SetM3({ t, flyP, convP, msgP }: { t: number; flyP: number; convP: numbe
 
       <div style={{ position: 'absolute', left: 72, top: 80, width: 936, display: 'flex', flexDirection: 'column', gap: 18 }}>
         <img src="/images/logo.png" alt="Prog Imports" style={{ width: 165, alignSelf: 'flex-start', opacity: msgP, transform: `translateY(${(1 - msgP) * -14}px)` }} />
-        <div style={{ fontFamily: F.mono, fontSize: 13, letterSpacing: '0.32em', color: C.orange, opacity: Math.min(1, flyP * 2) }}>ENGENHARIA PREMIUM</div>
+        <div style={{ fontFamily: F.mono, fontSize: 16, letterSpacing: '0.3em', color: C.orange, opacity: Math.min(1, flyP * 2) }}>ENGENHARIA PREMIUM</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', columnGap: 18 }}>
           {WORDS.map((w, i) => {
             const a = sg(msgP, i * 0.18, i * 0.18 + 0.3, Easing.easeOutCubic);
@@ -117,7 +117,7 @@ function SetM3({ t, flyP, convP, msgP }: { t: number; flyP: number; convP: numbe
                   style={{
                     fontFamily: F.display,
                     fontWeight: 600,
-                    fontSize: 46,
+                    fontSize: 55,
                     lineHeight: 1.16,
                     letterSpacing: '-0.02em',
                     color: i === 2 ? C.orange : C.white,
@@ -130,7 +130,7 @@ function SetM3({ t, flyP, convP, msgP }: { t: number; flyP: number; convP: numbe
             );
           })}
         </div>
-        <div style={{ fontSize: 18, lineHeight: 1.5, color: C.gray, maxWidth: 640, opacity: sg(msgP, 0.55, 0.85), transform: `translateY(${(1 - sg(msgP, 0.55, 0.85)) * 16}px)` }}>
+        <div style={{ fontSize: 21, lineHeight: 1.5, color: C.gray, maxWidth: 700, opacity: sg(msgP, 0.55, 0.85), transform: `translateY(${(1 - sg(msgP, 0.55, 0.85)) * 16}px)` }}>
           Máquinas montadas e configuradas sob medida para o seu desempenho.
         </div>
         <a
@@ -143,7 +143,7 @@ function SetM3({ t, flyP, convP, msgP }: { t: number; flyP: number; convP: numbe
             textDecoration: 'none',
             fontFamily: F.display,
             fontWeight: 600,
-            fontSize: 16,
+            fontSize: 18,
             letterSpacing: '0.06em',
             padding: '15px 32px',
             borderRadius: 3,

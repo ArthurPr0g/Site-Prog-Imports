@@ -120,10 +120,10 @@ function SetM1({
         })}
       </div>
 
-      <div style={{ position: 'absolute', left: 72, top: 88, width: 936, display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ position: 'absolute', left: 72, top: 64, width: 936, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <img src="/images/logo.png" alt="Prog Imports" style={{ width: 170, alignSelf: 'flex-start', opacity: brandP, transform: `translateY(${(1 - brandP) * -14}px)` }} />
         <div style={{ overflow: 'hidden' }}>
-          <div style={{ fontFamily: F.mono, fontSize: 13, letterSpacing: '0.32em', color: C.orange, transform: `translateY(${(1 - Math.min(1, titleP * 1.6)) * 110}%)` }}>
+          <div style={{ fontFamily: F.mono, fontSize: 16, letterSpacing: '0.3em', color: C.orange, transform: `translateY(${(1 - Math.min(1, titleP * 1.6)) * 110}%)` }}>
             O FUTURO CHEGOU
           </div>
         </div>
@@ -133,18 +133,18 @@ function SetM1({
               margin: 0,
               fontFamily: F.display,
               fontWeight: 600,
-              fontSize: 47,
+              fontSize: 58,
               lineHeight: 1.08,
               color: C.white,
               letterSpacing: '-0.02em',
               transform: `translateY(${(1 - titleP) * 110}%)`,
-              maxWidth: 700,
+              maxWidth: 780,
             }}
           >
             O melhor da tecnologia mundial<span style={{ color: C.orange }}>.</span>
           </h1>
         </div>
-        <div style={{ fontSize: 20, lineHeight: 1.5, color: C.gray, opacity: brandP, transform: `translateY(${(1 - brandP) * 18}px)` }}>Importado diretamente para você.</div>
+        <div style={{ fontSize: 23, lineHeight: 1.5, color: C.gray, opacity: brandP, transform: `translateY(${(1 - brandP) * 18}px)` }}>Importado diretamente para você.</div>
         <a
           href="#produtos"
           style={{
@@ -155,7 +155,7 @@ function SetM1({
             textDecoration: 'none',
             fontFamily: F.display,
             fontWeight: 600,
-            fontSize: 16,
+            fontSize: 18,
             letterSpacing: '0.06em',
             padding: '15px 32px',
             borderRadius: 3,

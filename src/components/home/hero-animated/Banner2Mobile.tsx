@@ -104,14 +104,14 @@ function SetM2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; ro
 
       <div style={{ position: 'absolute', left: 72, right: 72, top: 735, display: 'flex', flexDirection: 'column', gap: 20 }}>
         <img src="/images/logo.png" alt="Prog Imports" style={{ width: 170, opacity: msgP, transform: `translateY(${(1 - msgP) * -14}px)` }} />
-        <div style={{ fontFamily: F.mono, fontSize: 13, letterSpacing: '0.32em', color: C.orange, opacity: Math.min(1, mapP) }}>DIRETO DOS EUA 🇺🇸</div>
+        <div style={{ fontFamily: F.mono, fontSize: 16, letterSpacing: '0.3em', color: C.orange, opacity: Math.min(1, mapP) }}>DIRETO DOS EUA 🇺🇸</div>
         <div style={{ overflow: 'hidden' }}>
           <h1
             style={{
               margin: 0,
               fontFamily: F.display,
               fontWeight: 600,
-              fontSize: 45,
+              fontSize: 55,
               lineHeight: 1.1,
               color: C.white,
               letterSpacing: '-0.02em',
@@ -121,7 +121,7 @@ function SetM2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; ro
             Produtos exclusivos, importados dos EUA<span style={{ color: C.orange }}>.</span>
           </h1>
         </div>
-        <div style={{ fontSize: 19, lineHeight: 1.5, color: C.gray, maxWidth: 760, opacity: msgP, transform: `translateY(${(1 - msgP) * 16}px)` }}>
+        <div style={{ fontSize: 22, lineHeight: 1.5, color: C.gray, maxWidth: 760, opacity: msgP, transform: `translateY(${(1 - msgP) * 16}px)` }}>
           Do lançamento nos Estados Unidos até a sua casa, sem intermediários.
         </div>
         <a
@@ -134,7 +134,7 @@ function SetM2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; ro
             textDecoration: 'none',
             fontFamily: F.display,
             fontWeight: 600,
-            fontSize: 16,
+            fontSize: 18,
             letterSpacing: '0.06em',
             padding: '15px 32px',
             borderRadius: 3,
