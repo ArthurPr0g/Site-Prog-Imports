@@ -653,17 +653,17 @@ export async function renameCollectionAction(id: string, name: string): Promise<
   return okResult();
 }
 
-export async function addProductToCollectionAction(productId: string, collectionId: string): Promise<ActionResult> {
+export async function addProductsToCollectionAction(productIds: string[], collectionId: string): Promise<ActionResult> {
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
-  const { error } = await supabase.from('product_collections').insert({ product_id: productId, collection_id: collectionId });
-  if (error) {
-    if (error.code === '23505') return errResult('Esse produto já está nessa coleção.');
-    return errResult(friendlyDbError(error, 'Não foi possível adicionar o produto à coleção.'));
-  }
+  if (productIds.length === 0) return errResult('Selecione ao menos um produto.');
+  const { error } = await supabase
+    .from('product_collections')
+    .insert(productIds.map((productId) => ({ product_id: productId, collection_id: collectionId })));
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível adicionar os produtos à coleção.'));
   revalidatePath('/admin/colecoes');
   revalidatePath('/');
-  return okResult();
+  return okResult(`${productIds.length} produto(s) adicionado(s) à coleção.`);
 }
 
 export async function removeProductFromCollectionAction(productId: string, collectionId: string): Promise<ActionResult> {
