@@ -797,17 +797,39 @@ export async function setSmallBannersVisibleAction(visible: boolean): Promise<Ac
 }
 
 // ============ SERVICES ============
-export async function addServiceAction(name: string, priceLabel: string): Promise<ActionResult> {
+// O ícone exibido no site é escolhido automaticamente a partir do nome (ver
+// src/lib/service-icons.tsx) — não gravamos mais abreviação em `glyph`.
+export async function addServiceAction(name: string, description: string, priceLabel: string): Promise<ActionResult> {
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
   const trimmed = name.trim();
   if (!trimmed) return errResult('Informe o nome do serviço.');
   const { error } = await supabase.from('services').insert({
     name: trimmed,
+    description: description.trim(),
     price_label: priceLabel.trim() || 'sob consulta',
-    glyph: trimmed.slice(0, 2).toUpperCase(),
   });
   if (error) return errResult(friendlyDbError(error, 'Não foi possível adicionar o serviço.'));
+  revalidatePath('/admin/servicos');
+  revalidatePath('/');
+  return okResult();
+}
+
+export async function updateServiceAction(
+  id: string,
+  name: string,
+  description: string,
+  priceLabel: string
+): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const trimmed = name.trim();
+  if (!trimmed) return errResult('Informe o nome do serviço.');
+  const { error } = await supabase
+    .from('services')
+    .update({ name: trimmed, description: description.trim(), price_label: priceLabel.trim() || 'sob consulta' })
+    .eq('id', id);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar as alterações do serviço.'));
   revalidatePath('/admin/servicos');
   revalidatePath('/');
   return okResult();
