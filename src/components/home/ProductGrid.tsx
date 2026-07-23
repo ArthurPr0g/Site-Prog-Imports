@@ -97,7 +97,7 @@ export function ProductGrid({ products, initialFilter }: { products: ProductCard
                   onClick={() => {
                     add({ id: p.id, sku: p.sku, name: p.name, price: activePrice, image: p.image, imageUrl: p.imageUrl });
                   }}
-                  className="mt-3 rounded-xl border border-border-hover bg-[#1c1c21] py-2 text-[11.5px] font-extrabold transition-all hover:border-accent hover:bg-accent hover:text-page sm:mt-4 sm:rounded-[14px] sm:py-3 sm:text-sm"
+                  className="mt-auto rounded-xl border border-border-hover bg-[#1c1c21] pb-2 pt-3 text-[11.5px] font-extrabold transition-all hover:border-accent hover:bg-accent hover:text-page sm:rounded-[14px] sm:pb-3 sm:pt-4 sm:text-sm"
                 >
                   <span className="sm:hidden">Adicionar</span>
                   <span className="hidden sm:inline">Adicionar ao carrinho</span>
