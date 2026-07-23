@@ -59,7 +59,7 @@ export async function listCollectionNames() {
   return (data ?? []).map((c) => c.name);
 }
 
-const MAX_SITE_COLLECTIONS = 4;
+const MAX_SITE_COLLECTIONS = 6;
 
 export async function listSiteCollections() {
   const supabase = await createClient();

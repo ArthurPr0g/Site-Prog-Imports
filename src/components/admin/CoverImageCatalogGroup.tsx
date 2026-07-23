@@ -101,7 +101,7 @@ export function CoverImageCatalogGroup({
       <div className="mb-4 text-[15px] font-extrabold">{title}</div>
       {kind === 'collections' && (
         <div className="mb-3.5 text-[12px] leading-relaxed text-fg-tertiary">
-          Ative &ldquo;Mostrar no site&rdquo; em até 4 coleções para virarem seções na home, cada uma com a posição que você definir.
+          Ative &ldquo;Mostrar no site&rdquo; em até 6 coleções para virarem seções na home, cada uma com a posição que você definir.
         </div>
       )}
       <div className="mb-3.5 flex gap-2">
@@ -231,14 +231,14 @@ function CoverImageRow({
             key={item.site_position}
             type="number"
             min={1}
-            max={4}
+            max={6}
             defaultValue={item.site_position || ''}
             disabled={!showOnSite}
             onBlur={(e) => {
               const v = Number(e.target.value);
               if (Number.isFinite(v) && v > 0) onSitePositionChange?.(v);
             }}
-            title="Posição no site (1 a 4)"
+            title="Posição no site (1 a 6)"
             className="h-8 w-13 rounded-[8px] border border-border-strong bg-input px-1.5 text-center text-[12px] outline-none focus:border-accent disabled:opacity-40"
           />
           <button

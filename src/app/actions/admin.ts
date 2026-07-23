@@ -604,7 +604,7 @@ export async function toggleCategoryActiveAction(id: string, active: boolean): P
 }
 
 // Quantas coleções podem virar seção (feed horizontal) na home ao mesmo tempo.
-const MAX_SITE_COLLECTIONS = 4;
+const MAX_SITE_COLLECTIONS = 6;
 
 export async function toggleCollectionShowOnSiteAction(id: string, current: boolean): Promise<ActionResult> {
   const supabase = await adminClient();
