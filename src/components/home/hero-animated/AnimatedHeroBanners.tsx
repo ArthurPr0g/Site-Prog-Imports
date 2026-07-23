@@ -5,16 +5,48 @@ import { Banner1, BANNER1_SCENES } from './Banner1';
 import { Banner2, BANNER2_SCENES } from './Banner2';
 import { Banner3, BANNER3_SCENES } from './Banner3';
 import { Banner4, BANNER4_SCENES } from './Banner4';
+import { Banner1Mobile } from './Banner1Mobile';
+import { Banner2Mobile } from './Banner2Mobile';
+import { Banner3Mobile } from './Banner3Mobile';
+import { Banner4Mobile } from './Banner4Mobile';
 import { useSceneClock, type SceneSpec } from './scene-engine';
 
-const SLIDES: { Component: (p: { index: number; progress: number; t: number }) => React.ReactElement; scenes: SceneSpec[] }[] = [
+type SlideDef = { Component: (p: { index: number; progress: number; t: number }) => React.ReactElement; scenes: SceneSpec[] };
+
+const DESKTOP_SLIDES: SlideDef[] = [
   { Component: Banner1, scenes: BANNER1_SCENES },
   { Component: Banner2, scenes: BANNER2_SCENES },
   { Component: Banner3, scenes: BANNER3_SCENES },
   { Component: Banner4, scenes: BANNER4_SCENES },
 ];
 
+const MOBILE_SLIDES: SlideDef[] = [
+  { Component: Banner1Mobile, scenes: BANNER1_SCENES },
+  { Component: Banner2Mobile, scenes: BANNER2_SCENES },
+  { Component: Banner3Mobile, scenes: BANNER3_SCENES },
+  { Component: Banner4Mobile, scenes: BANNER4_SCENES },
+];
+
+const DESKTOP_CANVAS = { width: 1920, height: 800 };
+const MOBILE_CANVAS = { width: 1080, height: 1350 };
+const MOBILE_BREAKPOINT = '(max-width: 767px)';
+
 const HOLD_MS = 3200;
+
+function subscribeIsMobile(callback: () => void) {
+  const mq = window.matchMedia(MOBILE_BREAKPOINT);
+  mq.addEventListener('change', callback);
+  return () => mq.removeEventListener('change', callback);
+}
+function getIsMobileSnapshot() {
+  return window.matchMedia(MOBILE_BREAKPOINT).matches;
+}
+function getIsMobileServerSnapshot() {
+  return false;
+}
+function useIsMobile() {
+  return useSyncExternalStore(subscribeIsMobile, getIsMobileSnapshot, getIsMobileServerSnapshot);
+}
 
 function subscribeReducedMotion(callback: () => void) {
   const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -46,8 +78,20 @@ function useCanvasScale(canvasWidth = 1920) {
   return [ref, scale] as const;
 }
 
-function Slide({ index, active, reducedMotion, onDone }: { index: number; active: boolean; reducedMotion: boolean; onDone: () => void }) {
-  const { Component, scenes } = SLIDES[index];
+function Slide({
+  slides,
+  index,
+  active,
+  reducedMotion,
+  onDone,
+}: {
+  slides: SlideDef[];
+  index: number;
+  active: boolean;
+  reducedMotion: boolean;
+  onDone: () => void;
+}) {
+  const { Component, scenes } = slides[index];
   const clock = useSceneClock(scenes, active, reducedMotion);
   const firedRef = useRef(false);
 
@@ -65,11 +109,14 @@ export function AnimatedHeroBanners() {
   const [active, setActive] = useState(0);
   const [slideKey, setSlideKey] = useState(0);
   const reducedMotion = useReducedMotion();
-  const [containerRef, scale] = useCanvasScale();
+  const isMobile = useIsMobile();
+  const canvas = isMobile ? MOBILE_CANVAS : DESKTOP_CANVAS;
+  const slides = isMobile ? MOBILE_SLIDES : DESKTOP_SLIDES;
+  const [containerRef, scale] = useCanvasScale(canvas.width);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const goTo = useCallback((next: number) => {
-    setActive(((next % SLIDES.length) + SLIDES.length) % SLIDES.length);
+    setActive(((next % DESKTOP_SLIDES.length) + DESKTOP_SLIDES.length) % DESKTOP_SLIDES.length);
     setSlideKey((k) => k + 1);
   }, []);
 
@@ -79,7 +126,7 @@ export function AnimatedHeroBanners() {
     if (reducedMotion) return;
     advanceTimer.current = setTimeout(() => {
       setActive((prev) => {
-        const next = (prev + 1) % SLIDES.length;
+        const next = (prev + 1) % DESKTOP_SLIDES.length;
         setSlideKey((k) => k + 1);
         return next;
       });
@@ -91,11 +138,11 @@ export function AnimatedHeroBanners() {
       <div
         ref={containerRef}
         className="relative overflow-hidden rounded-2xl border border-border"
-        style={{ aspectRatio: '1920 / 800' }}
+        style={{ aspectRatio: `${canvas.width} / ${canvas.height}` }}
       >
         {scale > 0 && (
-          <div style={{ position: 'absolute', top: 0, left: 0, width: 1920, height: 800, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-            <Slide key={slideKey} index={active} active reducedMotion={reducedMotion} onDone={handleDone} />
+          <div style={{ position: 'absolute', top: 0, left: 0, width: canvas.width, height: canvas.height, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+            <Slide key={`${slideKey}-${isMobile}`} slides={slides} index={active} active reducedMotion={reducedMotion} onDone={handleDone} />
           </div>
         )}
 
@@ -115,7 +162,7 @@ export function AnimatedHeroBanners() {
         </button>
 
         <div className="absolute bottom-3 left-1/2 z-2 flex -translate-x-1/2 gap-2 sm:bottom-4">
-          {SLIDES.map((_, i) => (
+          {DESKTOP_SLIDES.map((_, i) => (
             <button
               key={i}
               onClick={() => goTo(i)}

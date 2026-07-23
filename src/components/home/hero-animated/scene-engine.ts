@@ -96,12 +96,12 @@ export const HERO_FONTS = {
 
 export const HERO_ASSET = (name: string) => `/hero-banners/${name}`;
 
-export function heroBgGrid(opacity = 0.05): React.CSSProperties {
+export function heroBgGrid(opacity = 0.05, cell = 96): React.CSSProperties {
   return {
     position: 'absolute',
     inset: 0,
     opacity,
     backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
-    backgroundSize: '96px 96px',
+    backgroundSize: `${cell}px ${cell}px`,
   };
 }
