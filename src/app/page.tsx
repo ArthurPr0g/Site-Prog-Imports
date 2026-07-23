@@ -89,7 +89,7 @@ export default async function HomePage({
       {settings.showSmallBanners && <HeroCarousel slides={heroSlides} />}
       <BrandsMarquee />
       <Categories categories={categoryCards} />
-      <ProductGrid products={productsForFilter} />
+      <ProductGrid products={productsForFilter} activeCategoria={categoria} />
       <Institutional />
       <Services services={services} />
       <Testimonials testimonials={testimonials} />

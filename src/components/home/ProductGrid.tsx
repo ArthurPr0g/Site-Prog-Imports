@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { PlaceholderImage } from '@/components/ui/PlaceholderImage';
 import { GlowBorder, glowMouseMove, glowMouseLeave } from '@/components/ui/GlowBorder';
 import { formatBRL, formatParcel } from '@/lib/format';
@@ -10,14 +11,31 @@ import type { ProductCard } from '@/lib/data/catalog';
 
 const COLLECTION_TABS = ['Todos', 'Lançamentos', 'Promoções', 'Mais vendidos'];
 
-export function ProductGrid({ products, initialFilter }: { products: ProductCard[]; initialFilter?: string }) {
+export function ProductGrid({
+  products,
+  initialFilter,
+  activeCategoria,
+}: {
+  products: ProductCard[];
+  initialFilter?: string;
+  activeCategoria?: string;
+}) {
   const [active, setActive] = useState(initialFilter && COLLECTION_TABS.includes(initialFilter) ? initialFilter : 'Todos');
   const { add, favorites, toggleFavorite } = useCart();
+  const router = useRouter();
 
   const shown = useMemo(
     () => (active === 'Todos' ? products : products.filter((p) => p.collections.includes(active))),
     [products, active]
   );
+
+  // "Todos" também precisa limpar o filtro de categoria vindo do carrossel (via
+  // URL) — sem isso, o clique só resetava a aba de coleção e a lista continuava
+  // restrita à categoria selecionada.
+  function selectTab(name: string) {
+    setActive(name);
+    if (name === 'Todos' && activeCategoria) router.push('/#produtos');
+  }
 
   return (
     <section id="produtos" className="mx-auto max-w-[1280px] px-6 pt-20">
@@ -32,7 +50,7 @@ export function ProductGrid({ products, initialFilter }: { products: ProductCard
           {COLLECTION_TABS.map((name) => (
             <button
               key={name}
-              onClick={() => setActive(name)}
+              onClick={() => selectTab(name)}
               className="rounded-full border px-4.5 py-2.5 text-[13px] font-bold transition-all"
               style={{
                 background: active === name ? '#F28705' : '#151518',
