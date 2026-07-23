@@ -3,8 +3,10 @@ import { PlaceholderImage } from '@/components/ui/PlaceholderImage';
 import { formatBRL, formatParcel } from '@/lib/format';
 import type { ProductCard } from '@/lib/data/catalog';
 
+const MIN_RELATED_TO_SHOW = 3;
+
 export function RelatedProducts({ products }: { products: ProductCard[] }) {
-  if (products.length === 0) return null;
+  if (products.length < MIN_RELATED_TO_SHOW) return null;
   return (
     <section className="mx-auto max-w-[1280px] px-6 pb-20 pt-20">
       <h2 className="mb-6 font-display text-[28px] font-bold tracking-[-.02em]">Produtos relacionados</h2>

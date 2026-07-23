@@ -74,18 +74,18 @@ export async function getProductBySku(sku: string) {
 
   if (error || !product) return null;
 
-  const { data: relatedLinks } = await supabase
-    .from('product_related')
-    .select('related_id')
-    .eq('product_id', product.id);
-
+  // Sugestões automáticas: outros produtos ativos da mesma categoria — não depende de
+  // curadoria manual, então passa a aparecer sozinho conforme o catálogo cresce.
   let related: ProductCard[] = [];
-  if (relatedLinks && relatedLinks.length > 0) {
-    const ids = relatedLinks.map((r) => r.related_id);
+  if (product.category_id) {
     const { data: relatedProducts } = await supabase
       .from('products')
       .select(`id, sku, name, price, promo_price, stock, categories(name), brands(name), product_images(label, url, position)`)
-      .in('id', ids);
+      .eq('category_id', product.category_id)
+      .eq('active', true)
+      .neq('id', product.id)
+      .order('created_at', { ascending: false })
+      .limit(8);
     related = (relatedProducts ?? []).map((p) => {
       const images = (p.product_images ?? []).sort((a, b) => a.position - b.position);
       return {
