@@ -38,6 +38,8 @@
   --animate-marquee: marquee 26s linear infinite;
   --animate-toast-in: toastIn .3s ease both;
   --animate-pulse-dot: pulseDot 2s ease-in-out infinite;
+  --animate-cart-bump: cartBump .5s cubic-bezier(.34,1.56,.64,1);
+  --animate-cart-box-pop: cartBoxPop .35s cubic-bezier(.34,1.56,.64,1) both;
 }
 
 @keyframes heroGlow {
@@ -59,6 +61,18 @@
 @keyframes pulseDot {
   0%, 100% { box-shadow: 0 0 0 0 rgba(242,135,5,.5); }
   50% { box-shadow: 0 0 0 9px rgba(242,135,5,0); }
+}
+@keyframes cartBump {
+  0% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-2px) rotate(-10deg); }
+  55% { transform: translateY(0) rotate(7deg); }
+  80% { transform: translateY(-1px) rotate(-3deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+@keyframes cartBoxPop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 html {

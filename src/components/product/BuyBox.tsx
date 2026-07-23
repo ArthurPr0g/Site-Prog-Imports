@@ -39,6 +39,10 @@ export function BuyBox({
     add({ id: productId, sku, name, price: activePrice, image, imageUrl }, false, qty);
   }
 
+  function handleAddToCart() {
+    add({ id: productId, sku, name, price: activePrice, image, imageUrl }, false, qty);
+  }
+
   return (
     <div>
       <div className="mb-4.5 rounded-[20px] border border-border bg-card p-6">
@@ -61,7 +65,7 @@ export function BuyBox({
           )}
         </div>
       </div>
-      <div className="mb-3.5 flex gap-3">
+      <div className="mb-3 flex gap-3">
         <div className="flex items-center gap-3 rounded-2xl border border-border-strong bg-card px-2">
           <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="h-12 w-9 text-lg">
             −
@@ -71,26 +75,32 @@ export function BuyBox({
             +
           </button>
         </div>
-        <a
-          href={waLink}
-          target="_blank"
-          rel="noreferrer"
-          onClick={() => {
-            handleBuyClick();
-            openCart();
-          }}
-          className="flex flex-1 items-center justify-center rounded-2xl bg-accent text-[15px] font-extrabold text-page shadow-[0_8px_28px_rgba(242,135,5,.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_36px_rgba(242,135,5,.45)]"
+        <button
+          onClick={handleAddToCart}
+          className="flex flex-1 items-center justify-center rounded-2xl border border-border-hover bg-[#1c1c21] text-[15px] font-extrabold transition-all hover:border-accent hover:bg-accent hover:text-page"
         >
-          Comprar agora
-        </a>
+          Adicionar ao carrinho
+        </button>
         <button
           onClick={() => toggleFavorite(productId)}
-          className="h-12 w-12 rounded-2xl border border-border-strong bg-card text-lg transition-all hover:border-accent"
+          className="h-12 w-12 flex-shrink-0 rounded-2xl border border-border-strong bg-card text-lg transition-all hover:border-accent"
           style={{ color: isFav ? '#F28705' : '#a8a8b0' }}
         >
           {isFav ? '♥' : '♡'}
         </button>
       </div>
+      <a
+        href={waLink}
+        target="_blank"
+        rel="noreferrer"
+        onClick={() => {
+          handleBuyClick();
+          openCart();
+        }}
+        className="mb-3.5 flex items-center justify-center rounded-2xl bg-accent py-3.5 text-[15px] font-extrabold text-page shadow-[0_8px_28px_rgba(242,135,5,.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_36px_rgba(242,135,5,.45)]"
+      >
+        Comprar agora
+      </a>
       <div className="flex flex-col gap-2.5 rounded-2xl border border-divider-strong bg-card-dark px-5 py-4.5 text-[13.5px] text-fg-secondary">
         <div><span className="mr-2 font-extrabold text-accent">✓</span>Modelo exclusivo do mercado americano — não vendido no Brasil</div>
         <div><span className="mr-2 font-extrabold text-accent">✓</span>Garantia de 12 meses + suporte pós-venda Prog Imports</div>

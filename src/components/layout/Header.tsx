@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Logo } from '@/components/ui/Logo';
+import { CartIcon } from '@/components/ui/CartIcon';
 import { useCart } from '@/lib/cart-context';
 import { formatBRL } from '@/lib/format';
 import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher';
@@ -129,9 +130,9 @@ export function Header({
             <button
               onClick={openCart}
               title="Carrinho"
-              className="relative grid h-9 w-9 flex-shrink-0 place-items-center rounded-full border border-border-strong bg-input-alt text-[15px] hover:border-accent sm:h-10 sm:w-10"
+              className="relative grid h-9 w-9 flex-shrink-0 place-items-center rounded-full border border-border-strong bg-input-alt hover:border-accent sm:h-10 sm:w-10"
             >
-              ▢
+              <CartIcon count={count} className="h-5 w-5 text-fg" />
               {count > 0 && (
                 <span className="absolute -right-1 -top-1 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-accent text-[10px] font-extrabold text-page">
                   {count}
