@@ -46,7 +46,7 @@ export default function LoginPage() {
       <div className="w-full max-w-[420px]">
         <div className="mb-8 flex justify-center">
           <Link href="/">
-            <Logo height={56} />
+            <Logo height={64} />
           </Link>
         </div>
         <div className="rounded-[22px] border border-border bg-card p-8">

@@ -7,7 +7,7 @@ export function AccountHeader({ name }: { name: string }) {
     <header className="sticky top-0 z-90 border-b border-divider-strong bg-page/82 backdrop-blur-xl">
       <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-4 px-4 py-3 sm:gap-6 sm:px-6 sm:py-3.5">
         <Link href="/" className="flex flex-shrink-0 items-center gap-2.5">
-          <Logo height={40} />
+          <Logo height={46} />
         </Link>
         <div className="flex flex-shrink-0 items-center gap-3 sm:gap-4">
           <Link href="/" className="hidden text-sm font-bold text-fg-secondary hover:text-accent sm:inline">

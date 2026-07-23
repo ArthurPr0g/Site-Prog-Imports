@@ -4,7 +4,7 @@ import { Logo } from '@/components/ui/Logo';
 export default function NotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-page px-6 text-center">
-      <Logo height={48} />
+      <Logo height={55} />
       <div>
         <h1 className="mb-2 font-display text-2xl font-bold tracking-[-.02em]">Página não encontrada</h1>
         <p className="max-w-md text-sm text-fg-tertiary">

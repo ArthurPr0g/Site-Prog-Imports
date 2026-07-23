@@ -8,6 +8,8 @@ import {
   deleteCatalogItemAction,
   reorderCatalogItemsAction,
   toggleCategoryActiveAction,
+  toggleCollectionShowOnSiteAction,
+  setCollectionSitePositionAction,
   uploadCollectionImageAction,
   removeCollectionImageAction,
   uploadCategoryImageAction,
@@ -16,7 +18,14 @@ import {
 import { useToast } from '@/components/ui/Toast';
 import { useDragReorder } from '@/lib/useDragReorder';
 
-type Item = { id: string; name: string; image_url: string | null; active?: boolean };
+type Item = {
+  id: string;
+  name: string;
+  image_url: string | null;
+  active?: boolean;
+  show_on_site?: boolean;
+  site_position?: number;
+};
 type Kind = 'collections' | 'categories';
 
 const ACTIONS = {
@@ -73,9 +82,28 @@ export function CoverImageCatalogGroup({
     });
   }
 
+  function toggleShowOnSite(item: Item) {
+    startTransition(async () => {
+      const result = await toggleCollectionShowOnSiteAction(item.id, item.show_on_site ?? false);
+      if (!result.ok) toast(result.message);
+    });
+  }
+
+  function changeSitePosition(item: Item, position: number) {
+    startTransition(async () => {
+      const result = await setCollectionSitePositionAction(item.id, position);
+      if (!result.ok) toast(result.message);
+    });
+  }
+
   return (
     <div className="rounded-[18px] border border-border bg-card p-6">
       <div className="mb-4 text-[15px] font-extrabold">{title}</div>
+      {kind === 'collections' && (
+        <div className="mb-3.5 text-[12px] leading-relaxed text-fg-tertiary">
+          Ative &ldquo;Mostrar no site&rdquo; em até 4 coleções para virarem seções na home, cada uma com a posição que você definir.
+        </div>
+      )}
       <div className="mb-3.5 flex gap-2">
         <input
           value={draft}
@@ -99,6 +127,8 @@ export function CoverImageCatalogGroup({
             item={item}
             onRemove={() => remove(item)}
             onToggleActive={kind === 'categories' ? () => toggleActive(item) : undefined}
+            onToggleShowOnSite={kind === 'collections' ? () => toggleShowOnSite(item) : undefined}
+            onSitePositionChange={kind === 'collections' ? (pos: number) => changeSitePosition(item, pos) : undefined}
           />
         ))}
       </div>
@@ -111,6 +141,8 @@ function CoverImageRow({
   item,
   onRemove,
   onToggleActive,
+  onToggleShowOnSite,
+  onSitePositionChange,
   rowRef,
   onPointerDown,
 }: {
@@ -118,6 +150,8 @@ function CoverImageRow({
   item: Item;
   onRemove: () => void;
   onToggleActive?: () => void;
+  onToggleShowOnSite?: () => void;
+  onSitePositionChange?: (position: number) => void;
   rowRef: (el: HTMLElement | null) => void;
   onPointerDown: (e: React.PointerEvent) => void;
 }) {
@@ -126,6 +160,7 @@ function CoverImageRow({
   const toast = useToast();
   const actions = ACTIONS[kind];
   const active = item.active ?? true;
+  const showOnSite = item.show_on_site ?? false;
 
   function pickFile() {
     inputRef.current?.click();
@@ -151,7 +186,11 @@ function CoverImageRow({
   }
 
   return (
-    <div ref={rowRef} className="flex items-center gap-2.5 border-b border-divider pb-3 last:border-b-0" style={{ opacity: active ? 1 : 0.5 }}>
+    <div
+      ref={rowRef}
+      className="flex flex-wrap items-center gap-2.5 border-b border-divider pb-3 last:border-b-0"
+      style={{ opacity: active ? 1 : 0.5 }}
+    >
       <span
         onPointerDown={onPointerDown}
         className="flex-shrink-0 cursor-grab text-fg-faded active:cursor-grabbing"
@@ -186,6 +225,35 @@ function CoverImageRow({
           )}
         </div>
       </div>
+      {onToggleShowOnSite && (
+        <div className="flex flex-shrink-0 items-center gap-1.5">
+          <input
+            key={item.site_position}
+            type="number"
+            min={1}
+            max={4}
+            defaultValue={item.site_position || ''}
+            disabled={!showOnSite}
+            onBlur={(e) => {
+              const v = Number(e.target.value);
+              if (Number.isFinite(v) && v > 0) onSitePositionChange?.(v);
+            }}
+            title="Posição no site (1 a 4)"
+            className="h-8 w-13 rounded-[8px] border border-border-strong bg-input px-1.5 text-center text-[12px] outline-none focus:border-accent disabled:opacity-40"
+          />
+          <button
+            onClick={onToggleShowOnSite}
+            className="rounded-full border px-2.5 py-1 text-[11px] font-extrabold"
+            style={{
+              background: showOnSite ? 'rgba(74,222,128,.1)' : 'rgba(168,168,176,.08)',
+              borderColor: showOnSite ? 'rgba(74,222,128,.35)' : 'rgba(168,168,176,.3)',
+              color: showOnSite ? '#4ade80' : '#a8a8b0',
+            }}
+          >
+            {showOnSite ? 'No site' : 'Mostrar no site'}
+          </button>
+        </div>
+      )}
       {onToggleActive && (
         <button
           onClick={onToggleActive}

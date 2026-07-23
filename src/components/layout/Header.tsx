@@ -94,7 +94,7 @@ export function Header({
             {menuOpen ? '✕' : '☰'}
           </button>
           <Link href="/" className="flex flex-shrink-0 items-center gap-2.5">
-            <Logo height={44} />
+            <Logo height={51} />
           </Link>
           <nav className="hidden gap-5 text-sm font-semibold text-fg-secondary lg:flex">
             {NAV_LINKS.map((l) => (

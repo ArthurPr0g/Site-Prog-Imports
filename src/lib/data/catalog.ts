@@ -59,6 +59,20 @@ export async function listCollectionNames() {
   return (data ?? []).map((c) => c.name);
 }
 
+const MAX_SITE_COLLECTIONS = 4;
+
+export async function listSiteCollections() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('collections')
+    .select('id, name')
+    .eq('show_on_site', true)
+    .order('site_position')
+    .order('name')
+    .limit(MAX_SITE_COLLECTIONS);
+  return data ?? [];
+}
+
 export async function getProductBySku(sku: string) {
   const supabase = await createClient();
   const { data: product, error } = await supabase

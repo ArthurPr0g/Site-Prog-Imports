@@ -37,7 +37,7 @@ export type ProductFormInput = {
   name: string;
   brand: string;
   category: string;
-  collection: string;
+  collections: string[];
   price: number;
   promoPrice: number | null;
   stock: number;
@@ -128,14 +128,15 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
 
   if (productId) {
     const { error: delError } = await supabase.from('product_collections').delete().eq('product_id', productId);
-    if (delError) return errResult('Produto salvo, mas não foi possível atualizar a coleção.');
-    if (input.collection.trim()) {
-      const { data: col } = await supabase.from('collections').select('id').eq('name', input.collection).maybeSingle();
-      if (col) {
+    if (delError) return errResult('Produto salvo, mas não foi possível atualizar as coleções.');
+    const collectionNames = input.collections.map((c) => c.trim()).filter(Boolean);
+    if (collectionNames.length) {
+      const { data: cols } = await supabase.from('collections').select('id').in('name', collectionNames);
+      if (cols?.length) {
         const { error: colError } = await supabase
           .from('product_collections')
-          .insert({ product_id: productId, collection_id: col.id });
-        if (colError) return errResult('Produto salvo, mas não foi possível vincular a coleção.');
+          .insert(cols.map((c) => ({ product_id: productId, collection_id: c.id })));
+        if (colError) return errResult('Produto salvo, mas não foi possível vincular as coleções.');
       }
     }
   }
@@ -597,6 +598,40 @@ export async function toggleCategoryActiveAction(id: string, active: boolean): P
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
   const { error } = await supabase.from('categories').update({ active: !active }).eq('id', id);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível atualizar o status da categoria.'));
+  revalidatePath('/admin/catalogo');
+  revalidatePath('/');
+  return okResult();
+}
+
+// Quantas coleções podem virar seção (feed horizontal) na home ao mesmo tempo.
+const MAX_SITE_COLLECTIONS = 4;
+
+export async function toggleCollectionShowOnSiteAction(id: string, current: boolean): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  if (!current) {
+    const { count } = await supabase
+      .from('collections')
+      .select('id', { count: 'exact', head: true })
+      .eq('show_on_site', true);
+    if ((count ?? 0) >= MAX_SITE_COLLECTIONS) {
+      return errResult(`Você já tem ${MAX_SITE_COLLECTIONS} coleções mostrando no site. Desative uma antes de ativar outra.`);
+    }
+  }
+  const { error } = await supabase.from('collections').update({ show_on_site: !current }).eq('id', id);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível atualizar a coleção.'));
+  revalidatePath('/admin/catalogo');
+  revalidatePath('/');
+  return okResult();
+}
+
+export async function setCollectionSitePositionAction(id: string, position: number): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  if (!Number.isFinite(position) || position <= 0) return errResult('Informe uma posição válida.');
+  const clamped = Math.min(MAX_SITE_COLLECTIONS, Math.round(position));
+  const { error } = await supabase.from('collections').update({ site_position: clamped }).eq('id', id);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível atualizar a posição.'));
   revalidatePath('/admin/catalogo');
   revalidatePath('/');
   return okResult();

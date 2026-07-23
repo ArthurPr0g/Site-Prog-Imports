@@ -16,7 +16,7 @@ type Row = {
   sku: string;
   category: string;
   brand: string;
-  collection: string;
+  collections: string[];
   price: number;
   stock: number;
   active: boolean;
@@ -68,7 +68,7 @@ export function ProductsTable({ products: productsProp, collections }: { product
       sku: p.sku,
       brand: p.brand,
       category: p.category,
-      collection: p.collection,
+      collections: p.collections,
       price: String(p.price),
       promoPrice: '',
       stock: String(p.stock),

@@ -14,7 +14,7 @@ export type ProductModalData = {
   sku?: string;
   brand: string;
   category: string;
-  collection: string;
+  collections: string[];
   price: string;
   promoPrice: string;
   stock: string;
@@ -54,7 +54,7 @@ export function ProductModal({
       name: '',
       brand: '',
       category: CATEGORY_OPTIONS[0],
-      collection: '',
+      collections: [],
       price: '',
       promoPrice: '',
       stock: '',
@@ -76,6 +76,13 @@ export function ProductModal({
 
   const set = (key: keyof ProductModalData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  function toggleCollection(name: string) {
+    setForm((f) => ({
+      ...f,
+      collections: f.collections.includes(name) ? f.collections.filter((c) => c !== name) : [...f.collections, name],
+    }));
+  }
 
   function updateHighlight(i: number, value: string) {
     setHighlights((hs) => hs.map((h, idx) => (idx === i ? value : h)));
@@ -117,7 +124,7 @@ export function ProductModal({
       name: form.name.trim(),
       brand: form.brand.trim(),
       category: form.category,
-      collection: form.collection,
+      collections: form.collections,
       price,
       promoPrice,
       stock: Number.isFinite(stock) ? stock : 0,
@@ -226,17 +233,42 @@ export function ProductModal({
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
-          <select value={form.collection} onChange={set('collection')} className={inputClass}>
-            <option value="">Sem coleção</option>
-            {collections.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
           <input value={form.price} onChange={set('price')} placeholder="Preço (R$)" className={inputClass} />
           <input value={form.promoPrice} onChange={set('promoPrice')} placeholder="Preço promocional (opcional)" className={inputClass} />
           <input value={form.stock} onChange={set('stock')} placeholder="Estoque" className={inputClass} />
           <input value={form.rating ?? ''} onChange={set('rating')} placeholder="Avaliação (0 a 5, ex: 4.9)" className={inputClass} />
           <input value={form.reviewCount ?? ''} onChange={set('reviewCount')} placeholder="Nº de avaliações" className={inputClass} />
+
+          <div className="sm:col-span-2">
+            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+              Coleções (pode selecionar mais de uma)
+            </div>
+            {collections.length === 0 ? (
+              <div className="text-[13px] text-fg-tertiary">Nenhuma coleção cadastrada ainda — crie em Catálogo.</div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {collections.map((c) => {
+                  const checked = form.collections.includes(c);
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => toggleCollection(c)}
+                      className="rounded-full border px-3.5 py-2 text-[12.5px] font-bold transition-all"
+                      style={{
+                        background: checked ? '#F28705' : '#151518',
+                        color: checked ? '#0a0a0c' : '#a8a8b0',
+                        borderColor: checked ? '#F28705' : '#26262b',
+                      }}
+                    >
+                      {c}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           <textarea
             value={form.description}
             onChange={set('description')}

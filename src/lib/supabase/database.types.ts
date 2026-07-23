@@ -151,6 +151,8 @@ export type Database = {
           image_url: string | null
           name: string
           position: number
+          show_on_site: boolean
+          site_position: number
         }
         Insert: {
           created_at?: string
@@ -158,6 +160,8 @@ export type Database = {
           image_url?: string | null
           name: string
           position?: number
+          show_on_site?: boolean
+          site_position?: number
         }
         Update: {
           created_at?: string
@@ -165,6 +169,8 @@ export type Database = {
           image_url?: string | null
           name?: string
           position?: number
+          show_on_site?: boolean
+          site_position?: number
         }
         Relationships: []
       }

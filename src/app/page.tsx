@@ -1,4 +1,4 @@
-import { listActiveProducts, listCategories } from '@/lib/data/catalog';
+import { listActiveProducts, listCategories, listSiteCollections } from '@/lib/data/catalog';
 import { listBanners, listServices, listTestimonials, getSiteSettings } from '@/lib/data/content';
 import { getCurrentUser } from '@/lib/auth';
 import { PromoBar } from '@/components/layout/PromoBar';
@@ -10,6 +10,7 @@ import { AnimatedHeroBanners } from '@/components/home/hero-animated/AnimatedHer
 import { BrandsMarquee } from '@/components/home/BrandsMarquee';
 import { Categories, type CategoryCard } from '@/components/home/Categories';
 import { ProductGrid } from '@/components/home/ProductGrid';
+import { CollectionRow } from '@/components/home/CollectionRow';
 import { Institutional } from '@/components/home/Institutional';
 import { Services } from '@/components/home/Services';
 import { Testimonials } from '@/components/home/Testimonials';
@@ -21,9 +22,10 @@ export default async function HomePage({
   searchParams: Promise<{ categoria?: string }>;
 }) {
   const { categoria } = await searchParams;
-  const [products, categories, banners, services, testimonials, user, settings] = await Promise.all([
+  const [products, categories, siteCollections, banners, services, testimonials, user, settings] = await Promise.all([
     listActiveProducts(),
     listCategories(),
+    listSiteCollections(),
     listBanners(),
     listServices(),
     listTestimonials(),
@@ -57,6 +59,10 @@ export default async function HomePage({
     return acc;
   }, {});
 
+  const collectionSections = siteCollections
+    .map((c) => ({ id: c.id, name: c.name, products: products.filter((p) => p.collections.includes(c.name)) }))
+    .filter((c) => c.products.length > 0);
+
   // "Serviços" não é uma categoria de produto de verdade — é um atalho fixo para a
   // seção de serviços da página. Ainda assim, se o admin cadastrar uma categoria
   // "Serviços" (só para ter uma capa própria), usamos a foto dela aqui em vez de
@@ -89,7 +95,15 @@ export default async function HomePage({
       {settings.showSmallBanners && <HeroCarousel slides={heroSlides} />}
       <BrandsMarquee />
       <Categories categories={categoryCards} />
-      <ProductGrid products={productsForFilter} activeCategoria={categoria} />
+      {categoria || collectionSections.length === 0 ? (
+        <ProductGrid products={productsForFilter} activeCategoria={categoria} />
+      ) : (
+        <div id="produtos">
+          {collectionSections.map((c) => (
+            <CollectionRow key={c.id} title={c.name} products={c.products} />
+          ))}
+        </div>
+      )}
       <Institutional />
       <Services services={services} />
       <Testimonials testimonials={testimonials} />

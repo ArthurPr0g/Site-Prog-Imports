@@ -11,7 +11,7 @@ export default async function AdminProductsPage() {
     sku: p.sku,
     category: p.categories?.name ?? '',
     brand: p.brands?.name ?? '',
-    collection: p.product_collections?.[0]?.collections?.name ?? '',
+    collections: (p.product_collections ?? []).map((pc) => pc.collections?.name).filter(Boolean) as string[],
     price: Number(p.price),
     stock: p.stock,
     active: p.active,

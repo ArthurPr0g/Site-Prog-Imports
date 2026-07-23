@@ -49,7 +49,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         >
           ☰
         </button>
-        <Logo height={32} />
+        <Logo height={37} />
         <span className="text-[10px] font-extrabold uppercase tracking-[.14em] text-accent">Admin</span>
       </div>
 
@@ -65,7 +65,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         )}
       >
         <div className="flex items-center gap-2.5 border-b border-divider-strong px-5 pb-3.5 pt-5">
-          <Logo height={44} />
+          <Logo height={51} />
           <div className="text-[10px] font-extrabold uppercase tracking-[.14em] text-accent">Admin</div>
           <button
             onClick={() => setMobileOpen(false)}
@@ -108,7 +108,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         className="sticky top-0 z-30 hidden h-screen flex-shrink-0 flex-col overflow-hidden border-r border-divider-strong bg-card-dark lg:flex"
       >
         <div className="flex items-center gap-2.5 border-b border-divider-strong px-5 pb-3.5 pt-5">
-          <Logo height={36} />
+          <Logo height={41} />
           <AnimatePresence>
             {hovered && (
               <motion.span

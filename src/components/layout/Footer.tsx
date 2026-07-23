@@ -26,7 +26,7 @@ export function Footer() {
       >
         <span aria-hidden className="footer-spotlight" />
         <div>
-          <Logo height={64} className="mb-4" />
+          <Logo height={74} className="mb-4" />
           <p className="max-w-70 text-[13.5px] leading-relaxed text-fg-tertiary">
             Importação de tecnologia premium direto dos Estados Unidos. Confiança, exclusividade e
             atendimento personalizado.
