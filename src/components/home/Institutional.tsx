@@ -1,13 +1,11 @@
-import { ShieldCheck, PlaneTakeoff, Globe, Headset, LifeBuoy, BadgeCheck } from 'lucide-react';
+import { ShieldCheck, Globe, Headset, LifeBuoy } from 'lucide-react';
 import { GlobeOpportunities } from './GlobeOpportunities';
 
 const DIFFS = [
-  { Icon: PlaneTakeoff, title: 'Importação legalizada, com procedência e nota fiscal' },
   { Icon: ShieldCheck, title: 'Garantia real e cobertura completa em todos os produtos' },
   { Icon: Globe, title: 'Exclusivos dos EUA, modelos que não chegam ao Brasil' },
   { Icon: Headset, title: 'Atendimento personalizado, direto com quem entende' },
   { Icon: LifeBuoy, title: 'Suporte pós-venda com acompanhamento após a entrega' },
-  { Icon: BadgeCheck, title: 'Qualidade garantida — só trabalhamos com o melhor' },
 ];
 
 export function Institutional() {
@@ -26,13 +24,13 @@ export function Institutional() {
               Importamos os produtos mais desejados do mundo com procedência garantida, atendimento
               personalizado e suporte completo antes, durante e depois da compra.
             </p>
-            <div className="flex flex-col gap-3.5">
+            <div className="flex flex-col gap-4.5">
               {DIFFS.map((d) => (
-                <div key={d.title} className="flex items-center gap-3.5">
-                  <div className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-[10px] border border-accent/30 bg-accent/10 text-accent">
-                    <d.Icon size={17} />
+                <div key={d.title} className="flex items-center gap-4">
+                  <div className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl border border-accent/30 bg-accent/10 text-accent">
+                    <d.Icon size={20} />
                   </div>
-                  <div className="text-[13.5px] leading-snug text-fg-secondary">{d.title}</div>
+                  <div className="text-[15px] leading-snug text-fg-secondary">{d.title}</div>
                 </div>
               ))}
             </div>
