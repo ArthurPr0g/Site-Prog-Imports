@@ -1,11 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="38" viewBox="0 0 28 38">
   <path
-    d="M2,2 L2,27 L9,21 L13,30 L16.5,28.5 L11.5,19.5 L20,19.5 Z"
+    d="M2,3.3
+       L2,22.8
+       Q2,25 4.043,25.817
+       L10.143,28.257
+       Q12,29 13.074,27.313
+       L17.819,19.856
+       Q19,18 17.398,16.492
+       L2.947,2.891
+       Q2,2 2,3.3
+       Z"
     fill="#FFFFFF"
     stroke="#0A0A0C"
     stroke-width="1.8"
     stroke-linejoin="round"
     stroke-linecap="round"
   />
-  <circle cx="12.5" cy="24" r="3.6" fill="#F28705" stroke="#0A0A0C" stroke-width="1.1" />
+  <circle cx="11.5" cy="21" r="3.6" fill="#F28705" stroke="#0A0A0C" stroke-width="1.1" />
 </svg>
