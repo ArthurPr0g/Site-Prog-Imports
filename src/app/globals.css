@@ -175,3 +175,21 @@ textarea::placeholder {
   transition: opacity 0.35s ease;
   pointer-events: none;
 }
+
+/* Spotlight que acompanha o cursor na faixa de marcas (BrandsMarquee) — some
+   naturalmente com a distância (é só um radial-gradient) e desliga ao sair. */
+.brands-spotlight {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(260px circle at var(--spot-x, 50%) var(--spot-y, 50%), rgba(242, 135, 5, 0.18), transparent 70%);
+  opacity: var(--spot-opacity, 0);
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.brand-word {
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+.brand-word:hover {
+  color: var(--color-accent);
+  text-shadow: 0 0 22px rgba(242, 135, 5, 0.7);
+}
