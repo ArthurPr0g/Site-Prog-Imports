@@ -65,7 +65,7 @@ export async function listSiteCollections() {
   const supabase = await createClient();
   const { data } = await supabase
     .from('collections')
-    .select('id, name')
+    .select('id, name, image_url')
     .eq('show_on_site', true)
     .order('site_position')
     .order('name')

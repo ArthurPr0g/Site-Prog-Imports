@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ProductCardTile } from './ProductCardTile';
 import type { ProductCard } from '@/lib/data/catalog';
 
-export function CollectionRow({ title, products }: { title: string; products: ProductCard[] }) {
+export function CollectionRow({ id, title, products }: { id?: string; title: string; products: ProductCard[] }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -37,7 +37,7 @@ export function CollectionRow({ title, products }: { title: string; products: Pr
   if (products.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-[1280px] px-6 pt-16">
+    <section id={id} className="mx-auto max-w-[1280px] scroll-mt-24 px-6 pt-16">
       <div className="mb-6 flex items-end justify-between gap-5">
         <h2 className="font-display text-[26px] font-bold tracking-[-.02em] sm:text-[32px]">{title}</h2>
       </div>

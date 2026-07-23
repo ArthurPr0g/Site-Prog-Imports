@@ -54,29 +54,22 @@ export default async function HomePage({
     ? products.filter((p) => p.category === categoria)
     : products;
 
-  const productCountByCategory = products.reduce<Record<string, number>>((acc, p) => {
-    acc[p.category] = (acc[p.category] ?? 0) + 1;
-    return acc;
-  }, {});
-
   const collectionSections = siteCollections
-    .map((c) => ({ id: c.id, name: c.name, products: products.filter((p) => p.collections.includes(c.name)) }))
+    .map((c) => ({ id: c.id, name: c.name, imageUrl: c.image_url, products: products.filter((p) => p.collections.includes(c.name)) }))
     .filter((c) => c.products.length > 0);
 
-  // "Serviços" não é uma categoria de produto de verdade — é um atalho fixo para a
-  // seção de serviços da página. Ainda assim, se o admin cadastrar uma categoria
-  // "Serviços" (só para ter uma capa própria), usamos a foto dela aqui em vez de
-  // deixá-la virar mais um filtro de produtos (que sempre daria 0 resultados).
+  // "Serviços" não é uma coleção de verdade — é um atalho fixo para a seção de
+  // serviços da página. Ainda assim, se o admin cadastrar uma categoria "Serviços"
+  // (só para ter uma capa própria), usamos a foto dela aqui.
   const servicosCategory = categories.find((c) => c.name === 'Serviços');
-  const productCategories = categories.filter((c) => c.name !== 'Serviços');
 
-  const categoryCards: CategoryCard[] = [
-    ...productCategories.map((c) => ({
+  const collectionCards: CategoryCard[] = [
+    ...collectionSections.map((c) => ({
       name: c.name,
-      glyph: c.glyph,
-      imageUrl: c.image_url,
-      count: `${productCountByCategory[c.name] ?? 0} produtos`,
-      href: `/?categoria=${encodeURIComponent(c.name)}#produtos`,
+      glyph: c.name.slice(0, 2).toUpperCase(),
+      imageUrl: c.imageUrl,
+      count: `${c.products.length} produtos`,
+      href: `/#colecao-${c.id}`,
     })),
     {
       name: 'Serviços',
@@ -94,13 +87,13 @@ export default async function HomePage({
       <AnimatedHeroBanners />
       {settings.showSmallBanners && <HeroCarousel slides={heroSlides} />}
       <BrandsMarquee />
-      <Categories categories={categoryCards} />
+      <Categories categories={collectionCards} />
       {categoria || collectionSections.length === 0 ? (
         <ProductGrid products={productsForFilter} activeCategoria={categoria} />
       ) : (
         <div id="produtos">
           {collectionSections.map((c) => (
-            <CollectionRow key={c.id} title={c.name} products={c.products} />
+            <CollectionRow key={c.id} id={`colecao-${c.id}`} title={c.name} products={c.products} />
           ))}
         </div>
       )}
