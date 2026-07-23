@@ -101,6 +101,22 @@ select,
   cursor: auto;
 }
 
+/* Variante "clicável" (laranja) do cursor: sem isso, links e botões que não
+   têm uma classe cursor-pointer explícita perdiam o dedinho nativo do
+   navegador e ficavam com o mesmo cursor de tudo, parecendo não-clicáveis. */
+a,
+button,
+[role='button'],
+summary {
+  cursor: url('/cursor-pointer.svg') 2 2, url('/cursor-pointer.png') 2 2, pointer;
+}
+
+button:disabled,
+a[aria-disabled='true'],
+button[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
 a {
   color: inherit;
   text-decoration: none;

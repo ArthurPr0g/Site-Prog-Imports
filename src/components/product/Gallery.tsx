@@ -1,14 +1,18 @@
 'use client';
 
-import { useState, type MouseEvent } from 'react';
+import { useRef, useState, type MouseEvent, type TouchEvent } from 'react';
 import Image from 'next/image';
 
 type GalleryImage = { label: string; url?: string | null };
+
+const SWIPE_THRESHOLD = 40;
 
 export function Gallery({ images, badge }: { images: GalleryImage[]; badge?: string }) {
   const [idx, setIdx] = useState(0);
   const [zoom, setZoom] = useState(false);
   const [pos, setPos] = useState({ x: 50, y: 50 });
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
 
   function onMove(e: MouseEvent<HTMLDivElement>) {
     const r = e.currentTarget.getBoundingClientRect();
@@ -19,6 +23,26 @@ export function Gallery({ images, badge }: { images: GalleryImage[]; badge?: str
     });
   }
 
+  function goTo(next: number) {
+    if (images.length === 0) return;
+    setIdx(((next % images.length) + images.length) % images.length);
+  }
+
+  function onTouchStart(e: TouchEvent<HTMLDivElement>) {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }
+
+  function onTouchEnd(e: TouchEvent<HTMLDivElement>) {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) < Math.abs(deltaY)) return;
+    goTo(deltaX < 0 ? idx + 1 : idx - 1);
+  }
+
   const active = images[idx] ?? { label: 'produto' };
 
   return (
@@ -26,7 +50,9 @@ export function Gallery({ images, badge }: { images: GalleryImage[]; badge?: str
       <div
         onMouseMove={onMove}
         onMouseLeave={() => setZoom(false)}
-        className="stripe-placeholder relative aspect-square cursor-zoom-in overflow-hidden rounded-3xl border border-border-strong sm:aspect-auto sm:h-[460px]"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        className="stripe-placeholder relative aspect-square cursor-zoom-in touch-pan-y overflow-hidden rounded-3xl border border-border-strong sm:aspect-auto sm:h-[460px]"
       >
         {active.url ? (
           <div
