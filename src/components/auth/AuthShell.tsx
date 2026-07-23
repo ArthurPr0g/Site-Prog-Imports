@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Logo } from '@/components/ui/Logo';
+import { GlobeOpportunities } from '@/components/home/GlobeOpportunities';
 
 export function AuthShell({
   title,
@@ -16,7 +17,7 @@ export function AuthShell({
   footer?: React.ReactNode;
 }) {
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-page px-6 py-16">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-page px-6 py-16 lg:justify-end lg:pr-[7vw]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <motion.div
           className="absolute left-1/2 top-[-14%] h-[560px] w-[560px] -translate-x-1/2 rounded-full"
@@ -30,6 +31,12 @@ export function AuthShell({
           animate={{ scale: [1, 1.2, 1], opacity: [0.35, 0.65, 0.35] }}
           transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
         />
+      </div>
+
+      <div className="pointer-events-none absolute left-[-12%] top-1/2 hidden w-[58vw] max-w-[780px] -translate-y-1/2 lg:block">
+        <div className="pointer-events-auto">
+          <GlobeOpportunities />
+        </div>
       </div>
 
       <motion.div
