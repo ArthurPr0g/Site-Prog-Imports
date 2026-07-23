@@ -153,3 +153,24 @@ textarea::placeholder {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Borda iluminada que acompanha o cursor — ver GlowBorder.tsx. Fica só na faixa
+   da borda (não preenche o card) via mask xor entre a caixa cheia e o content-box. */
+.glow-border {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(
+    240px circle at var(--glow-x, 50%) var(--glow-y, 50%),
+    rgba(242, 135, 5, 0.95),
+    rgba(242, 135, 5, 0.12) 42%,
+    transparent 65%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: var(--glow-opacity, 0);
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}

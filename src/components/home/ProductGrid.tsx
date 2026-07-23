@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { PlaceholderImage } from '@/components/ui/PlaceholderImage';
+import { GlowBorder, glowMouseMove, glowMouseLeave } from '@/components/ui/GlowBorder';
 import { formatBRL, formatParcel } from '@/lib/format';
 import { useCart } from '@/lib/cart-context';
 import type { ProductCard } from '@/lib/data/catalog';
@@ -52,8 +53,11 @@ export function ProductGrid({ products, initialFilter }: { products: ProductCard
           return (
             <div
               key={p.id}
-              className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:-translate-y-1.5 hover:border-border-hover hover:shadow-[0_24px_48px_rgba(0,0,0,.45)] sm:rounded-[22px]"
+              onMouseMove={glowMouseMove}
+              onMouseLeave={glowMouseLeave}
+              className="relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:-translate-y-1.5 hover:border-border-hover hover:shadow-[0_24px_48px_rgba(0,0,0,.45)] sm:rounded-[22px]"
             >
+              <GlowBorder />
               <Link href={`/produto/${p.sku}`} className="relative block h-[130px] sm:h-[210px]">
                 <PlaceholderImage label={p.image} src={p.imageUrl} className="h-full" textClassName="hidden sm:block text-xs" sizes="(min-width: 640px) 280px, 50vw" />
                 {hasPromo && (
