@@ -57,8 +57,15 @@ export default async function HomePage({
     return acc;
   }, {});
 
+  // "Serviços" não é uma categoria de produto de verdade — é um atalho fixo para a
+  // seção de serviços da página. Ainda assim, se o admin cadastrar uma categoria
+  // "Serviços" (só para ter uma capa própria), usamos a foto dela aqui em vez de
+  // deixá-la virar mais um filtro de produtos (que sempre daria 0 resultados).
+  const servicosCategory = categories.find((c) => c.name === 'Serviços');
+  const productCategories = categories.filter((c) => c.name !== 'Serviços');
+
   const categoryCards: CategoryCard[] = [
-    ...categories.map((c) => ({
+    ...productCategories.map((c) => ({
       name: c.name,
       glyph: c.glyph,
       imageUrl: c.image_url,
@@ -67,8 +74,8 @@ export default async function HomePage({
     })),
     {
       name: 'Serviços',
-      glyph: 'SV',
-      imageUrl: null,
+      glyph: servicosCategory?.glyph || 'SV',
+      imageUrl: servicosCategory?.image_url ?? null,
       count: `${services.length} serviços`,
       href: '#servicos',
     },

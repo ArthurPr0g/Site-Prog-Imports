@@ -7,7 +7,8 @@ export async function GET() {
   if (!admin) return new Response('Não autorizado', { status: 403 });
 
   const catalog = await listCatalogData();
-  const categoryNames = catalog.categories.map((c) => c.name);
+  // "Serviços" é um atalho de navegação, não uma categoria de produto de verdade.
+  const categoryNames = catalog.categories.filter((c) => c.name !== 'Serviços').map((c) => c.name);
   const collectionNames = catalog.collections.map((c) => c.name);
 
   const workbook = new ExcelJS.Workbook();

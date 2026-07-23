@@ -2,7 +2,7 @@ import { getDashboardData } from '@/lib/data/admin';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 
 export default async function AdminDashboardPage() {
-  const { kpis, topSellers, lowStock, recentOrders } = await getDashboardData();
+  const { kpis, topSellers, missingPhotos, recentOrders } = await getDashboardData();
 
   const kpiCards = [
     { label: 'Vendas do mês', value: kpis.monthSales },
@@ -42,16 +42,15 @@ export default async function AdminDashboardPage() {
         </div>
         <div className="rounded-[18px] border border-border bg-card p-6">
           <div className="mb-4.5 flex items-center justify-between">
-            <div className="text-[15px] font-extrabold">Estoque baixo</div>
-            <span className="rounded-full border border-error/40 bg-error/12 px-2.5 py-1 text-[11px] font-extrabold text-error">
-              {lowStock.length} itens
+            <div className="text-[15px] font-extrabold">Produtos sem foto</div>
+            <span className="rounded-full border border-warning/40 bg-warning/12 px-2.5 py-1 text-[11px] font-extrabold text-warning">
+              {missingPhotos.length} itens
             </span>
           </div>
-          {lowStock.length === 0 && <div className="text-sm text-fg-tertiary">Nenhum item com estoque baixo.</div>}
-          {lowStock.map((l) => (
-            <div key={l.name} className="flex items-center justify-between border-b border-divider py-2.5 last:border-b-0">
-              <div className="text-[13.5px] font-bold">{l.name}</div>
-              <div className="text-[13px] font-extrabold text-error">{l.stock} un.</div>
+          {missingPhotos.length === 0 && <div className="text-sm text-fg-tertiary">Todos os produtos ativos têm foto.</div>}
+          {missingPhotos.map((p) => (
+            <div key={p.name} className="border-b border-divider py-2.5 text-[13.5px] font-bold last:border-b-0">
+              {p.name}
             </div>
           ))}
         </div>

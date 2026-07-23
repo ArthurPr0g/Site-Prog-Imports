@@ -10,7 +10,7 @@ export async function getDashboardData() {
   startOfMonth.setHours(0, 0, 0, 0);
 
   const [productsRes, ordersRes, monthOrdersRes, clientsRes, recentOrdersRes] = await Promise.all([
-    supabase.from('products').select('id, name, stock, active'),
+    supabase.from('products').select('id, name, active, product_images(url)'),
     supabase.from('orders').select('id, order_number, customer_name, total, status, created_at, order_items(product_name, qty)'),
     supabase.from('orders').select('total').gte('created_at', startOfMonth.toISOString()).neq('status', 'Cancelado'),
     supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'customer'),
@@ -38,10 +38,9 @@ export async function getDashboardData() {
     .map(([name, qty], i) => ({ rank: String(i + 1).padStart(2, '0'), name, sold: qty }));
   const maxSold = topSellers[0]?.sold ?? 1;
 
-  const lowStock = products
-    .filter((p) => p.stock <= 6)
-    .sort((a, b) => a.stock - b.stock)
-    .map((p) => ({ name: p.name, stock: p.stock }));
+  const missingPhotos = products
+    .filter((p) => p.active && !(p.product_images ?? []).some((img) => img.url))
+    .map((p) => ({ name: p.name }));
 
   const recentOrders = (recentOrdersRes.data ?? []).map((o) => {
     const style = STATUS_STYLES[o.status as OrderStatus] ?? STATUS_STYLES.Pago;
@@ -66,7 +65,7 @@ export async function getDashboardData() {
       clientsCount: clientsRes.count ?? 0,
     },
     topSellers: topSellers.map((t) => ({ ...t, pct: Math.round((t.sold / maxSold) * 100) + '%' })),
-    lowStock,
+    missingPhotos,
     recentOrders,
   };
 }
