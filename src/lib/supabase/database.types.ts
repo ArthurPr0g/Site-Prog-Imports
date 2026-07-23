@@ -116,6 +116,7 @@ export type Database = {
       }
       categories: {
         Row: {
+          active: boolean
           created_at: string
           glyph: string
           id: string
@@ -124,6 +125,7 @@ export type Database = {
           position: number
         }
         Insert: {
+          active?: boolean
           created_at?: string
           glyph?: string
           id?: string
@@ -132,6 +134,7 @@ export type Database = {
           position?: number
         }
         Update: {
+          active?: boolean
           created_at?: string
           glyph?: string
           id?: string
@@ -147,18 +150,21 @@ export type Database = {
           id: string
           image_url: string | null
           name: string
+          position: number
         }
         Insert: {
           created_at?: string
           id?: string
           image_url?: string | null
           name: string
+          position?: number
         }
         Update: {
           created_at?: string
           id?: string
           image_url?: string | null
           name?: string
+          position?: number
         }
         Relationships: []
       }
@@ -519,6 +525,7 @@ export type Database = {
           highlights: string[]
           id: string
           name: string
+          position: number
           price: number
           promo_price: number | null
           rating: number
@@ -535,6 +542,7 @@ export type Database = {
           highlights?: string[]
           id?: string
           name: string
+          position?: number
           price: number
           promo_price?: number | null
           rating?: number
@@ -551,6 +559,7 @@ export type Database = {
           highlights?: string[]
           id?: string
           name?: string
+          position?: number
           price?: number
           promo_price?: number | null
           rating?: number

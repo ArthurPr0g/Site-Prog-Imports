@@ -78,7 +78,7 @@ export async function listAdminProducts() {
     .select(
       '*, brands(name), categories(name), product_collections(collections(name)), product_images(id, label, url, position)'
     )
-    .order('created_at', { ascending: false });
+    .order('position');
   return (data ?? []).map((p) => ({
     ...p,
     product_images: (p.product_images ?? []).sort((a, b) => a.position - b.position),
@@ -144,7 +144,7 @@ export async function listCatalogData() {
   const [categories, brands, collections] = await Promise.all([
     supabase.from('categories').select('*').order('position'),
     supabase.from('brands').select('*').order('name'),
-    supabase.from('collections').select('*').order('name'),
+    supabase.from('collections').select('*').order('position'),
   ]);
   return {
     categories: categories.data ?? [],

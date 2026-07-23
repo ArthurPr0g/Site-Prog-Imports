@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import Image from 'next/image';
+import { GripVertical } from 'lucide-react';
 import { formatBRL } from '@/lib/format';
-import { toggleProductActiveAction, deleteProductAction } from '@/app/actions/admin';
+import { toggleProductActiveAction, deleteProductAction, reorderProductsAction } from '@/app/actions/admin';
 import { ProductModal, type ProductModalData } from './ProductModal';
 import { ProductImportButton } from './ProductImportButton';
 import { useToast } from '@/components/ui/Toast';
+import { reorderArray } from '@/lib/reorder';
 
 type Row = {
   id: string;
@@ -26,11 +28,27 @@ type Row = {
   highlights: string[];
 };
 
-export function ProductsTable({ products, collections }: { products: Row[]; collections: string[] }) {
+export function ProductsTable({ products: productsProp, collections }: { products: Row[]; collections: string[] }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ProductModalData | null>(null);
+  const [products, setProducts] = useState(productsProp);
+  const [prevProductsProp, setPrevProductsProp] = useState(productsProp);
   const [, startTransition] = useTransition();
   const toast = useToast();
+  const dragIndex = useRef<number | null>(null);
+
+  if (productsProp !== prevProductsProp) {
+    setPrevProductsProp(productsProp);
+    setProducts(productsProp);
+  }
+
+  function handleDrop() {
+    dragIndex.current = null;
+    startTransition(async () => {
+      const result = await reorderProductsAction(products.map((p) => p.id));
+      if (!result.ok) toast(result.message);
+    });
+  }
 
   function toggleActive(p: Row) {
     startTransition(async () => {
@@ -84,8 +102,9 @@ export function ProductsTable({ products, collections }: { products: Row[]; coll
         </button>
       </div>
       <div className="overflow-x-auto rounded-[18px] border border-border bg-card p-6">
-        <div className="min-w-[940px]">
-          <div className="grid grid-cols-[52px_1.8fr_110px_1fr_.8fr_110px_80px_90px_130px] gap-3 border-b border-border pb-2.5 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+        <div className="min-w-[970px]">
+          <div className="grid grid-cols-[22px_52px_1.8fr_110px_1fr_.8fr_110px_80px_90px_130px] gap-3 border-b border-border pb-2.5 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+            <div />
             <div>Foto</div>
             <div>Produto</div>
             <div>SKU</div>
@@ -96,14 +115,28 @@ export function ProductsTable({ products, collections }: { products: Row[]; coll
             <div>Status</div>
             <div>Ações</div>
           </div>
-          {products.map((p) => {
+          {products.map((p, index) => {
             const stockColor = p.stock <= 3 ? '#e05555' : p.stock <= 6 ? '#d9a441' : '#4ade80';
             return (
               <div
                 key={p.id}
-                className="grid grid-cols-[52px_1.8fr_110px_1fr_.8fr_110px_80px_90px_130px] items-center gap-3 border-b border-divider py-3 text-[13.5px] last:border-b-0"
+                draggable
+                onDragStart={() => {
+                  dragIndex.current = index;
+                }}
+                onDragEnter={() => {
+                  if (dragIndex.current === null || dragIndex.current === index) return;
+                  setProducts((cur) => reorderArray(cur, dragIndex.current!, index));
+                  dragIndex.current = index;
+                }}
+                onDragOver={(e) => e.preventDefault()}
+                onDragEnd={handleDrop}
+                className="grid grid-cols-[22px_52px_1.8fr_110px_1fr_.8fr_110px_80px_90px_130px] items-center gap-3 border-b border-divider py-3 text-[13.5px] last:border-b-0"
                 style={{ opacity: p.active ? 1 : 0.45 }}
               >
+                <span className="cursor-grab text-fg-faded active:cursor-grabbing" title="Arrastar para reordenar">
+                  <GripVertical size={15} />
+                </span>
                 <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-[10px] border border-border bg-input-alt">
                   {p.imageUrl ? (
                     <Image src={p.imageUrl} alt={p.name} width={44} height={44} className="h-full w-full object-cover" />

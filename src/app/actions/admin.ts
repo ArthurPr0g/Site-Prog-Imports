@@ -105,11 +105,13 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
     const { error } = await supabase.from('products').update(payload).eq('id', input.id);
     if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar as alterações do produto.'));
   } else {
+    const { data: last } = await supabase.from('products').select('position').order('position', { ascending: false }).limit(1).maybeSingle();
+    const nextPosition = (last?.position ?? -1) + 1;
     let insertError: string | null = null;
     for (let attempt = 0; attempt < 5 && !productId; attempt++) {
       const { data, error } = await supabase
         .from('products')
-        .insert({ ...payload, sku: generateSku(input.name), active: true })
+        .insert({ ...payload, sku: generateSku(input.name), active: true, position: nextPosition })
         .select('id')
         .single();
       if (!error) {
@@ -148,6 +150,17 @@ export async function toggleProductActiveAction(id: string, active: boolean): Pr
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
   const { error } = await supabase.from('products').update({ active: !active }).eq('id', id);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível atualizar o status do produto.'));
+  revalidatePath('/admin/produtos');
+  revalidatePath('/');
+  return okResult();
+}
+
+export async function reorderProductsAction(orderedIds: string[]): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const results = await Promise.all(orderedIds.map((id, i) => supabase.from('products').update({ position: i }).eq('id', id)));
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return errResult(friendlyDbError(failed.error, 'Não foi possível salvar a nova ordem.'));
   revalidatePath('/admin/produtos');
   revalidatePath('/');
   return okResult();
@@ -279,6 +292,9 @@ export async function importProductsFromSpreadsheetAction(
   const collectionByName = new Map((collections ?? []).map((c) => [c.name.trim().toLowerCase(), c.id]));
   const brandIdCache = new Map<string, string>();
 
+  const { data: lastProduct } = await supabase.from('products').select('position').order('position', { ascending: false }).limit(1).maybeSingle();
+  let nextPosition = (lastProduct?.position ?? -1) + 1;
+
   const results: ImportRowResult[] = [];
 
   for (let i = 0; i < rows.length; i++) {
@@ -364,6 +380,7 @@ export async function importProductsFromSpreadsheetAction(
           stock: r.stock,
           description: r.description.trim(),
           active: true,
+          position: nextPosition,
         })
         .select('id')
         .single();
@@ -380,6 +397,7 @@ export async function importProductsFromSpreadsheetAction(
       fail(insertError ?? 'Não foi possível gerar um SKU único depois de várias tentativas.');
       continue;
     }
+    nextPosition++;
 
     if (collectionId) {
       await supabase.from('product_collections').insert({ product_id: productId, collection_id: collectionId });
@@ -535,7 +553,14 @@ export async function addCatalogItemAction(table: CatalogTable, name: string): P
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
   const trimmed = name.trim();
   if (!trimmed) return errResult('Informe um nome.');
-  const { error } = await supabase.from(table).insert({ name: trimmed } as never);
+
+  const payload: { name: string; position?: number } = { name: trimmed };
+  if (table === 'categories' || table === 'collections') {
+    const { data: last } = await supabase.from(table).select('position').order('position', { ascending: false }).limit(1).maybeSingle();
+    payload.position = (last?.position ?? -1) + 1;
+  }
+
+  const { error } = await supabase.from(table).insert(payload as never);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível adicionar o item.'));
   revalidatePath('/admin/catalogo');
   return okResult();
@@ -551,6 +576,29 @@ export async function deleteCatalogItemAction(table: CatalogTable, id: string): 
     );
   }
   revalidatePath('/admin/catalogo');
+  return okResult();
+}
+
+type ReorderableCatalogTable = 'categories' | 'collections';
+
+export async function reorderCatalogItemsAction(table: ReorderableCatalogTable, orderedIds: string[]): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const results = await Promise.all(orderedIds.map((id, i) => supabase.from(table).update({ position: i }).eq('id', id)));
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return errResult(friendlyDbError(failed.error, 'Não foi possível salvar a nova ordem.'));
+  revalidatePath('/admin/catalogo');
+  revalidatePath('/');
+  return okResult();
+}
+
+export async function toggleCategoryActiveAction(id: string, active: boolean): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const { error } = await supabase.from('categories').update({ active: !active }).eq('id', id);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível atualizar o status da categoria.'));
+  revalidatePath('/admin/catalogo');
+  revalidatePath('/');
   return okResult();
 }
 

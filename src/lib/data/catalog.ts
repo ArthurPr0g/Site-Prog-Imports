@@ -25,7 +25,7 @@ export async function listActiveProducts(): Promise<ProductCard[]> {
        product_collections(collections(name))`
     )
     .eq('active', true)
-    .order('created_at', { ascending: false });
+    .order('position');
 
   if (error || !data) return [];
 
@@ -49,13 +49,13 @@ export async function listActiveProducts(): Promise<ProductCard[]> {
 
 export async function listCategories() {
   const supabase = await createClient();
-  const { data } = await supabase.from('categories').select('*').order('position');
+  const { data } = await supabase.from('categories').select('*').eq('active', true).order('position');
   return data ?? [];
 }
 
 export async function listCollectionNames() {
   const supabase = await createClient();
-  const { data } = await supabase.from('collections').select('name').order('name');
+  const { data } = await supabase.from('collections').select('name').order('position');
   return (data ?? []).map((c) => c.name);
 }
 
