@@ -26,7 +26,7 @@ export function Gallery({ images, badge }: { images: GalleryImage[]; badge?: str
       <div
         onMouseMove={onMove}
         onMouseLeave={() => setZoom(false)}
-        className="stripe-placeholder relative h-[460px] cursor-zoom-in overflow-hidden rounded-3xl border border-border-strong"
+        className="stripe-placeholder relative aspect-square cursor-zoom-in overflow-hidden rounded-3xl border border-border-strong sm:aspect-auto sm:h-[460px]"
       >
         {active.url ? (
           <div
