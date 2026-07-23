@@ -14,7 +14,7 @@ import {
   removeCategoryImageAction,
 } from '@/app/actions/admin';
 import { useToast } from '@/components/ui/Toast';
-import { reorderArray } from '@/lib/reorder';
+import { useDragReorder } from '@/lib/useDragReorder';
 
 type Item = { id: string; name: string; image_url: string | null; active?: boolean };
 type Kind = 'collections' | 'categories';
@@ -36,16 +36,15 @@ export function CoverImageCatalogGroup({
   placeholder: string;
 }) {
   const [draft, setDraft] = useState('');
-  const [items, setItems] = useState(itemsProp);
-  const [prevItemsProp, setPrevItemsProp] = useState(itemsProp);
   const [, startTransition] = useTransition();
   const toast = useToast();
-  const dragIndex = useRef<number | null>(null);
 
-  if (itemsProp !== prevItemsProp) {
-    setPrevItemsProp(itemsProp);
-    setItems(itemsProp);
-  }
+  const { items, rowRef, handlePointerDown } = useDragReorder(itemsProp, (orderedIds) => {
+    startTransition(async () => {
+      const result = await reorderCatalogItemsAction(kind, orderedIds);
+      if (!result.ok) toast(result.message);
+    });
+  });
 
   function add() {
     if (!draft.trim()) return;
@@ -74,14 +73,6 @@ export function CoverImageCatalogGroup({
     });
   }
 
-  function handleDrop() {
-    dragIndex.current = null;
-    startTransition(async () => {
-      const result = await reorderCatalogItemsAction(kind, items.map((it) => it.id));
-      if (!result.ok) toast(result.message);
-    });
-  }
-
   return (
     <div className="rounded-[18px] border border-border bg-card p-6">
       <div className="mb-4 text-[15px] font-extrabold">{title}</div>
@@ -102,19 +93,12 @@ export function CoverImageCatalogGroup({
         {items.map((item, index) => (
           <CoverImageRow
             key={item.id}
+            rowRef={rowRef(index)}
+            onPointerDown={handlePointerDown(index)}
             kind={kind}
             item={item}
             onRemove={() => remove(item)}
             onToggleActive={kind === 'categories' ? () => toggleActive(item) : undefined}
-            onDragStart={() => {
-              dragIndex.current = index;
-            }}
-            onDragEnter={() => {
-              if (dragIndex.current === null || dragIndex.current === index) return;
-              setItems((cur) => reorderArray(cur, dragIndex.current!, index));
-              dragIndex.current = index;
-            }}
-            onDragEnd={handleDrop}
           />
         ))}
       </div>
@@ -127,17 +111,15 @@ function CoverImageRow({
   item,
   onRemove,
   onToggleActive,
-  onDragStart,
-  onDragEnter,
-  onDragEnd,
+  rowRef,
+  onPointerDown,
 }: {
   kind: Kind;
   item: Item;
   onRemove: () => void;
   onToggleActive?: () => void;
-  onDragStart: () => void;
-  onDragEnter: () => void;
-  onDragEnd: () => void;
+  rowRef: (el: HTMLElement | null) => void;
+  onPointerDown: (e: React.PointerEvent) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
@@ -169,16 +151,13 @@ function CoverImageRow({
   }
 
   return (
-    <div
-      draggable
-      onDragStart={onDragStart}
-      onDragEnter={onDragEnter}
-      onDragOver={(e) => e.preventDefault()}
-      onDragEnd={onDragEnd}
-      className="flex items-center gap-2.5 border-b border-divider pb-3 last:border-b-0"
-      style={{ opacity: active ? 1 : 0.5 }}
-    >
-      <span className="flex-shrink-0 cursor-grab text-fg-faded active:cursor-grabbing" title="Arrastar para reordenar">
+    <div ref={rowRef} className="flex items-center gap-2.5 border-b border-divider pb-3 last:border-b-0" style={{ opacity: active ? 1 : 0.5 }}>
+      <span
+        onPointerDown={onPointerDown}
+        className="flex-shrink-0 cursor-grab text-fg-faded active:cursor-grabbing"
+        style={{ touchAction: 'none' }}
+        title="Arrastar para reordenar"
+      >
         <GripVertical size={16} />
       </span>
       <button
@@ -188,7 +167,7 @@ function CoverImageRow({
         className="stripe-placeholder relative grid h-14 w-14 flex-shrink-0 place-items-center overflow-hidden rounded-[12px] border border-border-strong hover:border-accent disabled:opacity-60"
       >
         {item.image_url ? (
-          <Image src={item.image_url} alt={item.name} fill sizes="56px" className="object-cover" />
+          <Image src={item.image_url} alt={item.name} fill sizes="56px" draggable={false} className="object-cover" />
         ) : (
           <span className="font-mono text-[9px] text-fg-faded">capa</span>
         )}

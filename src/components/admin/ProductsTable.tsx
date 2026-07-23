@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import Image from 'next/image';
 import { GripVertical } from 'lucide-react';
 import { formatBRL } from '@/lib/format';
@@ -8,7 +8,7 @@ import { toggleProductActiveAction, deleteProductAction, reorderProductsAction }
 import { ProductModal, type ProductModalData } from './ProductModal';
 import { ProductImportButton } from './ProductImportButton';
 import { useToast } from '@/components/ui/Toast';
-import { reorderArray } from '@/lib/reorder';
+import { useDragReorder } from '@/lib/useDragReorder';
 
 type Row = {
   id: string;
@@ -31,24 +31,15 @@ type Row = {
 export function ProductsTable({ products: productsProp, collections }: { products: Row[]; collections: string[] }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ProductModalData | null>(null);
-  const [products, setProducts] = useState(productsProp);
-  const [prevProductsProp, setPrevProductsProp] = useState(productsProp);
   const [, startTransition] = useTransition();
   const toast = useToast();
-  const dragIndex = useRef<number | null>(null);
 
-  if (productsProp !== prevProductsProp) {
-    setPrevProductsProp(productsProp);
-    setProducts(productsProp);
-  }
-
-  function handleDrop() {
-    dragIndex.current = null;
+  const { items: products, rowRef, handlePointerDown } = useDragReorder(productsProp, (orderedIds) => {
     startTransition(async () => {
-      const result = await reorderProductsAction(products.map((p) => p.id));
+      const result = await reorderProductsAction(orderedIds);
       if (!result.ok) toast(result.message);
     });
-  }
+  });
 
   function toggleActive(p: Row) {
     startTransition(async () => {
@@ -120,26 +111,21 @@ export function ProductsTable({ products: productsProp, collections }: { product
             return (
               <div
                 key={p.id}
-                draggable
-                onDragStart={() => {
-                  dragIndex.current = index;
-                }}
-                onDragEnter={() => {
-                  if (dragIndex.current === null || dragIndex.current === index) return;
-                  setProducts((cur) => reorderArray(cur, dragIndex.current!, index));
-                  dragIndex.current = index;
-                }}
-                onDragOver={(e) => e.preventDefault()}
-                onDragEnd={handleDrop}
+                ref={rowRef(index)}
                 className="grid grid-cols-[22px_52px_1.8fr_110px_1fr_.8fr_110px_80px_90px_130px] items-center gap-3 border-b border-divider py-3 text-[13.5px] last:border-b-0"
                 style={{ opacity: p.active ? 1 : 0.45 }}
               >
-                <span className="cursor-grab text-fg-faded active:cursor-grabbing" title="Arrastar para reordenar">
+                <span
+                  onPointerDown={handlePointerDown(index)}
+                  className="cursor-grab text-fg-faded active:cursor-grabbing"
+                  style={{ touchAction: 'none' }}
+                  title="Arrastar para reordenar"
+                >
                   <GripVertical size={15} />
                 </span>
                 <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-[10px] border border-border bg-input-alt">
                   {p.imageUrl ? (
-                    <Image src={p.imageUrl} alt={p.name} width={44} height={44} className="h-full w-full object-cover" />
+                    <Image src={p.imageUrl} alt={p.name} width={44} height={44} draggable={false} className="h-full w-full object-cover" />
                   ) : (
                     <span className="font-mono text-[9px] text-fg-faded">s/ foto</span>
                   )}
