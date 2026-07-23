@@ -6,6 +6,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
 import { HeroCarousel } from '@/components/home/HeroCarousel';
+import { AnimatedHeroBanners } from '@/components/home/hero-animated/AnimatedHeroBanners';
 import { BrandsMarquee } from '@/components/home/BrandsMarquee';
 import { Categories, type CategoryCard } from '@/components/home/Categories';
 import { ProductGrid } from '@/components/home/ProductGrid';
@@ -76,6 +77,7 @@ export default async function HomePage({
     <div className="min-h-screen overflow-x-clip bg-page">
       <PromoBar />
       <Header searchIndex={searchIndex} user={user} />
+      <AnimatedHeroBanners />
       <HeroCarousel slides={heroSlides} />
       <BrandsMarquee />
       <Categories categories={categoryCards} />
