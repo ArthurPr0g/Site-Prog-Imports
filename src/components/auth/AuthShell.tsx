@@ -17,7 +17,7 @@ export function AuthShell({
   footer?: React.ReactNode;
 }) {
   return (
-    <div className="relative flex min-h-screen items-center justify-center gap-16 overflow-hidden bg-page px-6 py-16 lg:gap-20 lg:px-[4vw]">
+    <div className="relative flex min-h-screen flex-col items-center justify-center gap-10 overflow-hidden bg-page px-6 py-16 lg:flex-row lg:gap-28 lg:px-[4vw]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <motion.div
           className="absolute left-1/2 top-[-14%] h-[560px] w-[560px] -translate-x-1/2 rounded-full"
@@ -33,7 +33,7 @@ export function AuthShell({
         />
       </div>
 
-      <div className="pointer-events-none hidden w-full max-w-[640px] flex-1 lg:block">
+      <div className="pointer-events-none w-full max-w-[380px] sm:max-w-[460px] lg:max-w-[860px] lg:flex-1">
         <div className="pointer-events-auto">
           <GlobeOpportunities />
         </div>
