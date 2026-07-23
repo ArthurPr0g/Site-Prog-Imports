@@ -44,7 +44,7 @@ export function ProductGrid({ products, initialFilter }: { products: ProductCard
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4.5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(280px,1fr))] sm:gap-4.5">
         {shown.map((p) => {
           const hasPromo = !!p.promoPrice;
           const activePrice = p.promoPrice ?? p.price;
@@ -52,12 +52,12 @@ export function ProductGrid({ products, initialFilter }: { products: ProductCard
           return (
             <div
               key={p.id}
-              className="flex flex-col overflow-hidden rounded-[22px] border border-border bg-card transition-all duration-300 hover:-translate-y-1.5 hover:border-border-hover hover:shadow-[0_24px_48px_rgba(0,0,0,.45)]"
+              className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:-translate-y-1.5 hover:border-border-hover hover:shadow-[0_24px_48px_rgba(0,0,0,.45)] sm:rounded-[22px]"
             >
-              <Link href={`/produto/${p.sku}`} className="relative block h-[210px]">
-                <PlaceholderImage label={p.image} className="h-full" />
+              <Link href={`/produto/${p.sku}`} className="relative block h-[130px] sm:h-[210px]">
+                <PlaceholderImage label={p.image} className="h-full" textClassName="hidden sm:block text-xs" />
                 {hasPromo && (
-                  <div className="absolute left-3.5 top-3.5 rounded-full bg-accent px-2.5 py-1 text-[11px] font-extrabold tracking-[.06em] text-page">
+                  <div className="absolute left-2 top-2 rounded-full bg-accent px-2 py-0.5 text-[9px] font-extrabold tracking-[.06em] text-page sm:left-3.5 sm:top-3.5 sm:px-2.5 sm:py-1 sm:text-[11px]">
                     PROMOÇÃO
                   </div>
                 )}
@@ -66,31 +66,41 @@ export function ProductGrid({ products, initialFilter }: { products: ProductCard
                     e.preventDefault();
                     toggleFavorite(p.id);
                   }}
-                  className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border border-border-hover bg-page/70 text-[15px] backdrop-blur-sm hover:border-accent hover:scale-110"
+                  className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full border border-border-hover bg-page/70 text-xs backdrop-blur-sm hover:border-accent hover:scale-110 sm:right-3 sm:top-3 sm:h-9 sm:w-9 sm:text-[15px]"
                   style={{ color: isFav ? '#F28705' : '#a8a8b0' }}
                 >
                   {isFav ? '♥' : '♡'}
                 </button>
               </Link>
-              <div className="flex flex-1 flex-col gap-1 p-5">
-                <div className="text-[11px] font-bold uppercase tracking-[.1em] text-fg-tertiary">{p.category}</div>
-                <Link href={`/produto/${p.sku}`} className="block min-h-10.5 text-base font-extrabold leading-tight">
+              <div className="flex flex-1 flex-col gap-1 p-3 sm:p-5">
+                <div className="text-[9.5px] font-bold uppercase tracking-[.08em] text-fg-tertiary sm:text-[11px] sm:tracking-[.1em]">
+                  {p.category}
+                </div>
+                <Link
+                  href={`/produto/${p.sku}`}
+                  className="block text-[12.5px] font-extrabold leading-snug sm:min-h-10.5 sm:text-base sm:leading-tight"
+                >
                   {p.name}
                 </Link>
-                <div className="mt-2">
+                <div className="mt-1 sm:mt-2">
                   {hasPromo && (
-                    <span className="mr-2 text-[13px] text-fg-tertiary line-through">{formatBRL(p.price)}</span>
+                    <span className="mr-1.5 text-[11px] text-fg-tertiary line-through sm:mr-2 sm:text-[13px]">
+                      {formatBRL(p.price)}
+                    </span>
                   )}
-                  <span className="font-display text-[22px] font-bold">{formatBRL(activePrice)}</span>
-                  <div className="mt-0.5 text-xs text-fg-tertiary">ou 12x de {formatParcel(activePrice)} sem juros</div>
+                  <span className="font-display text-base font-bold sm:text-[22px]">{formatBRL(activePrice)}</span>
+                  <div className="mt-0.5 text-[10px] text-fg-tertiary sm:text-xs">
+                    ou 12x de {formatParcel(activePrice)} sem juros
+                  </div>
                 </div>
                 <button
                   onClick={() => {
                     add({ id: p.id, sku: p.sku, name: p.name, price: activePrice });
                   }}
-                  className="mt-4 rounded-[14px] border border-border-hover bg-[#1c1c21] py-3 text-sm font-extrabold transition-all hover:border-accent hover:bg-accent hover:text-page"
+                  className="mt-3 rounded-xl border border-border-hover bg-[#1c1c21] py-2 text-[11.5px] font-extrabold transition-all hover:border-accent hover:bg-accent hover:text-page sm:mt-4 sm:rounded-[14px] sm:py-3 sm:text-sm"
                 >
-                  Adicionar ao carrinho
+                  <span className="sm:hidden">Adicionar</span>
+                  <span className="hidden sm:inline">Adicionar ao carrinho</span>
                 </button>
               </div>
             </div>

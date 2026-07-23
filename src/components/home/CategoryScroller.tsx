@@ -41,7 +41,7 @@ export function CategoryScroller({ categories }: { categories: CategoryCard[] })
         <button
           onClick={() => scrollByAmount(-1)}
           aria-label="Categorias anteriores"
-          className="absolute left-1 top-22 z-2 grid h-11 w-11 -translate-y-1/2 -translate-x-1/2 place-items-center rounded-full border border-border-strong bg-page/85 text-lg text-fg shadow-[0_8px_24px_rgba(0,0,0,.5)] backdrop-blur-md transition-all hover:border-accent hover:text-accent active:scale-95 sm:top-30"
+          className="absolute left-1 top-[115px] z-2 grid h-11 w-11 -translate-y-1/2 -translate-x-1/2 place-items-center rounded-full border border-border-strong bg-page/85 text-lg text-fg shadow-[0_8px_24px_rgba(0,0,0,.5)] backdrop-blur-md transition-all hover:border-accent hover:text-accent active:scale-95 sm:top-[156px]"
         >
           ‹
         </button>
@@ -50,7 +50,7 @@ export function CategoryScroller({ categories }: { categories: CategoryCard[] })
         <button
           onClick={() => scrollByAmount(1)}
           aria-label="Próximas categorias"
-          className="absolute right-1 top-22 z-2 grid h-11 w-11 -translate-y-1/2 translate-x-1/2 place-items-center rounded-full border border-border-strong bg-page/85 text-lg text-fg shadow-[0_8px_24px_rgba(0,0,0,.5)] backdrop-blur-md transition-all hover:border-accent hover:text-accent active:scale-95 sm:top-30"
+          className="absolute right-1 top-[115px] z-2 grid h-11 w-11 -translate-y-1/2 translate-x-1/2 place-items-center rounded-full border border-border-strong bg-page/85 text-lg text-fg shadow-[0_8px_24px_rgba(0,0,0,.5)] backdrop-blur-md transition-all hover:border-accent hover:text-accent active:scale-95 sm:top-[156px]"
         >
           ›
         </button>
@@ -64,20 +64,20 @@ export function CategoryScroller({ categories }: { categories: CategoryCard[] })
           <Link
             key={c.name}
             href={c.href}
-            className="group flex w-44 flex-shrink-0 snap-start flex-col items-center gap-5 text-center sm:w-60"
+            className="group flex w-[229px] flex-shrink-0 snap-start flex-col items-center gap-5 text-center sm:w-[312px]"
           >
-            <div className="relative h-44 w-44 transition-transform duration-500 ease-out group-hover:-translate-y-2 sm:h-60 sm:w-60">
+            <div className="relative h-[229px] w-[229px] transition-transform duration-500 ease-out group-hover:-translate-y-2 sm:h-[312px] sm:w-[312px]">
               {c.imageUrl ? (
                 <Image
                   src={c.imageUrl}
                   alt={c.name}
                   fill
-                  sizes="(min-width: 640px) 240px, 176px"
+                  sizes="(min-width: 640px) 312px, 229px"
                   className="object-contain drop-shadow-[0_16px_32px_rgba(0,0,0,.5)] transition-transform duration-500 ease-out group-hover:scale-110"
                 />
               ) : (
                 <div className="grid h-full w-full place-items-center">
-                  <div className="grid h-20 w-20 place-items-center rounded-2xl border border-accent/30 bg-accent/10 font-display text-lg font-bold text-accent transition-transform duration-500 ease-out group-hover:scale-110 sm:h-24 sm:w-24 sm:text-xl">
+                  <div className="grid h-[104px] w-[104px] place-items-center rounded-2xl border border-accent/30 bg-accent/10 font-display text-xl font-bold text-accent transition-transform duration-500 ease-out group-hover:scale-110 sm:h-[125px] sm:w-[125px] sm:text-2xl">
                     {c.glyph}
                   </div>
                 </div>
