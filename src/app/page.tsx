@@ -1,4 +1,4 @@
-import { listActiveProducts, listCategories, listSiteCollections } from '@/lib/data/catalog';
+import { listActiveProducts, listCategories, listTopCollections, listFeedCollections } from '@/lib/data/catalog';
 import { listBanners, listServices, listTestimonials, getSiteSettings } from '@/lib/data/content';
 import { getCurrentUser } from '@/lib/auth';
 import { PromoBar } from '@/components/layout/PromoBar';
@@ -22,10 +22,11 @@ export default async function HomePage({
   searchParams: Promise<{ categoria?: string }>;
 }) {
   const { categoria } = await searchParams;
-  const [products, categories, siteCollections, banners, services, testimonials, user, settings] = await Promise.all([
+  const [products, categories, topCollections, feedCollections, banners, services, testimonials, user, settings] = await Promise.all([
     listActiveProducts(),
     listCategories(),
-    listSiteCollections(),
+    listTopCollections(),
+    listFeedCollections(),
     listBanners(),
     listServices(),
     listTestimonials(),
@@ -54,9 +55,10 @@ export default async function HomePage({
     ? products.filter((p) => p.category === categoria)
     : products;
 
-  const collectionSections = siteCollections
-    .map((c) => ({ id: c.id, name: c.name, imageUrl: c.image_url, products: products.filter((p) => p.collections.includes(c.name)) }))
+  const feedSections = feedCollections
+    .map((c) => ({ id: c.id, name: c.name, products: products.filter((p) => p.collections.includes(c.name)) }))
     .filter((c) => c.products.length > 0);
+  const feedSectionIds = new Set(feedSections.map((c) => c.id));
 
   // "Serviços" não é uma coleção de verdade — é um atalho fixo para a seção de
   // serviços da página. Ainda assim, se o admin cadastrar uma categoria "Serviços"
@@ -64,12 +66,14 @@ export default async function HomePage({
   const servicosCategory = categories.find((c) => c.name === 'Serviços');
 
   const collectionCards: CategoryCard[] = [
-    ...collectionSections.map((c) => ({
+    ...topCollections.map((c) => ({
       name: c.name,
       glyph: c.name.slice(0, 2).toUpperCase(),
-      imageUrl: c.imageUrl,
-      count: `${c.products.length} produtos`,
-      href: `/#colecao-${c.id}`,
+      imageUrl: c.image_url,
+      count: `${products.filter((p) => p.collections.includes(c.name)).length} produtos`,
+      // Se a coleção também aparece no feed abaixo, o card pula direto pra seção
+      // dela; senão, abre a página dedicada com o grid completo e filtros.
+      href: feedSectionIds.has(c.id) ? `/#colecao-${c.id}` : `/colecao/${c.id}`,
     })),
     {
       name: 'Serviços',
@@ -88,11 +92,11 @@ export default async function HomePage({
       {settings.showSmallBanners && <HeroCarousel slides={heroSlides} />}
       <BrandsMarquee />
       <Categories categories={collectionCards} />
-      {categoria || collectionSections.length === 0 ? (
+      {categoria || feedSections.length === 0 ? (
         <ProductGrid products={productsForFilter} activeCategoria={categoria} />
       ) : (
         <div id="produtos">
-          {collectionSections.map((c) => (
+          {feedSections.map((c) => (
             <CollectionRow key={c.id} id={`colecao-${c.id}`} title={c.name} products={c.products} />
           ))}
         </div>

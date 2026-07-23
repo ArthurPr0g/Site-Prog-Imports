@@ -564,6 +564,7 @@ export async function addCatalogItemAction(table: CatalogTable, name: string): P
   const { error } = await supabase.from(table).insert(payload as never);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível adicionar o item.'));
   revalidatePath('/admin/catalogo');
+  revalidatePath('/admin/colecoes');
   return okResult();
 }
 
@@ -577,6 +578,8 @@ export async function deleteCatalogItemAction(table: CatalogTable, id: string): 
     );
   }
   revalidatePath('/admin/catalogo');
+  revalidatePath('/admin/colecoes');
+  revalidatePath('/');
   return okResult();
 }
 
@@ -589,6 +592,7 @@ export async function reorderCatalogItemsAction(table: ReorderableCatalogTable, 
   const failed = results.find((r) => r.error);
   if (failed?.error) return errResult(friendlyDbError(failed.error, 'Não foi possível salvar a nova ordem.'));
   revalidatePath('/admin/catalogo');
+  revalidatePath('/admin/colecoes');
   revalidatePath('/');
   return okResult();
 }
@@ -603,24 +607,24 @@ export async function toggleCategoryActiveAction(id: string, active: boolean): P
   return okResult();
 }
 
-// Quantas coleções podem virar seção (feed horizontal) na home ao mesmo tempo.
-const MAX_SITE_COLLECTIONS = 6;
-
+// "Mostrar no topo" (carrossel com capas) e "mostrar no feed" (seção horizontal
+// na home) são independentes e sem limite de quantidade — o admin decide livremente.
 export async function toggleCollectionShowOnSiteAction(id: string, current: boolean): Promise<ActionResult> {
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
-  if (!current) {
-    const { count } = await supabase
-      .from('collections')
-      .select('id', { count: 'exact', head: true })
-      .eq('show_on_site', true);
-    if ((count ?? 0) >= MAX_SITE_COLLECTIONS) {
-      return errResult(`Você já tem ${MAX_SITE_COLLECTIONS} coleções mostrando no site. Desative uma antes de ativar outra.`);
-    }
-  }
   const { error } = await supabase.from('collections').update({ show_on_site: !current }).eq('id', id);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível atualizar a coleção.'));
-  revalidatePath('/admin/catalogo');
+  revalidatePath('/admin/colecoes');
+  revalidatePath('/');
+  return okResult();
+}
+
+export async function toggleCollectionShowInFeedAction(id: string, current: boolean): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const { error } = await supabase.from('collections').update({ show_in_feed: !current }).eq('id', id);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível atualizar a coleção.'));
+  revalidatePath('/admin/colecoes');
   revalidatePath('/');
   return okResult();
 }
@@ -629,10 +633,49 @@ export async function setCollectionSitePositionAction(id: string, position: numb
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
   if (!Number.isFinite(position) || position <= 0) return errResult('Informe uma posição válida.');
-  const clamped = Math.min(MAX_SITE_COLLECTIONS, Math.round(position));
-  const { error } = await supabase.from('collections').update({ site_position: clamped }).eq('id', id);
+  const { error } = await supabase.from('collections').update({ site_position: Math.round(position) }).eq('id', id);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível atualizar a posição.'));
-  revalidatePath('/admin/catalogo');
+  revalidatePath('/admin/colecoes');
+  revalidatePath('/');
+  return okResult();
+}
+
+export async function renameCollectionAction(id: string, name: string): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const trimmed = name.trim();
+  if (!trimmed) return errResult('Informe um nome.');
+  const { error } = await supabase.from('collections').update({ name: trimmed }).eq('id', id);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível renomear a coleção.'));
+  revalidatePath('/admin/colecoes');
+  revalidatePath('/admin/produtos');
+  revalidatePath('/');
+  return okResult();
+}
+
+export async function addProductToCollectionAction(productId: string, collectionId: string): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const { error } = await supabase.from('product_collections').insert({ product_id: productId, collection_id: collectionId });
+  if (error) {
+    if (error.code === '23505') return errResult('Esse produto já está nessa coleção.');
+    return errResult(friendlyDbError(error, 'Não foi possível adicionar o produto à coleção.'));
+  }
+  revalidatePath('/admin/colecoes');
+  revalidatePath('/');
+  return okResult();
+}
+
+export async function removeProductFromCollectionAction(productId: string, collectionId: string): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const { error } = await supabase
+    .from('product_collections')
+    .delete()
+    .eq('product_id', productId)
+    .eq('collection_id', collectionId);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível remover o produto da coleção.'));
+  revalidatePath('/admin/colecoes');
   revalidatePath('/');
   return okResult();
 }
@@ -690,6 +733,7 @@ async function uploadCoverImageAction(table: CoverImageTable, id: string, formDa
   }
 
   revalidatePath('/admin/catalogo');
+  revalidatePath('/admin/colecoes');
   revalidatePath('/');
   return okResult('Capa atualizada.');
 }
@@ -710,6 +754,7 @@ async function removeCoverImageAction(table: CoverImageTable, id: string): Promi
   }
 
   revalidatePath('/admin/catalogo');
+  revalidatePath('/admin/colecoes');
   revalidatePath('/');
   return okResult('Capa removida.');
 }

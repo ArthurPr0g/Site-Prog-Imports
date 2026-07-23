@@ -151,6 +151,7 @@ export type Database = {
           image_url: string | null
           name: string
           position: number
+          show_in_feed: boolean
           show_on_site: boolean
           site_position: number
         }
@@ -160,6 +161,7 @@ export type Database = {
           image_url?: string | null
           name: string
           position?: number
+          show_in_feed?: boolean
           show_on_site?: boolean
           site_position?: number
         }
@@ -169,6 +171,7 @@ export type Database = {
           image_url?: string | null
           name?: string
           position?: number
+          show_in_feed?: boolean
           show_on_site?: boolean
           site_position?: number
         }

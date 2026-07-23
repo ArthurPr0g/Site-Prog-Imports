@@ -59,18 +59,65 @@ export async function listCollectionNames() {
   return (data ?? []).map((c) => c.name);
 }
 
-const MAX_SITE_COLLECTIONS = 6;
-
-export async function listSiteCollections() {
+export async function listTopCollections() {
   const supabase = await createClient();
   const { data } = await supabase
     .from('collections')
     .select('id, name, image_url')
     .eq('show_on_site', true)
     .order('site_position')
-    .order('name')
-    .limit(MAX_SITE_COLLECTIONS);
+    .order('name');
   return data ?? [];
+}
+
+export async function listFeedCollections() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('collections')
+    .select('id, name, image_url')
+    .eq('show_in_feed', true)
+    .order('site_position')
+    .order('name');
+  return data ?? [];
+}
+
+export async function getCollectionById(id: string) {
+  const supabase = await createClient();
+  const { data: collection } = await supabase.from('collections').select('id, name').eq('id', id).maybeSingle();
+  if (!collection) return null;
+
+  const { data, error } = await supabase
+    .from('products')
+    .select(
+      `id, sku, name, price, promo_price, stock,
+       categories(name), brands(name),
+       product_images(label, url, position),
+       product_collections!inner(collection_id, collections(name))`
+    )
+    .eq('active', true)
+    .eq('product_collections.collection_id', id)
+    .order('position');
+
+  if (error || !data) return { ...collection, products: [] as ProductCard[] };
+
+  const products = data.map((p) => {
+    const images = (p.product_images ?? []).sort((a, b) => a.position - b.position);
+    return {
+      id: p.id,
+      sku: p.sku,
+      name: p.name,
+      price: Number(p.price),
+      promoPrice: p.promo_price ? Number(p.promo_price) : null,
+      category: p.categories?.name ?? '',
+      brand: p.brands?.name ?? '',
+      image: images[0]?.label ?? p.name.toLowerCase(),
+      imageUrl: images.find((img) => img.url)?.url ?? null,
+      stock: p.stock,
+      collections: (p.product_collections ?? []).map((pc) => pc.collections?.name).filter(Boolean) as string[],
+    };
+  });
+
+  return { ...collection, products };
 }
 
 export async function getProductBySku(sku: string) {

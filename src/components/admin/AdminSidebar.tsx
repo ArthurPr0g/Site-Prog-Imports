@@ -12,6 +12,7 @@ import {
   Users,
   Tag,
   LayoutGrid,
+  Layers,
   GalleryHorizontalEnd,
   Wrench,
   MessageSquareQuote,
@@ -21,6 +22,7 @@ import { Logo } from '@/components/ui/Logo';
 const NAV = [
   { href: '/admin', label: 'Dashboard', Icon: LayoutDashboard },
   { href: '/admin/produtos', label: 'Produtos', Icon: Package },
+  { href: '/admin/colecoes', label: 'Coleções', Icon: Layers },
   { href: '/admin/pedidos', label: 'Pedidos', Icon: ClipboardList },
   { href: '/admin/clientes', label: 'Clientes', Icon: Users },
   { href: '/admin/cupons', label: 'Cupons', Icon: Tag },

@@ -8,39 +8,20 @@ import {
   deleteCatalogItemAction,
   reorderCatalogItemsAction,
   toggleCategoryActiveAction,
-  toggleCollectionShowOnSiteAction,
-  setCollectionSitePositionAction,
-  uploadCollectionImageAction,
-  removeCollectionImageAction,
   uploadCategoryImageAction,
   removeCategoryImageAction,
 } from '@/app/actions/admin';
 import { useToast } from '@/components/ui/Toast';
 import { useDragReorder } from '@/lib/useDragReorder';
 
-type Item = {
-  id: string;
-  name: string;
-  image_url: string | null;
-  active?: boolean;
-  show_on_site?: boolean;
-  site_position?: number;
-};
-type Kind = 'collections' | 'categories';
-
-const ACTIONS = {
-  collections: { upload: uploadCollectionImageAction, remove: removeCollectionImageAction },
-  categories: { upload: uploadCategoryImageAction, remove: removeCategoryImageAction },
-} as const;
+type Item = { id: string; name: string; image_url: string | null; active?: boolean };
 
 export function CoverImageCatalogGroup({
   title,
-  kind,
   items: itemsProp,
   placeholder,
 }: {
   title: string;
-  kind: Kind;
   items: Item[];
   placeholder: string;
 }) {
@@ -50,7 +31,7 @@ export function CoverImageCatalogGroup({
 
   const { items, rowRef, handlePointerDown } = useDragReorder(itemsProp, (orderedIds) => {
     startTransition(async () => {
-      const result = await reorderCatalogItemsAction(kind, orderedIds);
+      const result = await reorderCatalogItemsAction('categories', orderedIds);
       if (!result.ok) toast(result.message);
     });
   });
@@ -58,7 +39,7 @@ export function CoverImageCatalogGroup({
   function add() {
     if (!draft.trim()) return;
     startTransition(async () => {
-      const result = await addCatalogItemAction(kind, draft);
+      const result = await addCatalogItemAction('categories', draft);
       if (!result.ok) {
         toast(result.message);
         return;
@@ -70,7 +51,7 @@ export function CoverImageCatalogGroup({
   function remove(item: Item) {
     if (!window.confirm(`Excluir "${item.name}"?`)) return;
     startTransition(async () => {
-      const result = await deleteCatalogItemAction(kind, item.id);
+      const result = await deleteCatalogItemAction('categories', item.id);
       if (!result.ok) toast(result.message);
     });
   }
@@ -82,28 +63,9 @@ export function CoverImageCatalogGroup({
     });
   }
 
-  function toggleShowOnSite(item: Item) {
-    startTransition(async () => {
-      const result = await toggleCollectionShowOnSiteAction(item.id, item.show_on_site ?? false);
-      if (!result.ok) toast(result.message);
-    });
-  }
-
-  function changeSitePosition(item: Item, position: number) {
-    startTransition(async () => {
-      const result = await setCollectionSitePositionAction(item.id, position);
-      if (!result.ok) toast(result.message);
-    });
-  }
-
   return (
     <div className="rounded-[18px] border border-border bg-card p-6">
       <div className="mb-4 text-[15px] font-extrabold">{title}</div>
-      {kind === 'collections' && (
-        <div className="mb-3.5 text-[12px] leading-relaxed text-fg-tertiary">
-          Ative &ldquo;Mostrar no site&rdquo; em até 6 coleções para virarem seções na home, cada uma com a posição que você definir.
-        </div>
-      )}
       <div className="mb-3.5 flex gap-2">
         <input
           value={draft}
@@ -123,12 +85,9 @@ export function CoverImageCatalogGroup({
             key={item.id}
             rowRef={rowRef(index)}
             onPointerDown={handlePointerDown(index)}
-            kind={kind}
             item={item}
             onRemove={() => remove(item)}
-            onToggleActive={kind === 'categories' ? () => toggleActive(item) : undefined}
-            onToggleShowOnSite={kind === 'collections' ? () => toggleShowOnSite(item) : undefined}
-            onSitePositionChange={kind === 'collections' ? (pos: number) => changeSitePosition(item, pos) : undefined}
+            onToggleActive={() => toggleActive(item)}
           />
         ))}
       </div>
@@ -137,30 +96,22 @@ export function CoverImageCatalogGroup({
 }
 
 function CoverImageRow({
-  kind,
   item,
   onRemove,
   onToggleActive,
-  onToggleShowOnSite,
-  onSitePositionChange,
   rowRef,
   onPointerDown,
 }: {
-  kind: Kind;
   item: Item;
   onRemove: () => void;
-  onToggleActive?: () => void;
-  onToggleShowOnSite?: () => void;
-  onSitePositionChange?: (position: number) => void;
+  onToggleActive: () => void;
   rowRef: (el: HTMLElement | null) => void;
   onPointerDown: (e: React.PointerEvent) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const toast = useToast();
-  const actions = ACTIONS[kind];
   const active = item.active ?? true;
-  const showOnSite = item.show_on_site ?? false;
 
   function pickFile() {
     inputRef.current?.click();
@@ -173,14 +124,14 @@ function CoverImageRow({
     const formData = new FormData();
     formData.set('file', file);
     startTransition(async () => {
-      const result = await actions.upload(item.id, formData);
+      const result = await uploadCategoryImageAction(item.id, formData);
       if (!result.ok) toast(result.message);
     });
   }
 
   function removeCover() {
     startTransition(async () => {
-      const result = await actions.remove(item.id);
+      const result = await removeCategoryImageAction(item.id);
       if (!result.ok) toast(result.message);
     });
   }
@@ -225,48 +176,17 @@ function CoverImageRow({
           )}
         </div>
       </div>
-      {onToggleShowOnSite && (
-        <div className="flex flex-shrink-0 items-center gap-1.5">
-          <input
-            key={item.site_position}
-            type="number"
-            min={1}
-            max={6}
-            defaultValue={item.site_position || ''}
-            disabled={!showOnSite}
-            onBlur={(e) => {
-              const v = Number(e.target.value);
-              if (Number.isFinite(v) && v > 0) onSitePositionChange?.(v);
-            }}
-            title="Posição no site (1 a 6)"
-            className="h-8 w-13 rounded-[8px] border border-border-strong bg-input px-1.5 text-center text-[12px] outline-none focus:border-accent disabled:opacity-40"
-          />
-          <button
-            onClick={onToggleShowOnSite}
-            className="rounded-full border px-2.5 py-1 text-[11px] font-extrabold"
-            style={{
-              background: showOnSite ? 'rgba(74,222,128,.1)' : 'rgba(168,168,176,.08)',
-              borderColor: showOnSite ? 'rgba(74,222,128,.35)' : 'rgba(168,168,176,.3)',
-              color: showOnSite ? '#4ade80' : '#a8a8b0',
-            }}
-          >
-            {showOnSite ? 'No site' : 'Mostrar no site'}
-          </button>
-        </div>
-      )}
-      {onToggleActive && (
-        <button
-          onClick={onToggleActive}
-          className="flex-shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-extrabold"
-          style={{
-            background: active ? 'rgba(74,222,128,.1)' : 'rgba(168,168,176,.08)',
-            borderColor: active ? 'rgba(74,222,128,.35)' : 'rgba(168,168,176,.3)',
-            color: active ? '#4ade80' : '#a8a8b0',
-          }}
-        >
-          {active ? 'Ativa' : 'Inativa'}
-        </button>
-      )}
+      <button
+        onClick={onToggleActive}
+        className="flex-shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-extrabold"
+        style={{
+          background: active ? 'rgba(74,222,128,.1)' : 'rgba(168,168,176,.08)',
+          borderColor: active ? 'rgba(74,222,128,.35)' : 'rgba(168,168,176,.3)',
+          color: active ? '#4ade80' : '#a8a8b0',
+        }}
+      >
+        {active ? 'Ativa' : 'Inativa'}
+      </button>
       <button onClick={onRemove} className="flex-shrink-0 text-fg-faded hover:text-error">
         ✕
       </button>
