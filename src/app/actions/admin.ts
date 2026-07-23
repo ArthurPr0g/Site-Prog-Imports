@@ -738,6 +738,16 @@ export async function updateBannerAction(
   return okResult('Banner atualizado.');
 }
 
+export async function setSmallBannersVisibleAction(visible: boolean): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const { error } = await supabase.from('site_settings').update({ show_small_banners: visible }).eq('id', true);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar a configuração.'));
+  revalidatePath('/admin/banners');
+  revalidatePath('/');
+  return okResult(visible ? 'Seção exibida na home.' : 'Seção ocultada da home.');
+}
+
 // ============ SERVICES ============
 export async function addServiceAction(name: string, priceLabel: string): Promise<ActionResult> {
   const supabase = await adminClient();

@@ -1,14 +1,16 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { updateBannerAction } from '@/app/actions/admin';
+import { updateBannerAction, setSmallBannersVisibleAction } from '@/app/actions/admin';
 import { useToast } from '@/components/ui/Toast';
 
 type Banner = { id: string; tag: string; title: string; subtitle: string; image_label: string };
 
-export function BannerEditor({ banners }: { banners: Banner[] }) {
+export function BannerEditor({ banners, initialShowSmallBanners }: { banners: Banner[]; initialShowSmallBanners: boolean }) {
   const [state, setState] = useState(banners);
+  const [showSmallBanners, setShowSmallBanners] = useState(initialShowSmallBanners);
   const [, startTransition] = useTransition();
+  const [, startVisibilityTransition] = useTransition();
   const toast = useToast();
 
   function update(id: string, patch: Partial<Banner>) {
@@ -22,8 +24,41 @@ export function BannerEditor({ banners }: { banners: Banner[] }) {
     });
   }
 
+  function toggleVisible() {
+    const next = !showSmallBanners;
+    setShowSmallBanners(next);
+    startVisibilityTransition(async () => {
+      const result = await setSmallBannersVisibleAction(next);
+      if (!result.ok) {
+        setShowSmallBanners(!next);
+        toast(result.message);
+      }
+    });
+  }
+
   return (
     <div className="flex flex-col gap-3.5">
+      <div className="flex items-center justify-between gap-4 rounded-[18px] border border-border bg-card p-5">
+        <div>
+          <div className="text-[13.5px] font-extrabold">Exibir esta seção na home</div>
+          <div className="mt-0.5 text-[12.5px] text-fg-tertiary">
+            Desative para ocultar a grade de 3 banners pequenos do site sem apagar o conteúdo.
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={toggleVisible}
+          role="switch"
+          aria-checked={showSmallBanners}
+          className="relative h-7 w-13 flex-shrink-0 rounded-full transition-colors"
+          style={{ background: showSmallBanners ? '#F28705' : '#26262b' }}
+        >
+          <span
+            className="absolute top-0.5 h-6 w-6 rounded-full bg-white transition-transform"
+            style={{ transform: showSmallBanners ? 'translateX(1.5rem)' : 'translateX(0.125rem)' }}
+          />
+        </button>
+      </div>
       {state.map((b, i) => (
         <div key={b.id} className="grid grid-cols-1 items-center gap-6 rounded-[18px] border border-border bg-card p-6 sm:grid-cols-[180px_1fr]">
           <div className="stripe-placeholder grid h-27.5 place-items-center rounded-[14px] border border-border-strong">

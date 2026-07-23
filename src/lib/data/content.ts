@@ -20,3 +20,9 @@ export async function listTestimonials() {
   const { data } = await supabase.from('testimonials').select('*').order('position');
   return data ?? [];
 }
+
+export async function getSiteSettings() {
+  const supabase = await createClient();
+  const { data } = await supabase.from('site_settings').select('show_small_banners').maybeSingle();
+  return { showSmallBanners: data?.show_small_banners ?? true };
+}

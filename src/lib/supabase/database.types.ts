@@ -664,6 +664,21 @@ export type Database = {
         }
         Relationships: []
       }
+      site_settings: {
+        Row: {
+          id: boolean
+          show_small_banners: boolean
+        }
+        Insert: {
+          id?: boolean
+          show_small_banners?: boolean
+        }
+        Update: {
+          id?: boolean
+          show_small_banners?: boolean
+        }
+        Relationships: []
+      }
       testimonials: {
         Row: {
           bought: string

@@ -1,5 +1,5 @@
 import { listActiveProducts, listCategories } from '@/lib/data/catalog';
-import { listBanners, listServices, listTestimonials } from '@/lib/data/content';
+import { listBanners, listServices, listTestimonials, getSiteSettings } from '@/lib/data/content';
 import { getCurrentUser } from '@/lib/auth';
 import { PromoBar } from '@/components/layout/PromoBar';
 import { Header } from '@/components/layout/Header';
@@ -21,13 +21,14 @@ export default async function HomePage({
   searchParams: Promise<{ categoria?: string }>;
 }) {
   const { categoria } = await searchParams;
-  const [products, categories, banners, services, testimonials, user] = await Promise.all([
+  const [products, categories, banners, services, testimonials, user, settings] = await Promise.all([
     listActiveProducts(),
     listCategories(),
     listBanners(),
     listServices(),
     listTestimonials(),
     getCurrentUser(),
+    getSiteSettings(),
   ]);
 
   const heroSlides = banners.map((b) => ({
@@ -78,7 +79,7 @@ export default async function HomePage({
       <PromoBar />
       <Header searchIndex={searchIndex} user={user} />
       <AnimatedHeroBanners />
-      <HeroCarousel slides={heroSlides} />
+      {settings.showSmallBanners && <HeroCarousel slides={heroSlides} />}
       <BrandsMarquee />
       <Categories categories={categoryCards} />
       <ProductGrid products={productsForFilter} />
