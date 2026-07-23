@@ -1,4 +1,7 @@
+'use client';
+
 import { StarRating } from '@/components/ui/Price';
+import { GlowBorder, glowMouseMove, glowMouseLeave } from '@/components/ui/GlowBorder';
 import { INSTAGRAM_HANDLE } from '@/lib/constants';
 import type { Tables } from '@/lib/supabase/database.types';
 
@@ -25,8 +28,11 @@ export function Testimonials({ testimonials }: { testimonials: Tables<'testimoni
         {testimonials.map((t) => (
           <div
             key={t.id}
-            className="rounded-[20px] border border-border bg-card p-7 transition-all duration-300 hover:-translate-y-1 hover:border-border-hover"
+            onMouseMove={glowMouseMove}
+            onMouseLeave={glowMouseLeave}
+            className="relative overflow-hidden rounded-[20px] border border-border bg-card p-7 transition-all duration-300 hover:-translate-y-1 hover:border-border-hover"
           >
+            <GlowBorder />
             <StarRating />
             <p className="my-3.5 text-[14.5px] leading-relaxed text-[#c9c9d1]">{t.text}</p>
             <div className="flex items-center gap-3">

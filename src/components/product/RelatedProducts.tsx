@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { PlaceholderImage } from '@/components/ui/PlaceholderImage';
+import { GlowBorder, glowMouseMove, glowMouseLeave } from '@/components/ui/GlowBorder';
 import { formatBRL, formatParcel } from '@/lib/format';
 import type { ProductCard } from '@/lib/data/catalog';
 
@@ -17,8 +18,11 @@ export function RelatedProducts({ products }: { products: ProductCard[] }) {
             <Link
               key={p.id}
               href={`/produto/${p.sku}`}
-              className="block overflow-hidden rounded-[20px] border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-border-hover"
+              onMouseMove={glowMouseMove}
+              onMouseLeave={glowMouseLeave}
+              className="relative block overflow-hidden rounded-[20px] border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-border-hover"
             >
+              <GlowBorder />
               <PlaceholderImage label={p.image} src={p.imageUrl} className="h-40" sizes="250px" />
               <div className="p-4.5">
                 <div className="mb-1 text-[11px] font-bold uppercase tracking-[.1em] text-fg-tertiary">{p.category}</div>

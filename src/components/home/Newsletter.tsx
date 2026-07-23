@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { subscribeNewsletterAction } from '@/app/actions/coupon';
 import { useToast } from '@/components/ui/Toast';
+import { GlowBorder, glowMouseMove, glowMouseLeave } from '@/components/ui/GlowBorder';
 
 export function Newsletter() {
   const [email, setEmail] = useState('');
@@ -21,7 +22,12 @@ export function Newsletter() {
 
   return (
     <section className="mx-auto max-w-[1280px] px-6 py-22">
-      <div className="relative overflow-hidden rounded-[28px] border border-accent/25 bg-[linear-gradient(135deg,#181014,#0f0f13_55%)] p-8 text-center md:p-14">
+      <div
+        onMouseMove={glowMouseMove}
+        onMouseLeave={glowMouseLeave}
+        className="relative overflow-hidden rounded-[28px] border border-accent/25 bg-[linear-gradient(135deg,#181014,#0f0f13_55%)] p-8 text-center md:p-14"
+      >
+        <GlowBorder />
         <div
           className="pointer-events-none absolute left-1/2 top-[-160px] h-[320px] w-[520px] -translate-x-1/2 rounded-full"
           style={{ background: 'radial-gradient(circle, rgba(242,135,5,.16), transparent 70%)' }}

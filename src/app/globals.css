@@ -193,3 +193,21 @@ textarea::placeholder {
   color: var(--color-accent);
   text-shadow: 0 0 22px rgba(242, 135, 5, 0.7);
 }
+
+/* Mesma dinâmica do spotlight das marcas, aplicada ao rodapé — área de luz
+   menor (140px) para não tomar a seção inteira. */
+.footer-spotlight {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(140px circle at var(--spot-x, 50%) var(--spot-y, 50%), rgba(242, 135, 5, 0.14), transparent 70%);
+  opacity: var(--spot-opacity, 0);
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.footer-link {
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+.footer-link:hover {
+  color: var(--color-accent);
+  text-shadow: 0 0 22px rgba(242, 135, 5, 0.7);
+}

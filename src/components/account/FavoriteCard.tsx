@@ -4,6 +4,7 @@ import { useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PlaceholderImage } from '@/components/ui/PlaceholderImage';
+import { GlowBorder, glowMouseMove, glowMouseLeave } from '@/components/ui/GlowBorder';
 import { formatBRL, formatParcel } from '@/lib/format';
 import { toggleFavoriteAction } from '@/app/actions/account';
 import { useToast } from '@/components/ui/Toast';
@@ -30,7 +31,12 @@ export function FavoriteCard({
   const toast = useToast();
 
   return (
-    <div className="overflow-hidden rounded-[20px] border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-border-hover">
+    <div
+      onMouseMove={glowMouseMove}
+      onMouseLeave={glowMouseLeave}
+      className="relative overflow-hidden rounded-[20px] border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-border-hover"
+    >
+      <GlowBorder />
       <div className="relative h-37.5">
         <PlaceholderImage label={image} src={imageUrl} className="h-full" sizes="240px" />
         <button
