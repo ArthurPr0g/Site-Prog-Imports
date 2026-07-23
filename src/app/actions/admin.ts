@@ -13,10 +13,28 @@ async function adminClient() {
 }
 
 // ============ PRODUCTS ============
+
+// Gera um SKU curto a partir do nome (iniciais das primeiras palavras + sufixo aleatório).
+// Nunca é escolhido pelo usuário — evita colisão via retry no unique constraint da coluna.
+const SKU_SUFFIX_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem 0/O/1/I para evitar confusão visual
+function generateSku(name: string): string {
+  const words = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const prefix = (words.slice(0, 3).map((w) => w.slice(0, 3)).join('') || 'PRD').slice(0, 9);
+  let suffix = '';
+  for (let i = 0; i < 5; i++) suffix += SKU_SUFFIX_CHARS[Math.floor(Math.random() * SKU_SUFFIX_CHARS.length)];
+  return `${prefix}-${suffix}`;
+}
+
 export type ProductFormInput = {
   id?: string;
   name: string;
-  sku: string;
   brand: string;
   category: string;
   collection: string;
@@ -34,7 +52,6 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
 
   if (!input.name.trim()) return errResult('Informe o nome do produto.');
-  if (!input.sku.trim()) return errResult('Informe o SKU do produto.');
   if (!Number.isFinite(input.price) || input.price <= 0) return errResult('Informe um preço válido, maior que zero.');
   if (input.promoPrice !== null && (!Number.isFinite(input.promoPrice) || input.promoPrice <= 0)) {
     return errResult('O preço promocional precisa ser um número válido maior que zero.');
@@ -72,7 +89,6 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
 
   const payload = {
     name: input.name.trim(),
-    sku: input.sku.trim(),
     brand_id: brandId,
     category_id: category?.id ?? null,
     price: input.price,
@@ -89,9 +105,23 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
     const { error } = await supabase.from('products').update(payload).eq('id', input.id);
     if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar as alterações do produto.'));
   } else {
-    const { data, error } = await supabase.from('products').insert({ ...payload, active: true }).select('id').single();
-    if (error) return errResult(friendlyDbError(error, 'Não foi possível criar o produto.'));
-    productId = data?.id;
+    let insertError: string | null = null;
+    for (let attempt = 0; attempt < 5 && !productId; attempt++) {
+      const { data, error } = await supabase
+        .from('products')
+        .insert({ ...payload, sku: generateSku(input.name), active: true })
+        .select('id')
+        .single();
+      if (!error) {
+        productId = data?.id;
+        break;
+      }
+      if (error.code !== '23505') {
+        insertError = friendlyDbError(error, 'Não foi possível criar o produto.');
+        break;
+      }
+    }
+    if (!productId) return errResult(insertError ?? 'Não foi possível gerar um SKU único. Tente novamente.');
   }
 
   if (productId) {
@@ -131,6 +161,237 @@ export async function deleteProductAction(id: string): Promise<ActionResult> {
   revalidatePath('/admin/produtos');
   revalidatePath('/');
   return okResult();
+}
+
+// ============ IMPORTAÇÃO DE PRODUTOS (PLANILHA) ============
+type ImportProductRow = {
+  name: string;
+  brand: string;
+  category: string;
+  collection: string;
+  stock: number;
+  price: number;
+  promoPrice: number | null;
+  description: string;
+};
+
+export type ImportRowResult = { row: number; name: string; ok: boolean; message: string };
+
+const MAX_IMPORT_ROWS = 500;
+const MAX_IMPORT_FILE_MB = 8;
+
+const IMPORT_COLUMN_KEYS = {
+  nome: 'name',
+  marca: 'brand',
+  categoria: 'category',
+  'coleção': 'collection',
+  estoque: 'stock',
+  'preço (r$)': 'price',
+  'preço promocional (opcional)': 'promoPrice',
+  'descrição': 'description',
+} as const;
+
+function cellText(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === 'object') {
+    const v = value as { text?: string; richText?: { text: string }[]; result?: unknown };
+    if (typeof v.text === 'string') return v.text;
+    if (Array.isArray(v.richText)) return v.richText.map((t) => t.text).join('');
+    if ('result' in v) return cellText(v.result);
+    return '';
+  }
+  return String(value);
+}
+
+function cellNumberOrNaN(value: unknown): number {
+  if (typeof value === 'number') return value;
+  const s = cellText(value).replace(',', '.').trim();
+  return s ? parseFloat(s) : NaN;
+}
+
+export async function importProductsFromSpreadsheetAction(
+  formData: FormData
+): Promise<ActionResult & { results?: ImportRowResult[] }> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) return errResult('Selecione um arquivo de planilha (.xlsx).');
+  if (file.size > MAX_IMPORT_FILE_MB * 1024 * 1024) return errResult(`O arquivo deve ter no máximo ${MAX_IMPORT_FILE_MB}MB.`);
+
+  const ExcelJS = (await import('exceljs')).default;
+  const workbook = new ExcelJS.Workbook();
+  try {
+    const buffer = await file.arrayBuffer();
+    await workbook.xlsx.load(buffer);
+  } catch {
+    return errResult('Não foi possível ler o arquivo. Confirme que é uma planilha .xlsx válida.');
+  }
+
+  const sheet = workbook.getWorksheet('Produtos') ?? workbook.worksheets.find((w) => !w.state || w.state === 'visible');
+  if (!sheet) return errResult('A planilha não tem uma aba de produtos.');
+
+  const headerRow = sheet.getRow(1);
+  const colIndexToKey = new Map<number, string>();
+  headerRow.eachCell((cell, colNumber) => {
+    const key = cellText(cell.value).trim().toLowerCase();
+    const mapped = (IMPORT_COLUMN_KEYS as Record<string, string>)[key];
+    if (mapped) colIndexToKey.set(colNumber, mapped);
+  });
+  if (colIndexToKey.size === 0) {
+    return errResult('Não reconheci as colunas da planilha. Baixe o modelo novamente e preencha sobre ele.');
+  }
+
+  const rows: ImportProductRow[] = [];
+  for (let r = 2; r <= sheet.rowCount; r++) {
+    const row = sheet.getRow(r);
+    const parsed: Record<string, unknown> = {};
+    let hasContent = false;
+    colIndexToKey.forEach((key, colNumber) => {
+      const raw = row.getCell(colNumber).value;
+      const text = cellText(raw);
+      if (text.trim()) hasContent = true;
+      parsed[key] = raw;
+    });
+    if (!hasContent) continue;
+
+    rows.push({
+      name: cellText(parsed.name),
+      brand: cellText(parsed.brand),
+      category: cellText(parsed.category),
+      collection: cellText(parsed.collection),
+      stock: Math.round(cellNumberOrNaN(parsed.stock)),
+      price: cellNumberOrNaN(parsed.price),
+      promoPrice: cellText(parsed.promoPrice).trim() ? cellNumberOrNaN(parsed.promoPrice) : null,
+      description: cellText(parsed.description),
+    });
+  }
+
+  if (rows.length === 0) return errResult('A planilha não tem nenhuma linha preenchida para importar.');
+  if (rows.length > MAX_IMPORT_ROWS) return errResult(`Envie no máximo ${MAX_IMPORT_ROWS} produtos por importação.`);
+
+  const [{ data: categories }, { data: collections }] = await Promise.all([
+    supabase.from('categories').select('id, name'),
+    supabase.from('collections').select('id, name'),
+  ]);
+  const categoryByName = new Map((categories ?? []).map((c) => [c.name.trim().toLowerCase(), c.id]));
+  const collectionByName = new Map((collections ?? []).map((c) => [c.name.trim().toLowerCase(), c.id]));
+  const brandIdCache = new Map<string, string>();
+
+  const results: ImportRowResult[] = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const rowNum = i + 2; // linha 1 é o cabeçalho da planilha
+    const name = r.name.trim();
+    const fail = (message: string) => results.push({ row: rowNum, name: name || '(sem nome)', ok: false, message });
+
+    if (!name) {
+      fail('Nome é obrigatório.');
+      continue;
+    }
+    if (!Number.isFinite(r.price) || r.price <= 0) {
+      fail('Preço inválido — precisa ser um número maior que zero.');
+      continue;
+    }
+    if (r.promoPrice !== null && (!Number.isFinite(r.promoPrice) || r.promoPrice <= 0)) {
+      fail('Preço promocional inválido.');
+      continue;
+    }
+    if (r.promoPrice !== null && r.promoPrice >= r.price) {
+      fail('Preço promocional precisa ser menor que o preço.');
+      continue;
+    }
+    if (!Number.isFinite(r.stock) || r.stock < 0) {
+      fail('Estoque inválido — precisa ser 0 ou mais.');
+      continue;
+    }
+
+    if (!r.category.trim()) {
+      fail('Categoria é obrigatória.');
+      continue;
+    }
+    const categoryId = categoryByName.get(r.category.trim().toLowerCase()) ?? null;
+    if (!categoryId) {
+      fail(`Categoria "${r.category}" não encontrada. Confira a aba de referência na planilha.`);
+      continue;
+    }
+
+    let collectionId: string | null = null;
+    if (r.collection.trim()) {
+      collectionId = collectionByName.get(r.collection.trim().toLowerCase()) ?? null;
+      if (!collectionId) {
+        fail(`Coleção "${r.collection}" não encontrada. Confira a aba de referência na planilha.`);
+        continue;
+      }
+    }
+
+    let brandId: string | null = null;
+    const brandName = r.brand.trim();
+    if (brandName) {
+      const cacheKey = brandName.toLowerCase();
+      const cached = brandIdCache.get(cacheKey);
+      if (cached) {
+        brandId = cached;
+      } else {
+        const { data: brand, error: brandError } = await supabase
+          .from('brands')
+          .upsert({ name: brandName }, { onConflict: 'name' })
+          .select('id')
+          .single();
+        if (brandError || !brand) {
+          fail('Não foi possível salvar a marca.');
+          continue;
+        }
+        brandId = brand.id;
+        brandIdCache.set(cacheKey, brandId);
+      }
+    }
+
+    let productId: string | null = null;
+    let insertError: string | null = null;
+    for (let attempt = 0; attempt < 5 && !productId; attempt++) {
+      const { data, error } = await supabase
+        .from('products')
+        .insert({
+          name,
+          sku: generateSku(name),
+          brand_id: brandId,
+          category_id: categoryId,
+          price: r.price,
+          promo_price: r.promoPrice,
+          stock: r.stock,
+          description: r.description.trim(),
+          active: true,
+        })
+        .select('id')
+        .single();
+      if (!error) {
+        productId = data?.id;
+        break;
+      }
+      if (error.code !== '23505') {
+        insertError = friendlyDbError(error, 'Não foi possível criar o produto.');
+        break;
+      }
+    }
+    if (!productId) {
+      fail(insertError ?? 'Não foi possível gerar um SKU único depois de várias tentativas.');
+      continue;
+    }
+
+    if (collectionId) {
+      await supabase.from('product_collections').insert({ product_id: productId, collection_id: collectionId });
+    }
+
+    results.push({ row: rowNum, name, ok: true, message: 'Importado com sucesso.' });
+  }
+
+  revalidatePath('/admin/produtos');
+  revalidatePath('/');
+  const successCount = results.filter((r) => r.ok).length;
+  return { ...okResult(`${successCount} de ${rows.length} produtos importados.`), results };
 }
 
 // ============ ORDERS ============

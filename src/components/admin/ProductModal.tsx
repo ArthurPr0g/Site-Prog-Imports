@@ -11,7 +11,7 @@ export type ProductImageData = { id: string; url: string | null; label: string }
 export type ProductModalData = {
   id?: string;
   name: string;
-  sku: string;
+  sku?: string;
   brand: string;
   category: string;
   collection: string;
@@ -52,7 +52,6 @@ export function ProductModal({
   const [form, setForm] = useState<ProductModalData>(
     initial ?? {
       name: '',
-      sku: '',
       brand: '',
       category: CATEGORY_OPTIONS[0],
       collection: '',
@@ -91,7 +90,6 @@ export function ProductModal({
   function save() {
     setError('');
     if (!form.name.trim()) return setError('Informe o nome do produto.');
-    if (!form.sku.trim()) return setError('Informe o SKU do produto.');
 
     const price = parseFloat(form.price.replace(',', '.'));
     if (!Number.isFinite(price) || price <= 0) return setError('Informe um preço válido, maior que zero.');
@@ -117,7 +115,6 @@ export function ProductModal({
     const input: ProductFormInput = {
       id: form.id,
       name: form.name.trim(),
-      sku: form.sku.trim(),
       brand: form.brand.trim(),
       category: form.category,
       collection: form.collection,
@@ -210,15 +207,19 @@ export function ProductModal({
     <>
       <div onClick={onClose} className="fixed inset-0 z-99 bg-black/65 backdrop-blur-sm" />
       <div className="fixed left-1/2 top-1/2 z-100 max-h-[88vh] w-[min(620px,94vw)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[22px] border border-border-strong bg-card p-8 shadow-[0_40px_100px_rgba(0,0,0,.7)]">
-        <div className="mb-6 flex items-center justify-between">
-          <div className="font-display text-xl font-bold">{form.id ? 'Editar produto' : 'Novo produto'}</div>
-          <button onClick={onClose} className="grid h-8.5 w-8.5 place-items-center rounded-full border border-border-strong text-fg-secondary hover:border-accent hover:text-accent">
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <div>
+            <div className="font-display text-xl font-bold">{form.id ? 'Editar produto' : 'Novo produto'}</div>
+            {form.sku && (
+              <div className="mt-0.5 font-mono text-[11px] text-fg-faded">SKU {form.sku} (gerado automaticamente)</div>
+            )}
+          </div>
+          <button onClick={onClose} className="grid h-8.5 w-8.5 flex-shrink-0 place-items-center rounded-full border border-border-strong text-fg-secondary hover:border-accent hover:text-accent">
             ✕
           </button>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <input value={form.name} onChange={set('name')} placeholder="Nome do produto" className={`sm:col-span-2 ${inputClass}`} />
-          <input value={form.sku} onChange={set('sku')} placeholder="SKU" className={inputClass} />
           <input value={form.brand} onChange={set('brand')} placeholder="Marca" className={inputClass} />
           <select value={form.category} onChange={set('category')} className={inputClass}>
             {CATEGORY_OPTIONS.map((c) => (

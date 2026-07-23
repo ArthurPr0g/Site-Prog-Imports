@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { formatBRL } from '@/lib/format';
 import { toggleProductActiveAction, deleteProductAction } from '@/app/actions/admin';
 import { ProductModal, type ProductModalData } from './ProductModal';
+import { ProductImportButton } from './ProductImportButton';
 import { useToast } from '@/components/ui/Toast';
 
 type Row = {
@@ -73,7 +74,8 @@ export function ProductsTable({ products, collections }: { products: Row[]; coll
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex flex-wrap justify-end gap-2">
+        <ProductImportButton />
         <button
           onClick={openNew}
           className="rounded-control bg-accent px-5 py-2.75 text-[13.5px] font-extrabold text-page transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(242,135,5,.35)]"
