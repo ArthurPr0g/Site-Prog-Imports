@@ -15,7 +15,7 @@ export function AccountSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-24 flex flex-col gap-0.5 rounded-[20px] border border-border bg-card p-3">
+    <aside className="flex flex-col gap-0.5 rounded-[20px] border border-border bg-card p-3 md:sticky md:top-24">
       {NAV.map((item) => {
         const active =
           item.href === '/conta' ? pathname === '/conta' : pathname.startsWith(item.href);

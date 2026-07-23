@@ -14,6 +14,14 @@ export type SearchIndexItem = {
   price: number;
 };
 
+const NAV_LINKS = [
+  { href: '/?categoria=MacBook#produtos', label: 'MacBooks' },
+  { href: '/?categoria=iPhone#produtos', label: 'iPhones' },
+  { href: '/?categoria=Notebook+Gamer#produtos', label: 'Notebooks Gamer' },
+  { href: '/?categoria=Monitores#produtos', label: 'Monitores' },
+  { href: '/#servicos', label: 'Serviços' },
+];
+
 export function Header({
   searchIndex,
   user,
@@ -22,6 +30,7 @@ export function Header({
   user: { name: string; role: string } | null;
 }) {
   const [query, setQuery] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
   const { count, favCount, openCart } = useCart();
 
   const suggestions = useMemo(() => {
@@ -34,81 +43,120 @@ export function Header({
 
   const showSuggestions = query.trim().length > 0;
 
+  function renderSearch(id: string) {
+    return (
+      <div className="relative w-full">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar iPhone, MacBook, Alienware…"
+          className="w-full rounded-full border border-border-strong bg-input-alt px-4.5 py-2.5 text-sm text-fg outline-none focus:border-accent"
+        />
+        {showSuggestions && (
+          <div
+            key={id}
+            className="absolute left-0 right-0 top-[calc(100%+8px)] z-10 overflow-hidden rounded-2xl border border-border-strong bg-input-alt shadow-[0_24px_60px_rgba(0,0,0,.6)]"
+          >
+            {suggestions.map((s) => (
+              <Link
+                key={s.sku}
+                href={`/produto/${s.sku}`}
+                onClick={() => setQuery('')}
+                className="flex items-center justify-between border-b border-divider-strong px-4.5 py-3 hover:bg-divider-strong"
+              >
+                <div>
+                  <div className="text-sm font-semibold">{s.name}</div>
+                  <div className="text-xs text-fg-tertiary">{s.category}</div>
+                </div>
+                <div className="text-[13px] font-bold text-accent">{formatBRL(s.price)}</div>
+              </Link>
+            ))}
+            {suggestions.length === 0 && (
+              <div className="px-4.5 py-3.5 text-[13px] text-fg-tertiary">Nenhum produto encontrado</div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <header className="sticky top-0 z-90 border-b border-divider-strong bg-page/82 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-[1280px] items-center gap-7 px-6 py-3.5">
-        <Link href="/" className="flex flex-shrink-0 items-center gap-2.5">
-          <Logo height={52} />
-        </Link>
-        <nav className="hidden gap-5 text-sm font-semibold text-fg-secondary lg:flex">
-          <Link href="/?categoria=MacBook#produtos" className="hover:text-accent">MacBooks</Link>
-          <Link href="/?categoria=iPhone#produtos" className="hover:text-accent">iPhones</Link>
-          <Link href="/?categoria=Notebook+Gamer#produtos" className="hover:text-accent">Notebooks Gamer</Link>
-          <Link href="/?categoria=Monitores#produtos" className="hover:text-accent">Monitores</Link>
-          <Link href="/#servicos" className="hover:text-accent">Serviços</Link>
-        </nav>
-        <div className="relative ml-auto max-w-[420px] flex-1">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar iPhone, MacBook, Alienware…"
-            className="w-full rounded-full border border-border-strong bg-input-alt px-4.5 py-2.5 text-sm text-fg outline-none focus:border-accent"
-          />
-          {showSuggestions && (
-            <div className="absolute left-0 right-0 top-[calc(100%+8px)] overflow-hidden rounded-2xl border border-border-strong bg-input-alt shadow-[0_24px_60px_rgba(0,0,0,.6)]">
-              {suggestions.map((s) => (
-                <Link
-                  key={s.sku}
-                  href={`/produto/${s.sku}`}
-                  onClick={() => setQuery('')}
-                  className="flex items-center justify-between border-b border-divider-strong px-4.5 py-3 hover:bg-divider-strong"
-                >
-                  <div>
-                    <div className="text-sm font-semibold">{s.name}</div>
-                    <div className="text-xs text-fg-tertiary">{s.category}</div>
-                  </div>
-                  <div className="text-[13px] font-bold text-accent">{formatBRL(s.price)}</div>
-                </Link>
-              ))}
-              {suggestions.length === 0 && (
-                <div className="px-4.5 py-3.5 text-[13px] text-fg-tertiary">Nenhum produto encontrado</div>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="flex flex-shrink-0 items-center gap-2">
-          {user?.role === 'admin' && <WorkspaceSwitcher active="loja" />}
-          <Link
-            href={user ? '/conta' : '/entrar'}
-            className="rounded-full border border-border-strong px-4 py-2.5 text-[13px] font-bold hover:border-accent hover:text-accent"
-          >
-            {user ? user.name.split(' ')[0] : 'Entrar'}
-          </Link>
-          <Link
-            href={user ? '/conta/favoritos' : '/entrar'}
-            title="Favoritos"
-            className="relative grid h-10 w-10 place-items-center rounded-full border border-border-strong bg-input-alt text-base hover:border-accent"
-          >
-            ♡
-            {favCount > 0 && (
-              <span className="absolute -right-1 -top-1 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-accent text-[10px] font-extrabold text-page">
-                {favCount}
-              </span>
-            )}
-          </Link>
+      <div className="mx-auto max-w-[1280px] px-4 py-3 sm:px-6 sm:py-3.5">
+        <div className="flex items-center gap-3 sm:gap-7">
           <button
-            onClick={openCart}
-            title="Carrinho"
-            className="relative grid h-10 w-10 place-items-center rounded-full border border-border-strong bg-input-alt text-[15px] hover:border-accent"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label="Abrir menu"
+            aria-expanded={menuOpen}
+            className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full border border-border-strong text-base lg:hidden"
           >
-            ▢
-            {count > 0 && (
-              <span className="absolute -right-1 -top-1 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-accent text-[10px] font-extrabold text-page">
-                {count}
-              </span>
-            )}
+            {menuOpen ? '✕' : '☰'}
           </button>
+          <Link href="/" className="flex flex-shrink-0 items-center gap-2.5">
+            <Logo height={44} />
+          </Link>
+          <nav className="hidden gap-5 text-sm font-semibold text-fg-secondary lg:flex">
+            {NAV_LINKS.map((l) => (
+              <Link key={l.href} href={l.href} className="hover:text-accent">
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="ml-auto hidden max-w-[420px] flex-1 md:block">
+            {renderSearch('desktop')}
+          </div>
+          <div className="ml-auto flex flex-shrink-0 items-center gap-2 md:ml-0">
+            {user?.role === 'admin' && <WorkspaceSwitcher active="loja" />}
+            <Link
+              href={user ? '/conta' : '/entrar'}
+              title={user ? user.name : 'Entrar'}
+              className="grid h-9 flex-shrink-0 place-items-center whitespace-nowrap rounded-full border border-border-strong px-3.5 text-[13px] font-bold hover:border-accent hover:text-accent sm:h-10 sm:px-4"
+            >
+              {user ? user.name.split(' ')[0] : 'Entrar'}
+            </Link>
+            <Link
+              href={user ? '/conta/favoritos' : '/entrar'}
+              title="Favoritos"
+              className="relative grid h-9 w-9 flex-shrink-0 place-items-center rounded-full border border-border-strong bg-input-alt text-base hover:border-accent sm:h-10 sm:w-10"
+            >
+              ♡
+              {favCount > 0 && (
+                <span className="absolute -right-1 -top-1 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-accent text-[10px] font-extrabold text-page">
+                  {favCount}
+                </span>
+              )}
+            </Link>
+            <button
+              onClick={openCart}
+              title="Carrinho"
+              className="relative grid h-9 w-9 flex-shrink-0 place-items-center rounded-full border border-border-strong bg-input-alt text-[15px] hover:border-accent sm:h-10 sm:w-10"
+            >
+              ▢
+              {count > 0 && (
+                <span className="absolute -right-1 -top-1 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-accent text-[10px] font-extrabold text-page">
+                  {count}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
+        <div className="mt-3 md:hidden">
+          {renderSearch('mobile')}
+        </div>
+        {menuOpen && (
+          <nav className="mt-3 flex flex-col gap-1 border-t border-divider-strong pt-3 lg:hidden">
+            {NAV_LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                onClick={() => setMenuOpen(false)}
+                className="rounded-xl px-3 py-2.5 text-sm font-semibold text-fg-secondary hover:bg-card hover:text-accent"
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+        )}
       </div>
     </header>
   );

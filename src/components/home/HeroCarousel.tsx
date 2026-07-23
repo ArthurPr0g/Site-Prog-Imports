@@ -34,7 +34,7 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
           className="pointer-events-none absolute left-[70%] top-1/2 h-[640px] w-[640px] -translate-x-1/2 -translate-y-1/2 animate-hero-glow rounded-full"
           style={{ background: 'radial-gradient(circle, rgba(242,135,5,.18) 0%, rgba(242,135,5,0) 65%)' }}
         />
-        <div className="relative z-2 grid w-full grid-cols-1 gap-8 px-8 py-14 md:grid-cols-[1.05fr_.95fr] md:px-16">
+        <div className="relative z-2 grid w-full grid-cols-1 gap-8 px-6 py-12 md:grid-cols-[1.05fr_.95fr] md:px-16 md:py-14">
           <div key={slide.id} className="animate-slide-up">
             <div className="mb-5.5 inline-flex items-center gap-2 rounded-full border border-accent/35 bg-accent/12 px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-[.12em] text-accent">
               {slide.tag}
@@ -43,7 +43,7 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
               {slide.title}
             </h1>
             <p className="mb-8 max-w-[440px] text-[17px] leading-relaxed text-fg-secondary">{slide.subtitle}</p>
-            <div className="flex items-center gap-3.5">
+            <div className="flex flex-wrap items-center gap-x-3.5 gap-y-3">
               <button
                 onClick={() => {
                   add({ id: slide.id, sku: slide.sku, name: slide.title, price: slide.price });
@@ -67,7 +67,7 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
             <div className="font-mono text-[13px] text-fg-faded">[ foto: {slide.image} ]</div>
           </div>
         </div>
-        <div className="absolute bottom-6 left-8 z-3 flex gap-2 md:left-16">
+        <div className="absolute bottom-6 left-6 z-3 flex gap-2 md:left-16">
           {slides.map((s, i) => (
             <button
               key={s.id}
