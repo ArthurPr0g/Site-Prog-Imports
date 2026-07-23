@@ -21,35 +21,34 @@ export function Categories({ categories }: { categories: CategoryCard[] }) {
         </div>
       </div>
       <div
-        className="no-scrollbar flex snap-x snap-mandatory gap-9 overflow-x-auto px-6 pb-3"
+        className="no-scrollbar flex snap-x snap-mandatory gap-10 overflow-x-auto px-6 pb-3"
         style={{ scrollBehavior: 'smooth' }}
       >
         {categories.map((c) => (
           <Link
             key={c.name}
             href={c.href}
-            className="group flex w-44 flex-shrink-0 snap-start flex-col items-start gap-4"
+            className="group flex w-60 flex-shrink-0 snap-start flex-col items-center gap-5 text-center"
           >
-            <div className="relative h-44 w-44">
+            <div className="relative h-60 w-60 transition-transform duration-500 ease-out group-hover:-translate-y-2">
               {c.imageUrl ? (
                 <Image
                   src={c.imageUrl}
                   alt={c.name}
                   fill
-                  sizes="176px"
-                  className="object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+                  sizes="240px"
+                  className="object-contain drop-shadow-[0_16px_32px_rgba(0,0,0,.5)] transition-transform duration-500 ease-out group-hover:scale-110"
                 />
               ) : (
                 <div className="grid h-full w-full place-items-center">
-                  <div className="grid h-20 w-20 place-items-center rounded-2xl border border-accent/30 bg-accent/10 font-display text-lg font-bold text-accent">
+                  <div className="grid h-24 w-24 place-items-center rounded-2xl border border-accent/30 bg-accent/10 font-display text-xl font-bold text-accent transition-transform duration-500 ease-out group-hover:scale-110">
                     {c.glyph}
                   </div>
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-1.5 text-[15px] font-bold text-fg transition-colors duration-200 group-hover:text-accent">
+            <div className="text-[19px] font-extrabold text-fg transition-colors duration-200 group-hover:text-accent">
               {c.name}
-              <span className="transition-transform duration-300 ease-out group-hover:translate-x-1">→</span>
             </div>
           </Link>
         ))}
