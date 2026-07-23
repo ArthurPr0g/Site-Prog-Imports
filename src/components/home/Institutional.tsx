@@ -1,11 +1,4 @@
-const DIFFS = [
-  { num: '01', title: 'Importação legalizada', sub: 'Produtos com procedência e nota fiscal.' },
-  { num: '02', title: 'Garantia real', sub: 'Cobertura completa em todos os produtos.' },
-  { num: '03', title: 'Exclusivos dos EUA', sub: 'Modelos que não chegam ao Brasil.' },
-  { num: '04', title: 'Atendimento personalizado', sub: 'Você fala direto com quem entende.' },
-  { num: '05', title: 'Suporte pós-venda', sub: 'Acompanhamento após a entrega.' },
-  { num: '06', title: 'Qualidade garantida', sub: 'Só trabalhamos com o melhor.' },
-];
+import { GlobeOpportunities } from './GlobeOpportunities';
 
 export function Institutional() {
   return (
@@ -24,18 +17,7 @@ export function Institutional() {
               personalizado e suporte completo antes, durante e depois da compra.
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {DIFFS.map((d) => (
-              <div
-                key={d.num}
-                className="rounded-2xl border border-border bg-page p-5 transition-all hover:border-accent/40"
-              >
-                <div className="mb-2 font-display text-[13px] font-bold text-accent">{d.num}</div>
-                <div className="mb-1 text-sm font-extrabold">{d.title}</div>
-                <div className="text-[12.5px] leading-relaxed text-fg-tertiary">{d.sub}</div>
-              </div>
-            ))}
-          </div>
+          <GlobeOpportunities />
         </div>
       </div>
     </section>
