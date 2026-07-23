@@ -159,6 +159,7 @@ textarea::placeholder {
 .glow-border {
   position: absolute;
   inset: 0;
+  z-index: 20;
   border-radius: inherit;
   padding: 1px;
   background: radial-gradient(
