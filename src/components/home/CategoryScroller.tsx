@@ -57,7 +57,7 @@ export function CategoryScroller({ categories }: { categories: CategoryCard[] })
       )}
       <div
         ref={scrollerRef}
-        className="no-scrollbar flex snap-x snap-mandatory gap-10 overflow-x-auto px-6 pb-3"
+        className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-3"
         style={{ scrollBehavior: 'smooth' }}
       >
         {categories.map((c) => (
