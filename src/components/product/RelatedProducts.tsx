@@ -17,7 +17,7 @@ export function RelatedProducts({ products }: { products: ProductCard[] }) {
               href={`/produto/${p.sku}`}
               className="block overflow-hidden rounded-[20px] border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-border-hover"
             >
-              <PlaceholderImage label={p.image} className="h-40" />
+              <PlaceholderImage label={p.image} src={p.imageUrl} className="h-40" sizes="250px" />
               <div className="p-4.5">
                 <div className="mb-1 text-[11px] font-bold uppercase tracking-[.1em] text-fg-tertiary">{p.category}</div>
                 <div className="mb-2.5 text-[14.5px] font-extrabold leading-snug">{p.name}</div>

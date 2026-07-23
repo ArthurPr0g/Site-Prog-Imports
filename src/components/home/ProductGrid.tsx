@@ -55,7 +55,7 @@ export function ProductGrid({ products, initialFilter }: { products: ProductCard
               className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:-translate-y-1.5 hover:border-border-hover hover:shadow-[0_24px_48px_rgba(0,0,0,.45)] sm:rounded-[22px]"
             >
               <Link href={`/produto/${p.sku}`} className="relative block h-[130px] sm:h-[210px]">
-                <PlaceholderImage label={p.image} className="h-full" textClassName="hidden sm:block text-xs" />
+                <PlaceholderImage label={p.image} src={p.imageUrl} className="h-full" textClassName="hidden sm:block text-xs" sizes="(min-width: 640px) 280px, 50vw" />
                 {hasPromo && (
                   <div className="absolute left-2 top-2 rounded-full bg-accent px-2 py-0.5 text-[9px] font-extrabold tracking-[.06em] text-page sm:left-3.5 sm:top-3.5 sm:px-2.5 sm:py-1 sm:text-[11px]">
                     PROMOÇÃO
@@ -95,7 +95,7 @@ export function ProductGrid({ products, initialFilter }: { products: ProductCard
                 </div>
                 <button
                   onClick={() => {
-                    add({ id: p.id, sku: p.sku, name: p.name, price: activePrice });
+                    add({ id: p.id, sku: p.sku, name: p.name, price: activePrice, image: p.image, imageUrl: p.imageUrl });
                   }}
                   className="mt-3 rounded-xl border border-border-hover bg-[#1c1c21] py-2 text-[11.5px] font-extrabold transition-all hover:border-accent hover:bg-accent hover:text-page sm:mt-4 sm:rounded-[14px] sm:py-3 sm:text-sm"
                 >

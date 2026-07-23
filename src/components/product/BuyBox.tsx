@@ -11,12 +11,16 @@ export function BuyBox({
   name,
   price,
   promoPrice,
+  image,
+  imageUrl,
 }: {
   productId: string;
   sku: string;
   name: string;
   price: number;
   promoPrice: number | null;
+  image: string;
+  imageUrl: string | null;
 }) {
   const [qty, setQty] = useState(1);
   const { favorites, toggleFavorite, add, openCart } = useCart();
@@ -32,7 +36,7 @@ export function BuyBox({
   }, [name, qty, activePrice]);
 
   function handleBuyClick() {
-    add({ id: productId, sku, name, price: activePrice }, false, qty);
+    add({ id: productId, sku, name, price: activePrice, image, imageUrl }, false, qty);
   }
 
   return (

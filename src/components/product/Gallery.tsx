@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, type MouseEvent } from 'react';
+import Image from 'next/image';
 
-export function Gallery({ images, badge }: { images: { label: string }[]; badge?: string }) {
+type GalleryImage = { label: string; url?: string | null };
+
+export function Gallery({ images, badge }: { images: GalleryImage[]; badge?: string }) {
   const [idx, setIdx] = useState(0);
   const [zoom, setZoom] = useState(false);
   const [pos, setPos] = useState({ x: 50, y: 50 });
@@ -25,12 +28,21 @@ export function Gallery({ images, badge }: { images: { label: string }[]; badge?
         onMouseLeave={() => setZoom(false)}
         className="stripe-placeholder relative h-[460px] cursor-zoom-in overflow-hidden rounded-3xl border border-border-strong"
       >
-        <div
-          className="stripe-placeholder absolute inset-0 grid place-items-center transition-transform duration-200 ease-out"
-          style={{ transform: `scale(${zoom ? 1.8 : 1})`, transformOrigin: `${pos.x}% ${pos.y}%` }}
-        >
-          <div className="font-mono text-sm text-fg-faded">[ foto: {active.label} ]</div>
-        </div>
+        {active.url ? (
+          <div
+            className="absolute inset-0 transition-transform duration-200 ease-out"
+            style={{ transform: `scale(${zoom ? 1.8 : 1})`, transformOrigin: `${pos.x}% ${pos.y}%` }}
+          >
+            <Image src={active.url} alt={active.label} fill sizes="(min-width: 1024px) 560px, 100vw" className="object-cover" priority />
+          </div>
+        ) : (
+          <div
+            className="stripe-placeholder absolute inset-0 grid place-items-center transition-transform duration-200 ease-out"
+            style={{ transform: `scale(${zoom ? 1.8 : 1})`, transformOrigin: `${pos.x}% ${pos.y}%` }}
+          >
+            <div className="font-mono text-sm text-fg-faded">[ foto: {active.label} ]</div>
+          </div>
+        )}
         {badge && (
           <div className="absolute left-4 top-4 rounded-full bg-accent px-3 py-1.5 text-[11px] font-extrabold tracking-[.06em] text-page">
             {badge}
@@ -45,10 +57,14 @@ export function Gallery({ images, badge }: { images: { label: string }[]; badge?
           <button
             key={i}
             onClick={() => setIdx(i)}
-            className="stripe-placeholder grid h-19 place-items-center rounded-2xl border p-0 transition-all hover:border-accent"
+            className="stripe-placeholder relative grid h-19 place-items-center overflow-hidden rounded-2xl border p-0 transition-all hover:border-accent"
             style={{ borderColor: i === idx ? '#F28705' : '#26262b' }}
           >
-            <span className="font-mono text-[10px] text-fg-faded">foto {i + 1}</span>
+            {img.url ? (
+              <Image src={img.url} alt={img.label} fill sizes="90px" className="object-cover" />
+            ) : (
+              <span className="font-mono text-[10px] text-fg-faded">foto {i + 1}</span>
+            )}
           </button>
         ))}
       </div>

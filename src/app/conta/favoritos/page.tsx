@@ -10,7 +10,7 @@ export default async function FavoritesPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from('favorites')
-    .select('product_id, products(id, sku, name, price, promo_price, categories(name), product_images(label, position))')
+    .select('product_id, products(id, sku, name, price, promo_price, categories(name), product_images(label, url, position))')
     .eq('customer_id', user.id);
 
   const items = (data ?? [])
@@ -25,6 +25,7 @@ export default async function FavoritesPage() {
         category: p.categories?.name ?? '',
         price: Number(p.promo_price ?? p.price),
         image: images[0]?.label ?? p.name.toLowerCase(),
+        imageUrl: images.find((img) => img.url)?.url ?? null,
       };
     });
 
@@ -38,7 +39,7 @@ export default async function FavoritesPage() {
       )}
       <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
         {items.map((it) => (
-          <FavoriteCard key={it.id} productId={it.id} sku={it.sku} name={it.name} category={it.category} price={it.price} image={it.image} />
+          <FavoriteCard key={it.id} productId={it.id} sku={it.sku} name={it.name} category={it.category} price={it.price} image={it.image} imageUrl={it.imageUrl} />
         ))}
       </div>
     </div>

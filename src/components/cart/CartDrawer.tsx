@@ -60,7 +60,7 @@ export function CartDrawer() {
           )}
           {items.map((it) => (
             <div key={it.id} className="flex gap-3.5 rounded-2xl border border-border bg-input p-3.5">
-              <PlaceholderImage label={it.name} className="h-16 w-16 flex-shrink-0 rounded-xl" textClassName="hidden" />
+              <PlaceholderImage label={it.image ?? it.name} src={it.imageUrl} className="h-16 w-16 flex-shrink-0 rounded-xl" textClassName="hidden" sizes="64px" />
               <div className="min-w-0 flex-1">
                 <div className="text-[13.5px] font-extrabold leading-tight">{it.name}</div>
                 <div className="mt-1 text-[13px] font-extrabold text-accent">{formatBRL(it.price * it.qty)}</div>

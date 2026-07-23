@@ -15,6 +15,7 @@ export function FavoriteCard({
   category,
   price,
   image,
+  imageUrl,
 }: {
   productId: string;
   sku: string;
@@ -22,6 +23,7 @@ export function FavoriteCard({
   category: string;
   price: number;
   image: string;
+  imageUrl: string | null;
 }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -30,7 +32,7 @@ export function FavoriteCard({
   return (
     <div className="overflow-hidden rounded-[20px] border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-border-hover">
       <div className="relative h-37.5">
-        <PlaceholderImage label={image} className="h-full" />
+        <PlaceholderImage label={image} src={imageUrl} className="h-full" sizes="240px" />
         <button
           disabled={pending}
           onClick={() =>

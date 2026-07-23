@@ -9,6 +9,7 @@ export type ProductCard = {
   category: string;
   brand: string;
   image: string;
+  imageUrl: string | null;
   stock: number;
   collections: string[];
 };
@@ -20,7 +21,7 @@ export async function listActiveProducts(): Promise<ProductCard[]> {
     .select(
       `id, sku, name, price, promo_price, stock,
        categories(name), brands(name),
-       product_images(label, position),
+       product_images(label, url, position),
        product_collections(collections(name))`
     )
     .eq('active', true)
@@ -39,6 +40,7 @@ export async function listActiveProducts(): Promise<ProductCard[]> {
       category: p.categories?.name ?? '',
       brand: p.brands?.name ?? '',
       image: images[0]?.label ?? p.name.toLowerCase(),
+      imageUrl: images.find((img) => img.url)?.url ?? null,
       stock: p.stock,
       collections: (p.product_collections ?? []).map((pc) => pc.collections?.name).filter(Boolean) as string[],
     };
@@ -82,7 +84,7 @@ export async function getProductBySku(sku: string) {
     const ids = relatedLinks.map((r) => r.related_id);
     const { data: relatedProducts } = await supabase
       .from('products')
-      .select(`id, sku, name, price, promo_price, stock, categories(name), brands(name), product_images(label, position)`)
+      .select(`id, sku, name, price, promo_price, stock, categories(name), brands(name), product_images(label, url, position)`)
       .in('id', ids);
     related = (relatedProducts ?? []).map((p) => {
       const images = (p.product_images ?? []).sort((a, b) => a.position - b.position);
@@ -95,6 +97,7 @@ export async function getProductBySku(sku: string) {
         category: p.categories?.name ?? '',
         brand: p.brands?.name ?? '',
         image: images[0]?.label ?? p.name.toLowerCase(),
+        imageUrl: images.find((img) => img.url)?.url ?? null,
         stock: p.stock,
         collections: [],
       };

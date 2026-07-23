@@ -21,6 +21,8 @@ export type CartLine = {
   name: string;
   price: number;
   qty: number;
+  image?: string;
+  imageUrl?: string | null;
 };
 
 type CartState = Record<string, CartLine>;
@@ -31,7 +33,11 @@ type CartContextValue = {
   isOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
-  add: (item: { id: string; sku: string; name: string; price: number }, openDrawer?: boolean, qty?: number) => void;
+  add: (
+    item: { id: string; sku: string; name: string; price: number; image?: string; imageUrl?: string | null },
+    openDrawer?: boolean,
+    qty?: number
+  ) => void;
   inc: (id: string) => void;
   dec: (id: string) => void;
   remove: (id: string) => void;
@@ -99,7 +105,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [favorites, hydrated]);
 
   const add = useCallback(
-    (item: { id: string; sku: string; name: string; price: number }, openDrawer = false, qty = 1) => {
+    (
+      item: { id: string; sku: string; name: string; price: number; image?: string; imageUrl?: string | null },
+      openDrawer = false,
+      qty = 1
+    ) => {
       setItems((prev) => {
         const existing = prev[item.id];
         return {
