@@ -134,7 +134,7 @@ export function AnimatedHeroBanners() {
   }, [reducedMotion]);
 
   return (
-    <section className="mx-auto mt-6 max-w-[1280px] px-6">
+    <section className="mx-auto mt-6 max-w-[2560px] px-6">
       <div
         ref={containerRef}
         className="relative overflow-hidden rounded-2xl border border-border"
