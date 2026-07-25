@@ -31,6 +31,8 @@ type Row = {
   ram: string;
   storage: string;
   screenType: string;
+  color: string;
+  condition: string;
   variants: ProductVariantData[];
 };
 
@@ -88,6 +90,8 @@ export function ProductsTable({ products: productsProp, collections }: { product
       ram: p.ram,
       storage: p.storage,
       screenType: p.screenType,
+      color: p.color,
+      condition: p.condition,
       variants: p.variants,
     });
     setModalOpen(true);

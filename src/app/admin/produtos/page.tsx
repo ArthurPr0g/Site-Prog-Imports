@@ -26,6 +26,8 @@ export default async function AdminProductsPage() {
     ram: p.ram ?? '',
     storage: p.storage ?? '',
     screenType: p.screen_type ?? '',
+    color: p.color ?? '',
+    condition: p.condition ?? '',
     variants: (p.product_variants ?? []).map((v) => ({
       id: v.id,
       gpu: v.gpu ?? '',

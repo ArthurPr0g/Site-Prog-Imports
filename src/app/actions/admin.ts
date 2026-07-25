@@ -50,6 +50,8 @@ export type ProductFormInput = {
   ram: string;
   storage: string;
   screenType: string;
+  color: string;
+  condition: string;
 };
 
 export async function saveProductAction(input: ProductFormInput): Promise<ActionResult & { id?: string }> {
@@ -108,6 +110,8 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
     ram: input.ram,
     storage: input.storage,
     screen_type: input.screenType,
+    color: input.color.trim(),
+    condition: input.condition,
   };
 
   let productId = input.id;

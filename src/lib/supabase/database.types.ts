@@ -579,6 +579,8 @@ export type Database = {
           active: boolean
           brand_id: string | null
           category_id: string | null
+          color: string
+          condition: string
           cpu: string
           created_at: string
           description: string
@@ -601,6 +603,8 @@ export type Database = {
           active?: boolean
           brand_id?: string | null
           category_id?: string | null
+          color?: string
+          condition?: string
           cpu?: string
           created_at?: string
           description?: string
@@ -623,6 +627,8 @@ export type Database = {
           active?: boolean
           brand_id?: string | null
           category_id?: string | null
+          color?: string
+          condition?: string
           cpu?: string
           created_at?: string
           description?: string

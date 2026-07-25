@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { ProductCardTile } from '@/components/home/ProductCardTile';
 import { formatBRL } from '@/lib/format';
-import { CPU_SUGGESTIONS, RAM_OPTIONS, STORAGE_OPTIONS, SCREEN_TYPE_OPTIONS } from '@/lib/product-specs';
+import { CPU_SUGGESTIONS, RAM_OPTIONS, STORAGE_OPTIONS, SCREEN_TYPE_OPTIONS, CONDITION_OPTIONS } from '@/lib/product-specs';
 import type { ProductCard } from '@/lib/data/catalog';
 
 function sortByCanonicalOrder(values: string[], canonical: string[]) {
@@ -54,6 +54,11 @@ export function CollectionExplorer({ products }: { products: ProductCard[] }) {
     () => sortByCanonicalOrder([...new Set(products.flatMap((p) => specValues(p, 'screenType')))], SCREEN_TYPE_OPTIONS),
     [products]
   );
+  const colors = useMemo(() => [...new Set(products.map((p) => p.color).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [products]);
+  const conditions = useMemo(
+    () => sortByCanonicalOrder([...new Set(products.map((p) => p.condition).filter(Boolean))], CONDITION_OPTIONS),
+    [products]
+  );
   const priceBounds = useMemo(() => {
     const prices = products.map((p) => p.promoPrice ?? p.price);
     return { min: prices.length ? Math.min(...prices) : 0, max: prices.length ? Math.max(...prices) : 0 };
@@ -66,6 +71,8 @@ export function CollectionExplorer({ products }: { products: ProductCard[] }) {
   const [selectedRams, setSelectedRams] = useState<string[]>([]);
   const [selectedStorages, setSelectedStorages] = useState<string[]>([]);
   const [selectedScreenTypes, setSelectedScreenTypes] = useState<string[]>([]);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
   const [cpuSearch, setCpuSearch] = useState('');
   const [onlyPromo, setOnlyPromo] = useState(false);
   const [minPrice, setMinPrice] = useState('');
@@ -91,6 +98,8 @@ export function CollectionExplorer({ products }: { products: ProductCard[] }) {
     setSelectedRams([]);
     setSelectedStorages([]);
     setSelectedScreenTypes([]);
+    setSelectedColors([]);
+    setSelectedConditions([]);
     setCpuSearch('');
     setOnlyPromo(false);
     setMinPrice('');
@@ -106,6 +115,8 @@ export function CollectionExplorer({ products }: { products: ProductCard[] }) {
     selectedRams.length > 0 ||
     selectedStorages.length > 0 ||
     selectedScreenTypes.length > 0 ||
+    selectedColors.length > 0 ||
+    selectedConditions.length > 0 ||
     onlyPromo ||
     minPrice.trim() !== '' ||
     maxPrice.trim() !== '';
@@ -123,6 +134,8 @@ export function CollectionExplorer({ products }: { products: ProductCard[] }) {
       if (selectedRams.length && !specValues(p, 'ram').some((v) => selectedRams.includes(v))) return false;
       if (selectedStorages.length && !specValues(p, 'storage').some((v) => selectedStorages.includes(v))) return false;
       if (selectedScreenTypes.length && !specValues(p, 'screenType').some((v) => selectedScreenTypes.includes(v))) return false;
+      if (selectedColors.length && !selectedColors.includes(p.color)) return false;
+      if (selectedConditions.length && !selectedConditions.includes(p.condition)) return false;
       if (onlyPromo && !p.promoPrice) return false;
       if (min !== null && Number.isFinite(min) && activePrice < min) return false;
       if (max !== null && Number.isFinite(max) && activePrice > max) return false;
@@ -144,6 +157,8 @@ export function CollectionExplorer({ products }: { products: ProductCard[] }) {
     selectedRams,
     selectedStorages,
     selectedScreenTypes,
+    selectedColors,
+    selectedConditions,
     onlyPromo,
     minPrice,
     maxPrice,
@@ -313,6 +328,44 @@ export function CollectionExplorer({ products }: { products: ProductCard[] }) {
                         className="h-4 w-4 accent-accent"
                       />
                       {s}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {colors.length > 0 && (
+              <div className="mb-5">
+                <div className="mb-2.5 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">Cor</div>
+                <div className="flex flex-col gap-2">
+                  {colors.map((c) => (
+                    <label key={c} className="flex cursor-pointer items-center gap-2 text-[13px] text-fg-secondary">
+                      <input
+                        type="checkbox"
+                        checked={selectedColors.includes(c)}
+                        onChange={() => toggleFrom(selectedColors, setSelectedColors, c)}
+                        className="h-4 w-4 accent-accent"
+                      />
+                      {c}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {conditions.length > 0 && (
+              <div className="mb-5">
+                <div className="mb-2.5 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">Estado</div>
+                <div className="flex flex-col gap-2">
+                  {conditions.map((c) => (
+                    <label key={c} className="flex cursor-pointer items-center gap-2 text-[13px] text-fg-secondary">
+                      <input
+                        type="checkbox"
+                        checked={selectedConditions.includes(c)}
+                        onChange={() => toggleFrom(selectedConditions, setSelectedConditions, c)}
+                        className="h-4 w-4 accent-accent"
+                      />
+                      {c}
                     </label>
                   ))}
                 </div>

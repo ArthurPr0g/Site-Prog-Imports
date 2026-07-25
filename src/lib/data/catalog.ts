@@ -29,6 +29,8 @@ export type ProductCard = {
   ram: string;
   storage: string;
   screenType: string;
+  color: string;
+  condition: string;
   variants: ProductVariant[];
 };
 
@@ -67,7 +69,7 @@ export async function listActiveProducts(): Promise<ProductCard[]> {
   const { data, error } = await supabase
     .from('products')
     .select(
-      `id, sku, name, price, promo_price, stock, gpu, cpu, ram, storage, screen_type,
+      `id, sku, name, price, promo_price, stock, gpu, cpu, ram, storage, screen_type, color, condition,
        categories(name), brands(name),
        product_images(label, url, position),
        product_collections(collections(name)),
@@ -97,6 +99,8 @@ export async function listActiveProducts(): Promise<ProductCard[]> {
       ram: p.ram ?? '',
       storage: p.storage ?? '',
       screenType: p.screen_type ?? '',
+      color: p.color ?? '',
+      condition: p.condition ?? '',
       variants: mapVariants(p.product_variants),
     };
   });
@@ -144,7 +148,7 @@ export async function getCollectionById(id: string) {
   const { data, error } = await supabase
     .from('products')
     .select(
-      `id, sku, name, price, promo_price, stock, gpu, cpu, ram, storage, screen_type,
+      `id, sku, name, price, promo_price, stock, gpu, cpu, ram, storage, screen_type, color, condition,
        categories(name), brands(name),
        product_images(label, url, position),
        product_collections!inner(collection_id, collections(name)),
@@ -175,6 +179,8 @@ export async function getCollectionById(id: string) {
       ram: p.ram ?? '',
       storage: p.storage ?? '',
       screenType: p.screen_type ?? '',
+      color: p.color ?? '',
+      condition: p.condition ?? '',
       variants: mapVariants(p.product_variants),
     };
   });
@@ -229,6 +235,8 @@ export async function getProductBySku(sku: string) {
         ram: '',
         storage: '',
         screenType: '',
+        color: '',
+        condition: '',
         variants: [],
       };
     });

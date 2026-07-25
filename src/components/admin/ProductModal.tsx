@@ -11,7 +11,15 @@ import {
   type ProductFormInput,
 } from '@/app/actions/admin';
 import { CATEGORY_OPTIONS } from '@/lib/constants';
-import { CPU_SUGGESTIONS, RAM_OPTIONS, STORAGE_OPTIONS, SCREEN_TYPE_OPTIONS } from '@/lib/product-specs';
+import {
+  CPU_SUGGESTIONS,
+  RAM_OPTIONS,
+  STORAGE_OPTIONS,
+  SCREEN_TYPE_OPTIONS,
+  CONDITION_OPTIONS,
+  COLOR_SUGGESTIONS,
+  specFieldsForCategory,
+} from '@/lib/product-specs';
 import { useToast } from '@/components/ui/Toast';
 
 export type ProductImageData = { id: string; url: string | null; label: string };
@@ -48,6 +56,8 @@ export type ProductModalData = {
   ram?: string;
   storage?: string;
   screenType?: string;
+  color?: string;
+  condition?: string;
   variants?: ProductVariantData[];
 };
 
@@ -92,6 +102,8 @@ export function ProductModal({
       ram: '',
       storage: '',
       screenType: '',
+      color: '',
+      condition: CONDITION_OPTIONS[0],
     }
   );
   const [images, setImages] = useState<ProductImageData[]>(initial?.images ?? []);
@@ -110,6 +122,8 @@ export function ProductModal({
 
   const set = (key: keyof ProductModalData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const visibleSpecFields = specFieldsForCategory(form.category);
 
   function toggleCollection(name: string) {
     setForm((f) => ({
@@ -254,11 +268,13 @@ export function ProductModal({
       rating,
       reviewCount,
       highlights,
-      gpu: (form.gpu ?? '').trim(),
-      cpu: (form.cpu ?? '').trim(),
-      ram: form.ram ?? '',
-      storage: form.storage ?? '',
-      screenType: form.screenType ?? '',
+      gpu: visibleSpecFields.includes('gpu') ? (form.gpu ?? '').trim() : '',
+      cpu: visibleSpecFields.includes('cpu') ? (form.cpu ?? '').trim() : '',
+      ram: visibleSpecFields.includes('ram') ? form.ram ?? '' : '',
+      storage: visibleSpecFields.includes('storage') ? form.storage ?? '' : '',
+      screenType: visibleSpecFields.includes('screenType') ? form.screenType ?? '' : '',
+      color: visibleSpecFields.includes('color') ? (form.color ?? '').trim() : '',
+      condition: form.condition ?? CONDITION_OPTIONS[0],
     };
     const wasNew = !form.id;
     startTransition(async () => {
@@ -398,43 +414,76 @@ export function ProductModal({
 
           <div className="sm:col-span-2">
             <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
-              Especificações técnicas (opcional — usadas nos filtros de coleção)
+              Especificações técnicas (opcional — variam conforme a categoria escolhida acima)
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <input
-                value={form.gpu ?? ''}
-                onChange={set('gpu')}
-                placeholder="Placa de vídeo (ex: RTX 4060)"
-                className={inputClass}
-              />
-              <input
-                list="cpu-suggestions"
-                value={form.cpu ?? ''}
-                onChange={set('cpu')}
-                placeholder="Processador (ex: Intel Core i7 (13ª Geração))"
-                className={inputClass}
-              />
-              <datalist id="cpu-suggestions">
-                {CPU_SUGGESTIONS.map((c) => (
-                  <option key={c} value={c} />
-                ))}
-              </datalist>
-              <select value={form.ram ?? ''} onChange={set('ram')} className={inputClass}>
-                <option value="">Memória RAM (não informado)</option>
-                {RAM_OPTIONS.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-              <select value={form.storage ?? ''} onChange={set('storage')} className={inputClass}>
-                <option value="">Armazenamento (não informado)</option>
-                {STORAGE_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-              <select value={form.screenType ?? ''} onChange={set('screenType')} className={inputClass}>
-                <option value="">Tipo de tela (não informado)</option>
-                {SCREEN_TYPE_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{s}</option>
+              {visibleSpecFields.includes('gpu') && (
+                <input
+                  value={form.gpu ?? ''}
+                  onChange={set('gpu')}
+                  placeholder="Placa de vídeo (ex: RTX 4060)"
+                  className={inputClass}
+                />
+              )}
+              {visibleSpecFields.includes('cpu') && (
+                <>
+                  <input
+                    list="cpu-suggestions"
+                    value={form.cpu ?? ''}
+                    onChange={set('cpu')}
+                    placeholder="Processador (ex: Intel Core i7 (13ª Geração))"
+                    className={inputClass}
+                  />
+                  <datalist id="cpu-suggestions">
+                    {CPU_SUGGESTIONS.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
+                </>
+              )}
+              {visibleSpecFields.includes('ram') && (
+                <select value={form.ram ?? ''} onChange={set('ram')} className={inputClass}>
+                  <option value="">Memória RAM (não informado)</option>
+                  {RAM_OPTIONS.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              )}
+              {visibleSpecFields.includes('storage') && (
+                <select value={form.storage ?? ''} onChange={set('storage')} className={inputClass}>
+                  <option value="">Armazenamento (não informado)</option>
+                  {STORAGE_OPTIONS.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              )}
+              {visibleSpecFields.includes('screenType') && (
+                <select value={form.screenType ?? ''} onChange={set('screenType')} className={inputClass}>
+                  <option value="">Tipo de tela (não informado)</option>
+                  {SCREEN_TYPE_OPTIONS.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              )}
+              {visibleSpecFields.includes('color') && (
+                <>
+                  <input
+                    list="color-suggestions"
+                    value={form.color ?? ''}
+                    onChange={set('color')}
+                    placeholder="Cor"
+                    className={inputClass}
+                  />
+                  <datalist id="color-suggestions">
+                    {COLOR_SUGGESTIONS.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
+                </>
+              )}
+              <select value={form.condition ?? CONDITION_OPTIONS[0]} onChange={set('condition')} className={inputClass}>
+                {CONDITION_OPTIONS.map((c) => (
+                  <option key={c} value={c}>{c}</option>
                 ))}
               </select>
             </div>
