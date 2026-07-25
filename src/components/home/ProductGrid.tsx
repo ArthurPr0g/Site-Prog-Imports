@@ -4,7 +4,7 @@ import type { ProductCard } from '@/lib/data/catalog';
 
 export function ProductGrid({ products, activeCategoria }: { products: ProductCard[]; activeCategoria?: string }) {
   return (
-    <section id="produtos" className="mx-auto max-w-[1280px] px-6 pt-20">
+    <section id="colecoes" className="mx-auto max-w-[1280px] scroll-mt-24 px-6 pt-20">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-5">
         <div>
           <div className="mb-2.5 text-xs font-extrabold uppercase tracking-[.14em] text-accent">
@@ -16,7 +16,7 @@ export function ProductGrid({ products, activeCategoria }: { products: ProductCa
         </div>
         {activeCategoria && (
           <Link
-            href="/#produtos"
+            href="/#colecoes"
             className="rounded-full border border-border-hover px-4.5 py-2.5 text-[13px] font-bold text-fg-secondary transition-all hover:border-accent hover:text-accent"
           >
             ✕ Limpar filtro

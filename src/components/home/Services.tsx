@@ -3,7 +3,7 @@ import { getServiceIcon } from '@/lib/service-icons';
 
 export function Services({ services }: { services: Tables<'services'>[] }) {
   return (
-    <section id="servicos" className="mx-auto max-w-[1280px] px-6 pt-22">
+    <section id="servicos" className="mx-auto max-w-[1280px] scroll-mt-24 px-6 pt-22">
       <div className="mb-9 text-center">
         <div className="mb-2.5 text-xs font-extrabold uppercase tracking-[.14em] text-accent">
           Assistência especializada

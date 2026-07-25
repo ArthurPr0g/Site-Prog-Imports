@@ -16,11 +16,10 @@ export type SearchIndexItem = {
 };
 
 const NAV_LINKS = [
-  { href: '/?categoria=MacBook#produtos', label: 'MacBooks' },
-  { href: '/?categoria=iPhone#produtos', label: 'iPhones' },
-  { href: '/?categoria=Notebook+Gamer#produtos', label: 'Notebooks Gamer' },
-  { href: '/?categoria=Monitores#produtos', label: 'Monitores' },
+  { href: '/produtos', label: 'Produtos' },
+  { href: '/#colecoes', label: 'Coleções' },
   { href: '/#servicos', label: 'Serviços' },
+  { href: '/#depoimentos', label: 'Depoimentos' },
 ];
 
 export function Header({
@@ -83,7 +82,7 @@ export function Header({
 
   return (
     <header className="sticky top-3 z-90 mt-3 px-3 sm:px-6">
-      <div className="mx-auto max-w-[1280px] rounded-[22px] border border-border-strong bg-black/55 px-4 py-3 shadow-[0_20px_50px_rgba(0,0,0,.55)] backdrop-blur-xl sm:px-6 sm:py-3.5">
+      <div className="mx-auto max-w-[1280px] rounded-[28px] border border-accent/25 bg-black/55 px-4 py-3 shadow-[0_0_24px_-6px_rgba(242,135,5,.45),0_20px_50px_rgba(0,0,0,.55)] backdrop-blur-xl sm:px-6 sm:py-3.5">
         <div className="flex items-center gap-3 sm:gap-7">
           <button
             onClick={() => setMenuOpen((v) => !v)}

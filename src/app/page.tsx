@@ -95,7 +95,7 @@ export default async function HomePage({
       {categoria || feedSections.length === 0 ? (
         <ProductGrid products={productsForFilter} activeCategoria={categoria} />
       ) : (
-        <div id="produtos">
+        <div id="colecoes" className="scroll-mt-24">
           {feedSections.map((c) => (
             <CollectionRow key={c.id} id={`colecao-${c.id}`} title={c.name} products={c.products} collectionId={c.id} />
           ))}

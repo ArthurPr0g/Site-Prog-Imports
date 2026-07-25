@@ -38,7 +38,7 @@ export default async function ProductPage({ params }: { params: Promise<{ sku: s
 
       <div className="mx-auto max-w-[1280px] px-6 pt-6 text-[13px] text-fg-tertiary">
         <Link href="/" className="text-fg-tertiary">Home</Link> /{' '}
-        <Link href={`/?categoria=${encodeURIComponent(product.category)}#produtos`} className="text-fg-tertiary">
+        <Link href={`/?categoria=${encodeURIComponent(product.category)}#colecoes`} className="text-fg-tertiary">
           {product.category}
         </Link>{' '}
         / <span className="text-fg">{product.name}</span>

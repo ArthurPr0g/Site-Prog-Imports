@@ -7,7 +7,7 @@ import type { Tables } from '@/lib/supabase/database.types';
 
 export function Testimonials({ testimonials }: { testimonials: Tables<'testimonials'>[] }) {
   return (
-    <section className="mx-auto max-w-[1280px] px-6 pt-22">
+    <section id="depoimentos" className="mx-auto max-w-[1280px] scroll-mt-24 px-6 pt-22">
       <div className="mb-8 flex items-end justify-between">
         <div>
           <div className="mb-2.5 text-xs font-extrabold uppercase tracking-[.14em] text-accent">
