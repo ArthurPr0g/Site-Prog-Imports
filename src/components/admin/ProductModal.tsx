@@ -51,17 +51,6 @@ export type ProductModalData = {
   variants?: ProductVariantData[];
 };
 
-const EMPTY_VARIANT: ProductVariantData = {
-  gpu: '',
-  cpu: '',
-  ram: '',
-  storage: '',
-  screenType: '',
-  price: '',
-  promoPrice: '',
-  stock: '',
-};
-
 const inputClass =
   'rounded-control border border-border-strong bg-input px-4 py-3 text-[13.5px] outline-none focus:border-accent';
 
@@ -140,7 +129,19 @@ export function ProductModal({
   }
 
   function addVariant() {
-    setVariants((vs) => [...vs, { ...EMPTY_VARIANT }]);
+    setVariants((vs) => [
+      ...vs,
+      {
+        gpu: form.gpu ?? '',
+        cpu: form.cpu ?? '',
+        ram: form.ram ?? '',
+        storage: form.storage ?? '',
+        screenType: form.screenType ?? '',
+        price: form.price,
+        promoPrice: form.promoPrice,
+        stock: form.stock,
+      },
+    ]);
   }
 
   function updateVariant(i: number, patch: Partial<ProductVariantData>) {
@@ -443,7 +444,7 @@ export function ProductModal({
             value={form.description}
             onChange={set('description')}
             placeholder="Descrição do produto…"
-            rows={3}
+            rows={6}
             className={`resize-y sm:col-span-2 ${inputClass}`}
           />
 
@@ -482,40 +483,6 @@ export function ProductModal({
                     : `Clique para enviar fotos (${images.length}/${MAX_IMAGES})`}
             </button>
             {imageError && <div className="mt-2 text-[13px] font-semibold text-error">{imageError}</div>}
-          </div>
-
-          <div className="sm:col-span-2">
-            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
-              Destaques (lista de benefícios exibida na página do produto)
-            </div>
-            <div className="flex flex-col gap-2">
-              {highlights.map((h, i) => (
-                <div key={i} className="flex gap-2">
-                  <input
-                    value={h}
-                    onChange={(e) => updateHighlight(i, e.target.value)}
-                    placeholder="Ex: Garantia de 12 meses + suporte pós-venda"
-                    className={`flex-1 ${inputClass}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeHighlight(i)}
-                    className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-control border border-border-strong text-fg-tertiary hover:border-error hover:text-error"
-                    aria-label="Remover destaque"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={addHighlight}
-              disabled={highlights.length >= MAX_HIGHLIGHTS}
-              className="mt-2 rounded-control border border-dashed border-border-hover px-4 py-2.5 text-[13px] font-bold text-fg-tertiary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              + Adicionar linha
-            </button>
           </div>
 
           <div className="sm:col-span-2">
@@ -611,6 +578,40 @@ export function ProductModal({
                 + Adicionar variação
               </button>
             )}
+          </div>
+
+          <div className="sm:col-span-2">
+            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+              Destaques (lista de benefícios exibida na página do produto)
+            </div>
+            <div className="flex flex-col gap-2">
+              {highlights.map((h, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    value={h}
+                    onChange={(e) => updateHighlight(i, e.target.value)}
+                    placeholder="Ex: Garantia de 12 meses + suporte pós-venda"
+                    className={`flex-1 ${inputClass}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeHighlight(i)}
+                    className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-control border border-border-strong text-fg-tertiary hover:border-error hover:text-error"
+                    aria-label="Remover destaque"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={addHighlight}
+              disabled={highlights.length >= MAX_HIGHLIGHTS}
+              className="mt-2 rounded-control border border-dashed border-border-hover px-4 py-2.5 text-[13px] font-bold text-fg-tertiary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              + Adicionar linha
+            </button>
           </div>
         </div>
         {error && <div className="mt-3 text-[13px] font-semibold text-error">{error}</div>}
