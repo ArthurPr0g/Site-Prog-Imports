@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { PlaceholderImage } from '@/components/ui/PlaceholderImage';
 import { GlowBorder, glowMouseMove, glowMouseLeave } from '@/components/ui/GlowBorder';
