@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { GripVertical } from 'lucide-react';
 import { formatBRL } from '@/lib/format';
 import { toggleProductActiveAction, deleteProductAction, reorderProductsAction } from '@/app/actions/admin';
-import { ProductModal, type ProductModalData, type ProductVariantData } from './ProductModal';
+import { ProductModal, type ProductModalData } from './ProductModal';
 import { ProductImportButton } from './ProductImportButton';
 import { useToast } from '@/components/ui/Toast';
 import { useDragReorder } from '@/lib/useDragReorder';
@@ -33,12 +33,13 @@ type Row = {
   screenType: string;
   color: string;
   condition: string;
-  variants: ProductVariantData[];
+  variantOf: string | null;
 };
 
 export function ProductsTable({ products: productsProp, collections }: { products: Row[]; collections: string[] }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ProductModalData | null>(null);
+  const [modalKey, setModalKey] = useState(0);
   const [, startTransition] = useTransition();
   const toast = useToast();
 
@@ -66,6 +67,7 @@ export function ProductsTable({ products: productsProp, collections }: { product
 
   function openNew() {
     setEditing(null);
+    setModalKey((k) => k + 1);
     setModalOpen(true);
   }
 
@@ -92,9 +94,52 @@ export function ProductsTable({ products: productsProp, collections }: { product
       screenType: p.screenType,
       color: p.color,
       condition: p.condition,
-      variants: p.variants,
+      variantOf: p.variantOf,
     });
+    setModalKey((k) => k + 1);
     setModalOpen(true);
+  }
+
+  function openVariant(origin: Row) {
+    const rootId = origin.variantOf ?? origin.id;
+    setEditing({
+      name: '',
+      brand: origin.brand,
+      category: origin.category,
+      collections: origin.collections,
+      price: String(origin.price),
+      promoPrice: '',
+      stock: String(origin.stock),
+      description: origin.description,
+      rating: String(origin.rating),
+      reviewCount: String(origin.reviewCount),
+      highlights: origin.highlights,
+      gpu: origin.gpu,
+      cpu: origin.cpu,
+      ram: origin.ram,
+      storage: origin.storage,
+      screenType: origin.screenType,
+      color: origin.color,
+      condition: origin.condition,
+      variantOf: rootId,
+    });
+    setModalKey((k) => k + 1);
+    setModalOpen(true);
+  }
+
+  function handleEditProduct(id: string) {
+    const p = products.find((x) => x.id === id);
+    if (p) openEdit(p);
+  }
+
+  function handleCreateVariant(originId: string) {
+    const origin = products.find((x) => x.id === originId);
+    if (origin) openVariant(origin);
+  }
+
+  function handleDeleteProduct(id: string) {
+    const p = products.find((x) => x.id === id);
+    if (p) removeProduct(p);
   }
 
   return (
@@ -185,11 +230,23 @@ export function ProductsTable({ products: productsProp, collections }: { product
         </div>
       </div>
       <ProductModal
-        key={editing?.id ?? 'new'}
+        key={modalKey}
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         initial={editing}
         collections={collections}
+        allProducts={products.map((p) => ({
+          id: p.id,
+          name: p.name,
+          sku: p.sku,
+          price: p.price,
+          stock: p.stock,
+          active: p.active,
+          variantOf: p.variantOf,
+        }))}
+        onEditProduct={handleEditProduct}
+        onCreateVariant={handleCreateVariant}
+        onDeleteProduct={handleDeleteProduct}
       />
     </div>
   );

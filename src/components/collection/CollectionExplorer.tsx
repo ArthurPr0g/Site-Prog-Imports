@@ -10,35 +10,8 @@ import {
   SCREEN_TYPE_OPTIONS,
   CONDITION_OPTIONS,
   sortByCanonicalOrder,
-  buildVariantLabel,
 } from '@/lib/product-specs';
 import type { ProductCard } from '@/lib/data/catalog';
-
-// Cada variação de configuração vira seu próprio card na listagem — se um
-// produto tem 2 variações, aparecem 2 cards, cada um com o preço/specs e o
-// link (com ?variante=) daquela configuração específica. Produtos sem
-// variação viram um único item, como antes.
-type DisplayItem = ProductCard & { variantId?: string };
-
-function expandProducts(products: ProductCard[]): DisplayItem[] {
-  return products.flatMap((p) => {
-    if (p.variants.length === 0) return [{ ...p }];
-    return p.variants.map((v) => ({
-      ...p,
-      id: `${p.id}:${v.id}`,
-      variantId: v.id,
-      name: `${p.name} — ${buildVariantLabel(v)}`,
-      price: v.price,
-      promoPrice: v.promoPrice,
-      stock: v.stock,
-      gpu: v.gpu || p.gpu,
-      cpu: v.cpu || p.cpu,
-      ram: v.ram || p.ram,
-      storage: v.storage || p.storage,
-      screenType: v.screenType || p.screenType,
-    }));
-  });
-}
 
 type SortOption = 'relevancia' | 'menor-preco' | 'maior-preco' | 'nome-az';
 
@@ -50,39 +23,37 @@ const SORT_LABELS: Record<SortOption, string> = {
 };
 
 export function CollectionExplorer({ products }: { products: ProductCard[] }) {
-  const items = useMemo(() => expandProducts(products), [products]);
-
-  const categories = useMemo(() => [...new Set(items.map((p) => p.category).filter(Boolean))].sort(), [items]);
-  const brands = useMemo(() => [...new Set(items.map((p) => p.brand).filter(Boolean))].sort(), [items]);
+  const categories = useMemo(() => [...new Set(products.map((p) => p.category).filter(Boolean))].sort(), [products]);
+  const brands = useMemo(() => [...new Set(products.map((p) => p.brand).filter(Boolean))].sort(), [products]);
   const gpus = useMemo(
-    () => [...new Set(items.map((p) => p.gpu).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
-    [items]
+    () => [...new Set(products.map((p) => p.gpu).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [products]
   );
   const cpus = useMemo(
-    () => sortByCanonicalOrder([...new Set(items.map((p) => p.cpu).filter(Boolean))], CPU_SUGGESTIONS),
-    [items]
+    () => sortByCanonicalOrder([...new Set(products.map((p) => p.cpu).filter(Boolean))], CPU_SUGGESTIONS),
+    [products]
   );
   const rams = useMemo(
-    () => sortByCanonicalOrder([...new Set(items.map((p) => p.ram).filter(Boolean))], RAM_OPTIONS),
-    [items]
+    () => sortByCanonicalOrder([...new Set(products.map((p) => p.ram).filter(Boolean))], RAM_OPTIONS),
+    [products]
   );
   const storages = useMemo(
-    () => sortByCanonicalOrder([...new Set(items.map((p) => p.storage).filter(Boolean))], STORAGE_OPTIONS),
-    [items]
+    () => sortByCanonicalOrder([...new Set(products.map((p) => p.storage).filter(Boolean))], STORAGE_OPTIONS),
+    [products]
   );
   const screenTypes = useMemo(
-    () => sortByCanonicalOrder([...new Set(items.map((p) => p.screenType).filter(Boolean))], SCREEN_TYPE_OPTIONS),
-    [items]
+    () => sortByCanonicalOrder([...new Set(products.map((p) => p.screenType).filter(Boolean))], SCREEN_TYPE_OPTIONS),
+    [products]
   );
-  const colors = useMemo(() => [...new Set(items.map((p) => p.color).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [items]);
+  const colors = useMemo(() => [...new Set(products.map((p) => p.color).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [products]);
   const conditions = useMemo(
-    () => sortByCanonicalOrder([...new Set(items.map((p) => p.condition).filter(Boolean))], CONDITION_OPTIONS),
-    [items]
+    () => sortByCanonicalOrder([...new Set(products.map((p) => p.condition).filter(Boolean))], CONDITION_OPTIONS),
+    [products]
   );
   const priceBounds = useMemo(() => {
-    const prices = items.map((p) => p.promoPrice ?? p.price);
+    const prices = products.map((p) => p.promoPrice ?? p.price);
     return { min: prices.length ? Math.min(...prices) : 0, max: prices.length ? Math.max(...prices) : 0 };
-  }, [items]);
+  }, [products]);
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
@@ -145,7 +116,7 @@ export function CollectionExplorer({ products }: { products: ProductCard[] }) {
     const min = minPrice.trim() ? parseFloat(minPrice.replace(',', '.')) : null;
     const max = maxPrice.trim() ? parseFloat(maxPrice.replace(',', '.')) : null;
 
-    let list = items.filter((p) => {
+    let list = products.filter((p) => {
       const activePrice = p.promoPrice ?? p.price;
       if (selectedCategories.length && !selectedCategories.includes(p.category)) return false;
       if (selectedBrands.length && !selectedBrands.includes(p.brand)) return false;
@@ -169,7 +140,7 @@ export function CollectionExplorer({ products }: { products: ProductCard[] }) {
 
     return list;
   }, [
-    items,
+    products,
     selectedCategories,
     selectedBrands,
     selectedGpus,
@@ -458,7 +429,7 @@ export function CollectionExplorer({ products }: { products: ProductCard[] }) {
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(240px,1fr))] sm:gap-4.5">
               {filtered.map((p) => (
-                <ProductCardTile key={p.id} p={p} variantId={p.variantId} />
+                <ProductCardTile key={p.id} p={p} />
               ))}
             </div>
           )}

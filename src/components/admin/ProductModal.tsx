@@ -6,11 +6,10 @@ import {
   saveProductAction,
   uploadProductImageAction,
   removeProductImageAction,
-  saveProductVariantAction,
-  deleteProductVariantAction,
   type ProductFormInput,
 } from '@/app/actions/admin';
 import { CATEGORY_OPTIONS } from '@/lib/constants';
+import { formatBRL } from '@/lib/format';
 import {
   CPU_SUGGESTIONS,
   RAM_OPTIONS,
@@ -19,21 +18,20 @@ import {
   CONDITION_OPTIONS,
   COLOR_SUGGESTIONS,
   specFieldsForCategory,
+  composeVariantName,
 } from '@/lib/product-specs';
 import { useToast } from '@/components/ui/Toast';
 
 export type ProductImageData = { id: string; url: string | null; label: string };
 
-export type ProductVariantData = {
-  id?: string;
-  gpu: string;
-  cpu: string;
-  ram: string;
-  storage: string;
-  screenType: string;
-  price: string;
-  promoPrice: string;
-  stock: string;
+export type SiblingProduct = {
+  id: string;
+  name: string;
+  sku: string;
+  price: number;
+  stock: number;
+  active: boolean;
+  variantOf: string | null;
 };
 
 export type ProductModalData = {
@@ -58,7 +56,7 @@ export type ProductModalData = {
   screenType?: string;
   color?: string;
   condition?: string;
-  variants?: ProductVariantData[];
+  variantOf?: string | null;
 };
 
 const inputClass =
@@ -79,11 +77,19 @@ export function ProductModal({
   onClose,
   initial,
   collections,
+  allProducts,
+  onEditProduct,
+  onCreateVariant,
+  onDeleteProduct,
 }: {
   open: boolean;
   onClose: () => void;
   initial: ProductModalData | null;
   collections: string[];
+  allProducts: SiblingProduct[];
+  onEditProduct: (id: string) => void;
+  onCreateVariant: (originId: string) => void;
+  onDeleteProduct: (id: string) => void;
 }) {
   const [form, setForm] = useState<ProductModalData>(
     initial ?? {
@@ -104,13 +110,11 @@ export function ProductModal({
       screenType: '',
       color: '',
       condition: CONDITION_OPTIONS[0],
+      variantOf: null,
     }
   );
   const [images, setImages] = useState<ProductImageData[]>(initial?.images ?? []);
   const [highlights, setHighlights] = useState<string[]>(initial?.highlights ?? DEFAULT_HIGHLIGHTS);
-  const [variants, setVariants] = useState<ProductVariantData[]>(initial?.variants ?? []);
-  const [variantErrors, setVariantErrors] = useState<Record<number, string>>({});
-  const [savingVariant, startSavingVariant] = useTransition();
   const [pending, startTransition] = useTransition();
   const [uploading, startUpload] = useTransition();
   const [error, setError] = useState('');
@@ -124,6 +128,25 @@ export function ProductModal({
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const visibleSpecFields = specFieldsForCategory(form.category);
+
+  // Produto de variação: o nome final é o nome base do produto de origem +
+  // as especificações preenchidas abaixo, então não é digitado à mão.
+  const isVariant = !!form.variantOf;
+  const groupId = form.variantOf ?? form.id ?? null;
+  const baseName = isVariant ? allProducts.find((p) => p.id === form.variantOf)?.name ?? '' : '';
+  const composedName = isVariant
+    ? composeVariantName(baseName, form.category, {
+        gpu: form.gpu ?? '',
+        cpu: form.cpu ?? '',
+        ram: form.ram ?? '',
+        storage: form.storage ?? '',
+        screenType: form.screenType ?? '',
+        color: form.color ?? '',
+      })
+    : form.name;
+  const siblingProducts = groupId
+    ? allProducts.filter((p) => p.id !== form.id && (p.id === groupId || p.variantOf === groupId))
+    : [];
 
   function toggleCollection(name: string) {
     setForm((f) => ({
@@ -142,97 +165,9 @@ export function ProductModal({
     setHighlights((hs) => (hs.length >= MAX_HIGHLIGHTS ? hs : [...hs, '']));
   }
 
-  function addVariant() {
-    setVariants((vs) => [
-      ...vs,
-      {
-        gpu: form.gpu ?? '',
-        cpu: form.cpu ?? '',
-        ram: form.ram ?? '',
-        storage: form.storage ?? '',
-        screenType: form.screenType ?? '',
-        price: form.price,
-        promoPrice: form.promoPrice,
-        stock: form.stock,
-      },
-    ]);
-  }
-
-  function updateVariant(i: number, patch: Partial<ProductVariantData>) {
-    setVariants((vs) => vs.map((v, idx) => (idx === i ? { ...v, ...patch } : v)));
-  }
-
-  function removeVariant(i: number) {
-    const variant = variants[i];
-    setVariantErrors((errs) => {
-      const next = { ...errs };
-      delete next[i];
-      return next;
-    });
-    if (!variant.id) {
-      setVariants((vs) => vs.filter((_, idx) => idx !== i));
-      return;
-    }
-    startSavingVariant(async () => {
-      const result = await deleteProductVariantAction(variant.id!);
-      if (!result.ok) {
-        setVariantErrors((errs) => ({ ...errs, [i]: result.message }));
-        return;
-      }
-      setVariants((vs) => vs.filter((_, idx) => idx !== i));
-    });
-  }
-
-  function saveVariant(i: number) {
-    if (!form.id) return;
-    const variant = variants[i];
-    setVariantErrors((errs) => {
-      const next = { ...errs };
-      delete next[i];
-      return next;
-    });
-
-    const price = parseFloat(variant.price.replace(',', '.'));
-    if (!Number.isFinite(price) || price <= 0) {
-      setVariantErrors((errs) => ({ ...errs, [i]: 'Informe um preço válido para essa variação.' }));
-      return;
-    }
-    const promoPrice = variant.promoPrice.trim() ? parseFloat(variant.promoPrice.replace(',', '.')) : null;
-    if (promoPrice !== null && (!Number.isFinite(promoPrice) || promoPrice <= 0)) {
-      setVariantErrors((errs) => ({ ...errs, [i]: 'Preço promocional inválido.' }));
-      return;
-    }
-    const stock = variant.stock.trim() ? parseInt(variant.stock, 10) : 0;
-    if (!Number.isFinite(stock) || stock < 0) {
-      setVariantErrors((errs) => ({ ...errs, [i]: 'Informe um estoque válido.' }));
-      return;
-    }
-
-    startSavingVariant(async () => {
-      const result = await saveProductVariantAction({
-        id: variant.id,
-        productId: form.id!,
-        gpu: variant.gpu.trim(),
-        cpu: variant.cpu.trim(),
-        ram: variant.ram,
-        storage: variant.storage,
-        screenType: variant.screenType,
-        price,
-        promoPrice,
-        stock,
-      });
-      if (!result.ok) {
-        setVariantErrors((errs) => ({ ...errs, [i]: result.message }));
-        return;
-      }
-      if (result.variant) updateVariant(i, { id: result.variant.id });
-      toast(result.message);
-    });
-  }
-
   function save() {
     setError('');
-    if (!form.name.trim()) return setError('Informe o nome do produto.');
+    if (!isVariant && !form.name.trim()) return setError('Informe o nome do produto.');
 
     const price = parseFloat(form.price.replace(',', '.'));
     if (!Number.isFinite(price) || price <= 0) return setError('Informe um preço válido, maior que zero.');
@@ -257,7 +192,8 @@ export function ProductModal({
 
     const input: ProductFormInput = {
       id: form.id,
-      name: form.name.trim(),
+      name: (isVariant ? composedName : form.name).trim(),
+      variantOf: form.variantOf ?? null,
       brand: form.brand.trim(),
       category: form.category,
       collections: form.collections,
@@ -369,7 +305,16 @@ export function ProductModal({
           </button>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <input value={form.name} onChange={set('name')} placeholder="Nome do produto" className={`sm:col-span-2 ${inputClass}`} />
+          {isVariant ? (
+            <div className="sm:col-span-2">
+              <input value={composedName} disabled className={`w-full opacity-70 ${inputClass}`} />
+              <div className="mt-1 text-[12px] text-fg-tertiary">
+                Nome gerado automaticamente a partir de &quot;{baseName}&quot; + as especificações preenchidas abaixo.
+              </div>
+            </div>
+          ) : (
+            <input value={form.name} onChange={set('name')} placeholder="Nome do produto" className={`sm:col-span-2 ${inputClass}`} />
+          )}
           <input value={form.brand} onChange={set('brand')} placeholder="Marca" className={inputClass} />
           <select value={form.category} onChange={set('category')} className={inputClass}>
             {CATEGORY_OPTIONS.map((c) => (
@@ -536,96 +481,61 @@ export function ProductModal({
 
           <div className="sm:col-span-2">
             <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
-              Variações de configuração (opcional — cada uma com preço e estoque próprios)
+              Variações deste produto (cada uma é um produto próprio, com fotos, preço e estoque independentes)
             </div>
             {!form.id ? (
-              <div className="text-[13px] text-fg-tertiary">Salve o produto antes de adicionar variações.</div>
+              <div className="text-[13px] text-fg-tertiary">Salve o produto antes de criar variações.</div>
             ) : (
-              <div className="flex flex-col gap-3">
-                {variants.map((v, i) => (
-                  <div key={v.id ?? `new-${i}`} className="rounded-2xl border border-border-strong p-4">
-                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-                      <input
-                        value={v.gpu}
-                        onChange={(e) => updateVariant(i, { gpu: e.target.value })}
-                        placeholder="Placa de vídeo"
-                        className={inputClass}
-                      />
-                      <input
-                        list="cpu-suggestions"
-                        value={v.cpu}
-                        onChange={(e) => updateVariant(i, { cpu: e.target.value })}
-                        placeholder="Processador"
-                        className={inputClass}
-                      />
-                      <select value={v.ram} onChange={(e) => updateVariant(i, { ram: e.target.value })} className={inputClass}>
-                        <option value="">Memória RAM</option>
-                        {RAM_OPTIONS.map((r) => (
-                          <option key={r} value={r}>{r}</option>
-                        ))}
-                      </select>
-                      <select value={v.storage} onChange={(e) => updateVariant(i, { storage: e.target.value })} className={inputClass}>
-                        <option value="">Armazenamento</option>
-                        {STORAGE_OPTIONS.map((s) => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
-                      <select value={v.screenType} onChange={(e) => updateVariant(i, { screenType: e.target.value })} className={inputClass}>
-                        <option value="">Tipo de tela</option>
-                        {SCREEN_TYPE_OPTIONS.map((s) => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
-                      <input
-                        value={v.stock}
-                        onChange={(e) => updateVariant(i, { stock: e.target.value })}
-                        placeholder="Estoque"
-                        className={inputClass}
-                      />
-                      <input
-                        value={v.price}
-                        onChange={(e) => updateVariant(i, { price: e.target.value })}
-                        placeholder="Preço (R$)"
-                        className={inputClass}
-                      />
-                      <input
-                        value={v.promoPrice}
-                        onChange={(e) => updateVariant(i, { promoPrice: e.target.value })}
-                        placeholder="Preço promocional (opcional)"
-                        className={`sm:col-span-2 ${inputClass}`}
-                      />
-                    </div>
-                    {variantErrors[i] && <div className="mt-2 text-[12.5px] font-semibold text-error">{variantErrors[i]}</div>}
-                    <div className="mt-3 flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => removeVariant(i)}
-                        disabled={savingVariant}
-                        className="rounded-control border border-border-strong px-4 py-2 text-[12.5px] font-bold text-fg-tertiary hover:border-error hover:text-error disabled:opacity-60"
+              <>
+                {siblingProducts.length > 0 && (
+                  <div className="mb-2.5 flex flex-col gap-2">
+                    {siblingProducts.map((s) => (
+                      <div
+                        key={s.id}
+                        className="flex items-center justify-between gap-3 rounded-2xl border border-border-strong px-4 py-3"
+                        style={{ opacity: s.active ? 1 : 0.5 }}
                       >
-                        Remover
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => saveVariant(i)}
-                        disabled={savingVariant}
-                        className="rounded-control bg-accent px-4 py-2 text-[12.5px] font-extrabold text-page disabled:opacity-60"
-                      >
-                        {v.id ? 'Salvar variação' : 'Criar variação'}
-                      </button>
-                    </div>
+                        <div className="min-w-0">
+                          <div className="truncate text-[13px] font-bold">
+                            {s.name}
+                            {s.id === groupId && (
+                              <span className="ml-1.5 rounded-full border border-accent/40 bg-accent/12 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-[.06em] text-accent">
+                                origem
+                              </span>
+                            )}
+                          </div>
+                          <div className="font-mono text-[11px] text-fg-faded">
+                            {s.sku} · {formatBRL(s.price)} · estoque {s.stock}
+                          </div>
+                        </div>
+                        <div className="flex flex-shrink-0 gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => onEditProduct(s.id)}
+                            className="rounded-[9px] border border-border-hover px-3 py-1.5 text-xs font-bold hover:border-accent"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onDeleteProduct(s.id)}
+                            className="rounded-[9px] border border-border-hover px-2.5 py-1.5 text-xs text-fg-tertiary hover:border-error hover:text-error"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-            {form.id && (
-              <button
-                type="button"
-                onClick={addVariant}
-                className="mt-2 rounded-control border border-dashed border-border-hover px-4 py-2.5 text-[13px] font-bold text-fg-tertiary transition-colors hover:border-accent hover:text-accent"
-              >
-                + Adicionar variação
-              </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => onCreateVariant(groupId!)}
+                  className="w-full rounded-control border border-dashed border-border-hover px-4 py-2.5 text-[13px] font-bold text-fg-tertiary transition-colors hover:border-accent hover:text-accent"
+                >
+                  + Criar variação (novo produto com as mesmas informações, para você ajustar)
+                </button>
+              </>
             )}
           </div>
 

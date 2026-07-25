@@ -52,6 +52,7 @@ export type ProductFormInput = {
   screenType: string;
   color: string;
   condition: string;
+  variantOf: string | null;
 };
 
 export async function saveProductAction(input: ProductFormInput): Promise<ActionResult & { id?: string }> {
@@ -112,9 +113,11 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
     screen_type: input.screenType,
     color: input.color.trim(),
     condition: input.condition,
+    variant_of: input.variantOf,
   };
 
   let productId = input.id;
+  const isNew = !input.id;
   if (input.id) {
     const { error } = await supabase.from('products').update(payload).eq('id', input.id);
     if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar as alterações do produto.'));
@@ -138,6 +141,18 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
       }
     }
     if (!productId) return errResult(insertError ?? 'Não foi possível gerar um SKU único. Tente novamente.');
+  }
+
+  // Nova variação de configuração: reaproveita as fotos do produto de
+  // origem automaticamente, já que normalmente é o mesmo aparelho.
+  if (isNew && productId && input.variantOf) {
+    const { data: originImages } = await supabase
+      .from('product_images')
+      .select('label, url, position')
+      .eq('product_id', input.variantOf);
+    if (originImages?.length) {
+      await supabase.from('product_images').insert(originImages.map((img) => ({ ...img, product_id: productId })));
+    }
   }
 
   if (productId) {
@@ -864,85 +879,6 @@ export async function removeProductImageAction(imageId: string): Promise<ActionR
   revalidatePath('/admin/produtos');
   revalidatePath('/');
   return okResult('Imagem removida.');
-}
-
-// ============ VARIAÇÕES DE PRODUTO ============
-export type ProductVariantInput = {
-  id?: string;
-  productId: string;
-  gpu: string;
-  cpu: string;
-  ram: string;
-  storage: string;
-  screenType: string;
-  price: number;
-  promoPrice: number | null;
-  stock: number;
-};
-
-export async function saveProductVariantAction(
-  input: ProductVariantInput
-): Promise<ActionResult & { variant?: ProductVariantInput & { id: string } }> {
-  const supabase = await adminClient();
-  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
-
-  if (!Number.isFinite(input.price) || input.price <= 0) return errResult('Informe um preço válido para a variação.');
-  if (input.promoPrice !== null && (!Number.isFinite(input.promoPrice) || input.promoPrice <= 0)) {
-    return errResult('O preço promocional da variação precisa ser um número válido.');
-  }
-  if (!Number.isFinite(input.stock) || input.stock < 0) return errResult('Informe um estoque válido para a variação.');
-
-  const payload = {
-    product_id: input.productId,
-    gpu: input.gpu.trim(),
-    cpu: input.cpu.trim(),
-    ram: input.ram,
-    storage: input.storage,
-    screen_type: input.screenType,
-    price: input.price,
-    promo_price: input.promoPrice,
-    stock: input.stock,
-  };
-
-  if (input.id) {
-    const { error } = await supabase.from('product_variants').update(payload).eq('id', input.id);
-    if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar a variação.'));
-    revalidatePath('/admin/produtos');
-    revalidatePath('/');
-    return { ...okResult('Variação salva.'), variant: { ...input, id: input.id } };
-  }
-
-  const { data: last } = await supabase
-    .from('product_variants')
-    .select('position')
-    .eq('product_id', input.productId)
-    .order('position', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const nextPosition = (last?.position ?? -1) + 1;
-
-  const { data, error } = await supabase
-    .from('product_variants')
-    .insert({ ...payload, position: nextPosition })
-    .select('id')
-    .single();
-  if (error || !data) return errResult(friendlyDbError(error, 'Não foi possível criar a variação.'));
-
-  revalidatePath('/admin/produtos');
-  revalidatePath('/');
-  return { ...okResult('Variação criada.'), variant: { ...input, id: data.id } };
-}
-
-export async function deleteProductVariantAction(variantId: string): Promise<ActionResult> {
-  const supabase = await adminClient();
-  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
-
-  const { error } = await supabase.from('product_variants').delete().eq('id', variantId);
-  if (error) return errResult(friendlyDbError(error, 'Não foi possível remover a variação.'));
-
-  revalidatePath('/admin/produtos');
-  revalidatePath('/');
-  return okResult('Variação removida.');
 }
 
 // ============ BANNERS ============

@@ -524,56 +524,6 @@ export type Database = {
           },
         ]
       }
-      product_variants: {
-        Row: {
-          cpu: string
-          gpu: string
-          id: string
-          position: number
-          price: number
-          product_id: string
-          promo_price: number | null
-          ram: string
-          screen_type: string
-          stock: number
-          storage: string
-        }
-        Insert: {
-          cpu?: string
-          gpu?: string
-          id?: string
-          position?: number
-          price: number
-          product_id: string
-          promo_price?: number | null
-          ram?: string
-          screen_type?: string
-          stock?: number
-          storage?: string
-        }
-        Update: {
-          cpu?: string
-          gpu?: string
-          id?: string
-          position?: number
-          price?: number
-          product_id?: string
-          promo_price?: number | null
-          ram?: string
-          screen_type?: string
-          stock?: number
-          storage?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "product_variants_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       products: {
         Row: {
           active: boolean
@@ -598,6 +548,7 @@ export type Database = {
           sku: string
           stock: number
           storage: string
+          variant_of: string | null
         }
         Insert: {
           active?: boolean
@@ -622,6 +573,7 @@ export type Database = {
           sku: string
           stock?: number
           storage?: string
+          variant_of?: string | null
         }
         Update: {
           active?: boolean
@@ -646,6 +598,7 @@ export type Database = {
           sku?: string
           stock?: number
           storage?: string
+          variant_of?: string | null
         }
         Relationships: [
           {
@@ -660,6 +613,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_variant_of_fkey"
+            columns: ["variant_of"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]

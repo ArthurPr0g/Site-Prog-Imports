@@ -1,17 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
 
-export type ProductVariant = {
-  id: string;
-  gpu: string;
-  cpu: string;
-  ram: string;
-  storage: string;
-  screenType: string;
-  price: number;
-  promoPrice: number | null;
-  stock: number;
-};
-
 export type ProductCard = {
   id: string;
   sku: string;
@@ -31,49 +19,18 @@ export type ProductCard = {
   screenType: string;
   color: string;
   condition: string;
-  variants: ProductVariant[];
+  variantOf: string | null;
 };
-
-const VARIANT_SELECT = 'product_variants(id, gpu, cpu, ram, storage, screen_type, price, promo_price, stock, position)';
-
-function mapVariants(raw: unknown): ProductVariant[] {
-  const list = (raw ?? []) as {
-    id: string;
-    gpu: string | null;
-    cpu: string | null;
-    ram: string | null;
-    storage: string | null;
-    screen_type: string | null;
-    price: number;
-    promo_price: number | null;
-    stock: number;
-    position: number;
-  }[];
-  return [...list]
-    .sort((a, b) => a.position - b.position)
-    .map((v) => ({
-      id: v.id,
-      gpu: v.gpu ?? '',
-      cpu: v.cpu ?? '',
-      ram: v.ram ?? '',
-      storage: v.storage ?? '',
-      screenType: v.screen_type ?? '',
-      price: Number(v.price),
-      promoPrice: v.promo_price ? Number(v.promo_price) : null,
-      stock: v.stock,
-    }));
-}
 
 export async function listActiveProducts(): Promise<ProductCard[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('products')
     .select(
-      `id, sku, name, price, promo_price, stock, gpu, cpu, ram, storage, screen_type, color, condition,
+      `id, sku, name, price, promo_price, stock, gpu, cpu, ram, storage, screen_type, color, condition, variant_of,
        categories(name), brands(name),
        product_images(label, url, position),
-       product_collections(collections(name)),
-       ${VARIANT_SELECT}`
+       product_collections(collections(name))`
     )
     .eq('active', true)
     .order('position');
@@ -101,7 +58,7 @@ export async function listActiveProducts(): Promise<ProductCard[]> {
       screenType: p.screen_type ?? '',
       color: p.color ?? '',
       condition: p.condition ?? '',
-      variants: mapVariants(p.product_variants),
+      variantOf: p.variant_of,
     };
   });
 }
@@ -148,11 +105,10 @@ export async function getCollectionById(id: string) {
   const { data, error } = await supabase
     .from('products')
     .select(
-      `id, sku, name, price, promo_price, stock, gpu, cpu, ram, storage, screen_type, color, condition,
+      `id, sku, name, price, promo_price, stock, gpu, cpu, ram, storage, screen_type, color, condition, variant_of,
        categories(name), brands(name),
        product_images(label, url, position),
-       product_collections!inner(collection_id, collections(name)),
-       ${VARIANT_SELECT}`
+       product_collections!inner(collection_id, collections(name))`
     )
     .eq('active', true)
     .eq('product_collections.collection_id', id)
@@ -181,7 +137,7 @@ export async function getCollectionById(id: string) {
       screenType: p.screen_type ?? '',
       color: p.color ?? '',
       condition: p.condition ?? '',
-      variants: mapVariants(p.product_variants),
+      variantOf: p.variant_of,
     };
   });
 
@@ -196,13 +152,51 @@ export async function getProductBySku(sku: string) {
       `*, categories(name), brands(name),
        product_images(id, label, url, position),
        product_specs(k, v, position),
-       reviews(id, author_name, rating, text, created_at),
-       ${VARIANT_SELECT}`
+       reviews(id, author_name, rating, text, created_at)`
     )
     .eq('sku', sku)
     .maybeSingle();
 
   if (error || !product) return null;
+
+  // Variações de configuração são produtos completos ligados via variant_of —
+  // o grupo inteiro é: o produto de origem (variant_of nulo) + todos que
+  // apontam pra ele.
+  const groupId = product.variant_of ?? product.id;
+  const { data: groupRows } = await supabase
+    .from('products')
+    .select(
+      `id, sku, name, price, promo_price, stock, gpu, cpu, ram, storage, screen_type, color, condition, variant_of,
+       categories(name), brands(name), product_images(label, url, position)`
+    )
+    .or(`id.eq.${groupId},variant_of.eq.${groupId}`)
+    .eq('active', true);
+
+  const siblings: ProductCard[] = (groupRows ?? []).map((p) => {
+    const images = (p.product_images ?? []).sort((a, b) => a.position - b.position);
+    return {
+      id: p.id,
+      sku: p.sku,
+      name: p.name,
+      price: Number(p.price),
+      promoPrice: p.promo_price ? Number(p.promo_price) : null,
+      category: p.categories?.name ?? '',
+      brand: p.brands?.name ?? '',
+      image: images[0]?.label ?? p.name.toLowerCase(),
+      imageUrl: images.find((img) => img.url)?.url ?? null,
+      stock: p.stock,
+      collections: [],
+      gpu: p.gpu ?? '',
+      cpu: p.cpu ?? '',
+      ram: p.ram ?? '',
+      storage: p.storage ?? '',
+      screenType: p.screen_type ?? '',
+      color: p.color ?? '',
+      condition: p.condition ?? '',
+      variantOf: p.variant_of,
+    };
+  });
+  const siblingIds = new Set(siblings.map((s) => s.id));
 
   // Sugestões automáticas: outros produtos ativos da mesma categoria — não depende de
   // curadoria manual, então passa a aparecer sozinho conforme o catálogo cresce.
@@ -216,30 +210,32 @@ export async function getProductBySku(sku: string) {
       .neq('id', product.id)
       .order('created_at', { ascending: false })
       .limit(8);
-    related = (relatedProducts ?? []).map((p) => {
-      const images = (p.product_images ?? []).sort((a, b) => a.position - b.position);
-      return {
-        id: p.id,
-        sku: p.sku,
-        name: p.name,
-        price: Number(p.price),
-        promoPrice: p.promo_price ? Number(p.promo_price) : null,
-        category: p.categories?.name ?? '',
-        brand: p.brands?.name ?? '',
-        image: images[0]?.label ?? p.name.toLowerCase(),
-        imageUrl: images.find((img) => img.url)?.url ?? null,
-        stock: p.stock,
-        collections: [],
-        gpu: '',
-        cpu: '',
-        ram: '',
-        storage: '',
-        screenType: '',
-        color: '',
-        condition: '',
-        variants: [],
-      };
-    });
+    related = (relatedProducts ?? [])
+      .filter((p) => !siblingIds.has(p.id))
+      .map((p) => {
+        const images = (p.product_images ?? []).sort((a, b) => a.position - b.position);
+        return {
+          id: p.id,
+          sku: p.sku,
+          name: p.name,
+          price: Number(p.price),
+          promoPrice: p.promo_price ? Number(p.promo_price) : null,
+          category: p.categories?.name ?? '',
+          brand: p.brands?.name ?? '',
+          image: images[0]?.label ?? p.name.toLowerCase(),
+          imageUrl: images.find((img) => img.url)?.url ?? null,
+          stock: p.stock,
+          collections: [],
+          gpu: '',
+          cpu: '',
+          ram: '',
+          storage: '',
+          screenType: '',
+          color: '',
+          condition: '',
+          variantOf: null,
+        };
+      });
   }
 
   return {
@@ -251,7 +247,7 @@ export async function getProductBySku(sku: string) {
     images: (product.product_images ?? []).sort((a, b) => a.position - b.position),
     specs: (product.product_specs ?? []).sort((a, b) => a.position - b.position),
     reviews: product.reviews ?? [],
-    variants: mapVariants(product.product_variants),
+    siblings,
     related,
   };
 }

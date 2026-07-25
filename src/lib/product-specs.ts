@@ -98,6 +98,16 @@ export const VARIANT_DIM_CANONICAL: Record<'gpu' | 'cpu' | 'ram' | 'storage' | '
   screenType: SCREEN_TYPE_OPTIONS,
 };
 
-export function buildVariantLabel(v: { ram: string; storage: string; gpu: string; cpu: string; screenType: string }) {
-  return [v.ram, v.storage, v.gpu, v.cpu, v.screenType].filter(Boolean).join(' · ') || 'Configuração padrão';
+// Nome final de uma variação = nome base do produto de origem + as specs
+// relevantes pra categoria dele (mesma lista usada pra mostrar/ocultar
+// campos no cadastro), então um iPhone complementa com Armazenamento/Cor e
+// um notebook com GPU/CPU/RAM/Armazenamento/Tela/Cor.
+export function composeVariantName(
+  baseName: string,
+  category: string,
+  specs: { gpu: string; cpu: string; ram: string; storage: string; screenType: string; color: string }
+) {
+  const fields = specFieldsForCategory(category);
+  const parts = fields.map((f) => specs[f]).filter(Boolean);
+  return parts.length ? `${baseName} — ${parts.join(' · ')}` : baseName;
 }

@@ -28,17 +28,7 @@ export default async function AdminProductsPage() {
     screenType: p.screen_type ?? '',
     color: p.color ?? '',
     condition: p.condition ?? '',
-    variants: (p.product_variants ?? []).map((v) => ({
-      id: v.id,
-      gpu: v.gpu ?? '',
-      cpu: v.cpu ?? '',
-      ram: v.ram ?? '',
-      storage: v.storage ?? '',
-      screenType: v.screen_type ?? '',
-      price: String(v.price),
-      promoPrice: v.promo_price ? String(v.promo_price) : '',
-      stock: String(v.stock),
-    })),
+    variantOf: p.variant_of,
   }));
 
   return (

@@ -7,13 +7,12 @@ import { formatBRL, formatParcel } from '@/lib/format';
 import { useCart } from '@/lib/cart-context';
 import type { ProductCard } from '@/lib/data/catalog';
 
-export function ProductCardTile({ p, className, variantId }: { p: ProductCard; className?: string; variantId?: string }) {
+export function ProductCardTile({ p, className }: { p: ProductCard; className?: string }) {
   const { add, favorites, toggleFavorite } = useCart();
   const hasPromo = !!p.promoPrice;
   const activePrice = p.promoPrice ?? p.price;
   const isFav = !!favorites[p.id];
-  const href = variantId ? `/produto/${p.sku}?variante=${variantId}` : `/produto/${p.sku}`;
-  const cartId = variantId ? `${p.id}:${variantId}` : p.id;
+  const href = `/produto/${p.sku}`;
 
   return (
     <div
@@ -63,7 +62,7 @@ export function ProductCardTile({ p, className, variantId }: { p: ProductCard; c
         </div>
         <button
           onClick={() => {
-            add({ id: cartId, sku: p.sku, name: p.name, price: activePrice, image: p.image, imageUrl: p.imageUrl });
+            add({ id: p.id, sku: p.sku, name: p.name, price: activePrice, image: p.image, imageUrl: p.imageUrl });
           }}
           className="mt-auto rounded-xl border border-border-hover bg-[#1c1c21] pb-2 pt-3 text-[11.5px] font-extrabold transition-all hover:border-accent hover:bg-accent hover:text-page sm:rounded-[14px] sm:pb-3 sm:pt-4 sm:text-sm"
         >
