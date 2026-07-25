@@ -19,6 +19,7 @@ type Row = {
   brand: string;
   collections: string[];
   price: number;
+  promoPrice: number | null;
   stock: number;
   active: boolean;
   description: string;
@@ -81,7 +82,7 @@ export function ProductsTable({ products: productsProp, collections }: { product
       category: p.category,
       collections: p.collections,
       price: String(p.price),
-      promoPrice: '',
+      promoPrice: p.promoPrice !== null ? String(p.promoPrice) : '',
       stock: String(p.stock),
       description: p.description,
       images: p.images,
@@ -109,7 +110,7 @@ export function ProductsTable({ products: productsProp, collections }: { product
       category: origin.category,
       collections: origin.collections,
       price: String(origin.price),
-      promoPrice: '',
+      promoPrice: origin.promoPrice !== null ? String(origin.promoPrice) : '',
       stock: String(origin.stock),
       description: origin.description,
       rating: String(origin.rating),
