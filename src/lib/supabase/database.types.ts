@@ -529,52 +529,67 @@ export type Database = {
           active: boolean
           brand_id: string | null
           category_id: string | null
+          cpu: string
           created_at: string
           description: string
+          gpu: string
           highlights: string[]
           id: string
           name: string
           position: number
           price: number
           promo_price: number | null
+          ram: string
           rating: number
           review_count: number
+          screen_type: string
           sku: string
           stock: number
+          storage: string
         }
         Insert: {
           active?: boolean
           brand_id?: string | null
           category_id?: string | null
+          cpu?: string
           created_at?: string
           description?: string
+          gpu?: string
           highlights?: string[]
           id?: string
           name: string
           position?: number
           price: number
           promo_price?: number | null
+          ram?: string
           rating?: number
           review_count?: number
+          screen_type?: string
           sku: string
           stock?: number
+          storage?: string
         }
         Update: {
           active?: boolean
           brand_id?: string | null
           category_id?: string | null
+          cpu?: string
           created_at?: string
           description?: string
+          gpu?: string
           highlights?: string[]
           id?: string
           name?: string
           position?: number
           price?: number
           promo_price?: number | null
+          ram?: string
           rating?: number
           review_count?: number
+          screen_type?: string
           sku?: string
           stock?: number
+          storage?: string
         }
         Relationships: [
           {

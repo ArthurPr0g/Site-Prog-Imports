@@ -21,6 +21,11 @@ export default async function AdminProductsPage() {
     rating: Number(p.rating),
     reviewCount: p.review_count,
     highlights: p.highlights ?? [],
+    gpu: p.gpu ?? '',
+    cpu: p.cpu ?? '',
+    ram: p.ram ?? '',
+    storage: p.storage ?? '',
+    screenType: p.screen_type ?? '',
   }));
 
   return (

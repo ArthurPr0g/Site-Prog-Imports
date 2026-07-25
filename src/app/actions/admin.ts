@@ -45,6 +45,11 @@ export type ProductFormInput = {
   rating: number;
   reviewCount: number;
   highlights: string[];
+  gpu: string;
+  cpu: string;
+  ram: string;
+  storage: string;
+  screenType: string;
 };
 
 export async function saveProductAction(input: ProductFormInput): Promise<ActionResult & { id?: string }> {
@@ -98,6 +103,11 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
     rating: input.rating,
     review_count: input.reviewCount,
     highlights,
+    gpu: input.gpu.trim(),
+    cpu: input.cpu.trim(),
+    ram: input.ram,
+    storage: input.storage,
+    screen_type: input.screenType,
   };
 
   let productId = input.id;

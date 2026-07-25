@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from 'react';
 import Image from 'next/image';
 import { saveProductAction, uploadProductImageAction, removeProductImageAction, type ProductFormInput } from '@/app/actions/admin';
 import { CATEGORY_OPTIONS } from '@/lib/constants';
+import { CPU_SUGGESTIONS, RAM_OPTIONS, STORAGE_OPTIONS, SCREEN_TYPE_OPTIONS } from '@/lib/product-specs';
 import { useToast } from '@/components/ui/Toast';
 
 export type ProductImageData = { id: string; url: string | null; label: string };
@@ -23,6 +24,11 @@ export type ProductModalData = {
   rating?: string;
   reviewCount?: string;
   highlights?: string[];
+  gpu?: string;
+  cpu?: string;
+  ram?: string;
+  storage?: string;
+  screenType?: string;
 };
 
 const inputClass =
@@ -61,6 +67,11 @@ export function ProductModal({
       description: '',
       rating: '4.9',
       reviewCount: '0',
+      gpu: '',
+      cpu: '',
+      ram: '',
+      storage: '',
+      screenType: '',
     }
   );
   const [images, setImages] = useState<ProductImageData[]>(initial?.images ?? []);
@@ -132,6 +143,11 @@ export function ProductModal({
       rating,
       reviewCount,
       highlights,
+      gpu: (form.gpu ?? '').trim(),
+      cpu: (form.cpu ?? '').trim(),
+      ram: form.ram ?? '',
+      storage: form.storage ?? '',
+      screenType: form.screenType ?? '',
     };
     const wasNew = !form.id;
     startTransition(async () => {
@@ -267,6 +283,50 @@ export function ProductModal({
                 })}
               </div>
             )}
+          </div>
+
+          <div className="sm:col-span-2">
+            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+              Especificações técnicas (opcional — usadas nos filtros de coleção)
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <input
+                value={form.gpu ?? ''}
+                onChange={set('gpu')}
+                placeholder="Placa de vídeo (ex: RTX 4060)"
+                className={inputClass}
+              />
+              <input
+                list="cpu-suggestions"
+                value={form.cpu ?? ''}
+                onChange={set('cpu')}
+                placeholder="Processador (ex: Intel Core i7 (13ª Geração))"
+                className={inputClass}
+              />
+              <datalist id="cpu-suggestions">
+                {CPU_SUGGESTIONS.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+              <select value={form.ram ?? ''} onChange={set('ram')} className={inputClass}>
+                <option value="">Memória RAM (não informado)</option>
+                {RAM_OPTIONS.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+              <select value={form.storage ?? ''} onChange={set('storage')} className={inputClass}>
+                <option value="">Armazenamento (não informado)</option>
+                {STORAGE_OPTIONS.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <select value={form.screenType ?? ''} onChange={set('screenType')} className={inputClass}>
+                <option value="">Tipo de tela (não informado)</option>
+                {SCREEN_TYPE_OPTIONS.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <textarea

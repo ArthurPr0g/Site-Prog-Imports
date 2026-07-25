@@ -12,6 +12,11 @@ export type ProductCard = {
   imageUrl: string | null;
   stock: number;
   collections: string[];
+  gpu: string;
+  cpu: string;
+  ram: string;
+  storage: string;
+  screenType: string;
 };
 
 export async function listActiveProducts(): Promise<ProductCard[]> {
@@ -19,7 +24,7 @@ export async function listActiveProducts(): Promise<ProductCard[]> {
   const { data, error } = await supabase
     .from('products')
     .select(
-      `id, sku, name, price, promo_price, stock,
+      `id, sku, name, price, promo_price, stock, gpu, cpu, ram, storage, screen_type,
        categories(name), brands(name),
        product_images(label, url, position),
        product_collections(collections(name))`
@@ -43,6 +48,11 @@ export async function listActiveProducts(): Promise<ProductCard[]> {
       imageUrl: images.find((img) => img.url)?.url ?? null,
       stock: p.stock,
       collections: (p.product_collections ?? []).map((pc) => pc.collections?.name).filter(Boolean) as string[],
+      gpu: p.gpu ?? '',
+      cpu: p.cpu ?? '',
+      ram: p.ram ?? '',
+      storage: p.storage ?? '',
+      screenType: p.screen_type ?? '',
     };
   });
 }
@@ -89,7 +99,7 @@ export async function getCollectionById(id: string) {
   const { data, error } = await supabase
     .from('products')
     .select(
-      `id, sku, name, price, promo_price, stock,
+      `id, sku, name, price, promo_price, stock, gpu, cpu, ram, storage, screen_type,
        categories(name), brands(name),
        product_images(label, url, position),
        product_collections!inner(collection_id, collections(name))`
@@ -114,6 +124,11 @@ export async function getCollectionById(id: string) {
       imageUrl: images.find((img) => img.url)?.url ?? null,
       stock: p.stock,
       collections: (p.product_collections ?? []).map((pc) => pc.collections?.name).filter(Boolean) as string[],
+      gpu: p.gpu ?? '',
+      cpu: p.cpu ?? '',
+      ram: p.ram ?? '',
+      storage: p.storage ?? '',
+      screenType: p.screen_type ?? '',
     };
   });
 
@@ -161,6 +176,11 @@ export async function getProductBySku(sku: string) {
         imageUrl: images.find((img) => img.url)?.url ?? null,
         stock: p.stock,
         collections: [],
+        gpu: '',
+        cpu: '',
+        ram: '',
+        storage: '',
+        screenType: '',
       };
     });
   }

@@ -26,6 +26,11 @@ type Row = {
   rating: number;
   reviewCount: number;
   highlights: string[];
+  gpu: string;
+  cpu: string;
+  ram: string;
+  storage: string;
+  screenType: string;
 };
 
 export function ProductsTable({ products: productsProp, collections }: { products: Row[]; collections: string[] }) {
@@ -77,6 +82,11 @@ export function ProductsTable({ products: productsProp, collections }: { product
       rating: String(p.rating),
       reviewCount: String(p.reviewCount),
       highlights: p.highlights,
+      gpu: p.gpu,
+      cpu: p.cpu,
+      ram: p.ram,
+      storage: p.storage,
+      screenType: p.screenType,
     });
     setModalOpen(true);
   }

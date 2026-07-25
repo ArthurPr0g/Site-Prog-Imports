@@ -82,7 +82,7 @@ export function Header({
   }
 
   return (
-    <header className="sticky top-3 z-90 px-3 sm:px-6">
+    <header className="sticky top-3 z-90 mt-3 px-3 sm:px-6">
       <div className="mx-auto max-w-[1280px] rounded-[22px] border border-border-strong bg-black/55 px-4 py-3 shadow-[0_20px_50px_rgba(0,0,0,.55)] backdrop-blur-xl sm:px-6 sm:py-3.5">
         <div className="flex items-center gap-3 sm:gap-7">
           <button
