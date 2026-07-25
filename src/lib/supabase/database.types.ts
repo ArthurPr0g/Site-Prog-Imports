@@ -765,6 +765,10 @@ export type Database = {
     Functions: {
       is_admin: { Args: never; Returns: boolean }
       next_order_number: { Args: never; Returns: number }
+      check_assistant_rate_limit: {
+        Args: { p_key: string; p_window_seconds: number; p_limit: number }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

@@ -3,6 +3,7 @@ import { Space_Grotesk, Manrope, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
 import { CartProvider } from "@/lib/cart-context";
+import { FloatingAssistant } from "@/components/assistant/FloatingAssistant";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -37,7 +38,10 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${spaceGrotesk.variable} ${manrope.variable} ${jetbrainsMono.variable}`}>
       <body className="min-h-screen bg-page text-fg font-body antialiased">
         <ToastProvider>
-          <CartProvider>{children}</CartProvider>
+          <CartProvider>
+            {children}
+            <FloatingAssistant />
+          </CartProvider>
         </ToastProvider>
       </body>
     </html>
