@@ -12,8 +12,15 @@ import { ProductTabs } from '@/components/product/ProductTabs';
 import { RelatedProducts } from '@/components/product/RelatedProducts';
 import { StarRating } from '@/components/ui/Price';
 
-export default async function ProductPage({ params }: { params: Promise<{ sku: string }> }) {
+export default async function ProductPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ sku: string }>;
+  searchParams: Promise<{ variante?: string }>;
+}) {
   const { sku } = await params;
+  const { variante } = await searchParams;
   const [product, allProducts, user] = await Promise.all([
     getProductBySku(sku),
     listActiveProducts(),
@@ -72,6 +79,7 @@ export default async function ProductPage({ params }: { params: Promise<{ sku: s
             imageUrl={product.images.find((img) => img.url)?.url ?? null}
             highlights={product.highlights ?? []}
             variants={product.variants}
+            initialVariantId={variante}
           />
         </div>
       </section>

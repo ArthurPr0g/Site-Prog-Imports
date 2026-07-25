@@ -7,11 +7,13 @@ import { formatBRL, formatParcel } from '@/lib/format';
 import { useCart } from '@/lib/cart-context';
 import type { ProductCard } from '@/lib/data/catalog';
 
-export function ProductCardTile({ p, className }: { p: ProductCard; className?: string }) {
+export function ProductCardTile({ p, className, variantId }: { p: ProductCard; className?: string; variantId?: string }) {
   const { add, favorites, toggleFavorite } = useCart();
   const hasPromo = !!p.promoPrice;
   const activePrice = p.promoPrice ?? p.price;
   const isFav = !!favorites[p.id];
+  const href = variantId ? `/produto/${p.sku}?variante=${variantId}` : `/produto/${p.sku}`;
+  const cartId = variantId ? `${p.id}:${variantId}` : p.id;
 
   return (
     <div
@@ -20,7 +22,7 @@ export function ProductCardTile({ p, className }: { p: ProductCard; className?: 
       className={`relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:-translate-y-1.5 hover:border-border-hover hover:shadow-[0_24px_48px_rgba(0,0,0,.45)] sm:rounded-[22px] ${className ?? ''}`}
     >
       <GlowBorder />
-      <Link href={`/produto/${p.sku}`} className="relative block h-[130px] sm:h-[210px]">
+      <Link href={href} className="relative block h-[130px] sm:h-[210px]">
         <PlaceholderImage label={p.image} src={p.imageUrl} className="h-full" textClassName="hidden sm:block text-xs" sizes="(min-width: 640px) 280px, 50vw" />
         {hasPromo && (
           <div className="absolute left-2 top-2 rounded-full bg-accent px-2 py-0.5 text-[9px] font-extrabold tracking-[.06em] text-page sm:left-3.5 sm:top-3.5 sm:px-2.5 sm:py-1 sm:text-[11px]">
@@ -43,7 +45,7 @@ export function ProductCardTile({ p, className }: { p: ProductCard; className?: 
           {p.category}
         </div>
         <Link
-          href={`/produto/${p.sku}`}
+          href={href}
           className="block text-[12.5px] font-extrabold leading-snug sm:min-h-10.5 sm:text-base sm:leading-tight"
         >
           {p.name}
@@ -61,7 +63,7 @@ export function ProductCardTile({ p, className }: { p: ProductCard; className?: 
         </div>
         <button
           onClick={() => {
-            add({ id: p.id, sku: p.sku, name: p.name, price: activePrice, image: p.image, imageUrl: p.imageUrl });
+            add({ id: cartId, sku: p.sku, name: p.name, price: activePrice, image: p.image, imageUrl: p.imageUrl });
           }}
           className="mt-auto rounded-xl border border-border-hover bg-[#1c1c21] pb-2 pt-3 text-[11.5px] font-extrabold transition-all hover:border-accent hover:bg-accent hover:text-page sm:rounded-[14px] sm:pb-3 sm:pt-4 sm:text-sm"
         >

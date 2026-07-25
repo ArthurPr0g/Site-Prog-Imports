@@ -67,3 +67,37 @@ const DEFAULT_SPEC_FIELDS: SpecFieldKey[] = ['gpu', 'cpu', 'ram', 'storage', 'sc
 export function specFieldsForCategory(category: string): SpecFieldKey[] {
   return CATEGORY_SPEC_FIELDS[category] ?? DEFAULT_SPEC_FIELDS;
 }
+
+export function sortByCanonicalOrder(values: string[], canonical: string[]) {
+  const known = canonical.filter((c) => values.includes(c));
+  const extra = values.filter((v) => !canonical.includes(v)).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  return [...known, ...extra];
+}
+
+export const VARIANT_DIM_LABELS: Record<'gpu' | 'cpu' | 'ram' | 'storage' | 'screenType', string> = {
+  ram: 'Memória RAM',
+  storage: 'Armazenamento',
+  gpu: 'Placa de vídeo',
+  cpu: 'Processador',
+  screenType: 'Tipo de tela',
+};
+
+export const VARIANT_DIM_ORDER: Array<'gpu' | 'cpu' | 'ram' | 'storage' | 'screenType'> = [
+  'ram',
+  'storage',
+  'gpu',
+  'cpu',
+  'screenType',
+];
+
+export const VARIANT_DIM_CANONICAL: Record<'gpu' | 'cpu' | 'ram' | 'storage' | 'screenType', string[]> = {
+  ram: RAM_OPTIONS,
+  storage: STORAGE_OPTIONS,
+  gpu: [],
+  cpu: CPU_SUGGESTIONS,
+  screenType: SCREEN_TYPE_OPTIONS,
+};
+
+export function buildVariantLabel(v: { ram: string; storage: string; gpu: string; cpu: string; screenType: string }) {
+  return [v.ram, v.storage, v.gpu, v.cpu, v.screenType].filter(Boolean).join(' · ') || 'Configuração padrão';
+}

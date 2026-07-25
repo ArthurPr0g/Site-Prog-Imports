@@ -4,11 +4,10 @@ import { useMemo, useState } from 'react';
 import { formatBRL, formatParcel } from '@/lib/format';
 import { buildWhatsAppLink } from '@/lib/whatsapp';
 import { useCart } from '@/lib/cart-context';
+import { VARIANT_DIM_LABELS, VARIANT_DIM_ORDER, VARIANT_DIM_CANONICAL, sortByCanonicalOrder, buildVariantLabel } from '@/lib/product-specs';
 import type { ProductVariant } from '@/lib/data/catalog';
 
-function variantLabel(v: ProductVariant) {
-  return [v.ram, v.storage, v.gpu, v.cpu, v.screenType].filter(Boolean).join(' · ') || 'Configuração padrão';
-}
+type DimKey = (typeof VARIANT_DIM_ORDER)[number];
 
 export function BuyBox({
   productId,
@@ -20,6 +19,7 @@ export function BuyBox({
   imageUrl,
   highlights,
   variants,
+  initialVariantId,
 }: {
   productId: string;
   sku: string;
@@ -30,13 +30,58 @@ export function BuyBox({
   imageUrl: string | null;
   highlights: string[];
   variants: ProductVariant[];
+  initialVariantId?: string;
 }) {
   const [qty, setQty] = useState(1);
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(variants[0]?.id ?? null);
   const { favorites, toggleFavorite, add, openCart } = useCart();
   const isFav = !!favorites[productId];
 
-  const selectedVariant = variants.find((v) => v.id === selectedVariantId) ?? null;
+  // Só mostra como campo de escolha as dimensões que realmente mudam entre as
+  // variações (ex: se todas têm o mesmo processador, não faz sentido pedir
+  // pra escolher processador — só RAM/Armazenamento, que de fato variam).
+  const differingDims = useMemo(
+    () => VARIANT_DIM_ORDER.filter((dim) => new Set(variants.map((v) => v[dim]).filter(Boolean)).size > 1),
+    [variants]
+  );
+
+  const initialVariant = useMemo(
+    () => variants.find((v) => v.id === initialVariantId) ?? variants[0] ?? null,
+    [variants, initialVariantId]
+  );
+
+  const [selectedDims, setSelectedDims] = useState<Partial<Record<DimKey, string>>>(() => {
+    const init: Partial<Record<DimKey, string>> = {};
+    if (initialVariant) differingDims.forEach((dim) => { if (initialVariant[dim]) init[dim] = initialVariant[dim]; });
+    return init;
+  });
+  // Fallback pra quando há várias variações mas nenhuma dimensão "diferente"
+  // foi detectada (ex: mesma spec, preços diferentes) — mantém a escolha
+  // direta por variação inteira nesse caso raro.
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(initialVariant?.id ?? null);
+
+  const selectedVariant = useMemo(() => {
+    if (variants.length === 0) return null;
+    if (differingDims.length === 0) return variants.find((v) => v.id === selectedVariantId) ?? initialVariant;
+    const exact = variants.find((v) => differingDims.every((dim) => v[dim] === selectedDims[dim]));
+    return exact ?? initialVariant;
+  }, [variants, differingDims, selectedDims, selectedVariantId, initialVariant]);
+
+  function dimOptions(dim: DimKey): string[] {
+    const values = [...new Set(variants.map((v) => v[dim]).filter(Boolean))];
+    const canonical = VARIANT_DIM_CANONICAL[dim];
+    return canonical.length ? sortByCanonicalOrder(values, canonical) : values.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
+
+  function pickDim(dim: DimKey, value: string) {
+    const candidates = variants.filter((v) => v[dim] === value);
+    const stillMatches = candidates.find((v) => differingDims.every((d) => d === dim || v[d] === selectedDims[d]));
+    const target = stillMatches ?? candidates[0];
+    if (!target) return;
+    const next: Partial<Record<DimKey, string>> = {};
+    differingDims.forEach((d) => { if (target[d]) next[d] = target[d]; });
+    setSelectedDims(next);
+  }
+
   const basePrice = selectedVariant ? selectedVariant.price : price;
   const activePromoPrice = selectedVariant ? selectedVariant.promoPrice : promoPrice;
   const activePrice = activePromoPrice ?? basePrice;
@@ -45,7 +90,7 @@ export function BuyBox({
   const discountPct = hasPromo ? Math.round((1 - activePromoPrice! / basePrice) * 100) : 0;
 
   const cartId = selectedVariant ? `${productId}:${selectedVariant.id}` : productId;
-  const cartName = selectedVariant ? `${name} — ${variantLabel(selectedVariant)}` : name;
+  const cartName = selectedVariant ? `${name} — ${buildVariantLabel(selectedVariant)}` : name;
 
   const waLink = useMemo(() => {
     const msg = `Olá! Tenho interesse no ${cartName} (${qty}x) — ${formatBRL(activePrice * qty)}. Pode me passar mais detalhes?`;
@@ -62,7 +107,37 @@ export function BuyBox({
 
   return (
     <div>
-      {variants.length > 0 && (
+      {differingDims.length > 0 && (
+        <div className="mb-4.5 flex flex-col gap-3.5">
+          {differingDims.map((dim) => (
+            <div key={dim}>
+              <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{VARIANT_DIM_LABELS[dim]}</div>
+              <div className="flex flex-wrap gap-2">
+                {dimOptions(dim).map((value) => {
+                  const selected = selectedDims[dim] === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => pickDim(dim, value)}
+                      className="rounded-full border px-4 py-2 text-[13px] font-bold transition-all hover:border-accent"
+                      style={{
+                        borderColor: selected ? '#F28705' : undefined,
+                        background: selected ? 'rgba(242,135,5,.12)' : undefined,
+                        color: selected ? '#F28705' : undefined,
+                      }}
+                    >
+                      {value}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {differingDims.length === 0 && variants.length > 1 && (
         <div className="mb-4.5">
           <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">Escolha a configuração</div>
           <div className="flex flex-col gap-2">
@@ -77,7 +152,7 @@ export function BuyBox({
                   className="flex items-center justify-between gap-3 rounded-2xl border bg-card px-4 py-3 text-left text-[13.5px] transition-all hover:border-accent"
                   style={{ borderColor: selected ? '#F28705' : undefined, background: selected ? 'rgba(242,135,5,.08)' : undefined }}
                 >
-                  <span className={selected ? 'font-bold text-fg' : 'text-fg-secondary'}>{variantLabel(v)}</span>
+                  <span className={selected ? 'font-bold text-fg' : 'text-fg-secondary'}>{buildVariantLabel(v)}</span>
                   <span className="flex-shrink-0 font-bold text-accent">{formatBRL(vPrice)}</span>
                 </button>
               );

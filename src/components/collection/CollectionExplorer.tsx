@@ -3,23 +3,41 @@
 import { useMemo, useState } from 'react';
 import { ProductCardTile } from '@/components/home/ProductCardTile';
 import { formatBRL } from '@/lib/format';
-import { CPU_SUGGESTIONS, RAM_OPTIONS, STORAGE_OPTIONS, SCREEN_TYPE_OPTIONS, CONDITION_OPTIONS } from '@/lib/product-specs';
+import {
+  CPU_SUGGESTIONS,
+  RAM_OPTIONS,
+  STORAGE_OPTIONS,
+  SCREEN_TYPE_OPTIONS,
+  CONDITION_OPTIONS,
+  sortByCanonicalOrder,
+  buildVariantLabel,
+} from '@/lib/product-specs';
 import type { ProductCard } from '@/lib/data/catalog';
 
-function sortByCanonicalOrder(values: string[], canonical: string[]) {
-  const known = canonical.filter((c) => values.includes(c));
-  const extra = values.filter((v) => !canonical.includes(v)).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  return [...known, ...extra];
-}
+// Cada variação de configuração vira seu próprio card na listagem — se um
+// produto tem 2 variações, aparecem 2 cards, cada um com o preço/specs e o
+// link (com ?variante=) daquela configuração específica. Produtos sem
+// variação viram um único item, como antes.
+type DisplayItem = ProductCard & { variantId?: string };
 
-type SpecKey = 'gpu' | 'cpu' | 'ram' | 'storage' | 'screenType';
-
-// Considera tanto a spec base do produto quanto a de cada variação de
-// configuração, já que o cliente pode estar procurando por uma combinação
-// (ex: 16GB RAM) que só existe numa variante específica, não no produto base.
-function specValues(p: ProductCard, key: SpecKey): string[] {
-  const values = [p[key], ...p.variants.map((v) => v[key])];
-  return values.filter(Boolean);
+function expandProducts(products: ProductCard[]): DisplayItem[] {
+  return products.flatMap((p) => {
+    if (p.variants.length === 0) return [{ ...p }];
+    return p.variants.map((v) => ({
+      ...p,
+      id: `${p.id}:${v.id}`,
+      variantId: v.id,
+      name: `${p.name} — ${buildVariantLabel(v)}`,
+      price: v.price,
+      promoPrice: v.promoPrice,
+      stock: v.stock,
+      gpu: v.gpu || p.gpu,
+      cpu: v.cpu || p.cpu,
+      ram: v.ram || p.ram,
+      storage: v.storage || p.storage,
+      screenType: v.screenType || p.screenType,
+    }));
+  });
 }
 
 type SortOption = 'relevancia' | 'menor-preco' | 'maior-preco' | 'nome-az';
@@ -32,37 +50,39 @@ const SORT_LABELS: Record<SortOption, string> = {
 };
 
 export function CollectionExplorer({ products }: { products: ProductCard[] }) {
-  const categories = useMemo(() => [...new Set(products.map((p) => p.category).filter(Boolean))].sort(), [products]);
-  const brands = useMemo(() => [...new Set(products.map((p) => p.brand).filter(Boolean))].sort(), [products]);
+  const items = useMemo(() => expandProducts(products), [products]);
+
+  const categories = useMemo(() => [...new Set(items.map((p) => p.category).filter(Boolean))].sort(), [items]);
+  const brands = useMemo(() => [...new Set(items.map((p) => p.brand).filter(Boolean))].sort(), [items]);
   const gpus = useMemo(
-    () => [...new Set(products.flatMap((p) => specValues(p, 'gpu')))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
-    [products]
+    () => [...new Set(items.map((p) => p.gpu).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [items]
   );
   const cpus = useMemo(
-    () => sortByCanonicalOrder([...new Set(products.flatMap((p) => specValues(p, 'cpu')))], CPU_SUGGESTIONS),
-    [products]
+    () => sortByCanonicalOrder([...new Set(items.map((p) => p.cpu).filter(Boolean))], CPU_SUGGESTIONS),
+    [items]
   );
   const rams = useMemo(
-    () => sortByCanonicalOrder([...new Set(products.flatMap((p) => specValues(p, 'ram')))], RAM_OPTIONS),
-    [products]
+    () => sortByCanonicalOrder([...new Set(items.map((p) => p.ram).filter(Boolean))], RAM_OPTIONS),
+    [items]
   );
   const storages = useMemo(
-    () => sortByCanonicalOrder([...new Set(products.flatMap((p) => specValues(p, 'storage')))], STORAGE_OPTIONS),
-    [products]
+    () => sortByCanonicalOrder([...new Set(items.map((p) => p.storage).filter(Boolean))], STORAGE_OPTIONS),
+    [items]
   );
   const screenTypes = useMemo(
-    () => sortByCanonicalOrder([...new Set(products.flatMap((p) => specValues(p, 'screenType')))], SCREEN_TYPE_OPTIONS),
-    [products]
+    () => sortByCanonicalOrder([...new Set(items.map((p) => p.screenType).filter(Boolean))], SCREEN_TYPE_OPTIONS),
+    [items]
   );
-  const colors = useMemo(() => [...new Set(products.map((p) => p.color).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [products]);
+  const colors = useMemo(() => [...new Set(items.map((p) => p.color).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [items]);
   const conditions = useMemo(
-    () => sortByCanonicalOrder([...new Set(products.map((p) => p.condition).filter(Boolean))], CONDITION_OPTIONS),
-    [products]
+    () => sortByCanonicalOrder([...new Set(items.map((p) => p.condition).filter(Boolean))], CONDITION_OPTIONS),
+    [items]
   );
   const priceBounds = useMemo(() => {
-    const prices = products.map((p) => p.promoPrice ?? p.price);
+    const prices = items.map((p) => p.promoPrice ?? p.price);
     return { min: prices.length ? Math.min(...prices) : 0, max: prices.length ? Math.max(...prices) : 0 };
-  }, [products]);
+  }, [items]);
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
@@ -125,15 +145,15 @@ export function CollectionExplorer({ products }: { products: ProductCard[] }) {
     const min = minPrice.trim() ? parseFloat(minPrice.replace(',', '.')) : null;
     const max = maxPrice.trim() ? parseFloat(maxPrice.replace(',', '.')) : null;
 
-    let list = products.filter((p) => {
+    let list = items.filter((p) => {
       const activePrice = p.promoPrice ?? p.price;
       if (selectedCategories.length && !selectedCategories.includes(p.category)) return false;
       if (selectedBrands.length && !selectedBrands.includes(p.brand)) return false;
-      if (selectedGpus.length && !specValues(p, 'gpu').some((v) => selectedGpus.includes(v))) return false;
-      if (selectedCpus.length && !specValues(p, 'cpu').some((v) => selectedCpus.includes(v))) return false;
-      if (selectedRams.length && !specValues(p, 'ram').some((v) => selectedRams.includes(v))) return false;
-      if (selectedStorages.length && !specValues(p, 'storage').some((v) => selectedStorages.includes(v))) return false;
-      if (selectedScreenTypes.length && !specValues(p, 'screenType').some((v) => selectedScreenTypes.includes(v))) return false;
+      if (selectedGpus.length && !selectedGpus.includes(p.gpu)) return false;
+      if (selectedCpus.length && !selectedCpus.includes(p.cpu)) return false;
+      if (selectedRams.length && !selectedRams.includes(p.ram)) return false;
+      if (selectedStorages.length && !selectedStorages.includes(p.storage)) return false;
+      if (selectedScreenTypes.length && !selectedScreenTypes.includes(p.screenType)) return false;
       if (selectedColors.length && !selectedColors.includes(p.color)) return false;
       if (selectedConditions.length && !selectedConditions.includes(p.condition)) return false;
       if (onlyPromo && !p.promoPrice) return false;
@@ -149,7 +169,7 @@ export function CollectionExplorer({ products }: { products: ProductCard[] }) {
 
     return list;
   }, [
-    products,
+    items,
     selectedCategories,
     selectedBrands,
     selectedGpus,
@@ -438,7 +458,7 @@ export function CollectionExplorer({ products }: { products: ProductCard[] }) {
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(240px,1fr))] sm:gap-4.5">
               {filtered.map((p) => (
-                <ProductCardTile key={p.id} p={p} />
+                <ProductCardTile key={p.id} p={p} variantId={p.variantId} />
               ))}
             </div>
           )}
