@@ -26,6 +26,17 @@ export default async function AdminProductsPage() {
     ram: p.ram ?? '',
     storage: p.storage ?? '',
     screenType: p.screen_type ?? '',
+    variants: (p.product_variants ?? []).map((v) => ({
+      id: v.id,
+      gpu: v.gpu ?? '',
+      cpu: v.cpu ?? '',
+      ram: v.ram ?? '',
+      storage: v.storage ?? '',
+      screenType: v.screen_type ?? '',
+      price: String(v.price),
+      promoPrice: v.promo_price ? String(v.promo_price) : '',
+      stock: String(v.stock),
+    })),
   }));
 
   return (

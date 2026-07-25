@@ -71,6 +71,7 @@ export default async function ProductPage({ params }: { params: Promise<{ sku: s
             image={product.images[0]?.label ?? product.name.toLowerCase()}
             imageUrl={product.images.find((img) => img.url)?.url ?? null}
             highlights={product.highlights ?? []}
+            variants={product.variants}
           />
         </div>
       </section>

@@ -168,7 +168,7 @@ function Set2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; rou
           Do lançamento nos Estados Unidos até a sua casa, sem intermediários.
         </div>
         <a
-          href="#produtos"
+          href="/produtos"
           style={{
             display: 'inline-block',
             background: C.orange,

@@ -1,10 +1,21 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { ProductCardTile } from './ProductCardTile';
 import type { ProductCard } from '@/lib/data/catalog';
 
-export function CollectionRow({ id, title, products }: { id?: string; title: string; products: ProductCard[] }) {
+export function CollectionRow({
+  id,
+  title,
+  products,
+  collectionId,
+}: {
+  id?: string;
+  title: string;
+  products: ProductCard[];
+  collectionId?: string;
+}) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -40,6 +51,14 @@ export function CollectionRow({ id, title, products }: { id?: string; title: str
     <section id={id} className="mx-auto max-w-[1280px] scroll-mt-24 px-6 pt-16">
       <div className="mb-6 flex items-end justify-between gap-5">
         <h2 className="font-display text-[26px] font-bold tracking-[-.02em] sm:text-[32px]">{title}</h2>
+        {collectionId && (
+          <Link
+            href={`/colecao/${collectionId}`}
+            className="flex-shrink-0 text-[13px] font-bold text-accent hover:underline"
+          >
+            Ver mais →
+          </Link>
+        )}
       </div>
       <div className="relative">
         {canScrollLeft && (

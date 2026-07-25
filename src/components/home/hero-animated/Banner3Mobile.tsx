@@ -134,7 +134,7 @@ function SetM3({ t, flyP, convP, msgP }: { t: number; flyP: number; convP: numbe
           Máquinas montadas e configuradas sob medida para o seu desempenho.
         </div>
         <a
-          href="#produtos"
+          href="/produtos"
           style={{
             display: 'inline-block',
             alignSelf: 'flex-start',

@@ -146,7 +146,7 @@ function SetM1({
         </div>
         <div style={{ fontSize: 23, lineHeight: 1.5, color: C.gray, opacity: brandP, transform: `translateY(${(1 - brandP) * 18}px)` }}>Importado diretamente para você.</div>
         <a
-          href="#produtos"
+          href="/produtos"
           style={{
             display: 'inline-block',
             alignSelf: 'flex-start',

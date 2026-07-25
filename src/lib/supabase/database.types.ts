@@ -524,6 +524,56 @@ export type Database = {
           },
         ]
       }
+      product_variants: {
+        Row: {
+          cpu: string
+          gpu: string
+          id: string
+          position: number
+          price: number
+          product_id: string
+          promo_price: number | null
+          ram: string
+          screen_type: string
+          stock: number
+          storage: string
+        }
+        Insert: {
+          cpu?: string
+          gpu?: string
+          id?: string
+          position?: number
+          price: number
+          product_id: string
+          promo_price?: number | null
+          ram?: string
+          screen_type?: string
+          stock?: number
+          storage?: string
+        }
+        Update: {
+          cpu?: string
+          gpu?: string
+          id?: string
+          position?: number
+          price?: number
+          product_id?: string
+          promo_price?: number | null
+          ram?: string
+          screen_type?: string
+          stock?: number
+          storage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           active: boolean

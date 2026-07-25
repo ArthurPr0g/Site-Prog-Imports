@@ -186,7 +186,7 @@ function Set1({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20, opacity: brandP, transform: `translateY(${(1 - brandP) * 20}px)` }}>
           <a
-            href="#produtos"
+            href="/produtos"
             style={{
               display: 'inline-block',
               background: C.orange,

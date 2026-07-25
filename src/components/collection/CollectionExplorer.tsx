@@ -12,6 +12,16 @@ function sortByCanonicalOrder(values: string[], canonical: string[]) {
   return [...known, ...extra];
 }
 
+type SpecKey = 'gpu' | 'cpu' | 'ram' | 'storage' | 'screenType';
+
+// Considera tanto a spec base do produto quanto a de cada variação de
+// configuração, já que o cliente pode estar procurando por uma combinação
+// (ex: 16GB RAM) que só existe numa variante específica, não no produto base.
+function specValues(p: ProductCard, key: SpecKey): string[] {
+  const values = [p[key], ...p.variants.map((v) => v[key])];
+  return values.filter(Boolean);
+}
+
 type SortOption = 'relevancia' | 'menor-preco' | 'maior-preco' | 'nome-az';
 
 const SORT_LABELS: Record<SortOption, string> = {
@@ -24,21 +34,24 @@ const SORT_LABELS: Record<SortOption, string> = {
 export function CollectionExplorer({ products }: { products: ProductCard[] }) {
   const categories = useMemo(() => [...new Set(products.map((p) => p.category).filter(Boolean))].sort(), [products]);
   const brands = useMemo(() => [...new Set(products.map((p) => p.brand).filter(Boolean))].sort(), [products]);
-  const gpus = useMemo(() => [...new Set(products.map((p) => p.gpu).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [products]);
+  const gpus = useMemo(
+    () => [...new Set(products.flatMap((p) => specValues(p, 'gpu')))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [products]
+  );
   const cpus = useMemo(
-    () => sortByCanonicalOrder([...new Set(products.map((p) => p.cpu).filter(Boolean))], CPU_SUGGESTIONS),
+    () => sortByCanonicalOrder([...new Set(products.flatMap((p) => specValues(p, 'cpu')))], CPU_SUGGESTIONS),
     [products]
   );
   const rams = useMemo(
-    () => sortByCanonicalOrder([...new Set(products.map((p) => p.ram).filter(Boolean))], RAM_OPTIONS),
+    () => sortByCanonicalOrder([...new Set(products.flatMap((p) => specValues(p, 'ram')))], RAM_OPTIONS),
     [products]
   );
   const storages = useMemo(
-    () => sortByCanonicalOrder([...new Set(products.map((p) => p.storage).filter(Boolean))], STORAGE_OPTIONS),
+    () => sortByCanonicalOrder([...new Set(products.flatMap((p) => specValues(p, 'storage')))], STORAGE_OPTIONS),
     [products]
   );
   const screenTypes = useMemo(
-    () => sortByCanonicalOrder([...new Set(products.map((p) => p.screenType).filter(Boolean))], SCREEN_TYPE_OPTIONS),
+    () => sortByCanonicalOrder([...new Set(products.flatMap((p) => specValues(p, 'screenType')))], SCREEN_TYPE_OPTIONS),
     [products]
   );
   const priceBounds = useMemo(() => {
@@ -105,11 +118,11 @@ export function CollectionExplorer({ products }: { products: ProductCard[] }) {
       const activePrice = p.promoPrice ?? p.price;
       if (selectedCategories.length && !selectedCategories.includes(p.category)) return false;
       if (selectedBrands.length && !selectedBrands.includes(p.brand)) return false;
-      if (selectedGpus.length && !selectedGpus.includes(p.gpu)) return false;
-      if (selectedCpus.length && !selectedCpus.includes(p.cpu)) return false;
-      if (selectedRams.length && !selectedRams.includes(p.ram)) return false;
-      if (selectedStorages.length && !selectedStorages.includes(p.storage)) return false;
-      if (selectedScreenTypes.length && !selectedScreenTypes.includes(p.screenType)) return false;
+      if (selectedGpus.length && !specValues(p, 'gpu').some((v) => selectedGpus.includes(v))) return false;
+      if (selectedCpus.length && !specValues(p, 'cpu').some((v) => selectedCpus.includes(v))) return false;
+      if (selectedRams.length && !specValues(p, 'ram').some((v) => selectedRams.includes(v))) return false;
+      if (selectedStorages.length && !specValues(p, 'storage').some((v) => selectedStorages.includes(v))) return false;
+      if (selectedScreenTypes.length && !specValues(p, 'screenType').some((v) => selectedScreenTypes.includes(v))) return false;
       if (onlyPromo && !p.promoPrice) return false;
       if (min !== null && Number.isFinite(min) && activePrice < min) return false;
       if (max !== null && Number.isFinite(max) && activePrice > max) return false;

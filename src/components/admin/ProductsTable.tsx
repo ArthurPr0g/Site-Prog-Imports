@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { GripVertical } from 'lucide-react';
 import { formatBRL } from '@/lib/format';
 import { toggleProductActiveAction, deleteProductAction, reorderProductsAction } from '@/app/actions/admin';
-import { ProductModal, type ProductModalData } from './ProductModal';
+import { ProductModal, type ProductModalData, type ProductVariantData } from './ProductModal';
 import { ProductImportButton } from './ProductImportButton';
 import { useToast } from '@/components/ui/Toast';
 import { useDragReorder } from '@/lib/useDragReorder';
@@ -31,6 +31,7 @@ type Row = {
   ram: string;
   storage: string;
   screenType: string;
+  variants: ProductVariantData[];
 };
 
 export function ProductsTable({ products: productsProp, collections }: { products: Row[]; collections: string[] }) {
@@ -87,6 +88,7 @@ export function ProductsTable({ products: productsProp, collections }: { product
       ram: p.ram,
       storage: p.storage,
       screenType: p.screenType,
+      variants: p.variants,
     });
     setModalOpen(true);
   }

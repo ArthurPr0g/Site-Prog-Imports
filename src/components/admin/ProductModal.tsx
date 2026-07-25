@@ -2,12 +2,31 @@
 
 import { useRef, useState, useTransition } from 'react';
 import Image from 'next/image';
-import { saveProductAction, uploadProductImageAction, removeProductImageAction, type ProductFormInput } from '@/app/actions/admin';
+import {
+  saveProductAction,
+  uploadProductImageAction,
+  removeProductImageAction,
+  saveProductVariantAction,
+  deleteProductVariantAction,
+  type ProductFormInput,
+} from '@/app/actions/admin';
 import { CATEGORY_OPTIONS } from '@/lib/constants';
 import { CPU_SUGGESTIONS, RAM_OPTIONS, STORAGE_OPTIONS, SCREEN_TYPE_OPTIONS } from '@/lib/product-specs';
 import { useToast } from '@/components/ui/Toast';
 
 export type ProductImageData = { id: string; url: string | null; label: string };
+
+export type ProductVariantData = {
+  id?: string;
+  gpu: string;
+  cpu: string;
+  ram: string;
+  storage: string;
+  screenType: string;
+  price: string;
+  promoPrice: string;
+  stock: string;
+};
 
 export type ProductModalData = {
   id?: string;
@@ -29,6 +48,18 @@ export type ProductModalData = {
   ram?: string;
   storage?: string;
   screenType?: string;
+  variants?: ProductVariantData[];
+};
+
+const EMPTY_VARIANT: ProductVariantData = {
+  gpu: '',
+  cpu: '',
+  ram: '',
+  storage: '',
+  screenType: '',
+  price: '',
+  promoPrice: '',
+  stock: '',
 };
 
 const inputClass =
@@ -76,6 +107,9 @@ export function ProductModal({
   );
   const [images, setImages] = useState<ProductImageData[]>(initial?.images ?? []);
   const [highlights, setHighlights] = useState<string[]>(initial?.highlights ?? DEFAULT_HIGHLIGHTS);
+  const [variants, setVariants] = useState<ProductVariantData[]>(initial?.variants ?? []);
+  const [variantErrors, setVariantErrors] = useState<Record<number, string>>({});
+  const [savingVariant, startSavingVariant] = useTransition();
   const [pending, startTransition] = useTransition();
   const [uploading, startUpload] = useTransition();
   const [error, setError] = useState('');
@@ -103,6 +137,82 @@ export function ProductModal({
   }
   function addHighlight() {
     setHighlights((hs) => (hs.length >= MAX_HIGHLIGHTS ? hs : [...hs, '']));
+  }
+
+  function addVariant() {
+    setVariants((vs) => [...vs, { ...EMPTY_VARIANT }]);
+  }
+
+  function updateVariant(i: number, patch: Partial<ProductVariantData>) {
+    setVariants((vs) => vs.map((v, idx) => (idx === i ? { ...v, ...patch } : v)));
+  }
+
+  function removeVariant(i: number) {
+    const variant = variants[i];
+    setVariantErrors((errs) => {
+      const next = { ...errs };
+      delete next[i];
+      return next;
+    });
+    if (!variant.id) {
+      setVariants((vs) => vs.filter((_, idx) => idx !== i));
+      return;
+    }
+    startSavingVariant(async () => {
+      const result = await deleteProductVariantAction(variant.id!);
+      if (!result.ok) {
+        setVariantErrors((errs) => ({ ...errs, [i]: result.message }));
+        return;
+      }
+      setVariants((vs) => vs.filter((_, idx) => idx !== i));
+    });
+  }
+
+  function saveVariant(i: number) {
+    if (!form.id) return;
+    const variant = variants[i];
+    setVariantErrors((errs) => {
+      const next = { ...errs };
+      delete next[i];
+      return next;
+    });
+
+    const price = parseFloat(variant.price.replace(',', '.'));
+    if (!Number.isFinite(price) || price <= 0) {
+      setVariantErrors((errs) => ({ ...errs, [i]: 'Informe um preço válido para essa variação.' }));
+      return;
+    }
+    const promoPrice = variant.promoPrice.trim() ? parseFloat(variant.promoPrice.replace(',', '.')) : null;
+    if (promoPrice !== null && (!Number.isFinite(promoPrice) || promoPrice <= 0)) {
+      setVariantErrors((errs) => ({ ...errs, [i]: 'Preço promocional inválido.' }));
+      return;
+    }
+    const stock = variant.stock.trim() ? parseInt(variant.stock, 10) : 0;
+    if (!Number.isFinite(stock) || stock < 0) {
+      setVariantErrors((errs) => ({ ...errs, [i]: 'Informe um estoque válido.' }));
+      return;
+    }
+
+    startSavingVariant(async () => {
+      const result = await saveProductVariantAction({
+        id: variant.id,
+        productId: form.id!,
+        gpu: variant.gpu.trim(),
+        cpu: variant.cpu.trim(),
+        ram: variant.ram,
+        storage: variant.storage,
+        screenType: variant.screenType,
+        price,
+        promoPrice,
+        stock,
+      });
+      if (!result.ok) {
+        setVariantErrors((errs) => ({ ...errs, [i]: result.message }));
+        return;
+      }
+      if (result.variant) updateVariant(i, { id: result.variant.id });
+      toast(result.message);
+    });
   }
 
   function save() {
@@ -406,6 +516,101 @@ export function ProductModal({
             >
               + Adicionar linha
             </button>
+          </div>
+
+          <div className="sm:col-span-2">
+            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+              Variações de configuração (opcional — cada uma com preço e estoque próprios)
+            </div>
+            {!form.id ? (
+              <div className="text-[13px] text-fg-tertiary">Salve o produto antes de adicionar variações.</div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {variants.map((v, i) => (
+                  <div key={v.id ?? `new-${i}`} className="rounded-2xl border border-border-strong p-4">
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                      <input
+                        value={v.gpu}
+                        onChange={(e) => updateVariant(i, { gpu: e.target.value })}
+                        placeholder="Placa de vídeo"
+                        className={inputClass}
+                      />
+                      <input
+                        list="cpu-suggestions"
+                        value={v.cpu}
+                        onChange={(e) => updateVariant(i, { cpu: e.target.value })}
+                        placeholder="Processador"
+                        className={inputClass}
+                      />
+                      <select value={v.ram} onChange={(e) => updateVariant(i, { ram: e.target.value })} className={inputClass}>
+                        <option value="">Memória RAM</option>
+                        {RAM_OPTIONS.map((r) => (
+                          <option key={r} value={r}>{r}</option>
+                        ))}
+                      </select>
+                      <select value={v.storage} onChange={(e) => updateVariant(i, { storage: e.target.value })} className={inputClass}>
+                        <option value="">Armazenamento</option>
+                        {STORAGE_OPTIONS.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                      <select value={v.screenType} onChange={(e) => updateVariant(i, { screenType: e.target.value })} className={inputClass}>
+                        <option value="">Tipo de tela</option>
+                        {SCREEN_TYPE_OPTIONS.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                      <input
+                        value={v.stock}
+                        onChange={(e) => updateVariant(i, { stock: e.target.value })}
+                        placeholder="Estoque"
+                        className={inputClass}
+                      />
+                      <input
+                        value={v.price}
+                        onChange={(e) => updateVariant(i, { price: e.target.value })}
+                        placeholder="Preço (R$)"
+                        className={inputClass}
+                      />
+                      <input
+                        value={v.promoPrice}
+                        onChange={(e) => updateVariant(i, { promoPrice: e.target.value })}
+                        placeholder="Preço promocional (opcional)"
+                        className={`sm:col-span-2 ${inputClass}`}
+                      />
+                    </div>
+                    {variantErrors[i] && <div className="mt-2 text-[12.5px] font-semibold text-error">{variantErrors[i]}</div>}
+                    <div className="mt-3 flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => removeVariant(i)}
+                        disabled={savingVariant}
+                        className="rounded-control border border-border-strong px-4 py-2 text-[12.5px] font-bold text-fg-tertiary hover:border-error hover:text-error disabled:opacity-60"
+                      >
+                        Remover
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => saveVariant(i)}
+                        disabled={savingVariant}
+                        className="rounded-control bg-accent px-4 py-2 text-[12.5px] font-extrabold text-page disabled:opacity-60"
+                      >
+                        {v.id ? 'Salvar variação' : 'Criar variação'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {form.id && (
+              <button
+                type="button"
+                onClick={addVariant}
+                className="mt-2 rounded-control border border-dashed border-border-hover px-4 py-2.5 text-[13px] font-bold text-fg-tertiary transition-colors hover:border-accent hover:text-accent"
+              >
+                + Adicionar variação
+              </button>
+            )}
           </div>
         </div>
         {error && <div className="mt-3 text-[13px] font-semibold text-error">{error}</div>}

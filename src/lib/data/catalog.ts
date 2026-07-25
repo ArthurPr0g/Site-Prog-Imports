@@ -1,5 +1,17 @@
 import { createClient } from '@/lib/supabase/server';
 
+export type ProductVariant = {
+  id: string;
+  gpu: string;
+  cpu: string;
+  ram: string;
+  storage: string;
+  screenType: string;
+  price: number;
+  promoPrice: number | null;
+  stock: number;
+};
+
 export type ProductCard = {
   id: string;
   sku: string;
@@ -17,7 +29,38 @@ export type ProductCard = {
   ram: string;
   storage: string;
   screenType: string;
+  variants: ProductVariant[];
 };
+
+const VARIANT_SELECT = 'product_variants(id, gpu, cpu, ram, storage, screen_type, price, promo_price, stock, position)';
+
+function mapVariants(raw: unknown): ProductVariant[] {
+  const list = (raw ?? []) as {
+    id: string;
+    gpu: string | null;
+    cpu: string | null;
+    ram: string | null;
+    storage: string | null;
+    screen_type: string | null;
+    price: number;
+    promo_price: number | null;
+    stock: number;
+    position: number;
+  }[];
+  return [...list]
+    .sort((a, b) => a.position - b.position)
+    .map((v) => ({
+      id: v.id,
+      gpu: v.gpu ?? '',
+      cpu: v.cpu ?? '',
+      ram: v.ram ?? '',
+      storage: v.storage ?? '',
+      screenType: v.screen_type ?? '',
+      price: Number(v.price),
+      promoPrice: v.promo_price ? Number(v.promo_price) : null,
+      stock: v.stock,
+    }));
+}
 
 export async function listActiveProducts(): Promise<ProductCard[]> {
   const supabase = await createClient();
@@ -27,7 +70,8 @@ export async function listActiveProducts(): Promise<ProductCard[]> {
       `id, sku, name, price, promo_price, stock, gpu, cpu, ram, storage, screen_type,
        categories(name), brands(name),
        product_images(label, url, position),
-       product_collections(collections(name))`
+       product_collections(collections(name)),
+       ${VARIANT_SELECT}`
     )
     .eq('active', true)
     .order('position');
@@ -53,6 +97,7 @@ export async function listActiveProducts(): Promise<ProductCard[]> {
       ram: p.ram ?? '',
       storage: p.storage ?? '',
       screenType: p.screen_type ?? '',
+      variants: mapVariants(p.product_variants),
     };
   });
 }
@@ -102,7 +147,8 @@ export async function getCollectionById(id: string) {
       `id, sku, name, price, promo_price, stock, gpu, cpu, ram, storage, screen_type,
        categories(name), brands(name),
        product_images(label, url, position),
-       product_collections!inner(collection_id, collections(name))`
+       product_collections!inner(collection_id, collections(name)),
+       ${VARIANT_SELECT}`
     )
     .eq('active', true)
     .eq('product_collections.collection_id', id)
@@ -129,6 +175,7 @@ export async function getCollectionById(id: string) {
       ram: p.ram ?? '',
       storage: p.storage ?? '',
       screenType: p.screen_type ?? '',
+      variants: mapVariants(p.product_variants),
     };
   });
 
@@ -143,7 +190,8 @@ export async function getProductBySku(sku: string) {
       `*, categories(name), brands(name),
        product_images(id, label, url, position),
        product_specs(k, v, position),
-       reviews(id, author_name, rating, text, created_at)`
+       reviews(id, author_name, rating, text, created_at),
+       ${VARIANT_SELECT}`
     )
     .eq('sku', sku)
     .maybeSingle();
@@ -181,6 +229,7 @@ export async function getProductBySku(sku: string) {
         ram: '',
         storage: '',
         screenType: '',
+        variants: [],
       };
     });
   }
@@ -194,6 +243,7 @@ export async function getProductBySku(sku: string) {
     images: (product.product_images ?? []).sort((a, b) => a.position - b.position),
     specs: (product.product_specs ?? []).sort((a, b) => a.position - b.position),
     reviews: product.reviews ?? [],
+    variants: mapVariants(product.product_variants),
     related,
   };
 }

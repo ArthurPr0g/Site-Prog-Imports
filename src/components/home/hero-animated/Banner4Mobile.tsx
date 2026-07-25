@@ -89,7 +89,7 @@ function SetM4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msg
             RASTREIO EM TEMPO REAL, DIRETO PELO SITE
           </div>
           <a
-            href="#produtos"
+            href="/produtos"
             style={{
               display: 'inline-block',
               background: C.orange,

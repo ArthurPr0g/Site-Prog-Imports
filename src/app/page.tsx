@@ -97,7 +97,7 @@ export default async function HomePage({
       ) : (
         <div id="produtos">
           {feedSections.map((c) => (
-            <CollectionRow key={c.id} id={`colecao-${c.id}`} title={c.name} products={c.products} />
+            <CollectionRow key={c.id} id={`colecao-${c.id}`} title={c.name} products={c.products} collectionId={c.id} />
           ))}
         </div>
       )}
