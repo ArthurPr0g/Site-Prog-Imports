@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
 import { STATUS_TO_STAGE, type OrderStatus } from '@/lib/constants';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
+import { composeVariantName } from '@/lib/product-specs';
 
 async function adminClient() {
   const admin = await requireAdmin();
@@ -34,7 +35,7 @@ function generateSku(name: string): string {
 
 export type ProductFormInput = {
   id?: string;
-  name: string;
+  baseName: string;
   brand: string;
   category: string;
   collections: string[];
@@ -59,7 +60,7 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
 
-  if (!input.name.trim()) return errResult('Informe o nome do produto.');
+  if (!input.baseName.trim()) return errResult('Informe o nome do produto.');
   if (!Number.isFinite(input.price) || input.price <= 0) return errResult('Informe um preço válido, maior que zero.');
   if (input.promoPrice !== null && (!Number.isFinite(input.promoPrice) || input.promoPrice <= 0)) {
     return errResult('O preço promocional precisa ser um número válido maior que zero.');
@@ -95,8 +96,19 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
 
   const highlights = input.highlights.map((h) => h.trim()).filter(Boolean).slice(0, 8);
 
+  const baseName = input.baseName.trim();
+  const name = composeVariantName(baseName, input.category, {
+    gpu: input.gpu.trim(),
+    cpu: input.cpu.trim(),
+    ram: input.ram,
+    storage: input.storage,
+    screenType: input.screenType,
+    color: input.color.trim(),
+  });
+
   const payload = {
-    name: input.name.trim(),
+    name,
+    base_name: baseName,
     brand_id: brandId,
     category_id: category?.id ?? null,
     price: input.price,
@@ -128,7 +140,7 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
     for (let attempt = 0; attempt < 5 && !productId; attempt++) {
       const { data, error } = await supabase
         .from('products')
-        .insert({ ...payload, sku: generateSku(input.name), active: true, position: nextPosition })
+        .insert({ ...payload, sku: generateSku(name), active: true, position: nextPosition })
         .select('id')
         .single();
       if (!error) {

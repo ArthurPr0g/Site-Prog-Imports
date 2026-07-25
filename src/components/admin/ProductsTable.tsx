@@ -13,6 +13,7 @@ import { useDragReorder } from '@/lib/useDragReorder';
 type Row = {
   id: string;
   name: string;
+  baseName: string;
   sku: string;
   category: string;
   brand: string;
@@ -74,7 +75,7 @@ export function ProductsTable({ products: productsProp, collections }: { product
   function openEdit(p: Row) {
     setEditing({
       id: p.id,
-      name: p.name,
+      baseName: p.baseName,
       sku: p.sku,
       brand: p.brand,
       category: p.category,
@@ -103,7 +104,7 @@ export function ProductsTable({ products: productsProp, collections }: { product
   function openVariant(origin: Row) {
     const rootId = origin.variantOf ?? origin.id;
     setEditing({
-      name: '',
+      baseName: '',
       brand: origin.brand,
       category: origin.category,
       collections: origin.collections,
@@ -238,6 +239,7 @@ export function ProductsTable({ products: productsProp, collections }: { product
         allProducts={products.map((p) => ({
           id: p.id,
           name: p.name,
+          baseName: p.baseName,
           sku: p.sku,
           price: p.price,
           stock: p.stock,

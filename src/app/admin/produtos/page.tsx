@@ -8,6 +8,7 @@ export default async function AdminProductsPage() {
   const rows = products.map((p) => ({
     id: p.id,
     name: p.name,
+    baseName: p.base_name ?? p.name,
     sku: p.sku,
     category: p.categories?.name ?? '',
     brand: p.brands?.name ?? '',

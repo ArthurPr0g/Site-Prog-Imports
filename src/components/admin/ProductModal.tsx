@@ -27,6 +27,7 @@ export type ProductImageData = { id: string; url: string | null; label: string }
 export type SiblingProduct = {
   id: string;
   name: string;
+  baseName: string;
   sku: string;
   price: number;
   stock: number;
@@ -36,7 +37,7 @@ export type SiblingProduct = {
 
 export type ProductModalData = {
   id?: string;
-  name: string;
+  baseName: string;
   sku?: string;
   brand: string;
   category: string;
@@ -60,7 +61,16 @@ export type ProductModalData = {
 };
 
 const inputClass =
-  'rounded-control border border-border-strong bg-input px-4 py-3 text-[13.5px] outline-none focus:border-accent';
+  'w-full rounded-control border border-border-strong bg-input px-4 py-3 text-[13.5px] outline-none focus:border-accent';
+
+function Field({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
+  return (
+    <div className={className}>
+      <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{label}</div>
+      {children}
+    </div>
+  );
+}
 
 const MAX_IMAGES = 8;
 const MAX_IMAGE_MB = 5;
@@ -93,7 +103,7 @@ export function ProductModal({
 }) {
   const [form, setForm] = useState<ProductModalData>(
     initial ?? {
-      name: '',
+      baseName: '',
       brand: '',
       category: CATEGORY_OPTIONS[0],
       collections: [],
@@ -129,21 +139,21 @@ export function ProductModal({
 
   const visibleSpecFields = specFieldsForCategory(form.category);
 
-  // Produto de variação: o nome final é o nome base do produto de origem +
-  // as especificações preenchidas abaixo, então não é digitado à mão.
+  // O nome exibido é sempre o nome base + as especificações preenchidas
+  // abaixo (pra categoria escolhida). Numa variação, o nome base vem do
+  // produto de origem e não é digitado à mão.
   const isVariant = !!form.variantOf;
   const groupId = form.variantOf ?? form.id ?? null;
-  const baseName = isVariant ? allProducts.find((p) => p.id === form.variantOf)?.name ?? '' : '';
-  const composedName = isVariant
-    ? composeVariantName(baseName, form.category, {
-        gpu: form.gpu ?? '',
-        cpu: form.cpu ?? '',
-        ram: form.ram ?? '',
-        storage: form.storage ?? '',
-        screenType: form.screenType ?? '',
-        color: form.color ?? '',
-      })
-    : form.name;
+  const originBaseName = isVariant ? allProducts.find((p) => p.id === form.variantOf)?.baseName ?? '' : '';
+  const effectiveBaseName = isVariant ? originBaseName : form.baseName;
+  const composedName = composeVariantName(effectiveBaseName, form.category, {
+    gpu: form.gpu ?? '',
+    cpu: form.cpu ?? '',
+    ram: form.ram ?? '',
+    storage: form.storage ?? '',
+    screenType: form.screenType ?? '',
+    color: form.color ?? '',
+  });
   const siblingProducts = groupId
     ? allProducts.filter((p) => p.id !== form.id && (p.id === groupId || p.variantOf === groupId))
     : [];
@@ -167,7 +177,7 @@ export function ProductModal({
 
   function save() {
     setError('');
-    if (!isVariant && !form.name.trim()) return setError('Informe o nome do produto.');
+    if (!effectiveBaseName.trim()) return setError('Informe o nome do produto.');
 
     const price = parseFloat(form.price.replace(',', '.'));
     if (!Number.isFinite(price) || price <= 0) return setError('Informe um preço válido, maior que zero.');
@@ -192,7 +202,7 @@ export function ProductModal({
 
     const input: ProductFormInput = {
       id: form.id,
-      name: (isVariant ? composedName : form.name).trim(),
+      baseName: effectiveBaseName.trim(),
       variantOf: form.variantOf ?? null,
       brand: form.brand.trim(),
       category: form.category,
@@ -306,26 +316,50 @@ export function ProductModal({
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {isVariant ? (
-            <div className="sm:col-span-2">
-              <input value={composedName} disabled className={`w-full opacity-70 ${inputClass}`} />
+            <Field label="Nome do produto (gerado automaticamente)" className="sm:col-span-2">
+              <input value={composedName} disabled className={`opacity-70 ${inputClass}`} />
               <div className="mt-1 text-[12px] text-fg-tertiary">
-                Nome gerado automaticamente a partir de &quot;{baseName}&quot; + as especificações preenchidas abaixo.
+                Baseado em &quot;{effectiveBaseName}&quot; + as especificações preenchidas abaixo.
               </div>
-            </div>
+            </Field>
           ) : (
-            <input value={form.name} onChange={set('name')} placeholder="Nome do produto" className={`sm:col-span-2 ${inputClass}`} />
+            <Field label="Nome do produto" className="sm:col-span-2">
+              <input
+                value={form.baseName}
+                onChange={set('baseName')}
+                placeholder="Ex: Alienware Area-51 16 polegadas"
+                className={inputClass}
+              />
+              {composedName !== effectiveBaseName.trim() && (
+                <div className="mt-1 text-[12px] text-fg-tertiary">Nome final: {composedName}</div>
+              )}
+            </Field>
           )}
-          <input value={form.brand} onChange={set('brand')} placeholder="Marca" className={inputClass} />
-          <select value={form.category} onChange={set('category')} className={inputClass}>
-            {CATEGORY_OPTIONS.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-          <input value={form.price} onChange={set('price')} placeholder="Preço (R$)" className={inputClass} />
-          <input value={form.promoPrice} onChange={set('promoPrice')} placeholder="Preço promocional (opcional)" className={inputClass} />
-          <input value={form.stock} onChange={set('stock')} placeholder="Estoque" className={inputClass} />
-          <input value={form.rating ?? ''} onChange={set('rating')} placeholder="Avaliação (0 a 5, ex: 4.9)" className={inputClass} />
-          <input value={form.reviewCount ?? ''} onChange={set('reviewCount')} placeholder="Nº de avaliações" className={inputClass} />
+          <Field label="Marca">
+            <input value={form.brand} onChange={set('brand')} placeholder="Ex: Alienware" className={inputClass} />
+          </Field>
+          <Field label="Categoria">
+            <select value={form.category} onChange={set('category')} className={inputClass}>
+              {CATEGORY_OPTIONS.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Preço (R$)">
+            <input value={form.price} onChange={set('price')} placeholder="0,00" className={inputClass} />
+          </Field>
+          <Field label="Preço promocional (opcional)">
+            <input value={form.promoPrice} onChange={set('promoPrice')} placeholder="Opcional" className={inputClass} />
+          </Field>
+          <Field label="Estoque">
+            <input value={form.stock} onChange={set('stock')} placeholder="0" className={inputClass} />
+          </Field>
+          <Field label="Avaliação (0 a 5)">
+            <input value={form.rating ?? ''} onChange={set('rating')} placeholder="Ex: 4.9" className={inputClass} />
+          </Field>
+          <Field label="Nº de avaliações">
+            <input value={form.reviewCount ?? ''} onChange={set('reviewCount')} placeholder="0" className={inputClass} />
+          </Field>
 
           <div className="sm:col-span-2">
             <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
@@ -363,20 +397,17 @@ export function ProductModal({
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {visibleSpecFields.includes('gpu') && (
-                <input
-                  value={form.gpu ?? ''}
-                  onChange={set('gpu')}
-                  placeholder="Placa de vídeo (ex: RTX 4060)"
-                  className={inputClass}
-                />
+                <Field label="Placa de vídeo">
+                  <input value={form.gpu ?? ''} onChange={set('gpu')} placeholder="Ex: RTX 4060" className={inputClass} />
+                </Field>
               )}
               {visibleSpecFields.includes('cpu') && (
-                <>
+                <Field label="Processador">
                   <input
                     list="cpu-suggestions"
                     value={form.cpu ?? ''}
                     onChange={set('cpu')}
-                    placeholder="Processador (ex: Intel Core i7 (13ª Geração))"
+                    placeholder="Ex: Intel Core i7 (13ª Geração)"
                     className={inputClass}
                   />
                   <datalist id="cpu-suggestions">
@@ -384,39 +415,45 @@ export function ProductModal({
                       <option key={c} value={c} />
                     ))}
                   </datalist>
-                </>
+                </Field>
               )}
               {visibleSpecFields.includes('ram') && (
-                <select value={form.ram ?? ''} onChange={set('ram')} className={inputClass}>
-                  <option value="">Memória RAM (não informado)</option>
-                  {RAM_OPTIONS.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
+                <Field label="Memória RAM">
+                  <select value={form.ram ?? ''} onChange={set('ram')} className={inputClass}>
+                    <option value="">Não informado</option>
+                    {RAM_OPTIONS.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </Field>
               )}
               {visibleSpecFields.includes('storage') && (
-                <select value={form.storage ?? ''} onChange={set('storage')} className={inputClass}>
-                  <option value="">Armazenamento (não informado)</option>
-                  {STORAGE_OPTIONS.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
+                <Field label="Armazenamento">
+                  <select value={form.storage ?? ''} onChange={set('storage')} className={inputClass}>
+                    <option value="">Não informado</option>
+                    {STORAGE_OPTIONS.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </Field>
               )}
               {visibleSpecFields.includes('screenType') && (
-                <select value={form.screenType ?? ''} onChange={set('screenType')} className={inputClass}>
-                  <option value="">Tipo de tela (não informado)</option>
-                  {SCREEN_TYPE_OPTIONS.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
+                <Field label="Tipo de tela">
+                  <select value={form.screenType ?? ''} onChange={set('screenType')} className={inputClass}>
+                    <option value="">Não informado</option>
+                    {SCREEN_TYPE_OPTIONS.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </Field>
               )}
               {visibleSpecFields.includes('color') && (
-                <>
+                <Field label="Cor">
                   <input
                     list="color-suggestions"
                     value={form.color ?? ''}
                     onChange={set('color')}
-                    placeholder="Cor"
+                    placeholder="Ex: Preto"
                     className={inputClass}
                   />
                   <datalist id="color-suggestions">
@@ -424,23 +461,27 @@ export function ProductModal({
                       <option key={c} value={c} />
                     ))}
                   </datalist>
-                </>
+                </Field>
               )}
-              <select value={form.condition ?? CONDITION_OPTIONS[0]} onChange={set('condition')} className={inputClass}>
-                {CONDITION_OPTIONS.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+              <Field label="Estado">
+                <select value={form.condition ?? CONDITION_OPTIONS[0]} onChange={set('condition')} className={inputClass}>
+                  {CONDITION_OPTIONS.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </Field>
             </div>
           </div>
 
-          <textarea
-            value={form.description}
-            onChange={set('description')}
-            placeholder="Descrição do produto…"
-            rows={6}
-            className={`resize-y sm:col-span-2 ${inputClass}`}
-          />
+          <Field label="Descrição" className="sm:col-span-2">
+            <textarea
+              value={form.description}
+              onChange={set('description')}
+              placeholder="Descrição do produto…"
+              rows={6}
+              className={`resize-y ${inputClass}`}
+            />
+          </Field>
 
           <div className="sm:col-span-2">
             {images.length > 0 && (
