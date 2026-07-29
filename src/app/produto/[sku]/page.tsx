@@ -54,12 +54,21 @@ export default async function ProductPage({ params }: { params: Promise<{ sku: s
           <h1 className="mb-2.5 font-display text-[28px] font-bold leading-tight tracking-[-.02em] md:text-[34px]">
             {product.name}
           </h1>
-          <div className="mb-5.5 flex items-center gap-2.5">
+          <div className="mb-5.5 flex flex-wrap items-center gap-2.5">
             <StarRating rating={product.rating} />
             <span className="text-[13px] text-fg-tertiary">
               {product.rating} · {product.review_count} avaliações
             </span>
             <span className="text-[13px] text-fg-tertiary">· SKU {product.sku}</span>
+            {/* Estado de conservação é informação material pra quem compra
+                importado (novo x seminovo x open box) e antes só aparecia
+                embutido no nome do produto. Com o nome limpo, precisa de
+                lugar próprio — aqui, antes do preço. */}
+            {product.condition && (
+              <span className="rounded-full border border-border-strong px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-[.06em] text-fg-secondary">
+                {product.condition}
+              </span>
+            )}
           </div>
 
           <BuyBox
