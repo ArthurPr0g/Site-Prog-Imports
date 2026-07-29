@@ -14,6 +14,12 @@ const RATE_LIMIT_MAX_MESSAGES = 20;
 const MAX_TOOL_ROUNDS = 3;
 const MAX_HISTORY_MESSAGES = 20;
 const MAX_MESSAGE_CHARS = 2000;
+// Menos resultados que antes (era 8) porque agora cada um carrega um trecho da
+// descrição; e mais tokens de saída porque o formato de card ocupa ~8 linhas
+// por produto — com 1024 a segunda sugestão vinha cortada no meio.
+const MAX_SEARCH_RESULTS = 6;
+const MAX_DESCRIPTION_CHARS = 900;
+const MAX_OUTPUT_TOKENS = 2048;
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
@@ -23,10 +29,41 @@ Regras importantes:
 - NUNCA invente produtos, preços, especificações ou disponibilidade. Sempre use a ferramenta buscar_produtos para consultar o catálogo real antes de recomendar qualquer coisa.
 - Se a busca não retornar nada adequado, diga isso com honestidade e sugira ajustar os critérios (categoria, orçamento, uso).
 - Se faltar informação essencial para recomendar bem (orçamento, uso principal: jogos/trabalho/estudo/edição, tamanho de tela, etc.), pergunte antes de buscar.
-- Ao recomendar, cite o nome exato e o preço retornados pela ferramenta, e explique brevemente por que aquele produto se encaixa no pedido.
-- Seja direto, use português do Brasil, e responda em texto simples: NUNCA use markdown (nada de **negrito**, títulos, tabelas ou listas com "-"/"*"), pois a interface exibe o texto cru e os símbolos aparecem literalmente na tela.
-- Quando recomendar mais de um produto, coloque cada um em seu próprio parágrafo, separado por uma linha em branco (\n\n) — nunca liste vários produtos seguidos no mesmo parágrafo.
-- Você não processa pedidos nem pagamentos; se o cliente quiser comprar, oriente a clicar no produto ou usar o carrinho no site.`;
+- Use português do Brasil e seja direto.
+- NUNCA use markdown: nada de **negrito**, # títulos, tabelas, ou listas com "-" ou "*". A interface não renderiza markdown e esses símbolos apareceriam literalmente na tela. A formatação abaixo é a única permitida.
+- Você não processa pedidos nem pagamentos; se o cliente quiser comprar, oriente a clicar no link do produto.
+
+FORMATO DA RECOMENDAÇÃO
+Ao recomendar um produto, use exatamente este molde, uma informação por linha:
+
+💻 [nome do produto]
+📌 Configuração: [configuração técnica]
+✨ Estado: [estado]
+💰 Valor: R$ [preço]
+
+Destaques:
+✔️ [benefício]
+✔️ [benefício]
+
+[url do produto]
+
+Regras do molde:
+- Escolha o emoji da primeira linha conforme a categoria: 💻 notebooks, 📱 celulares, 📲 tablets, 🖥️ monitores, ⌨️ periféricos.
+- "Configuração": use o campo configuracao quando vier preenchido; quando vier null, extraia a configuração de dentro do nome do produto. Se o nome também não trouxer, omita a linha inteira — nunca preencha de memória.
+- "Estado": use exatamente o valor do campo estado.
+- "Valor": formate em reais no padrão brasileiro, com ponto de milhar e duas casas (ex: R$ 3.999,00). Se houver preco_original, escreva "R$ 3.999,00 (de R$ 4.499,00)".
+- "Destaques": de 3 a 5 linhas, cada uma começando com "✔️ ". Extraia os benefícios do campo texto_do_anuncio daquele produto — ele já vem escrito com marcadores "✔️". Reescreva curto se precisar, mas NUNCA invente um benefício que não esteja lá. Se texto_do_anuncio vier null, omita a seção Destaques.
+- Termine o bloco com o campo url em uma linha só (ex: /produto/ABC-123), sem texto em volta — a interface transforma isso em link clicável.
+- Se o produto estiver fora de estoque, acrescente uma linha "⚠️ Sem estoque no momento" antes dos Destaques.
+
+MAIS DE UMA SUGESTÃO
+Separe cada produto com uma linha contendo apenas três hífens:
+
+---
+
+A interface desenha isso como um separador visual. Não numere os produtos.
+
+Fora dos blocos de produto (saudação, perguntas, fechamento) escreva em parágrafos normais, sem emoji de categoria e sem separador.`;
 
 const tools: Anthropic.Tool[] = [
   {
@@ -59,14 +96,52 @@ type SearchProductsInput = {
   preco_minimo?: number;
 };
 
+// A configuração técnica vive em colunas estruturadas em apenas 2 dos 21
+// produtos ativos — no resto ela está embutida no próprio nome. Quando as
+// colunas estão vazias devolvemos null e o modelo extrai do nome, que é dado
+// real do catálogo (nunca invenção).
+function buildConfiguracao(p: {
+  cpu: string | null;
+  ram: string | null;
+  storage: string | null;
+  gpu: string | null;
+}): string | null {
+  const partes = [p.cpu, p.gpu, p.ram, p.storage].map((v) => v?.trim()).filter(Boolean);
+  return partes.length ? partes.join(' + ') : null;
+}
+
+// O campo "Estado" do admin (coluna condition) é a fonte da verdade, por
+// decisão do dono do catálogo — é o campo que ele preenche de propósito.
+// O nome do produto só entra como fallback quando a coluna está vazia,
+// porque hoje 10 dos 21 produtos ainda repetem o estado dentro do nome.
+function resolveEstado(baseName: string, condition: string | null): string {
+  const doCampo = condition?.trim();
+  if (doCampo) return doCampo;
+
+  const nome = baseName.toLowerCase();
+  if (nome.includes('seminovo')) return 'Seminovo';
+  if (nome.includes('open box')) return 'Open Box';
+  return 'Novo';
+}
+
+// O molde do card tem linha própria para o estado, então o nome não precisa
+// repeti-lo. Tirar o sufixo evita o card sair com o nome dizendo "- Seminovo"
+// e a linha de Estado dizendo outra coisa (hoje 10 produtos têm essa
+// divergência entre o nome e o campo Estado do admin).
+function stripEstadoDoNome(nome: string): string {
+  return nome.replace(/\s*[-–]\s*(seminovo|open\s*box|novo)\s*$/i, '').trim();
+}
+
 async function searchProducts(input: SearchProductsInput) {
   const supabase = await createClient();
   let query = supabase
     .from('products')
-    .select('sku, name, price, promo_price, stock, categories(name), brands(name)')
+    .select(
+      'sku, name, base_name, description, condition, cpu, ram, storage, gpu, screen_type, color, price, promo_price, stock, categories(name), brands(name)'
+    )
     .eq('active', true)
     .order('position')
-    .limit(8);
+    .limit(MAX_SEARCH_RESULTS);
 
   if (input.categoria) {
     const { data: category } = await supabase
@@ -89,12 +164,24 @@ async function searchProducts(input: SearchProductsInput) {
   const { data } = await query;
   return (data ?? []).map((p) => ({
     sku: p.sku,
-    nome: p.name,
+    nome: stripEstadoDoNome(p.base_name?.trim() || p.name),
+    nome_completo: p.name,
+    configuracao: buildConfiguracao(p),
+    estado: resolveEstado(p.base_name || p.name, p.condition),
+    tela: p.screen_type?.trim() || null,
+    cor: p.color?.trim() || null,
     preco: Number(p.promo_price ?? p.price),
     preco_original: p.promo_price ? Number(p.price) : null,
     em_estoque: p.stock > 0,
     categoria: p.categories?.name ?? '',
     marca: p.brands?.name ?? '',
+    // Fonte dos destaques: as descrições do catálogo já são escritas com
+    // bullets "✔️ ...", então o modelo copia de um texto real em vez de
+    // inventar benefícios. Truncado para não estourar o contexto (média 2450
+    // caracteres por produto).
+    texto_do_anuncio: p.description
+      ? p.description.replace(/\s+/g, ' ').slice(0, MAX_DESCRIPTION_CHARS)
+      : null,
     url: `/produto/${p.sku}`,
   }));
 }
@@ -157,7 +244,7 @@ export async function POST(req: NextRequest) {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
       const response = await client.messages.create({
         model: MODEL,
-        max_tokens: 1024,
+        max_tokens: MAX_OUTPUT_TOKENS,
         system: SYSTEM_PROMPT,
         tools,
         messages,

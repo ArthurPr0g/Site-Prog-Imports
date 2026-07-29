@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Sparkles, X, Send } from 'lucide-react';
@@ -13,34 +13,101 @@ const GREETING: Message = {
     'Oi! Eu posso te ajudar a escolher o produto ideal no nosso catálogo — me conta o que você procura (categoria, orçamento, uso) que eu busco as melhores opções.',
 };
 
+const PRODUCT_LINK = /(\/produto\/[A-Za-z0-9-]+)/g;
+const BULLET_PREFIX = '✔️';
+const SEPARATOR = /^-{3,}$/;
+
 // Detecta um link de produto tipo /produto/SKU-123 dentro do texto do
 // assistente e transforma em link clicável, já que ele referencia produtos
 // reais retornados pela busca.
-function renderMessageParagraph(paragraph: string, key: number) {
-  const parts = paragraph.split(/(\/produto\/[A-Za-z0-9-]+)/g);
-  return (
-    <p key={key}>
-      {parts.map((part, i) =>
-        part.startsWith('/produto/') ? (
-          <Link key={i} href={part} className="font-bold text-accent underline underline-offset-2">
-            {part}
-          </Link>
-        ) : (
-          <span key={i}>{part}</span>
-        )
-      )}
-    </p>
+function renderInlineLinks(line: string) {
+  return line.split(PRODUCT_LINK).map((part, i) =>
+    part.startsWith('/produto/') ? (
+      <Link key={i} href={part} className="font-bold text-accent underline underline-offset-2">
+        {part}
+      </Link>
+    ) : (
+      <span key={i}>{part}</span>
+    )
   );
 }
 
-// O modelo separa ideias/opções em linhas com quebra própria, mas HTML
-// colapsa "\n" por padrão — sem isso cada resposta vira um bloco só,
-// difícil de ler quando lista mais de uma opção de produto.
+// O modelo responde num micro-formato combinado no system prompt: linhas de
+// ficha do produto, bullets começando com "✔️", e "---" separando sugestões.
+// HTML colapsa "\n", então sem agrupar aqui tudo viraria um bloco corrido —
+// e os marcadores apareceriam como texto solto em vez de lista.
 function renderMessageContent(content: string) {
-  return content
-    .split(/\n+/)
-    .filter((paragraph) => paragraph.trim().length > 0)
-    .map(renderMessageParagraph);
+  const lines = content.split('\n').map((l) => l.trim());
+  const blocks: ReactNode[] = [];
+  let bullets: string[] = [];
+  let textLines: string[] = [];
+
+  const flushBullets = () => {
+    if (!bullets.length) return;
+    blocks.push(
+      <ul key={`ul-${blocks.length}`} className="space-y-1">
+        {bullets.map((b, i) => (
+          <li key={i} className="flex gap-1.5">
+            <span aria-hidden className="flex-shrink-0">
+              {BULLET_PREFIX}
+            </span>
+            <span>{renderInlineLinks(b)}</span>
+          </li>
+        ))}
+      </ul>
+    );
+    bullets = [];
+  };
+
+  // Linhas seguidas viram um grupo compacto (a ficha do produto: nome,
+  // configuração, estado, valor). A separação maior entre grupos vem do
+  // space-y do balão, então aqui o espaçamento interno é curto de propósito.
+  const flushText = () => {
+    if (!textLines.length) return;
+    blocks.push(
+      <div key={`t-${blocks.length}`} className="space-y-0.5">
+        {textLines.map((line, i) => (
+          <p key={i}>{renderInlineLinks(line)}</p>
+        ))}
+      </div>
+    );
+    textLines = [];
+  };
+
+  const flushAll = () => {
+    flushBullets();
+    flushText();
+  };
+
+  for (const line of lines) {
+    // Linha vazia é fronteira de grupo: é o que separa a ficha do produto da
+    // seção de destaques e do texto de fechamento.
+    if (!line) {
+      flushAll();
+      continue;
+    }
+
+    if (line.startsWith(BULLET_PREFIX)) {
+      flushText();
+      // Guarda só o texto: o marcador é desenhado pelo <li>, senão ele
+      // apareceria duplicado.
+      bullets.push(line.slice(BULLET_PREFIX.length).trim());
+      continue;
+    }
+
+    flushBullets();
+
+    if (SEPARATOR.test(line)) {
+      flushText();
+      blocks.push(<hr key={`hr-${blocks.length}`} className="border-border" />);
+      continue;
+    }
+
+    textLines.push(line);
+  }
+
+  flushAll();
+  return blocks;
 }
 
 export function FloatingAssistant() {
