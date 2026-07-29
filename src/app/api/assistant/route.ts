@@ -53,7 +53,7 @@ Regras do molde:
 - "Estado": use exatamente o valor do campo estado.
 - "Valor": formate em reais no padrão brasileiro, com ponto de milhar e duas casas (ex: R$ 3.999,00). Se houver preco_original, escreva "R$ 3.999,00 (de R$ 4.499,00)".
 - "Destaques": de 3 a 5 linhas, cada uma começando com "✔️ ". Extraia os benefícios do campo texto_do_anuncio daquele produto — ele já vem escrito com marcadores "✔️". Reescreva curto se precisar, mas NUNCA invente um benefício que não esteja lá. Se texto_do_anuncio vier null, omita a seção Destaques.
-- Termine o bloco com o campo url em uma linha só (ex: /produto/ABC-123), sem texto em volta — a interface transforma isso em link clicável.
+- Termine o bloco com o campo url em uma linha só (ex: /produto/ABC-123), sem texto em volta — a interface transforma essa linha num botão "Ver produto" que leva à página do produto. Nunca escreva "clique aqui" nem repita a URL no meio de uma frase.
 - Se o produto estiver fora de estoque, acrescente uma linha "⚠️ Sem estoque no momento" antes dos Destaques.
 
 MAIS DE UMA SUGESTÃO
