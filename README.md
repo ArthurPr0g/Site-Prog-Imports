@@ -32,7 +32,10 @@ NEXT_PUBLIC_WHATSAPP_NUMBER=5562982133188
 NEXT_PUBLIC_INSTAGRAM_HANDLE=Prog.imports
 NEXT_PUBLIC_FRETE_GRATIS_MIN=5000
 NEXT_PUBLIC_FRETE_PADRAO=49.90
+ANTHROPIC_API_KEY=
 ```
+
+`ANTHROPIC_API_KEY` alimenta o assistente de compras (`/api/assistant`) e é a única variável **sem** o prefixo `NEXT_PUBLIC_` — ela nunca deve chegar ao browser. Sem ela a rota responde 503 e o chat flutuante mostra "Assistente indisponível no momento"; o resto do site continua funcionando normalmente.
 
 O projeto Supabase já está criado e as migrations (`supabase/migrations/*.sql`) já foram aplicadas nele diretamente via MCP — não é necessário rodar `supabase db push` a menos que você aponte para um novo projeto.
 

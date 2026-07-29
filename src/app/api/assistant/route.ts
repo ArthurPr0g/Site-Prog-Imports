@@ -24,7 +24,8 @@ Regras importantes:
 - Se a busca não retornar nada adequado, diga isso com honestidade e sugira ajustar os critérios (categoria, orçamento, uso).
 - Se faltar informação essencial para recomendar bem (orçamento, uso principal: jogos/trabalho/estudo/edição, tamanho de tela, etc.), pergunte antes de buscar.
 - Ao recomendar, cite o nome exato e o preço retornados pela ferramenta, e explique brevemente por que aquele produto se encaixa no pedido.
-- Seja direto, use português do Brasil, e responda em texto simples (sem markdown pesado como títulos ou tabelas) — poucas frases por parágrafo.
+- Seja direto, use português do Brasil, e responda em texto simples: NUNCA use markdown (nada de **negrito**, títulos, tabelas ou listas com "-"/"*"), pois a interface exibe o texto cru e os símbolos aparecem literalmente na tela.
+- Quando recomendar mais de um produto, coloque cada um em seu próprio parágrafo, separado por uma linha em branco (\n\n) — nunca liste vários produtos seguidos no mesmo parágrafo.
 - Você não processa pedidos nem pagamentos; se o cliente quiser comprar, oriente a clicar no produto ou usar o carrinho no site.`;
 
 const tools: Anthropic.Tool[] = [

@@ -16,17 +16,31 @@ const GREETING: Message = {
 // Detecta um link de produto tipo /produto/SKU-123 dentro do texto do
 // assistente e transforma em link clicável, já que ele referencia produtos
 // reais retornados pela busca.
-function renderMessageContent(content: string) {
-  const parts = content.split(/(\/produto\/[A-Za-z0-9-]+)/g);
-  return parts.map((part, i) =>
-    part.startsWith('/produto/') ? (
-      <Link key={i} href={part} className="font-bold text-accent underline underline-offset-2">
-        {part}
-      </Link>
-    ) : (
-      <span key={i}>{part}</span>
-    )
+function renderMessageParagraph(paragraph: string, key: number) {
+  const parts = paragraph.split(/(\/produto\/[A-Za-z0-9-]+)/g);
+  return (
+    <p key={key}>
+      {parts.map((part, i) =>
+        part.startsWith('/produto/') ? (
+          <Link key={i} href={part} className="font-bold text-accent underline underline-offset-2">
+            {part}
+          </Link>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </p>
   );
+}
+
+// O modelo separa ideias/opções em linhas com quebra própria, mas HTML
+// colapsa "\n" por padrão — sem isso cada resposta vira um bloco só,
+// difícil de ler quando lista mais de uma opção de produto.
+function renderMessageContent(content: string) {
+  return content
+    .split(/\n+/)
+    .filter((paragraph) => paragraph.trim().length > 0)
+    .map(renderMessageParagraph);
 }
 
 export function FloatingAssistant() {
@@ -100,7 +114,7 @@ export function FloatingAssistant() {
             {messages.map((m, i) => (
               <div
                 key={i}
-                className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-[13.5px] leading-snug ${
+                className={`max-w-[85%] space-y-2 rounded-2xl px-4 py-2.5 text-[13.5px] leading-snug ${
                   m.role === 'user'
                     ? 'ml-auto rounded-br-sm bg-accent text-page'
                     : 'mr-auto rounded-bl-sm border border-border bg-card-dark text-fg-secondary'
