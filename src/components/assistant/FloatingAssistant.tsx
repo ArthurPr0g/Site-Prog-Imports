@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Sparkles, X, Send } from 'lucide-react';
+import { Sparkles, X, Send, ArrowRight } from 'lucide-react';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 
@@ -14,6 +14,7 @@ const GREETING: Message = {
 };
 
 const PRODUCT_LINK = /(\/produto\/[A-Za-z0-9-]+)/g;
+const PRODUCT_LINK_ONLY = /^\/produto\/[A-Za-z0-9-]+$/;
 const BULLET_PREFIX = '✔️';
 const SEPARATOR = /^-{3,}$/;
 
@@ -29,6 +30,22 @@ function renderInlineLinks(line: string) {
     ) : (
       <span key={i}>{part}</span>
     )
+  );
+}
+
+// Quando a linha é só o caminho do produto, ela é o call-to-action daquela
+// sugestão — vira um botão com rótulo em vez de exibir a URL crua, que não
+// comunica ao cliente que ali se chega na página do produto.
+function renderProductCta(href: string, key: string) {
+  return (
+    <Link
+      key={key}
+      href={href}
+      className="inline-flex items-center gap-1.5 rounded-full bg-accent/15 px-3.5 py-1.5 text-[12.5px] font-extrabold text-accent transition-colors hover:bg-accent hover:text-page"
+    >
+      Ver produto
+      <ArrowRight size={13} />
+    </Link>
   );
 }
 
@@ -100,6 +117,12 @@ function renderMessageContent(content: string) {
     if (SEPARATOR.test(line)) {
       flushText();
       blocks.push(<hr key={`hr-${blocks.length}`} className="border-border" />);
+      continue;
+    }
+
+    if (PRODUCT_LINK_ONLY.test(line)) {
+      flushText();
+      blocks.push(renderProductCta(line, `cta-${blocks.length}`));
       continue;
     }
 
