@@ -68,12 +68,6 @@ export async function signUpAction(_prev: AuthResult, formData: FormData): Promi
   redirect('/conta');
 }
 
-export async function signOutAction() {
-  try {
-    const supabase = await createClient();
-    await supabase.auth.signOut();
-  } catch {
-    // best-effort: even if this fails, send the user home
-  }
-  redirect('/');
-}
+// O logout vive em app/auth/signout/route.ts (route handler com 303), não
+// aqui: como server action ele limpava os cookies e o Next re-renderizava o
+// segmento /conta na mesma resposta, caindo no error.tsx.
