@@ -52,7 +52,7 @@ function Set2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; rou
           width: 280,
           height: 220,
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(242,135,5,0.16) 0%, rgba(242,135,5,0) 60%)',
+          background: 'radial-gradient(circle, rgb(var(--brand-accent-rgb) / 0.16) 0%, rgb(var(--brand-accent-rgb) / 0) 60%)',
           opacity: mapP,
         }}
       />
@@ -101,11 +101,11 @@ function Set2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; rou
               height: 52,
               borderRadius: 10,
               background: 'rgba(20,21,25,0.9)',
-              border: '1px solid rgba(242,135,5,0.55)',
+              border: '1px solid rgb(var(--brand-accent-rgb) / 0.55)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 0 22px rgba(242,135,5,0.35)',
+              boxShadow: '0 0 22px rgb(var(--brand-accent-rgb) / 0.35)',
             }}
           >
             <img src={src} alt="" style={{ maxWidth: 38, maxHeight: 38 }} />

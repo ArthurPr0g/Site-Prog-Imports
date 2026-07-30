@@ -35,16 +35,16 @@ function Panel3({ p, a, conv, t, i }: { p: Piece; a: number; conv: number; t: nu
         transform: `translate(-50%,-50%) scale(${sc})`,
         opacity: op,
         background: 'rgba(18,19,23,0.82)',
-        border: '1px solid rgba(242,135,5,0.4)',
+        border: '1px solid rgb(var(--brand-accent-rgb) / 0.4)',
         borderRadius: 8,
         padding: '16px 20px',
-        boxShadow: '0 0 34px rgba(242,135,5,0.12), 0 24px 40px rgba(0,0,0,0.5)',
+        boxShadow: '0 0 34px rgb(var(--brand-accent-rgb) / 0.12), 0 24px 40px rgba(0,0,0,0.5)',
       }}
     >
       <div style={{ fontFamily: F.mono, fontSize: 12, letterSpacing: '0.28em', color: C.orange }}>{p.tag}</div>
       <div style={{ fontFamily: F.display, fontWeight: 600, fontSize: 24, color: C.white, margin: '6px 0 2px' }}>{p.name}</div>
       <div style={{ fontFamily: F.body, fontSize: 15, color: C.gray }}>{p.sub}</div>
-      <div style={{ height: 1, background: 'linear-gradient(90deg, rgba(242,135,5,0.7), rgba(242,135,5,0))', marginTop: 12 }} />
+      <div style={{ height: 1, background: 'linear-gradient(90deg, rgb(var(--brand-accent-rgb) / 0.7), rgb(var(--brand-accent-rgb) / 0))', marginTop: 12 }} />
     </div>
   );
 }
@@ -65,7 +65,7 @@ function Set3({ t, flyP, convP, msgP }: { t: number; flyP: number; convP: number
           width: 900,
           height: 640,
           transform: 'translate(-50%,-50%)',
-          background: 'radial-gradient(ellipse, rgba(242,135,5,0.10) 0%, rgba(242,135,5,0) 60%)',
+          background: 'radial-gradient(ellipse, rgb(var(--brand-accent-rgb) / 0.10) 0%, rgb(var(--brand-accent-rgb) / 0) 60%)',
           opacity: Math.max(flyP * 0.7, lapIn),
         }}
       />
@@ -101,7 +101,7 @@ function Set3({ t, flyP, convP, msgP }: { t: number; flyP: number; convP: number
           width: LAP.w,
           height: LAP.w * 0.55,
           transform: 'translate(-50%,-50%)',
-          background: 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(242,135,5,0.5) 30%, rgba(0,0,0,0) 62%)',
+          background: 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgb(var(--brand-accent-rgb) / 0.5) 30%, rgba(0,0,0,0) 62%)',
           opacity: flash * 0.9,
           borderRadius: '50%',
           pointerEvents: 'none',

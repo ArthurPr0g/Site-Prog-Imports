@@ -168,7 +168,7 @@ export function AnimatedHeroBanners() {
               onClick={() => goTo(i)}
               aria-label={`Ir para o banner ${i + 1}`}
               className="h-1.5 rounded-full transition-all"
-              style={{ width: i === active ? 22 : 7, background: i === active ? '#F28705' : 'rgba(245,245,243,.35)' }}
+              style={{ width: i === active ? 22 : 7, background: i === active ? 'var(--color-accent)' : 'rgba(245,245,243,.35)' }}
             />
           ))}
         </div>
