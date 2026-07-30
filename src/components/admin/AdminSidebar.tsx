@@ -86,7 +86,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
                 className="flex items-center gap-3 rounded-xl px-3.5 py-2.75 text-[13.5px] font-bold transition-all hover:text-accent"
-                style={{ background: active ? 'rgba(242,135,5,.1)' : 'transparent', color: active ? '#F28705' : '#a8a8b0' }}
+                style={{
+          background: active ? 'rgb(var(--brand-accent-rgb) / .1)' : 'transparent',
+          color: active ? 'var(--color-accent)' : '#a8a8b0',
+        }}
               >
                 <item.Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={2} />
                 {item.label}
@@ -134,7 +137,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 href={item.href}
                 title={item.label}
                 className="flex items-center gap-3 rounded-xl px-3.5 py-2.75 text-[13.5px] font-bold transition-colors hover:text-accent"
-                style={{ background: active ? 'rgba(242,135,5,.1)' : 'transparent', color: active ? '#F28705' : '#a8a8b0' }}
+                style={{
+          background: active ? 'rgb(var(--brand-accent-rgb) / .1)' : 'transparent',
+          color: active ? 'var(--color-accent)' : '#a8a8b0',
+        }}
               >
                 <item.Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={2} />
                 <AnimatePresence>

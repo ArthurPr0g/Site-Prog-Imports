@@ -252,7 +252,7 @@ export function FloatingAssistant() {
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? 'Fechar assistente' : 'Abrir assistente de compras'}
-        className="fixed bottom-5 right-5 z-100 grid h-14 w-14 place-items-center rounded-full bg-accent text-page shadow-[0_8px_28px_rgba(242,135,5,.4)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_36px_rgba(242,135,5,.55)]"
+        className="fixed bottom-5 right-5 z-100 grid h-14 w-14 place-items-center rounded-full bg-accent text-page shadow-[0_8px_28px_rgb(var(--brand-accent-rgb)/.4)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_36px_rgb(var(--brand-accent-rgb)/.55)]"
       >
         {open ? <X size={22} /> : <Sparkles size={22} />}
       </button>

@@ -21,13 +21,13 @@ export function AuthShell({
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <motion.div
           className="absolute left-1/2 top-[-14%] h-[560px] w-[560px] -translate-x-1/2 rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(242,135,5,.22), transparent 70%)' }}
+          style={{ background: 'radial-gradient(circle, rgb(var(--brand-accent-rgb) / .22), transparent 70%)' }}
           animate={{ scale: [1, 1.15, 1], opacity: [0.55, 0.9, 0.55] }}
           transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
           className="absolute bottom-[-18%] right-[-12%] h-[440px] w-[440px] rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(242,135,5,.14), transparent 70%)' }}
+          style={{ background: 'radial-gradient(circle, rgb(var(--brand-accent-rgb) / .14), transparent 70%)' }}
           animate={{ scale: [1, 1.2, 1], opacity: [0.35, 0.65, 0.35] }}
           transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
         />

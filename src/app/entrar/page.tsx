@@ -40,7 +40,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={pending}
-          className="mt-2 flex items-center justify-center gap-2 rounded-full bg-accent py-3.5 text-[14px] font-extrabold text-page transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(242,135,5,.4)] disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+          className="mt-2 flex items-center justify-center gap-2 rounded-full bg-accent py-3.5 text-[14px] font-extrabold text-page transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgb(var(--brand-accent-rgb)/.4)] disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
         >
           {pending ? 'Entrando…' : (
             <>

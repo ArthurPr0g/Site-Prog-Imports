@@ -84,7 +84,7 @@ export function Gallery({ images, badge }: { images: GalleryImage[]; badge?: str
             key={i}
             onClick={() => setIdx(i)}
             className="stripe-placeholder relative grid h-19 place-items-center overflow-hidden rounded-2xl border p-0 transition-all hover:border-accent"
-            style={{ borderColor: i === idx ? '#F28705' : '#26262b' }}
+            style={{ borderColor: i === idx ? 'var(--color-accent)' : '#26262b' }}
           >
             {img.url ? (
               <Image src={img.url} alt={img.label} fill sizes="90px" className="object-cover" />

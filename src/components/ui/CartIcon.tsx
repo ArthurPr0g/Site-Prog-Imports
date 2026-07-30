@@ -47,7 +47,7 @@ export function CartIcon({ count, className }: { count: number; className?: stri
           width={BOX_SIZE}
           height={BOX_SIZE}
           rx={0.8}
-          fill="#F28705"
+          fill="var(--color-accent)"
           stroke="none"
           className={i < filled ? 'animate-cart-box-pop' : ''}
           style={{ transformOrigin: `${slot.x + BOX_SIZE / 2}px ${slot.y + BOX_SIZE / 2}px`, opacity: i < filled ? 1 : 0 }}

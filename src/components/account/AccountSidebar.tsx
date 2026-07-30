@@ -24,11 +24,14 @@ export function AccountSidebar() {
             key={item.href}
             href={item.href}
             className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-[13.5px] font-bold transition-all hover:text-accent"
-            style={{ background: active ? 'rgba(242,135,5,.1)' : 'transparent', color: active ? '#F28705' : '#a8a8b0' }}
+            style={{
+        background: active ? 'rgb(var(--brand-accent-rgb) / .1)' : 'transparent',
+        color: active ? 'var(--color-accent)' : '#a8a8b0',
+      }}
           >
             <span
               className="grid h-6 w-6 flex-shrink-0 place-items-center rounded-lg font-display text-[11px] font-bold"
-              style={{ background: active ? '#F28705' : '#1c1c21', color: active ? '#0a0a0c' : '#7a7a84' }}
+              style={{ background: active ? 'var(--color-accent)' : '#1c1c21', color: active ? '#0a0a0c' : '#7a7a84' }}
             >
               {item.glyph}
             </span>

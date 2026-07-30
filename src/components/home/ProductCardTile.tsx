@@ -34,7 +34,7 @@ export function ProductCardTile({ p, className }: { p: ProductCard; className?: 
             toggleFavorite(p.id);
           }}
           className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full border border-border-hover bg-page/70 text-xs backdrop-blur-sm hover:border-accent hover:scale-110 sm:right-3 sm:top-3 sm:h-9 sm:w-9 sm:text-[15px]"
-          style={{ color: isFav ? '#F28705' : '#a8a8b0' }}
+          style={{ color: isFav ? 'var(--color-accent)' : '#a8a8b0' }}
         >
           {isFav ? '♥' : '♡'}
         </button>
