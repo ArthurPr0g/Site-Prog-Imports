@@ -6,11 +6,19 @@ import { BRAND } from './brand';
 // preço, no espaço que deveria falar daquele produto. São bons argumentos de
 // venda, só estavam no lugar errado.
 export const STORE_BENEFITS = [
-  'Modelo exclusivo do mercado americano — não vendido no Brasil',
-  `Garantia de 12 meses + suporte pós-venda ${BRAND.name}`,
+  `Suporte pós-venda ${BRAND.name}`,
   'Rastreamento completo da importação, etapa por etapa',
-  'Frete grátis — envio segurado para todo o Brasil',
 ];
+
+// A linha do frete é separada porque depende do preço: anunciar "frete grátis"
+// ao lado de um produto de R$ 3.199 seria impreciso, já que a regra é por total
+// do carrinho e não por produto. Abaixo do mínimo a linha vira informação da
+// condição — que também funciona como incentivo — em vez de sumir.
+export function freteBenefit(precoAtivo: number, minimoFormatado: string): string {
+  return precoAtivo >= FRETE_GRATIS_MIN
+    ? 'Frete grátis — envio segurado para todo o Brasil'
+    : `Frete grátis em compras acima de ${minimoFormatado}`;
+}
 
 export const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '5562982133188';
 export const INSTAGRAM_HANDLE = process.env.NEXT_PUBLIC_INSTAGRAM_HANDLE || 'Prog.imports';

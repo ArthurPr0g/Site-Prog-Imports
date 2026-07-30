@@ -6,7 +6,7 @@ import { formatBRL, formatParcel } from '@/lib/format';
 import { buildWhatsAppLink } from '@/lib/whatsapp';
 import { useCart } from '@/lib/cart-context';
 import { VARIANT_DIM_LABELS, VARIANT_DIM_ORDER, VARIANT_DIM_CANONICAL, sortByCanonicalOrder } from '@/lib/product-specs';
-import { STORE_BENEFITS } from '@/lib/constants';
+import { STORE_BENEFITS, freteBenefit, FRETE_GRATIS_MIN } from '@/lib/constants';
 import { BRAND } from '@/lib/brand';
 import type { ProductCard } from '@/lib/data/catalog';
 
@@ -225,7 +225,7 @@ export function BuyBox({
         <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
           Comprando na {BRAND.name}
         </div>
-        {STORE_BENEFITS.map((b, i) => (
+        {[...STORE_BENEFITS, freteBenefit(activePrice, formatBRL(FRETE_GRATIS_MIN))].map((b, i) => (
           <div key={i}>
             <span className="mr-2 font-extrabold text-accent">✓</span>
             {b}
