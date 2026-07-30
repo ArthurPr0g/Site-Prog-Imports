@@ -4,6 +4,7 @@ import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
 import { CartProvider } from "@/lib/cart-context";
 import { FloatingAssistant } from "@/components/assistant/FloatingAssistant";
+import { BRAND, brandCssVars } from "@/lib/brand";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -24,8 +25,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Prog Imports — Tecnologia Importada Premium",
+  title: `${BRAND.name} — ${BRAND.tagline}`,
   description:
+    process.env.NEXT_PUBLIC_BRAND_DESCRIPTION ||
     "Importação de tecnologia premium direto dos Estados Unidos. MacBooks, iPhones, notebooks gamer e mais, com garantia e atendimento personalizado.",
 };
 
@@ -35,7 +37,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`${spaceGrotesk.variable} ${manrope.variable} ${jetbrainsMono.variable}`}>
+    <html
+      lang="pt-BR"
+      className={`${spaceGrotesk.variable} ${manrope.variable} ${jetbrainsMono.variable}`}
+      style={brandCssVars}
+    >
       <body className="min-h-screen bg-page text-fg font-body antialiased">
         <ToastProvider>
           <CartProvider>

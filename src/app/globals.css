@@ -19,7 +19,9 @@
   --color-fg-faded: #5b5b63;
   --color-fg-muted: #3c3c44;
 
-  --color-accent: #F28705;
+  /* A cor de destaque é a única que muda por loja. O fallback é a cor da Prog
+     Imports: sem a variável de marca definida, nada muda. Ver lib/brand.ts. */
+  --color-accent: var(--brand-accent, #F28705);
   --color-success: #4ade80;
   --color-info: #60a5fa;
   --color-warning: #d9a441;
