@@ -35,6 +35,25 @@ NEXT_PUBLIC_FRETE_PADRAO=49.90
 ANTHROPIC_API_KEY=
 ```
 
+### Identidade da loja (opcional)
+
+Definidas em `src/lib/brand.ts`, todas com o valor da Prog Imports como padrão —
+sem nenhuma delas, o site se comporta como sempre. Servem para que uma loja nova
+seja configuração em vez de fork.
+
+```
+NEXT_PUBLIC_BRAND_NAME=            # padrão: Prog Imports
+NEXT_PUBLIC_BRAND_SHORT_NAME=      # padrão: Prog
+NEXT_PUBLIC_BRAND_TAGLINE=         # padrão: Tecnologia Importada Premium
+NEXT_PUBLIC_BRAND_DESCRIPTION=     # padrão: descrição institucional atual
+NEXT_PUBLIC_BRAND_ACCENT=          # padrão: #F28705 — só hexadecimal
+```
+
+`NEXT_PUBLIC_BRAND_ACCENT` vira a custom property `--brand-accent` no `<html>`, e
+o token `--color-accent` do tema aponta para ela. Valor fora do formato
+hexadecimal é ignorado e cai no padrão. Como são lidas no servidor, mudar a cor
+não exige rebuild — basta redeploy.
+
 `ANTHROPIC_API_KEY` alimenta o assistente de compras (`/api/assistant`) e é a única variável **sem** o prefixo `NEXT_PUBLIC_` — ela nunca deve chegar ao browser. Sem ela a rota responde 503 e o chat flutuante mostra "Assistente indisponível no momento"; o resto do site continua funcionando normalmente.
 
 O projeto Supabase já está criado e as migrations (`supabase/migrations/*.sql`) já foram aplicadas nele diretamente via MCP — não é necessário rodar `supabase db push` a menos que você aponte para um novo projeto.
