@@ -35,7 +35,7 @@ function SetM2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; ro
             width: 280,
             height: 220,
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(242,135,5,0.16) 0%, rgba(242,135,5,0) 60%)',
+            background: 'radial-gradient(circle, rgb(var(--brand-accent-rgb) / 0.16) 0%, rgb(var(--brand-accent-rgb) / 0) 60%)',
             opacity: mapP,
           }}
         />
@@ -82,11 +82,11 @@ function SetM2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; ro
                 height: 44,
                 borderRadius: 9,
                 background: 'rgba(20,21,25,0.9)',
-                border: '1px solid rgba(242,135,5,0.55)',
+                border: '1px solid rgb(var(--brand-accent-rgb) / 0.55)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 0 18px rgba(242,135,5,0.35)',
+                boxShadow: '0 0 18px rgb(var(--brand-accent-rgb) / 0.35)',
               }}
             >
               <img src={src} alt="" style={{ maxWidth: 32, maxHeight: 32 }} />

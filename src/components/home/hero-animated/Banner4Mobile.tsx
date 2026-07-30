@@ -34,7 +34,7 @@ function PkgM({ J }: { J: number }) {
           width: 130,
           height: 130,
           transform: 'translate(-50%,-50%)',
-          background: 'radial-gradient(circle, rgba(242,135,5,0.22) 0%, rgba(242,135,5,0) 60%)',
+          background: 'radial-gradient(circle, rgb(var(--brand-accent-rgb) / 0.22) 0%, rgb(var(--brand-accent-rgb) / 0) 60%)',
         }}
       />
       <div style={{ position: 'relative', width: 50, height: 50, background: 'linear-gradient(160deg, #26272D, #17181C)', borderRadius: 8, border: '1px solid #34363D', boxShadow: '0 14px 22px rgba(0,0,0,0.55)' }}>
@@ -59,7 +59,7 @@ function SetM4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msg
           width: 1600,
           height: 800,
           transform: 'translate(-50%,-50%)',
-          background: 'radial-gradient(ellipse, rgba(242,135,5,0.10) 0%, rgba(0,0,0,0) 60%)',
+          background: 'radial-gradient(ellipse, rgb(var(--brand-accent-rgb) / 0.10) 0%, rgba(0,0,0,0) 60%)',
         }}
       />
 
@@ -155,7 +155,7 @@ function SetM4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msg
                   fontFamily: F.mono,
                   fontSize: 14,
                   color: active ? C.orange : '#5B5D64',
-                  boxShadow: active ? '0 0 18px rgba(242,135,5,0.25)' : 'none',
+                  boxShadow: active ? '0 0 18px rgb(var(--brand-accent-rgb) / 0.25)' : 'none',
                 }}
               >
                 {isCheck ? '✓' : `0${i + 1}`}

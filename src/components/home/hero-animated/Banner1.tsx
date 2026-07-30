@@ -85,7 +85,7 @@ function Set1({
           width: 2400,
           height: 900,
           transform: 'translate(-50%,-50%)',
-          background: 'radial-gradient(ellipse at center, rgba(242,135,5,0.14) 0%, rgba(242,135,5,0.045) 34%, rgba(0,0,0,0) 62%)',
+          background: 'radial-gradient(ellipse at center, rgb(var(--brand-accent-rgb) / 0.14) 0%, rgb(var(--brand-accent-rgb) / 0.045) 34%, rgba(0,0,0,0) 62%)',
           opacity: 0.5 + 0.5 * Math.min(1, titleP),
         }}
       />
@@ -127,7 +127,7 @@ function Set1({
                   height: p.w * 1.5,
                   transform: 'translate(-50%,-50%)',
                   borderRadius: '50%',
-                  background: 'radial-gradient(circle, rgba(242,135,5,0.28) 0%, rgba(242,135,5,0) 60%)',
+                  background: 'radial-gradient(circle, rgb(var(--brand-accent-rgb) / 0.28) 0%, rgb(var(--brand-accent-rgb) / 0) 60%)',
                   opacity: flare,
                 }}
               />

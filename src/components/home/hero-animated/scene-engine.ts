@@ -83,7 +83,7 @@ export const HERO_COLORS = {
   white: '#F5F5F3',
   gray: '#9EA0A8',
   faded: '#5B5D64',
-  orange: '#F28705',
+  orange: 'var(--color-accent)',
   line: '#26272C',
   node: '#1B1C21',
 };

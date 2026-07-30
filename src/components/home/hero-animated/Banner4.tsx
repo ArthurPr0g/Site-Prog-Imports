@@ -43,7 +43,7 @@ function Pkg({ J }: { J: number }) {
           width: 150,
           height: 150,
           transform: 'translate(-50%,-50%)',
-          background: 'radial-gradient(circle, rgba(242,135,5,0.22) 0%, rgba(242,135,5,0) 60%)',
+          background: 'radial-gradient(circle, rgb(var(--brand-accent-rgb) / 0.22) 0%, rgb(var(--brand-accent-rgb) / 0) 60%)',
         }}
       />
       <div style={{ position: 'relative', width: 56, height: 56, background: 'linear-gradient(160deg, #26272D, #17181C)', borderRadius: 8, border: '1px solid #34363D', boxShadow: '0 18px 26px rgba(0,0,0,0.55)' }}>
@@ -62,7 +62,7 @@ function Pkg({ J }: { J: number }) {
           letterSpacing: '0.2em',
           color: C.orange,
           background: 'rgba(14,14,17,0.85)',
-          border: '1px solid rgba(242,135,5,0.35)',
+          border: '1px solid rgb(var(--brand-accent-rgb) / 0.35)',
           borderRadius: 4,
           padding: '6px 12px',
         }}
@@ -87,7 +87,7 @@ function Set4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msgP
           width: 2400,
           height: 800,
           transform: 'translate(-50%,-50%)',
-          background: 'radial-gradient(ellipse, rgba(242,135,5,0.10) 0%, rgba(0,0,0,0) 60%)',
+          background: 'radial-gradient(ellipse, rgb(var(--brand-accent-rgb) / 0.10) 0%, rgba(0,0,0,0) 60%)',
         }}
       />
 
@@ -183,7 +183,7 @@ function Set4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msgP
                   fontFamily: F.mono,
                   fontSize: 14,
                   color: active ? C.orange : '#5B5D64',
-                  boxShadow: active ? '0 0 20px rgba(242,135,5,0.25)' : 'none',
+                  boxShadow: active ? '0 0 20px rgb(var(--brand-accent-rgb) / 0.25)' : 'none',
                 }}
               >
                 {isCheck ? '✓' : `0${i + 1}`}
