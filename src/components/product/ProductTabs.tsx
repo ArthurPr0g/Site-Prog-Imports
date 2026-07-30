@@ -27,7 +27,10 @@ export function ProductTabs({
             key={name}
             onClick={() => setTab(i)}
             className="border-b-2 px-5.5 py-3.5 text-[15px] font-extrabold transition-all"
-            style={{ borderColor: tab === i ? '#F28705' : 'transparent', color: tab === i ? '#f4f4f5' : '#7a7a84' }}
+            style={{
+              borderColor: tab === i ? 'var(--color-accent)' : 'transparent',
+              color: tab === i ? '#f4f4f5' : '#7a7a84',
+            }}
           >
             {name}
           </button>

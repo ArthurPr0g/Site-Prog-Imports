@@ -51,7 +51,7 @@ export function BannerEditor({ banners, initialShowSmallBanners }: { banners: Ba
           role="switch"
           aria-checked={showSmallBanners}
           className="relative h-7 w-13 flex-shrink-0 rounded-full transition-colors"
-          style={{ background: showSmallBanners ? '#F28705' : '#26262b' }}
+          style={{ background: showSmallBanners ? 'var(--color-accent)' : '#26262b' }}
         >
           <span
             className="absolute top-0.5 h-6 w-6 rounded-full bg-white transition-transform"

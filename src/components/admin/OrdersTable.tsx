@@ -30,7 +30,7 @@ export function OrdersTable({ orders, products }: { orders: Row[]; products: Pro
       <div className="mb-4 flex justify-end">
         <button
           onClick={() => setModalOpen(true)}
-          className="rounded-control bg-accent px-5 py-2.75 text-[13.5px] font-extrabold text-page transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(242,135,5,.35)]"
+          className="rounded-control bg-accent px-5 py-2.75 text-[13.5px] font-extrabold text-page transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgb(var(--brand-accent-rgb)/.35)]"
         >
           + Lançar pedido
         </button>

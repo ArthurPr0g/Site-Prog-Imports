@@ -56,7 +56,7 @@ export default async function AccountSummaryPage() {
             </div>
             <Link
               href={`/conta/pedidos/${activeOrder.orderNumber}`}
-              className="rounded-xl bg-accent px-5.5 py-3 text-[13.5px] font-extrabold text-page transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(242,135,5,.4)]"
+              className="rounded-xl bg-accent px-5.5 py-3 text-[13.5px] font-extrabold text-page transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgb(var(--brand-accent-rgb)/.4)]"
             >
               Rastrear pedido
             </Link>
@@ -66,7 +66,14 @@ export default async function AccountSummaryPage() {
               <div
                 key={i}
                 className="h-1.5 flex-1 rounded-full"
-                style={{ background: i < activeOrder.stage ? '#F28705' : i === activeOrder.stage ? 'rgba(242,135,5,.35)' : '#1c1c21' }}
+                style={{
+                  background:
+                    i < activeOrder.stage
+                      ? 'var(--color-accent)'
+                      : i === activeOrder.stage
+                        ? 'rgb(var(--brand-accent-rgb) / .35)'
+                        : '#1c1c21',
+                }}
               />
             ))}
           </div>

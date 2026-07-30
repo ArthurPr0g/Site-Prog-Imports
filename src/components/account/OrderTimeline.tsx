@@ -6,16 +6,17 @@ export function OrderTimeline({ steps }: { steps: Step[] }) {
   return (
     <div className="flex flex-col">
       {steps.map((s, i) => {
-        const dotBg = s.done ? '#F28705' : s.current ? 'rgba(242,135,5,.15)' : '#141418';
-        const dotBorder = s.done || s.current ? '#F28705' : '#26262b';
-        const dotColor = s.done ? '#0a0a0c' : s.current ? '#F28705' : '#5b5b63';
+        const accent = 'var(--color-accent)';
+        const dotBg = s.done ? accent : s.current ? 'rgb(var(--brand-accent-rgb) / .15)' : '#141418';
+        const dotBorder = s.done || s.current ? accent : '#26262b';
+        const dotColor = s.done ? '#0a0a0c' : s.current ? accent : '#5b5b63';
         const titleColor = s.done || s.current ? '#f4f4f5' : '#5b5b63';
         const hasLine = i < steps.length - 1;
         let lineBg = '#26262b';
         if (i < steps.length - 1) {
           const nextDone = steps.length === 10 && steps[9].done; // fully delivered
-          if (s.done) lineBg = '#F28705';
-          else if (s.current) lineBg = nextDone ? '#F28705' : 'linear-gradient(#F28705,#26262b)';
+          if (s.done) lineBg = accent;
+          else if (s.current) lineBg = nextDone ? accent : `linear-gradient(${accent},#26262b)`;
         }
 
         return (

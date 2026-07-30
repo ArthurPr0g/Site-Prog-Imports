@@ -91,9 +91,9 @@ export function BuyBox({
                   const selected = current?.[dim] === value;
                   const target = siblingFor(dim, value);
                   const pillStyle = {
-                    borderColor: selected ? '#F28705' : undefined,
-                    background: selected ? 'rgba(242,135,5,.12)' : undefined,
-                    color: selected ? '#F28705' : undefined,
+                    borderColor: selected ? 'var(--color-accent)' : undefined,
+                    background: selected ? 'rgb(var(--brand-accent-rgb) / .12)' : undefined,
+                    color: selected ? 'var(--color-accent)' : undefined,
                   };
                   if (selected || !target) {
                     return (
@@ -135,7 +135,10 @@ export function BuyBox({
                   key={s.id}
                   href={`/produto/${s.sku}`}
                   className="flex items-center justify-between gap-3 rounded-2xl border bg-card px-4 py-3 text-left text-[13.5px] transition-all hover:border-accent"
-                  style={{ borderColor: selected ? '#F28705' : undefined, background: selected ? 'rgba(242,135,5,.08)' : undefined }}
+                  style={{
+                borderColor: selected ? 'var(--color-accent)' : undefined,
+                background: selected ? 'rgb(var(--brand-accent-rgb) / .08)' : undefined,
+              }}
                 >
                   <span className={selected ? 'font-bold text-fg' : 'text-fg-secondary'}>{s.name}</span>
                   <span className="flex-shrink-0 font-bold text-accent">{formatBRL(sPrice)}</span>
@@ -185,7 +188,7 @@ export function BuyBox({
         <button
           onClick={() => toggleFavorite(productId)}
           className="h-12 w-12 flex-shrink-0 rounded-2xl border border-border-strong bg-card text-lg transition-all hover:border-accent"
-          style={{ color: isFav ? '#F28705' : '#a8a8b0' }}
+          style={{ color: isFav ? 'var(--color-accent)' : '#a8a8b0' }}
         >
           {isFav ? '♥' : '♡'}
         </button>
@@ -198,7 +201,7 @@ export function BuyBox({
           handleBuyClick();
           openCart();
         }}
-        className="mb-3.5 flex items-center justify-center rounded-2xl bg-accent py-3.5 text-[15px] font-extrabold text-page shadow-[0_8px_28px_rgba(242,135,5,.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_36px_rgba(242,135,5,.45)]"
+        className="mb-3.5 flex items-center justify-center rounded-2xl bg-accent py-3.5 text-[15px] font-extrabold text-page shadow-[0_8px_28px_rgb(var(--brand-accent-rgb)/.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_36px_rgb(var(--brand-accent-rgb)/.45)]"
       >
         Comprar agora
       </a>

@@ -28,7 +28,10 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
           >
             <div
               className="pointer-events-none absolute right-0 top-0 h-40 w-40 -translate-y-1/3 translate-x-1/3 rounded-full"
-              style={{ background: 'radial-gradient(circle, rgba(242,135,5,.16) 0%, rgba(242,135,5,0) 70%)' }}
+              style={{
+      background:
+        'radial-gradient(circle, rgb(var(--brand-accent-rgb) / .16) 0%, rgb(var(--brand-accent-rgb) / 0) 70%)',
+    }}
             />
             <div className="stripe-placeholder relative z-1 mb-4 grid h-28 place-items-center rounded-xl border border-border-strong sm:h-32">
               <div className="px-3 text-center font-mono text-[11px] text-fg-faded">[ foto: {slide.image} ]</div>
@@ -44,7 +47,7 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
                   add({ id: slide.id, sku: slide.sku, name: slide.title, price: slide.price });
                   openCart();
                 }}
-                className="flex-shrink-0 rounded-full bg-accent px-4.5 py-2.5 text-[12.5px] font-extrabold text-page shadow-[0_6px_18px_rgba(242,135,5,.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_26px_rgba(242,135,5,.45)]"
+                className="flex-shrink-0 rounded-full bg-accent px-4.5 py-2.5 text-[12.5px] font-extrabold text-page shadow-[0_6px_18px_rgb(var(--brand-accent-rgb)/.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_26px_rgb(var(--brand-accent-rgb)/.45)]"
               >
                 Comprar agora
               </button>

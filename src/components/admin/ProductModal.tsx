@@ -378,9 +378,9 @@ export function ProductModal({
                       onClick={() => toggleCollection(c)}
                       className="rounded-full border px-3.5 py-2 text-[12.5px] font-bold transition-all"
                       style={{
-                        background: checked ? '#F28705' : '#151518',
+                        background: checked ? 'var(--color-accent)' : '#151518',
                         color: checked ? '#0a0a0c' : '#a8a8b0',
-                        borderColor: checked ? '#F28705' : '#26262b',
+                        borderColor: checked ? 'var(--color-accent)' : '#26262b',
                       }}
                     >
                       {c}

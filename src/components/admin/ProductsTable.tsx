@@ -150,7 +150,7 @@ export function ProductsTable({ products: productsProp, collections }: { product
         <ProductImportButton />
         <button
           onClick={openNew}
-          className="rounded-control bg-accent px-5 py-2.75 text-[13.5px] font-extrabold text-page transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(242,135,5,.35)]"
+          className="rounded-control bg-accent px-5 py-2.75 text-[13.5px] font-extrabold text-page transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgb(var(--brand-accent-rgb)/.35)]"
         >
           + Novo produto
         </button>
