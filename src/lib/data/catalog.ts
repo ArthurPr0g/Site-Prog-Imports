@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { resolveHighlights } from '@/lib/product-highlights';
 
 export type ProductCard = {
   id: string;
@@ -246,6 +247,9 @@ export async function getProductBySku(sku: string) {
     brand: product.brands?.name ?? '',
     images: (product.product_images ?? []).sort((a, b) => a.position - b.position),
     specs: (product.product_specs ?? []).sort((a, b) => a.position - b.position),
+    // Sem curadoria no admin, os destaques saem da própria descrição. Derivado
+    // aqui em vez de gravado para não dessincronizar quando a descrição mudar.
+    highlights: resolveHighlights(product.highlights, product.description),
     reviews: product.reviews ?? [],
     siblings,
     related,

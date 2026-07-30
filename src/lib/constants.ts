@@ -1,3 +1,17 @@
+import { BRAND } from './brand';
+
+// Benefícios da loja, não do produto. Antes estes quatro textos eram gravados
+// como "destaques" de cada produto — o formulário do admin os pré-preenchia —
+// então os 21 produtos ativos exibiam exatamente a mesma lista ao lado do
+// preço, no espaço que deveria falar daquele produto. São bons argumentos de
+// venda, só estavam no lugar errado.
+export const STORE_BENEFITS = [
+  'Modelo exclusivo do mercado americano — não vendido no Brasil',
+  `Garantia de 12 meses + suporte pós-venda ${BRAND.name}`,
+  'Rastreamento completo da importação, etapa por etapa',
+  'Frete grátis — envio segurado para todo o Brasil',
+];
+
 export const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '5562982133188';
 export const INSTAGRAM_HANDLE = process.env.NEXT_PUBLIC_INSTAGRAM_HANDLE || 'Prog.imports';
 export const FRETE_GRATIS_MIN = Number(process.env.NEXT_PUBLIC_FRETE_GRATIS_MIN || 5000);
