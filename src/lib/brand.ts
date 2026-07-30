@@ -24,6 +24,20 @@ function parseHexColor(value: string | undefined, fallback: string): string {
   return /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(candidate) ? candidate : fallback;
 }
 
+/** Converte o hex em canais separados ("242 135 5").
+ *
+ *  Necessário porque boa parte do brilho da marca vive em sombras e gradientes
+ *  com alpha — `rgba(242,135,5,.3)`. Só a cor sólida não resolve: é preciso
+ *  compor a mesma cor com opacidades diferentes, e para isso os canais têm que
+ *  estar disponíveis separadamente em CSS. */
+function hexToRgbChannels(hex: string): string {
+  let h = hex.replace('#', '');
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  if (h.length === 8) h = h.slice(0, 6); // descarta alpha: ele vem do uso, não da cor
+  const n = parseInt(h, 16);
+  return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`;
+}
+
 export const BRAND = {
   /** Nome completo, usado em títulos e textos institucionais. */
   name: process.env.NEXT_PUBLIC_BRAND_NAME || 'Prog Imports',
@@ -40,4 +54,5 @@ export const BRAND = {
  *  nenhum componente. */
 export const brandCssVars = {
   '--brand-accent': BRAND.accent,
+  '--brand-accent-rgb': hexToRgbChannels(BRAND.accent),
 } as React.CSSProperties;

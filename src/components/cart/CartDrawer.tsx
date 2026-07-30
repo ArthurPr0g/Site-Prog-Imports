@@ -151,7 +151,7 @@ export function CartDrawer() {
               href={whatsappCheckoutLink}
               target="_blank"
               rel="noreferrer"
-              className="block rounded-2xl bg-accent py-4 text-center text-[15px] font-extrabold text-page shadow-[0_8px_28px_rgba(242,135,5,.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_36px_rgba(242,135,5,.45)]"
+              className="block rounded-2xl bg-accent py-4 text-center text-[15px] font-extrabold text-page shadow-[0_8px_28px_rgb(var(--brand-accent-rgb)/.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_36px_rgb(var(--brand-accent-rgb)/.45)]"
             >
               Finalizar pelo WhatsApp
             </a>

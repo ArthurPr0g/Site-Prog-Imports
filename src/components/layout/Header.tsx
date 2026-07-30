@@ -82,7 +82,7 @@ export function Header({
 
   return (
     <header className="sticky top-3 z-90 mt-3 px-3 sm:px-6">
-      <div className="mx-auto max-w-[1280px] rounded-[28px] border border-accent/25 bg-black/55 px-4 py-3 shadow-[0_0_24px_-6px_rgba(242,135,5,.45),0_20px_50px_rgba(0,0,0,.55)] backdrop-blur-xl sm:px-6 sm:py-3.5">
+      <div className="mx-auto max-w-[1280px] rounded-[28px] border border-accent/25 bg-black/55 px-4 py-3 shadow-[0_0_24px_-6px_rgb(var(--brand-accent-rgb)/.45),0_20px_50px_rgba(0,0,0,.55)] backdrop-blur-xl sm:px-6 sm:py-3.5">
         <div className="flex items-center gap-3 sm:gap-7">
           <button
             onClick={() => setMenuOpen((v) => !v)}
