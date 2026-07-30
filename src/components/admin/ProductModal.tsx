@@ -58,6 +58,7 @@ export type ProductModalData = {
   color?: string;
   condition?: string;
   variantOf?: string | null;
+  exclusiveUs?: boolean;
 };
 
 const inputClass =
@@ -121,6 +122,7 @@ export function ProductModal({
       color: '',
       condition: CONDITION_OPTIONS[0],
       variantOf: null,
+      exclusiveUs: false,
     }
   );
   const [images, setImages] = useState<ProductImageData[]>(initial?.images ?? []);
@@ -221,6 +223,7 @@ export function ProductModal({
       screenType: visibleSpecFields.includes('screenType') ? form.screenType ?? '' : '',
       color: visibleSpecFields.includes('color') ? (form.color ?? '').trim() : '',
       condition: form.condition ?? CONDITION_OPTIONS[0],
+      exclusiveUs: form.exclusiveUs ?? false,
     };
     const wasNew = !form.id;
     startTransition(async () => {
@@ -578,6 +581,40 @@ export function ProductModal({
                 </button>
               </>
             )}
+          </div>
+
+          <div className="sm:col-span-2">
+            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+              Exclusividade
+            </div>
+            <button
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, exclusiveUs: !f.exclusiveUs }))}
+              aria-pressed={!!form.exclusiveUs}
+              className="flex items-center gap-3 rounded-control border px-4 py-3 text-left transition-all"
+              style={{
+                background: form.exclusiveUs ? 'rgb(var(--brand-accent-rgb) / .1)' : '#151518',
+                borderColor: form.exclusiveUs ? 'var(--color-accent)' : '#26262b',
+              }}
+            >
+              <span
+                className="grid h-5 w-5 flex-shrink-0 place-items-center rounded-[6px] border text-[12px] font-extrabold"
+                style={{
+                  background: form.exclusiveUs ? 'var(--color-accent)' : 'transparent',
+                  borderColor: form.exclusiveUs ? 'var(--color-accent)' : '#26262b',
+                  color: '#0a0a0c',
+                }}
+              >
+                {form.exclusiveUs ? '✓' : ''}
+              </span>
+              <span>
+                <span className="block text-[13.5px] font-bold">Exclusivo do mercado americano</span>
+                <span className="block text-[12px] text-fg-tertiary">
+                  Exibe o selo EXCLUSIVO EUA na página. Marque apenas se este modelo não é vendido
+                  oficialmente no Brasil.
+                </span>
+              </span>
+            </button>
           </div>
 
           <div className="sm:col-span-2">

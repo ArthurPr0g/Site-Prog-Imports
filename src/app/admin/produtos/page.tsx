@@ -31,6 +31,7 @@ export default async function AdminProductsPage() {
     color: p.color ?? '',
     condition: p.condition ?? '',
     variantOf: p.variant_of,
+    exclusiveUs: p.exclusive_us ?? false,
   }));
 
   return (

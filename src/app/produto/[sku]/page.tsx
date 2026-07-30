@@ -29,7 +29,10 @@ export default async function ProductPage({ params }: { params: Promise<{ sku: s
     price: p.promoPrice ?? p.price,
   }));
 
-  const isExclusive = product.name.toLowerCase().includes('exclusiv') || product.category === 'Notebook Gamer';
+  // Marcado por produto no admin. Antes era inferido do nome ou da categoria,
+  // o que carimbava "exclusivo" em todo notebook gamer — inclusive nos modelos
+  // que o Brasil também vende.
+  const isExclusive = product.exclusive_us === true;
 
   return (
     <div className="min-h-screen bg-page">

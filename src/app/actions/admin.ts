@@ -54,6 +54,7 @@ export type ProductFormInput = {
   color: string;
   condition: string;
   variantOf: string | null;
+  exclusiveUs: boolean;
 };
 
 export async function saveProductAction(input: ProductFormInput): Promise<ActionResult & { id?: string }> {
@@ -126,6 +127,7 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
     color: input.color.trim(),
     condition: input.condition,
     variant_of: input.variantOf,
+    exclusive_us: input.exclusiveUs,
   };
 
   let productId = input.id;

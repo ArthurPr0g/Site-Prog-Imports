@@ -35,6 +35,7 @@ type Row = {
   screenType: string;
   color: string;
   condition: string;
+  exclusiveUs: boolean;
   variantOf: string | null;
 };
 
@@ -97,6 +98,7 @@ export function ProductsTable({ products: productsProp, collections }: { product
       color: p.color,
       condition: p.condition,
       variantOf: p.variantOf,
+      exclusiveUs: p.exclusiveUs,
     });
     setModalKey((k) => k + 1);
     setModalOpen(true);
@@ -124,6 +126,8 @@ export function ProductsTable({ products: productsProp, collections }: { product
       color: origin.color,
       condition: origin.condition,
       variantOf: rootId,
+      // Variação herda a exclusividade do produto de origem: é o mesmo modelo.
+      exclusiveUs: origin.exclusiveUs,
     });
     setModalKey((k) => k + 1);
     setModalOpen(true);
