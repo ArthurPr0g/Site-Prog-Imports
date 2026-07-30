@@ -75,12 +75,12 @@ function Field({ label, className, children }: { label: string; className?: stri
 const MAX_IMAGES = 8;
 const MAX_IMAGE_MB = 5;
 const MAX_HIGHLIGHTS = 8;
-const DEFAULT_HIGHLIGHTS = [
-  'Modelo exclusivo do mercado americano — não vendido no Brasil',
-  'Garantia de 12 meses + suporte pós-venda Prog Imports',
-  'Rastreamento completo da importação, etapa por etapa',
-  'Frete grátis — envio segurado para todo o Brasil',
-];
+// Sem pré-preenchimento: deixado vazio, o site deriva os destaques da própria
+// descrição do produto. Antes este campo nascia com quatro textos
+// institucionais, e como quase ninguém edita, os 21 produtos ativos exibiam a
+// mesma lista. Esses textos agora são benefícios da loja (STORE_BENEFITS) e
+// aparecem em bloco próprio, abaixo dos destaques do produto.
+const DEFAULT_HIGHLIGHTS: string[] = [];
 
 export function ProductModal({
   open,
@@ -581,8 +581,13 @@ export function ProductModal({
           </div>
 
           <div className="sm:col-span-2">
-            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
-              Destaques (lista de benefícios exibida na página do produto)
+            <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+              Destaques do produto
+            </div>
+            <div className="mb-2 text-[12px] text-fg-tertiary">
+              Deixe vazio para usar automaticamente os itens com ✔️ da descrição. Preencha
+              apenas se quiser sobrescrever. Os benefícios da loja (garantia, frete, rastreamento)
+              já aparecem em bloco próprio e não precisam ser repetidos aqui.
             </div>
             <div className="flex flex-col gap-2">
               {highlights.map((h, i) => (

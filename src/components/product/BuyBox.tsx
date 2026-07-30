@@ -6,6 +6,8 @@ import { formatBRL, formatParcel } from '@/lib/format';
 import { buildWhatsAppLink } from '@/lib/whatsapp';
 import { useCart } from '@/lib/cart-context';
 import { VARIANT_DIM_LABELS, VARIANT_DIM_ORDER, VARIANT_DIM_CANONICAL, sortByCanonicalOrder } from '@/lib/product-specs';
+import { STORE_BENEFITS } from '@/lib/constants';
+import { BRAND } from '@/lib/brand';
 import type { ProductCard } from '@/lib/data/catalog';
 
 type DimKey = (typeof VARIANT_DIM_ORDER)[number];
@@ -205,6 +207,9 @@ export function BuyBox({
       >
         Comprar agora
       </a>
+      {/* Dois blocos distintos de propósito: o de cima fala deste produto, o de
+          baixo fala da loja. Antes os dois eram a mesma lista institucional,
+          repetida em todos os produtos no espaço mais nobre da página. */}
       {highlights.length > 0 && (
         <div className="flex flex-col gap-2.5 rounded-2xl border border-divider-strong bg-card-dark px-5 py-4.5 text-[13.5px] text-fg-secondary">
           {highlights.map((h, i) => (
@@ -215,6 +220,18 @@ export function BuyBox({
           ))}
         </div>
       )}
+
+      <div className="mt-3 flex flex-col gap-2 rounded-2xl border border-divider px-5 py-4 text-[12.5px] text-fg-tertiary">
+        <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+          Comprando na {BRAND.name}
+        </div>
+        {STORE_BENEFITS.map((b, i) => (
+          <div key={i}>
+            <span className="mr-2 font-extrabold text-accent">✓</span>
+            {b}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
