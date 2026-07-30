@@ -528,6 +528,7 @@ export type Database = {
         Row: {
           active: boolean
           base_name: string | null
+          exclusive_us: boolean
           brand_id: string | null
           category_id: string | null
           color: string
@@ -554,6 +555,7 @@ export type Database = {
         Insert: {
           active?: boolean
           base_name?: string | null
+          exclusive_us?: boolean
           brand_id?: string | null
           category_id?: string | null
           color?: string
@@ -580,6 +582,7 @@ export type Database = {
         Update: {
           active?: boolean
           base_name?: string | null
+          exclusive_us?: boolean
           brand_id?: string | null
           category_id?: string | null
           color?: string
