@@ -784,6 +784,90 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_items: {
+        Row: {
+          budget_id: string | null
+          category: string | null
+          created_at: string
+          entry_date: string | null
+          id: string
+          name: string
+          notes: string | null
+          origin: string
+          paid_amount: number
+          photo_url: string | null
+          product_id: string | null
+          product_link: string | null
+          purchase_date: string | null
+          reserved_customer_id: string | null
+          sale_amount: number
+          specs: string | null
+          status: string
+          trade_item_id: string | null
+          updated_at: string
+          usd_rate: number | null
+        }
+        Insert: {
+          budget_id?: string | null
+          category?: string | null
+          created_at?: string
+          entry_date?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          origin?: string
+          paid_amount?: number
+          photo_url?: string | null
+          product_id?: string | null
+          product_link?: string | null
+          purchase_date?: string | null
+          reserved_customer_id?: string | null
+          sale_amount?: number
+          specs?: string | null
+          status?: string
+          trade_item_id?: string | null
+          updated_at?: string
+          usd_rate?: number | null
+        }
+        Update: {
+          budget_id?: string | null
+          category?: string | null
+          created_at?: string
+          entry_date?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          origin?: string
+          paid_amount?: number
+          photo_url?: string | null
+          product_id?: string | null
+          product_link?: string | null
+          purchase_date?: string | null
+          reserved_customer_id?: string | null
+          sale_amount?: number
+          specs?: string | null
+          status?: string
+          trade_item_id?: string | null
+          updated_at?: string
+          usd_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_items_reserved_customer_id_fkey"
+            columns: ["reserved_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_settings: {
         Row: {
           default_delivery_time: string | null
@@ -839,6 +923,10 @@ export type Database = {
     Functions: {
       is_admin: { Args: never; Returns: boolean }
       next_order_number: { Args: never; Returns: number }
+      ready_stock_counts: {
+        Args: never
+        Returns: { product_id: string; qty: number }[]
+      }
       check_assistant_rate_limit: {
         Args: { p_key: string; p_window_seconds: number; p_limit: number }
         Returns: boolean

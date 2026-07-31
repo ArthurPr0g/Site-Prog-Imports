@@ -1,18 +1,44 @@
-import { ModuloPendente } from '@/components/admin/ModuloPendente';
+import { listStockItems } from '@/lib/data/stock';
+import { listCustomers } from '@/lib/data/customers';
+import { getSiteSettings } from '@/lib/data/content';
+import { createClient } from '@/lib/supabase/server';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StockTable } from '@/components/admin/StockTable';
 
-export default function AdminPageEstoque() {
+async function listProductOptions() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('products')
+    .select('id, name, categories(name)')
+    .eq('active', true)
+    .order('name');
+  return (data ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    category: p.categories?.name ?? '',
+  }));
+}
+
+export default async function AdminEstoquePage() {
+  const [items, customers, products, settings] = await Promise.all([
+    listStockItems(),
+    listCustomers(),
+    listProductOptions(),
+    getSiteSettings(),
+  ]);
+
   return (
-    <ModuloPendente
-      titulo="Estoque"
-      subtitulo="Inventário físico de produtos disponíveis para venda"
-      modulo="M2 — Estoque"
-      entrega={[
-        'Cards de indicador: valor total, custo total, vendidos, em transporte',
-        'Tabela com foto, origem, status, cliente reservado, cotação, lucro esperado',
-        'Origens: Manual, Orçamento e Troca',
-        'Proteções de exclusão para item já vendido ou usado em troca',
-      ]}
-      depende="M1 — Clientes e Configurações"
-    />
+    <div>
+      <AdminPageHeader
+        title="Estoque"
+        subtitle="Unidades físicas em mãos — separado do catálogo do site, que trabalha por encomenda"
+      />
+      <StockTable
+        items={items}
+        customers={customers.map((c) => ({ id: c.id, name: c.name }))}
+        products={products}
+        usdRate={settings.usdRate}
+      />
+    </div>
   );
 }
