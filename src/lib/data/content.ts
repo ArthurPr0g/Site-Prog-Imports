@@ -23,6 +23,15 @@ export async function listTestimonials() {
 
 export async function getSiteSettings() {
   const supabase = await createClient();
-  const { data } = await supabase.from('site_settings').select('show_small_banners').maybeSingle();
-  return { showSmallBanners: data?.show_small_banners ?? true };
+  const { data } = await supabase
+    .from('site_settings')
+    .select('show_small_banners, usd_rate, default_delivery_time')
+    .maybeSingle();
+  return {
+    showSmallBanners: data?.show_small_banners ?? true,
+    // Parâmetros do ERP. Cotação nula significa "ainda não configurada" — os
+    // orçamentos precisam recusar o cálculo nesse caso em vez de assumir 1.
+    usdRate: data?.usd_rate !== null && data?.usd_rate !== undefined ? Number(data.usd_rate) : null,
+    defaultDeliveryTime: data?.default_delivery_time ?? '',
+  };
 }

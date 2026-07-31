@@ -204,6 +204,71 @@ export type Database = {
         }
         Relationships: []
       }
+      customers: {
+        Row: {
+          address_line: string | null
+          address_number: string | null
+          cep: string | null
+          city: string | null
+          complement: string | null
+          created_at: string
+          district: string | null
+          doc: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          profile_id: string | null
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          address_line?: string | null
+          address_number?: string | null
+          cep?: string | null
+          city?: string | null
+          complement?: string | null
+          created_at?: string
+          district?: string | null
+          doc?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          profile_id?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address_line?: string | null
+          address_number?: string | null
+          cep?: string | null
+          city?: string | null
+          complement?: string | null
+          created_at?: string
+          district?: string | null
+          doc?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          profile_id?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorites: {
         Row: {
           created_at: string
@@ -721,16 +786,22 @@ export type Database = {
       }
       site_settings: {
         Row: {
+          default_delivery_time: string | null
           id: boolean
           show_small_banners: boolean
+          usd_rate: number | null
         }
         Insert: {
+          default_delivery_time?: string | null
           id?: boolean
           show_small_banners?: boolean
+          usd_rate?: number | null
         }
         Update: {
+          default_delivery_time?: string | null
           id?: boolean
           show_small_banners?: boolean
+          usd_rate?: number | null
         }
         Relationships: []
       }
