@@ -11,26 +11,85 @@ import {
   ClipboardList,
   Users,
   Tag,
-  LayoutGrid,
   Layers,
   GalleryHorizontalEnd,
   Wrench,
   MessageSquareQuote,
+  Briefcase,
+  Wallet,
+  Boxes,
+  BarChart3,
+  FileText,
+  FileSpreadsheet,
+  ArrowLeftRight,
+  HandPlatter,
+  Settings,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 
-const NAV = [
-  { href: '/admin', label: 'Dashboard', Icon: LayoutDashboard },
-  { href: '/admin/produtos', label: 'Produtos', Icon: Package },
-  { href: '/admin/colecoes', label: 'Coleções', Icon: Layers },
-  { href: '/admin/pedidos', label: 'Pedidos', Icon: ClipboardList },
-  { href: '/admin/clientes', label: 'Clientes', Icon: Users },
-  { href: '/admin/cupons', label: 'Cupons', Icon: Tag },
-  { href: '/admin/catalogo', label: 'Catálogo', Icon: LayoutGrid },
-  { href: '/admin/banners', label: 'Banners da home', Icon: GalleryHorizontalEnd },
-  { href: '/admin/servicos', label: 'Serviços', Icon: Wrench },
-  { href: '/admin/depoimentos', label: 'Depoimentos', Icon: MessageSquareQuote },
+type NavItem = { href: string; label: string; Icon: typeof LayoutDashboard };
+type NavGroup = { group: string; items: NavItem[] };
+
+// Agrupado por área de trabalho, não por ordem de criação. "Serviços" aparece
+// duas vezes de propósito: em Loja são os que o visitante vê no site; em
+// Cadastro são os que a Prog presta fora da loja (sites, sistemas, design).
+const NAV: NavGroup[] = [
+  {
+    group: 'Principal',
+    items: [{ href: '/admin', label: 'Dashboard', Icon: LayoutDashboard }],
+  },
+  {
+    group: 'Loja',
+    items: [
+      { href: '/admin/colecoes', label: 'Coleções', Icon: Layers },
+      { href: '/admin/cupons', label: 'Cupons', Icon: Tag },
+      { href: '/admin/banners', label: 'Banners da home', Icon: GalleryHorizontalEnd },
+      { href: '/admin/depoimentos', label: 'Depoimentos', Icon: MessageSquareQuote },
+      { href: '/admin/servicos', label: 'Serviços', Icon: Wrench },
+    ],
+  },
+  {
+    group: 'Cadastro',
+    items: [
+      { href: '/admin/clientes', label: 'Clientes', Icon: Users },
+      { href: '/admin/produtos', label: 'Produtos', Icon: Package },
+      { href: '/admin/servicos-internos', label: 'Serviços', Icon: Briefcase },
+    ],
+  },
+  {
+    group: 'Gestão',
+    items: [
+      { href: '/admin/financeiro', label: 'Financeiro', Icon: Wallet },
+      { href: '/admin/estoque', label: 'Estoque', Icon: Boxes },
+      { href: '/admin/relatorios', label: 'Relatórios', Icon: BarChart3 },
+    ],
+  },
+  {
+    group: 'Operacional',
+    items: [
+      { href: '/admin/orcamentos-loja', label: 'Orçamentos Loja', Icon: FileText },
+      { href: '/admin/orcamentos-servicos', label: 'Orçamentos Serviços', Icon: FileSpreadsheet },
+      { href: '/admin/vendas', label: 'Vendas', Icon: ClipboardList },
+      { href: '/admin/avaliacao-troca', label: 'Avaliação de Troca', Icon: ArrowLeftRight },
+      { href: '/admin/prestacao-servico', label: 'Prestação de Serviço', Icon: HandPlatter },
+    ],
+  },
+  {
+    group: 'Sistema',
+    items: [{ href: '/admin/configuracoes', label: 'Configurações', Icon: Settings }],
+  },
 ];
+
+const ALL_ITEMS = NAV.flatMap((g) => g.items);
+
+// Rotas irmãs precisam de match exato, senão /admin casa com tudo e
+// /admin/servicos ficaria sempre ativo junto de /admin/servicos-internos.
+function isActive(pathname: string, href: string): boolean {
+  if (href === '/admin') return pathname === '/admin';
+  const irmaMaisEspecifica = ALL_ITEMS.some((i) => i.href !== href && i.href.startsWith(href + '-'));
+  if (irmaMaisEspecifica) return pathname === href || pathname.startsWith(href + '/');
+  return pathname === href || pathname.startsWith(href + '/');
+}
 
 const COLLAPSED_WIDTH = 76;
 const EXPANDED_WIDTH = 248;
@@ -78,24 +137,31 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
-          {NAV.map((item) => {
-            const active = item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 rounded-xl px-3.5 py-2.75 text-[13.5px] font-bold transition-all hover:text-accent"
-                style={{
-          background: active ? 'rgb(var(--brand-accent-rgb) / .1)' : 'transparent',
-          color: active ? 'var(--color-accent)' : '#a8a8b0',
-        }}
-              >
-                <item.Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={2} />
-                {item.label}
-              </Link>
-            );
-          })}
+          {NAV.map((grupo) => (
+            <div key={grupo.group} className="mb-1">
+              <div className="px-3.5 pb-1 pt-3 text-[10px] font-extrabold uppercase tracking-[.12em] text-fg-faded">
+                {grupo.group}
+              </div>
+              {grupo.items.map((item) => {
+                const active = isActive(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-3 rounded-xl px-3.5 py-2.75 text-[13.5px] font-bold transition-all hover:text-accent"
+                    style={{
+                      background: active ? 'rgb(var(--brand-accent-rgb) / .1)' : 'transparent',
+                      color: active ? 'var(--color-accent)' : '#a8a8b0',
+                    }}
+                  >
+                    <item.Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={2} />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
         <div className="border-t border-divider-strong px-5 py-4 text-xs text-fg-faded">
           <Link href="/" className="font-bold text-fg-tertiary hover:text-accent">
@@ -129,36 +195,55 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </AnimatePresence>
         </div>
         <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden p-3">
-          {NAV.map((item) => {
-            const active = item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={item.label}
-                className="flex items-center gap-3 rounded-xl px-3.5 py-2.75 text-[13.5px] font-bold transition-colors hover:text-accent"
-                style={{
-          background: active ? 'rgb(var(--brand-accent-rgb) / .1)' : 'transparent',
-          color: active ? 'var(--color-accent)' : '#a8a8b0',
-        }}
-              >
-                <item.Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={2} />
-                <AnimatePresence>
-                  {hovered && (
-                    <motion.span
-                      initial={{ opacity: 0, x: -6 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -6 }}
-                      transition={{ duration: 0.15 }}
-                      className="whitespace-nowrap"
-                    >
-                      {item.label}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </Link>
-            );
-          })}
+          {NAV.map((grupo, i) => (
+            <div key={grupo.group}>
+              {/* Recolhida, a barra não tem largura para o rótulo do grupo — ele
+                  vira um traço, que preserva a separação visual entre as áreas
+                  sem texto cortado. O traço some no primeiro grupo. */}
+              {hovered ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.15 }}
+                  className="whitespace-nowrap px-3.5 pb-1 pt-3 text-[10px] font-extrabold uppercase tracking-[.12em] text-fg-faded"
+                >
+                  {grupo.group}
+                </motion.div>
+              ) : (
+                i > 0 && <div className="mx-3.5 my-2 border-t border-divider-strong" />
+              )}
+              {grupo.items.map((item) => {
+                const active = isActive(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    title={item.label}
+                    className="flex items-center gap-3 rounded-xl px-3.5 py-2.75 text-[13.5px] font-bold transition-colors hover:text-accent"
+                    style={{
+                      background: active ? 'rgb(var(--brand-accent-rgb) / .1)' : 'transparent',
+                      color: active ? 'var(--color-accent)' : '#a8a8b0',
+                    }}
+                  >
+                    <item.Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={2} />
+                    <AnimatePresence>
+                      {hovered && (
+                        <motion.span
+                          initial={{ opacity: 0, x: -6 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -6 }}
+                          transition={{ duration: 0.15 }}
+                          className="whitespace-nowrap"
+                        >
+                          {item.label}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
         <div className="border-t border-divider-strong px-5 py-4 text-xs text-fg-faded">
           <Link href="/" className="flex items-center gap-3 whitespace-nowrap font-bold text-fg-tertiary hover:text-accent">
