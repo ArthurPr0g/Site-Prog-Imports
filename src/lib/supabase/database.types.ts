@@ -784,6 +784,123 @@ export type Database = {
         }
         Relationships: []
       }
+      store_quotes: {
+        Row: {
+          category: string | null
+          created_at: string
+          customer_id: string | null
+          delivery_time: string | null
+          grabr_fee_brl: number
+          grabr_fee_usd: number
+          id: string
+          margin_pct: number
+          name: string
+          notes: string | null
+          payment_method: string | null
+          processing_brl: number
+          processing_usd: number
+          product_id: string | null
+          product_link: string | null
+          product_value_brl: number
+          product_value_usd: number
+          profit_brl: number
+          sale_price_brl: number
+          shipping_brl: number
+          shipping_usd: number
+          specs: string | null
+          status: string
+          tax_brl: number
+          tax_usd: number
+          total_brl: number
+          total_usd: number
+          traveler_fee_brl: number
+          traveler_fee_usd: number
+          updated_at: string
+          usd_rate: number
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          customer_id?: string | null
+          delivery_time?: string | null
+          grabr_fee_brl?: number
+          grabr_fee_usd?: number
+          id?: string
+          margin_pct?: number
+          name: string
+          notes?: string | null
+          payment_method?: string | null
+          processing_brl?: number
+          processing_usd?: number
+          product_id?: string | null
+          product_link?: string | null
+          product_value_brl?: number
+          product_value_usd?: number
+          profit_brl?: number
+          sale_price_brl?: number
+          shipping_brl?: number
+          shipping_usd?: number
+          specs?: string | null
+          status?: string
+          tax_brl?: number
+          tax_usd?: number
+          total_brl?: number
+          total_usd?: number
+          traveler_fee_brl?: number
+          traveler_fee_usd?: number
+          updated_at?: string
+          usd_rate: number
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          customer_id?: string | null
+          delivery_time?: string | null
+          grabr_fee_brl?: number
+          grabr_fee_usd?: number
+          id?: string
+          margin_pct?: number
+          name?: string
+          notes?: string | null
+          payment_method?: string | null
+          processing_brl?: number
+          processing_usd?: number
+          product_id?: string | null
+          product_link?: string | null
+          product_value_brl?: number
+          product_value_usd?: number
+          profit_brl?: number
+          sale_price_brl?: number
+          shipping_brl?: number
+          shipping_usd?: number
+          specs?: string | null
+          status?: string
+          tax_brl?: number
+          tax_usd?: number
+          total_brl?: number
+          total_usd?: number
+          traveler_fee_brl?: number
+          traveler_fee_usd?: number
+          updated_at?: string
+          usd_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_quotes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_quotes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_items: {
         Row: {
           budget_id: string | null
