@@ -465,7 +465,7 @@ export async function updateOrderStatusAction(orderId: string, status: OrderStat
     .update({ status, timeline_stage: STATUS_TO_STAGE[status], updated_at: new Date().toISOString() })
     .eq('id', orderId);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível atualizar o status do pedido.'));
-  revalidatePath('/admin/pedidos');
+  revalidatePath('/admin/vendas');
   revalidatePath('/admin');
   return okResult();
 }
@@ -541,7 +541,7 @@ export async function createOrderAction(input: {
     return errResult('Não foi possível registrar os itens do pedido. Nada foi salvo — tente novamente.');
   }
 
-  revalidatePath('/admin/pedidos');
+  revalidatePath('/admin/vendas');
   revalidatePath('/admin');
   return okResult('Pedido lançado com sucesso.');
 }
@@ -551,7 +551,7 @@ export async function deleteOrderAction(orderId: string): Promise<ActionResult> 
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
   const { error } = await supabase.from('orders').delete().eq('id', orderId);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível excluir o pedido.'));
-  revalidatePath('/admin/pedidos');
+  revalidatePath('/admin/vendas');
   revalidatePath('/admin');
   return okResult('Pedido excluído.');
 }
@@ -606,7 +606,7 @@ export async function addCatalogItemAction(table: CatalogTable, name: string): P
 
   const { error } = await supabase.from(table).insert(payload as never);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível adicionar o item.'));
-  revalidatePath('/admin/catalogo');
+  revalidatePath('/admin/configuracoes');
   revalidatePath('/admin/colecoes');
   return okResult();
 }
@@ -620,7 +620,7 @@ export async function deleteCatalogItemAction(table: CatalogTable, id: string): 
       friendlyDbError(error, 'Não foi possível excluir — verifique se não há produtos usando este item.')
     );
   }
-  revalidatePath('/admin/catalogo');
+  revalidatePath('/admin/configuracoes');
   revalidatePath('/admin/colecoes');
   revalidatePath('/');
   return okResult();
@@ -634,7 +634,7 @@ export async function reorderCatalogItemsAction(table: ReorderableCatalogTable, 
   const results = await Promise.all(orderedIds.map((id, i) => supabase.from(table).update({ position: i }).eq('id', id)));
   const failed = results.find((r) => r.error);
   if (failed?.error) return errResult(friendlyDbError(failed.error, 'Não foi possível salvar a nova ordem.'));
-  revalidatePath('/admin/catalogo');
+  revalidatePath('/admin/configuracoes');
   revalidatePath('/admin/colecoes');
   revalidatePath('/');
   return okResult();
@@ -645,7 +645,7 @@ export async function toggleCategoryActiveAction(id: string, active: boolean): P
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
   const { error } = await supabase.from('categories').update({ active: !active }).eq('id', id);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível atualizar o status da categoria.'));
-  revalidatePath('/admin/catalogo');
+  revalidatePath('/admin/configuracoes');
   revalidatePath('/');
   return okResult();
 }
@@ -775,7 +775,7 @@ async function uploadCoverImageAction(table: CoverImageTable, id: string, formDa
     if (oldPath) await supabase.storage.from(bucket).remove([oldPath]);
   }
 
-  revalidatePath('/admin/catalogo');
+  revalidatePath('/admin/configuracoes');
   revalidatePath('/admin/colecoes');
   revalidatePath('/');
   return okResult('Capa atualizada.');
@@ -796,7 +796,7 @@ async function removeCoverImageAction(table: CoverImageTable, id: string): Promi
     if (oldPath) await supabase.storage.from(bucket).remove([oldPath]);
   }
 
-  revalidatePath('/admin/catalogo');
+  revalidatePath('/admin/configuracoes');
   revalidatePath('/admin/colecoes');
   revalidatePath('/');
   return okResult('Capa removida.');
