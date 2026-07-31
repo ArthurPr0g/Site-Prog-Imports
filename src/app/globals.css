@@ -119,9 +119,16 @@ button[aria-disabled='true'] {
   cursor: not-allowed;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+/* Precisa estar em @layer base: CSS sem layer vence qualquer @layer utilities do
+   Tailwind, independentemente de especificidade. Solto, este `color: inherit`
+   fazia todo link do sistema ignorar classes como `text-accent` ou
+   `text-[#4a4a52]` em silêncio — o estilo simplesmente não aparecia, sem erro
+   nenhum para indicar o motivo. */
+@layer base {
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 }
 
 ::selection {
