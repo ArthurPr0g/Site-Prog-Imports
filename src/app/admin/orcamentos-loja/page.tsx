@@ -1,18 +1,40 @@
-import { ModuloPendente } from '@/components/admin/ModuloPendente';
+import { listStoreQuotes } from '@/lib/data/quotes';
+import { listCustomers } from '@/lib/data/customers';
+import { getSiteSettings } from '@/lib/data/content';
+import { createClient } from '@/lib/supabase/server';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { QuotesTable } from '@/components/admin/QuotesTable';
 
-export default function AdminPageOrcamentosLoja() {
+async function listProductOptions() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('products')
+    .select('id, name, categories(name)')
+    .eq('active', true)
+    .order('name');
+  return (data ?? []).map((p) => ({ id: p.id, name: p.name, category: p.categories?.name ?? '' }));
+}
+
+export default async function AdminOrcamentosLojaPage() {
+  const [quotes, customers, products, settings] = await Promise.all([
+    listStoreQuotes(),
+    listCustomers(),
+    listProductOptions(),
+    getSiteSettings(),
+  ]);
+
   return (
-    <ModuloPendente
-      titulo="Orçamentos Loja"
-      subtitulo="Cotação de compra internacional antes de virar estoque"
-      modulo="M3 — Orçamentos Loja"
-      entrega={[
-        'Motor de cálculo USD→BRL com os 6 componentes de custo',
-        'Cotação oficial vinda de Configurações, com recálculo em massa',
-        'Duplicar, exportar para o cliente e enviar para o estoque',
-        'Badge de adimplência do cliente e PIX parcelado',
-      ]}
-      depende="M1 e M2"
-    />
+    <div>
+      <AdminPageHeader
+        title="Orçamentos Loja"
+        subtitle="Cotação de importação EUA → Brasil, antes de virar estoque"
+      />
+      <QuotesTable
+        quotes={quotes}
+        customers={customers.map((c) => ({ id: c.id, name: c.name }))}
+        products={products}
+        usdRate={settings.usdRate}
+      />
+    </div>
   );
 }
