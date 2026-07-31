@@ -27,7 +27,10 @@ import {
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 
-type NavItem = { href: string; label: string; Icon: typeof LayoutDashboard };
+// `pendente` marca a página que ainda é placeholder do roadmap do ERP. Serve
+// para bater o olho no menu e saber o que falta construir, sem abrir uma por
+// uma — e some sozinho conforme cada módulo é entregue.
+type NavItem = { href: string; label: string; Icon: typeof LayoutDashboard; pendente?: boolean };
 type NavGroup = { group: string; items: NavItem[] };
 
 // Agrupado por área de trabalho, não por ordem de criação. "Serviços" aparece
@@ -53,25 +56,25 @@ const NAV: NavGroup[] = [
     items: [
       { href: '/admin/clientes', label: 'Clientes', Icon: Users },
       { href: '/admin/produtos', label: 'Produtos', Icon: Package },
-      { href: '/admin/servicos-internos', label: 'Serviços', Icon: Briefcase },
+      { href: '/admin/servicos-internos', label: 'Serviços', Icon: Briefcase, pendente: true },
     ],
   },
   {
     group: 'Gestão',
     items: [
-      { href: '/admin/financeiro', label: 'Financeiro', Icon: Wallet },
-      { href: '/admin/estoque', label: 'Estoque', Icon: Boxes },
-      { href: '/admin/relatorios', label: 'Relatórios', Icon: BarChart3 },
+      { href: '/admin/financeiro', label: 'Financeiro', Icon: Wallet, pendente: true },
+      { href: '/admin/estoque', label: 'Estoque', Icon: Boxes, pendente: true },
+      { href: '/admin/relatorios', label: 'Relatórios', Icon: BarChart3, pendente: true },
     ],
   },
   {
     group: 'Operacional',
     items: [
-      { href: '/admin/orcamentos-loja', label: 'Orçamentos Loja', Icon: FileText },
-      { href: '/admin/orcamentos-servicos', label: 'Orçamentos Serviços', Icon: FileSpreadsheet },
+      { href: '/admin/orcamentos-loja', label: 'Orçamentos Loja', Icon: FileText, pendente: true },
+      { href: '/admin/orcamentos-servicos', label: 'Orçamentos Serviços', Icon: FileSpreadsheet, pendente: true },
       { href: '/admin/vendas', label: 'Vendas', Icon: ClipboardList },
-      { href: '/admin/avaliacao-troca', label: 'Avaliação de Troca', Icon: ArrowLeftRight },
-      { href: '/admin/prestacao-servico', label: 'Prestação de Serviço', Icon: HandPlatter },
+      { href: '/admin/avaliacao-troca', label: 'Avaliação de Troca', Icon: ArrowLeftRight, pendente: true },
+      { href: '/admin/prestacao-servico', label: 'Prestação de Serviço', Icon: HandPlatter, pendente: true },
     ],
   },
   {
@@ -81,6 +84,24 @@ const NAV: NavGroup[] = [
 ];
 
 const ALL_ITEMS = NAV.flatMap((g) => g.items);
+
+// Tudo em classe, nada em `style` inline: estilo inline vence classe, e era por
+// isso que o `hover:text-accent` daqui nunca surtia efeito — a cor inline
+// sobrescrevia o hover em silêncio.
+//
+// Três estados visuais distinguíveis de relance: item ativo, item pronto e item
+// ainda por construir (mais apagado que os outros dois).
+const ITEM_BASE =
+  'flex items-center gap-3 rounded-xl px-3.5 py-2.75 text-[13.5px] font-bold transition-colors duration-150 ' +
+  'hover:bg-[rgb(var(--brand-accent-rgb)/.07)] hover:text-accent ' +
+  'active:bg-[rgb(var(--brand-accent-rgb)/.16)]';
+
+function classeDoItem(active: boolean, pendente?: boolean): string {
+  if (active) {
+    return `${ITEM_BASE} bg-[rgb(var(--brand-accent-rgb)/.1)] text-accent${pendente ? ' opacity-75' : ''}`;
+  }
+  return `${ITEM_BASE} ${pendente ? 'text-[#4a4a52]' : 'text-[#a8a8b0]'}`;
+}
 
 // Rotas irmãs precisam de match exato, senão /admin casa com tudo e
 // /admin/servicos ficaria sempre ativo junto de /admin/servicos-internos.
@@ -149,11 +170,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                     key={item.href}
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-3 rounded-xl px-3.5 py-2.75 text-[13.5px] font-bold transition-all hover:text-accent"
-                    style={{
-                      background: active ? 'rgb(var(--brand-accent-rgb) / .1)' : 'transparent',
-                      color: active ? 'var(--color-accent)' : '#a8a8b0',
-                    }}
+                    title={item.pendente ? `${item.label} — ainda não construída` : item.label}
+                    className={classeDoItem(active, item.pendente)}
                   >
                     <item.Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={2} />
                     {item.label}
@@ -218,12 +236,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    title={item.label}
-                    className="flex items-center gap-3 rounded-xl px-3.5 py-2.75 text-[13.5px] font-bold transition-colors hover:text-accent"
-                    style={{
-                      background: active ? 'rgb(var(--brand-accent-rgb) / .1)' : 'transparent',
-                      color: active ? 'var(--color-accent)' : '#a8a8b0',
-                    }}
+                    title={item.pendente ? `${item.label} — ainda não construída` : item.label}
+                    className={classeDoItem(active, item.pendente)}
                   >
                     <item.Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={2} />
                     <AnimatePresence>
