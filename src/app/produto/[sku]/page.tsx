@@ -11,6 +11,7 @@ import { BuyBox } from '@/components/product/BuyBox';
 import { ProductTabs } from '@/components/product/ProductTabs';
 import { RelatedProducts } from '@/components/product/RelatedProducts';
 import { StarRating } from '@/components/ui/Price';
+import { ReadyToShipBadge } from '@/components/ui/ReadyToShipBadge';
 
 export default async function ProductPage({ params }: { params: Promise<{ sku: string }> }) {
   const { sku } = await params;
@@ -33,6 +34,11 @@ export default async function ProductPage({ params }: { params: Promise<{ sku: s
   // o que carimbava "exclusivo" em todo notebook gamer — inclusive nos modelos
   // que o Brasil também vende.
   const isExclusive = product.exclusive_us === true;
+
+  // O próprio produto está entre os "siblings" (o grupo de variações inclui a
+  // origem), então dá para reaproveitar o dado já carregado em vez de uma
+  // consulta nova só para saber se há unidade em mãos.
+  const readyToShip = product.siblings.some((s) => s.id === product.id && s.readyToShip);
 
   return (
     <div className="min-h-screen bg-page">
@@ -72,6 +78,9 @@ export default async function ProductPage({ params }: { params: Promise<{ sku: s
                 {product.condition}
               </span>
             )}
+            {/* Só aparece com unidade física disponível. Sem ele o produto
+                continua à venda, por encomenda — a ausência não é indisponibilidade. */}
+            {readyToShip && <ReadyToShipBadge />}
           </div>
 
           <BuyBox

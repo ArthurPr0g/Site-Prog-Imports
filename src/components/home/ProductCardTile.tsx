@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { PlaceholderImage } from '@/components/ui/PlaceholderImage';
+import { ReadyToShipBadge } from '@/components/ui/ReadyToShipBadge';
 import { GlowBorder, glowMouseMove, glowMouseLeave } from '@/components/ui/GlowBorder';
 import { formatBRL, formatParcel } from '@/lib/format';
 import { useCart } from '@/lib/cart-context';
@@ -23,11 +24,16 @@ export function ProductCardTile({ p, className }: { p: ProductCard; className?: 
       <GlowBorder />
       <Link href={href} className="relative block h-[130px] sm:h-[210px]">
         <PlaceholderImage label={p.image} src={p.imageUrl} className="h-full" textClassName="hidden sm:block text-xs" sizes="(min-width: 640px) 280px, 50vw" />
-        {hasPromo && (
-          <div className="absolute left-2 top-2 rounded-full bg-accent px-2 py-0.5 text-[9px] font-extrabold tracking-[.06em] text-page sm:left-3.5 sm:top-3.5 sm:px-2.5 sm:py-1 sm:text-[11px]">
-            PROMOÇÃO
-          </div>
-        )}
+        {/* Promoção e pronta entrega empilham no mesmo canto: um produto pode
+            ter os dois, e sobrepor esconderia informação de venda. */}
+        <div className="absolute left-2 top-2 flex flex-col items-start gap-1 sm:left-3.5 sm:top-3.5">
+          {hasPromo && (
+            <div className="rounded-full bg-accent px-2 py-0.5 text-[9px] font-extrabold tracking-[.06em] text-page sm:px-2.5 sm:py-1 sm:text-[11px]">
+              PROMOÇÃO
+            </div>
+          )}
+          {p.readyToShip && <ReadyToShipBadge compact />}
+        </div>
         <button
           onClick={(e) => {
             e.preventDefault();

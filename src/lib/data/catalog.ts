@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { resolveHighlights } from '@/lib/product-highlights';
+import { getReadyStockCounts } from '@/lib/data/stock';
 
 export type ProductCard = {
   id: string;
@@ -21,6 +22,10 @@ export type ProductCard = {
   color: string;
   condition: string;
   variantOf: string | null;
+  /** Existe unidade física em mãos para este produto (estoque do ERP com status
+   *  Disponível). Diferente de `stock`, que é do catálogo: a loja trabalha por
+   *  encomenda e o produto continua à venda mesmo sem unidade pronta. */
+  readyToShip: boolean;
 };
 
 export async function listActiveProducts(): Promise<ProductCard[]> {
@@ -37,6 +42,8 @@ export async function listActiveProducts(): Promise<ProductCard[]> {
     .order('position');
 
   if (error || !data) return [];
+
+  const prontaEntrega = await getReadyStockCounts();
 
   return data.map((p) => {
     const images = (p.product_images ?? []).sort((a, b) => a.position - b.position);
@@ -60,6 +67,7 @@ export async function listActiveProducts(): Promise<ProductCard[]> {
       color: p.color ?? '',
       condition: p.condition ?? '',
       variantOf: p.variant_of,
+      readyToShip: (prontaEntrega.get(p.id) ?? 0) > 0,
     };
   });
 }
@@ -117,6 +125,8 @@ export async function getCollectionById(id: string) {
 
   if (error || !data) return { ...collection, products: [] as ProductCard[] };
 
+  const prontaEntrega = await getReadyStockCounts();
+
   const products = data.map((p) => {
     const images = (p.product_images ?? []).sort((a, b) => a.position - b.position);
     return {
@@ -139,6 +149,7 @@ export async function getCollectionById(id: string) {
       color: p.color ?? '',
       condition: p.condition ?? '',
       variantOf: p.variant_of,
+      readyToShip: (prontaEntrega.get(p.id) ?? 0) > 0,
     };
   });
 
@@ -173,6 +184,8 @@ export async function getProductBySku(sku: string) {
     .or(`id.eq.${groupId},variant_of.eq.${groupId}`)
     .eq('active', true);
 
+  const prontaEntrega = await getReadyStockCounts();
+
   const siblings: ProductCard[] = (groupRows ?? []).map((p) => {
     const images = (p.product_images ?? []).sort((a, b) => a.position - b.position);
     return {
@@ -195,6 +208,7 @@ export async function getProductBySku(sku: string) {
       color: p.color ?? '',
       condition: p.condition ?? '',
       variantOf: p.variant_of,
+      readyToShip: (prontaEntrega.get(p.id) ?? 0) > 0,
     };
   });
   const siblingIds = new Set(siblings.map((s) => s.id));
@@ -235,6 +249,7 @@ export async function getProductBySku(sku: string) {
           color: '',
           condition: '',
           variantOf: null,
+          readyToShip: (prontaEntrega.get(p.id) ?? 0) > 0,
         };
       });
   }
