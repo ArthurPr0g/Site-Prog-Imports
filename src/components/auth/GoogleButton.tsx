@@ -38,7 +38,14 @@ export function GoogleButton({ next, label }: { next?: string; label: string }) 
     if (next) redirectTo.searchParams.set('next', next);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: redirectTo.toString() },
+      options: {
+        redirectTo: redirectTo.toString(),
+        // Sem isto o Google reaproveita em silêncio a conta já logada no
+        // navegador: quem entrou com a conta errada não consegue trocar, porque
+        // sair do site não encerra a sessão do Google. `select_account` força a
+        // tela de escolha em toda tentativa de login.
+        queryParams: { prompt: 'select_account' },
+      },
     });
     if (error) {
       setError('Não foi possível continuar com o Google. Tente novamente.');
