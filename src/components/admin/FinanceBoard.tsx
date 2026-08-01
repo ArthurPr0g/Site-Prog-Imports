@@ -173,7 +173,7 @@ export function FinanceBoard({ entries }: { entries: FinanceEntry[] }) {
     if (!form) return;
     startTransition(async () => {
       const result = await saveFinanceEntryAction(form);
-      toast(result.message);
+      toast(result);
       if (result.ok) setForm(null);
     });
   }
@@ -193,7 +193,7 @@ export function FinanceBoard({ entries }: { entries: FinanceEntry[] }) {
     if (!window.confirm(`Excluir "${e.description}"?`)) return;
     startTransition(async () => {
       const result = await deleteFinanceEntryAction(e.id);
-      toast(result.message);
+      toast(result);
     });
   }
 
