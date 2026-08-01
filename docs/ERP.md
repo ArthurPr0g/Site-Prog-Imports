@@ -20,7 +20,7 @@ Serviços, extraída de um sistema Flask anterior).
 | M2 | Estoque + selo de pronta entrega | **Pronto** | `/admin/estoque` |
 | M3 | Orçamentos Loja + cotação automática | **Pronto** | `/admin/orcamentos-loja` |
 | M4 | Vendas | Pendente | `/admin/vendas` |
-| M5 | Financeiro | Pendente | `/admin/financeiro` |
+| M5 | Financeiro (livro-caixa) | **Pronto** | `/admin/financeiro` |
 | M6 | Serviços (cadastro) + Prestação | Pendente | `/admin/servicos-internos`, `/admin/prestacao-servico` |
 | M7 | Orçamentos Serviços | Pendente | `/admin/orcamentos-servicos` |
 | M8 | Avaliação de Troca | Pendente | `/admin/avaliacao-troca` |
@@ -95,8 +95,18 @@ público; os de **Cadastro** são os que a Prog presta fora dela (criação de
 sites, sistemas, design) e nunca aparecem no site.
 
 **Orçamento de Serviços.** Proposta para os serviços internos. Quando aprovado,
-o dono muda o status e isso **reflete no Financeiro**. Atenção ao risco de
-contagem dupla se a mesma entrega também virar Prestação de Serviço.
+**vira uma Prestação de Serviço**, e é a Prestação que lança no Financeiro —
+uma receita só. Espelha o fluxo da loja (orçamento → estoque → venda) e elimina
+a contagem dupla por construção, não por disciplina.
+
+Campos definidos pelo dono: **vários serviços por orçamento**, com valores
+separados e somados no total. **Sem validade** de proposta. **Prazo por
+serviço**, somados ao final. Forma de pagamento **não** entra no orçamento — é
+pedida no momento da aprovação, junto das demais informações necessárias.
+
+**Serviços internos (M6).** O dono preenche título, descrição, valor, prazo e
+categoria. É esse cadastro que alimenta o Orçamento de Serviços, com o valor
+ajustável na proposta.
 
 **Relatórios.** Dados brutos das tabelas macro (vendas, estoque, orçamentos,
 financeiro, clientes), com filtro por período e exportação.
@@ -143,6 +153,49 @@ congelada e cliente; exclusão com item vinculado foi recusada.
 
 ---
 
+## Financeiro (M5) — regras confirmadas
+
+Uma tabela só, `finance_entries`, com `kind` = `receita` | `despesa`. Os dois
+lados têm os mesmos campos e todo relatório precisa deles juntos e ordenados por
+data — duas tabelas obrigariam a um `UNION` em toda consulta.
+
+`status` = `Pago` | `Previsto`, com padrão **Previsto** (parcela e conta a pagar
+são o caso mais frequente). Só o que está `Pago` entra no **resultado real** e no
+**gráfico de fluxo de caixa**; o previsto aparece na segunda linha de
+indicadores. Na tela, receita `Pago` é rotulada **Recebido** — quem recebe não
+"pagou" nada. O dado guardado é o mesmo; a diferença é só de linguagem
+(`rotuloStatus` em `lib/finance.ts`).
+
+`source` = `manual` | `venda` | `servico`. Lançamento gerado por venda ou
+serviço **não pode ser excluído pela tela do Financeiro**: o registro de origem
+continuaria afirmando que houve dinheiro e o caixa discordaria. A ação recusa e
+manda ajustar a origem. `reference_id` aponta para o registro de origem, sem FK
+porque aponta para tabelas diferentes conforme o `source` (e M4/M6 ainda não
+existem). `installment_id` agrupa as parcelas de um mesmo lançamento.
+
+**Filtro de período** com prioridade fixa, para dois filtros preenchidos ao mesmo
+tempo nunca darem resultado ambíguo: `tudo` > `ano` (com `mês` opcional dentro) >
+`mês` no ano corrente > datas manuais. O padrão é do dia 1º do mês corrente até
+hoje. Os campos se anulam na tela — escolher ano desmarca "Tudo" —, senão o
+usuário mexe num filtro e o resultado não muda, sem explicação.
+
+**Datas são dias de calendário, não instantes.** `toISOString()` converte para
+UTC antes de cortar, o que no Brasil devolve o dia anterior para qualquer horário
+antes das 21h; no dia 1º de cada mês isso fazia o período padrão começar no mês
+errado. `lib/finance.ts` monta as datas pelos componentes locais.
+
+**Ressalva sobre "resultado".** Enquanto M4 e M6 não existem, resultado é receita
+menos despesa. Quando existirem, a receita de venda precisa entrar pelo **lucro**
+e não pelo faturamento — senão o preço cheio conta como ganho, o custo de
+aquisição some da conta e o resultado infla. Lançamento manual continua entrando
+integral: quem lança R$ 500 recebidos e não lança o custo está declarando que não
+houve custo.
+
+Testado em `scratchpad/test-finance.mjs` antes da UI (21 asserções: prioridade do
+filtro, fevereiro bissexto, virada de mês às 00h, indicadores, fluxo mensal).
+
+---
+
 ## Botão "Gerar Venda" (pedido, ainda não construído)
 
 Cada orçamento deve ganhar um botão que faz de uma vez o que hoje seria manual:
@@ -158,12 +211,10 @@ conversam: se o fluxo inteiro roda num clique, a integração está certa.
 ## Em aberto
 
 1. **Confirmação de vínculo no cadastro do site** (M1, não implementado).
-2. **Orçamento de Serviços aprovado gera Prestação automaticamente?** Ou só
-   lança no Financeiro? Risco de contagem dupla.
-3. **Proteções de exclusão do estoque** (item vendido, item usado em troca)
+2. **Proteções de exclusão do estoque** (item vendido, item usado em troca)
    dependem de M4 e M8 — o `deleteStockItemAction` já tem o lugar marcado.
-4. **Variável de ambiente para esconder o ERP** em lojas de cliente.
-5. **Prazo de entrega, forma de pagamento e PIX parcelado** ficaram fora do
+3. **Variável de ambiente para esconder o ERP** em lojas de cliente.
+4. **Prazo de entrega, forma de pagamento e PIX parcelado** ficaram fora do
    formulário de orçamento por decisão do dono, mas as colunas existem no banco
    (`delivery_time`, `payment_method`). Sem forma de pagamento, o orçamento
    exportado não comunica condições ao cliente, e o "prazo padrão" configurado

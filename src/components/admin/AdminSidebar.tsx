@@ -62,7 +62,7 @@ const NAV: NavGroup[] = [
   {
     group: 'Gestão',
     items: [
-      { href: '/admin/financeiro', label: 'Financeiro', Icon: Wallet, pendente: true },
+      { href: '/admin/financeiro', label: 'Financeiro', Icon: Wallet },
       { href: '/admin/estoque', label: 'Estoque', Icon: Boxes },
       { href: '/admin/relatorios', label: 'Relatórios', Icon: BarChart3, pendente: true },
     ],

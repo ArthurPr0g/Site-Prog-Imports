@@ -302,6 +302,48 @@ export type Database = {
           },
         ]
       }
+      finance_entries: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          entry_date: string
+          id: string
+          installment_id: string | null
+          kind: string
+          reference_id: string | null
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          entry_date?: string
+          id?: string
+          installment_id?: string | null
+          kind: string
+          reference_id?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          entry_date?: string
+          id?: string
+          installment_id?: string | null
+          kind?: string
+          reference_id?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       newsletter_subscribers: {
         Row: {
           created_at: string

@@ -1,18 +1,17 @@
-import { ModuloPendente } from '@/components/admin/ModuloPendente';
+import { listFinanceEntries, primeiraMovimentacao } from '@/lib/data/finance';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { FinanceBoard } from '@/components/admin/FinanceBoard';
 
-export default function AdminPageFinanceiro() {
+export default async function AdminFinanceiroPage() {
+  const [entries, primeiraData] = await Promise.all([listFinanceEntries(), primeiraMovimentacao()]);
+
   return (
-    <ModuloPendente
-      titulo="Financeiro"
-      subtitulo="Livro-caixa consolidado de receitas e despesas"
-      modulo="M5 — Financeiro"
-      entrega={[
-        'Lançamentos automáticos de vendas e serviços, mais lançamentos manuais',
-        'Receita e despesa, real e prevista, por período',
-        'Lucro líquido calculado sobre o lucro real, não sobre o faturamento',
-        'Gráfico de fluxo de caixa mensal',
-      ]}
-      depende="M4 — Vendas"
-    />
+    <div>
+      <AdminPageHeader
+        title="Financeiro"
+        subtitle="Livro-caixa de receitas e despesas — lançamentos manuais e o que vier de vendas e serviços"
+      />
+      <FinanceBoard entries={entries} primeiraData={primeiraData} />
+    </div>
   );
 }
