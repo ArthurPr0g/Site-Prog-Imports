@@ -272,6 +272,16 @@ soma de valores e prazos, virada de mês/ano e fevereiro bissexto na entrega, as
 seis combinações de status × pagamento no lançamento, canceladas fora dos
 indicadores).
 
+Verificado em produção (2026-08-01): escolher do catálogo copiou nome, valor e
+prazo; dois serviços (R$ 4.500 / 20d + R$ 1.200,50 / 7d) deram total
+R$ 5.700,50 e entrega em 28/08 — soma, não máximo; serviço inativo ficou fora do
+seletor; o Financeiro recebeu **uma** receita na data de entrega. Marcar
+Recebido virou a mesma linha para Pago **sem duplicar**; Cancelada removeu o
+lançamento e manteve os itens; voltar para Em andamento o recriou — a sincronia
+é idempotente. Excluir serviço em uso foi recusado com ✕ e a orientação de
+desativar; excluir a prestação levou lançamento e itens junto. Dados de teste
+removidos ao final, incluindo o catálogo, que é do dono para preencher.
+
 ---
 
 ## Botão "Gerar Venda" (pedido, ainda não construído)
@@ -288,6 +298,11 @@ teste de que os módulos conversam: se o fluxo inteiro roda num clique, a
 integração está certa. Ao lançar no caixa, lembrar da ressalva do M5 — a receita
 de venda entra pelo **lucro**, não pelo faturamento.
 
+O M6 já resolveu o equivalente do lado dos serviços e serve de molde:
+`sincronizarFinanceiroDaPrestacao` em `lib/data/service-orders.ts` mostra a
+forma — um lançamento por registro de origem, sincronizado a cada salvamento e
+removido junto com a origem.
+
 ## Em aberto
 
 1. **Confirmação de vínculo no cadastro do site** (M1, não implementado).
@@ -299,7 +314,9 @@ de venda entra pelo **lucro**, não pelo faturamento.
    (`delivery_time`, `payment_method`). Sem forma de pagamento, o orçamento
    exportado não comunica condições ao cliente, e o "prazo padrão" configurado
    no M1 segue sem uso.
-5. **Parcelamento no Financeiro.** A coluna `installment_id` existe para agrupar
+5. **Ordenação do catálogo de serviços.** A coluna `position` existe mas a tela
+   ainda não permite reordenar; hoje a lista sai por `position` e depois nome.
+6. **Parcelamento no Financeiro.** A coluna `installment_id` existe para agrupar
    as parcelas de um mesmo lançamento, mas nada na tela cria parcelas ainda —
    hoje o usuário lançaria uma linha por parcela na mão.
 6. **`toast` com resultado da ação** foi corrigido no Financeiro; as demais telas
