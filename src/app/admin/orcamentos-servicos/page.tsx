@@ -1,17 +1,27 @@
-import { ModuloPendente } from '@/components/admin/ModuloPendente';
+import { listServiceQuotes } from '@/lib/data/service-quotes';
+import { listInternalServices } from '@/lib/data/internal-services';
+import { listCustomers } from '@/lib/data/customers';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { ServiceQuotesTable } from '@/components/admin/ServiceQuotesTable';
 
-export default function AdminPageOrcamentosServicos() {
+export default async function AdminOrcamentosServicosPage() {
+  const [quotes, services, customers] = await Promise.all([
+    listServiceQuotes(),
+    listInternalServices(),
+    listCustomers(),
+  ]);
+
   return (
-    <ModuloPendente
-      titulo="Orçamentos Serviços"
-      subtitulo="Propostas de serviços que não aparecem no site público"
-      modulo="M7 — Orçamentos Serviços"
-      entrega={[
-        'Proposta para serviços como criação de sites, sistemas e design',
-        'Escopo, valores e condições',
-        'Conversão em prestação de serviço quando aprovado',
-      ]}
-      depende="M6 — Serviços e Prestação"
-    />
+    <div>
+      <AdminPageHeader
+        title="Orçamentos de Serviços"
+        subtitle="Propostas dos serviços internos. Ao ser aprovado, o orçamento vira uma Prestação — e é ela que lança no Financeiro."
+      />
+      <ServiceQuotesTable
+        quotes={quotes}
+        services={services}
+        customers={customers.map((c) => ({ id: c.id, name: c.name }))}
+      />
+    </div>
   );
 }

@@ -4,8 +4,33 @@
 export const SERVICE_ORDER_STATUSES = ['Em andamento', 'Concluída', 'Cancelada'] as const;
 export const SERVICE_PAYMENT_STATUSES = ['Previsto', 'Recebido'] as const;
 
+/** Espelha o fluxo da loja. 'Convertido em Prestação' é estado final atingido
+ *  pela conversão, nunca escolhido à mão no formulário — senão o orçamento
+ *  diria que virou prestação sem que nenhuma exista. */
+export const SERVICE_QUOTE_STATUSES = [
+  'Em elaboração',
+  'Enviado',
+  'Aguardando Cliente',
+  'Aprovado',
+  'Convertido em Prestação',
+  'Reprovado',
+] as const;
+
 export type ServiceOrderStatus = (typeof SERVICE_ORDER_STATUSES)[number];
 export type ServicePaymentStatus = (typeof SERVICE_PAYMENT_STATUSES)[number];
+export type ServiceQuoteStatus = (typeof SERVICE_QUOTE_STATUSES)[number];
+
+/** Status que o dono escolhe no formulário. A conversão é a única porta para
+ *  'Convertido em Prestação'. */
+export const SERVICE_QUOTE_STATUSES_EDITAVEIS = SERVICE_QUOTE_STATUSES.filter(
+  (s) => s !== 'Convertido em Prestação'
+);
+
+/** Só orçamento aprovado vira prestação. Antes disso não há acordo com o
+ *  cliente, e converter criaria trabalho a executar que ninguém contratou. */
+export function podeConverterEmPrestacao(status: ServiceQuoteStatus): boolean {
+  return status === 'Aprovado';
+}
 
 export type InternalService = {
   id: string;
@@ -25,6 +50,21 @@ export type ServiceOrderItem = {
   description: string;
   amount: number;
   leadTimeDays: number;
+};
+
+export type ServiceQuote = {
+  id: string;
+  customerId: string | null;
+  customerName: string;
+  title: string;
+  notes: string;
+  status: ServiceQuoteStatus;
+  totalAmount: number;
+  leadTimeDays: number;
+  createdAt: string;
+  /** Prestação gerada a partir deste orçamento, se já houve conversão. */
+  orderId: string | null;
+  items: ServiceOrderItem[];
 };
 
 export type ServiceOrder = {
@@ -130,6 +170,36 @@ export function computeServiceIndicators(orders: ServiceOrder[]): ServiceIndicat
       .filter((o) => o.paymentStatus === 'Recebido')
       .reduce((s, o) => s + o.totalAmount, 0),
     receitaPrevista: vivas.reduce((s, o) => s + o.totalAmount, 0),
+  };
+}
+
+export type ServiceQuoteIndicators = {
+  emAberto: number;
+  aprovados: number;
+  valorEmAberto: number;
+  valorAprovado: number;
+};
+
+/** Indicadores dos orçamentos.
+ *
+ *  "Em aberto" é o que ainda pode virar sim: elaboração, enviado e aguardando.
+ *  Reprovado e já convertido saem da conta — o primeiro morreu, o segundo já é
+ *  prestação e contá-lo aqui somaria o mesmo dinheiro duas vezes no painel.
+ *
+ *  "Aprovado" conta só o que está aprovado e AINDA NÃO convertido: é a fila de
+ *  trabalho a converter. Zero aqui com orçamentos aprovados na lista significa
+ *  que todos já viraram prestação. */
+export function computeServiceQuoteIndicators(quotes: ServiceQuote[]): ServiceQuoteIndicators {
+  const emAberto = quotes.filter((q) =>
+    ['Em elaboração', 'Enviado', 'Aguardando Cliente'].includes(q.status)
+  );
+  const aprovados = quotes.filter((q) => q.status === 'Aprovado');
+
+  return {
+    emAberto: emAberto.length,
+    aprovados: aprovados.length,
+    valorEmAberto: emAberto.reduce((s, q) => s + q.totalAmount, 0),
+    valorAprovado: aprovados.reduce((s, q) => s + q.totalAmount, 0),
   };
 }
 

@@ -71,7 +71,7 @@ const NAV: NavGroup[] = [
     group: 'Operacional',
     items: [
       { href: '/admin/orcamentos-loja', label: 'Orçamentos Loja', Icon: FileText },
-      { href: '/admin/orcamentos-servicos', label: 'Orçamentos Serviços', Icon: FileSpreadsheet, pendente: true },
+      { href: '/admin/orcamentos-servicos', label: 'Orçamentos Serviços', Icon: FileSpreadsheet },
       { href: '/admin/vendas', label: 'Vendas', Icon: ClipboardList },
       { href: '/admin/avaliacao-troca', label: 'Avaliação de Troca', Icon: ArrowLeftRight, pendente: true },
       { href: '/admin/prestacao-servico', label: 'Prestação de Serviço', Icon: HandPlatter },

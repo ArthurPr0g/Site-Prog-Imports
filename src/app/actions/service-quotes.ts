@@ -1,0 +1,239 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { createClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/auth';
+import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
+import {
+  totalizarItens,
+  calcularEntrega,
+  podeConverterEmPrestacao,
+  SERVICE_QUOTE_STATUSES,
+  type ServiceOrderItem,
+  type ServiceQuoteStatus,
+} from '@/lib/services';
+import { sincronizarFinanceiroDaPrestacao } from '@/lib/data/service-orders';
+
+export type ServiceQuoteInput = {
+  id?: string;
+  customerId: string | null;
+  title: string;
+  notes: string;
+  status: ServiceQuoteStatus;
+  items: ServiceOrderItem[];
+};
+
+/** O que só é perguntado na aprovação, nunca no orçamento (decisão do dono). */
+export type ConversaoInput = {
+  quoteId: string;
+  paymentMethod: string;
+  startDate: string;
+};
+
+async function adminClient() {
+  const admin = await requireAdmin();
+  if (!admin) return null;
+  return createClient();
+}
+
+function revalidar() {
+  revalidatePath('/admin/orcamentos-servicos');
+  revalidatePath('/admin/prestacao-servico');
+  revalidatePath('/admin/financeiro');
+}
+
+export async function saveServiceQuoteAction(input: ServiceQuoteInput): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  const title = input.title.trim();
+  if (!title) return errResult('Informe o título do orçamento.');
+  if (!SERVICE_QUOTE_STATUSES.includes(input.status)) return errResult('Status inválido.');
+
+  const itens = input.items.filter((i) => i.name.trim());
+  if (itens.length === 0) return errResult('Adicione ao menos um serviço ao orçamento.');
+  if (itens.some((i) => !Number.isFinite(i.amount) || i.amount < 0)) {
+    return errResult('Todos os valores precisam ser números iguais ou maiores que zero.');
+  }
+
+  // Orçamento já convertido é histórico: mexer nele faria a proposta divergir
+  // da prestação que dela nasceu, e o cliente tem a versão antiga em mãos.
+  if (input.id) {
+    const { data: atual } = await supabase
+      .from('service_quotes')
+      .select('status')
+      .eq('id', input.id)
+      .maybeSingle();
+
+    if (atual?.status === 'Convertido em Prestação') {
+      return errResult(
+        'Este orçamento já virou prestação e não pode mais ser alterado. Ajuste a prestação em vez dele.'
+      );
+    }
+  }
+
+  const { total, prazoDias } = totalizarItens(itens);
+
+  const payload = {
+    customer_id: input.customerId,
+    title,
+    notes: input.notes.trim(),
+    status: input.status,
+    total_amount: total,
+    lead_time_days: prazoDias,
+    updated_at: new Date().toISOString(),
+  };
+
+  let quoteId = input.id;
+
+  if (quoteId) {
+    const { error } = await supabase.from('service_quotes').update(payload).eq('id', quoteId);
+    if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar o orçamento.'));
+    await supabase.from('service_quote_items').delete().eq('quote_id', quoteId);
+  } else {
+    const { data, error } = await supabase.from('service_quotes').insert(payload).select('id').single();
+    if (error || !data) return errResult(friendlyDbError(error, 'Não foi possível criar o orçamento.'));
+    quoteId = data.id;
+  }
+
+  const { error: erroItens } = await supabase.from('service_quote_items').insert(
+    itens.map((i, indice) => ({
+      quote_id: quoteId,
+      internal_service_id: i.internalServiceId,
+      name: i.name.trim(),
+      description: i.description.trim(),
+      amount: i.amount,
+      lead_time_days: Number.isFinite(i.leadTimeDays) ? i.leadTimeDays : 0,
+      position: indice,
+    }))
+  );
+  if (erroItens) return errResult(friendlyDbError(erroItens, 'O orçamento foi salvo, mas os serviços não.'));
+
+  revalidar();
+  return okResult(input.id ? 'Orçamento atualizado.' : 'Orçamento criado.');
+}
+
+export async function deleteServiceQuoteAction(id: string): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  // Prestação já criada aponta para este orçamento. Apagar aqui deixaria o
+  // trabalho em execução sem rastro do que foi acordado e por quanto.
+  const { data: vinculada } = await supabase
+    .from('service_orders')
+    .select('id')
+    .eq('quote_id', id)
+    .limit(1)
+    .maybeSingle();
+
+  if (vinculada) {
+    return errResult(
+      'Este orçamento já virou prestação. Exclua a prestação primeiro — isso reabre o orçamento para nova conversão.'
+    );
+  }
+
+  const { error } = await supabase.from('service_quotes').delete().eq('id', id);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível excluir o orçamento.'));
+
+  revalidar();
+  return okResult('Orçamento excluído.');
+}
+
+/** Converte o orçamento aprovado numa Prestação de Serviço.
+ *
+ *  Espelha `sendQuoteToStockAction` da loja. Os itens são COPIADOS, não
+ *  movidos: o orçamento continua sendo o registro do que foi proposto, e a
+ *  prestação passa a ser o do que está sendo executado. Editar uma não mexe na
+ *  outra, que é o que permite comparar prometido com entregue.
+ *
+ *  Quem lança no Financeiro é a prestação, nunca o orçamento — é assim que a
+ *  contagem dupla fica impedida por construção. */
+export async function convertServiceQuoteAction(input: ConversaoInput): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  if (!input.startDate) return errResult('Informe a data de início da execução.');
+
+  const { data: q } = await supabase
+    .from('service_quotes')
+    .select('*, service_quote_items(*)')
+    .eq('id', input.quoteId)
+    .single();
+
+  if (!q) return errResult('Não foi possível ler o orçamento.');
+
+  if (q.status === 'Convertido em Prestação') {
+    return errResult('Este orçamento já foi convertido em prestação.');
+  }
+  if (!podeConverterEmPrestacao(q.status as ServiceQuoteStatus)) {
+    return errResult('Só orçamento aprovado vira prestação. Marque como Aprovado antes de converter.');
+  }
+
+  const itens = (q.service_quote_items ?? []) as {
+    internal_service_id: string | null;
+    name: string;
+    description: string;
+    amount: number;
+    lead_time_days: number;
+    position: number;
+  }[];
+
+  if (itens.length === 0) return errResult('Este orçamento não tem serviços para converter.');
+
+  const prazoDias = itens.reduce((s, i) => s + i.lead_time_days, 0);
+
+  const { data: order, error: erroOrder } = await supabase
+    .from('service_orders')
+    .insert({
+      customer_id: q.customer_id,
+      quote_id: q.id,
+      title: q.title,
+      notes: q.notes,
+      status: 'Em andamento',
+      // Nasce como Previsto: aprovar é acordo, não recebimento. O dono marca
+      // Recebido na prestação quando o dinheiro entra.
+      payment_status: 'Previsto',
+      payment_method: input.paymentMethod.trim(),
+      total_amount: q.total_amount,
+      lead_time_days: prazoDias,
+      start_date: input.startDate,
+      due_date: calcularEntrega(input.startDate, prazoDias),
+    })
+    .select('id')
+    .single();
+
+  if (erroOrder || !order) {
+    return errResult(friendlyDbError(erroOrder, 'Não foi possível criar a prestação.'));
+  }
+
+  const { error: erroItens } = await supabase.from('service_order_items').insert(
+    itens
+      .sort((a, b) => a.position - b.position)
+      .map((i, indice) => ({
+        order_id: order.id,
+        internal_service_id: i.internal_service_id,
+        name: i.name,
+        description: i.description,
+        amount: i.amount,
+        lead_time_days: i.lead_time_days,
+        position: indice,
+      }))
+  );
+  if (erroItens) {
+    return errResult('A prestação foi criada, mas os serviços não vieram junto. Ajuste na tela de Prestação.');
+  }
+
+  await sincronizarFinanceiroDaPrestacao(order.id);
+
+  const { error: erroStatus } = await supabase
+    .from('service_quotes')
+    .update({ status: 'Convertido em Prestação', updated_at: new Date().toISOString() })
+    .eq('id', q.id);
+
+  if (erroStatus) {
+    return errResult('A prestação foi criada, mas o status do orçamento não mudou. Ajuste manualmente.');
+  }
+
+  revalidar();
+  return okResult('Prestação criada e orçamento marcado como convertido.');
+}

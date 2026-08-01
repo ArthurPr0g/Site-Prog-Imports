@@ -22,7 +22,7 @@ Serviços, extraída de um sistema Flask anterior).
 | M4 | Vendas | Pendente | `/admin/vendas` |
 | M5 | Financeiro (livro-caixa) | **Pronto** | `/admin/financeiro` |
 | M6 | Serviços (cadastro) + Prestação | **Pronto** | `/admin/servicos-internos`, `/admin/prestacao-servico` |
-| M7 | Orçamentos Serviços | Pendente | `/admin/orcamentos-servicos` |
+| M7 | Orçamentos Serviços | **Pronto** | `/admin/orcamentos-servicos` |
 | M8 | Avaliação de Troca | Pendente | `/admin/avaliacao-troca` |
 | M9 | Relatórios | Pendente | `/admin/relatorios` |
 
@@ -281,6 +281,50 @@ lançamento e manteve os itens; voltar para Em andamento o recriou — a sincron
 é idempotente. Excluir serviço em uso foi recusado com ✕ e a orientação de
 desativar; excluir a prestação levou lançamento e itens junto. Dados de teste
 removidos ao final, incluindo o catálogo, que é do dono para preencher.
+
+---
+
+## Orçamentos de Serviços (M7) — regras confirmadas
+
+`service_quotes` + `service_quote_items`. Espelha o fluxo da loja: lá é
+orçamento → estoque → venda, aqui é **orçamento → prestação**.
+
+**O orçamento nunca toca no Financeiro.** É proposta, não dinheiro. Quem lança é
+a prestação, e só ela — a contagem dupla fica impedida por construção, não por
+disciplina.
+
+Status: `Em elaboração` → `Enviado` → `Aguardando Cliente` → `Aprovado` →
+`Convertido em Prestação`, com `Reprovado` como saída negativa. **`Convertido em
+Prestação` não aparece no seletor**: é atingido pela conversão, nunca escolhido à
+mão, senão o orçamento diria que virou prestação sem que nenhuma exista.
+
+**Só orçamento aprovado converte.** Antes disso não há acordo com o cliente, e
+converter criaria trabalho a executar que ninguém contratou.
+
+**Sem validade e sem forma de pagamento** no orçamento (decisão do dono). Forma
+de pagamento e data de início são pedidas **no momento da conversão**, e vivem na
+prestação.
+
+**Os itens são copiados na conversão, não movidos.** O orçamento continua sendo o
+registro do que foi proposto; a prestação passa a ser o do que está sendo
+executado. Editar uma não mexe na outra — é isso que permite comparar prometido
+com entregue.
+
+**A prestação nasce `Em andamento` / pagamento `Previsto`.** Aprovar é acordo,
+não recebimento; o dono marca Recebido quando o dinheiro entra.
+
+Orçamento já convertido **não pode mais ser editado nem excluído**: mexer nele
+faria a proposta divergir da prestação que dela nasceu, e o cliente tem a versão
+antiga em mãos. Excluir a prestação reabre o orçamento para nova conversão.
+
+Nos indicadores, "em aberto" é o que ainda pode virar sim (elaboração, enviado,
+aguardando); "aprovado" conta só o que ainda **não** foi convertido — é a fila de
+trabalho. Convertido sai das duas contas: já aparece em Prestação, e contá-lo
+aqui somaria o mesmo dinheiro duas vezes no painel.
+
+Regras testadas em `scratchpad/test-service-quotes.mjs` (19 asserções: quem pode
+converter, o status fora do seletor, e os convertidos/reprovados fora dos
+indicadores).
 
 ---
 

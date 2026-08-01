@@ -1114,6 +1114,98 @@ export type Database = {
           },
         ]
       }
+      service_quote_items: {
+        Row: {
+          amount: number
+          description: string
+          id: string
+          internal_service_id: string | null
+          lead_time_days: number
+          name: string
+          position: number
+          quote_id: string
+        }
+        Insert: {
+          amount?: number
+          description?: string
+          id?: string
+          internal_service_id?: string | null
+          lead_time_days?: number
+          name: string
+          position?: number
+          quote_id: string
+        }
+        Update: {
+          amount?: number
+          description?: string
+          id?: string
+          internal_service_id?: string | null
+          lead_time_days?: number
+          name?: string
+          position?: number
+          quote_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_quote_items_internal_service_id_fkey"
+            columns: ["internal_service_id"]
+            isOneToOne: false
+            referencedRelation: "internal_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "service_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_quotes: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          id: string
+          lead_time_days: number
+          notes: string
+          status: string
+          title: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          lead_time_days?: number
+          notes?: string
+          status?: string
+          title: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          lead_time_days?: number
+          notes?: string
+          status?: string
+          title?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_quotes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_orders: {
         Row: {
           created_at: string
@@ -1169,6 +1261,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_orders_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "service_quotes"
             referencedColumns: ["id"]
           },
         ]
