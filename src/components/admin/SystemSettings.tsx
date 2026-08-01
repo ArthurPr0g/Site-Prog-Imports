@@ -13,14 +13,26 @@ export function SystemSettings({
   usdRate,
   usdRateSpread,
   defaultDeliveryTime,
+  contractorName,
+  contractorDoc,
+  contractorRole,
+  contractForum,
 }: {
   usdRate: number | null;
   usdRateSpread: number;
   defaultDeliveryTime: string;
+  contractorName: string;
+  contractorDoc: string;
+  contractorRole: string;
+  contractForum: string;
 }) {
   const [cotacao, setCotacao] = useState(usdRate !== null ? String(usdRate) : '');
   const [taxa, setTaxa] = useState(String(usdRateSpread));
   const [prazo, setPrazo] = useState(defaultDeliveryTime);
+  const [contratado, setContratado] = useState(contractorName);
+  const [documento, setDocumento] = useState(contractorDoc);
+  const [cargo, setCargo] = useState(contractorRole);
+  const [foro, setForo] = useState(contractForum);
   const [origem, setOrigem] = useState('');
   const [pending, startTransition] = useTransition();
   const toast = useToast();
@@ -42,8 +54,12 @@ export function SystemSettings({
         usdRate: cotacao.trim() === '' ? null : parseNumeroBR(cotacao),
         usdRateSpread: parseNumeroBR(taxa),
         defaultDeliveryTime: prazo,
+        contractorName: contratado,
+        contractorDoc: documento,
+        contractorRole: cargo,
+        contractForum: foro,
       });
-      toast(result.message);
+      toast(result);
       if (result.ok) setOrigem('');
     });
   }
@@ -113,10 +129,66 @@ export function SystemSettings({
         a Prog. O valor entra no campo para conferência, mas só passa a valer depois de salvar.
       </div>
 
+      <div className="mt-7 border-t border-divider pt-6">
+        <div className="mb-1 text-[15px] font-extrabold">Dados para contratos</div>
+        <div className="mb-4 text-[12.5px] text-fg-tertiary">
+          Saem no rodapé e na assinatura do PDF de proposta. Ficam aqui, e não no código, porque o repositório
+          do projeto é <strong>público</strong> — CPF em arquivo versionado fica exposto para sempre, inclusive
+          no histórico.
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+              Nome do contratado
+            </div>
+            <input
+              value={contratado}
+              onChange={(e) => setContratado(e.target.value)}
+              placeholder="Nome completo de quem assina"
+              className={`w-full ${inputClass}`}
+            />
+          </div>
+          <div>
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+              CPF / CNPJ
+            </div>
+            <input
+              value={documento}
+              onChange={(e) => setDocumento(e.target.value)}
+              placeholder="000.000.000-00"
+              className={`w-full ${inputClass}`}
+            />
+          </div>
+          <div>
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+              Qualificação
+            </div>
+            <input
+              value={cargo}
+              onChange={(e) => setCargo(e.target.value)}
+              placeholder="Ex: Pessoa Física, desenvolvedor de websites"
+              className={`w-full ${inputClass}`}
+            />
+          </div>
+          <div>
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+              Foro (comarca)
+            </div>
+            <input
+              value={foro}
+              onChange={(e) => setForo(e.target.value)}
+              placeholder="Ex: Goiânia – GO"
+              className={`w-full ${inputClass}`}
+            />
+          </div>
+        </div>
+      </div>
+
       <button
         onClick={salvar}
         disabled={pending}
-        className="mt-4 rounded-control bg-accent px-6 py-2.5 text-[13.5px] font-extrabold text-page disabled:opacity-60"
+        className="mt-5 rounded-control bg-accent px-6 py-2.5 text-[13.5px] font-extrabold text-page disabled:opacity-60"
       >
         {pending ? 'Salvando…' : 'Salvar parâmetros'}
       </button>

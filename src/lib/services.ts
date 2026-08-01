@@ -74,6 +74,10 @@ export type ServiceQuote = {
   planMonths: number | null;
   leadTimeDays: number;
   createdAt: string;
+  /** Anexa o contrato ao PDF da proposta. */
+  includeContract: boolean;
+  /** Move "Domínio" de incluso para não incluso na Cláusula 2. */
+  clientHasDomain: boolean;
   /** Prestação gerada a partir deste orçamento, se já houve conversão. */
   orderId: string | null;
   items: ServiceOrderItem[];

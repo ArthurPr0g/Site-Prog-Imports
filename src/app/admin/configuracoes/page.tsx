@@ -19,6 +19,10 @@ export default async function AdminConfiguracoesPage() {
           usdRate={settings.usdRate}
           usdRateSpread={settings.usdRateSpread}
           defaultDeliveryTime={settings.defaultDeliveryTime}
+          contractorName={settings.contractorName}
+          contractorDoc={settings.contractorDoc}
+          contractorRole={settings.contractorRole}
+          contractForum={settings.contractForum}
         />
         <div className="grid grid-cols-1 items-start gap-3.5 md:grid-cols-2">
           <CoverImageCatalogGroup title="Categorias" items={categories} placeholder="Nova categoria…" />

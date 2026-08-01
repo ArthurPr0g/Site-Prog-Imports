@@ -23,6 +23,10 @@ export type ServiceQuoteInput = {
   status: ServiceQuoteStatus;
   /** Duração proposta do plano. Só vale quando há serviço mensal. */
   planMonths: number | null;
+  /** Anexa o contrato ao PDF da proposta. */
+  includeContract: boolean;
+  /** Cliente já tem domínio: muda a Cláusula 2 do contrato. */
+  clientHasDomain: boolean;
   items: ServiceOrderItem[];
 };
 
@@ -92,6 +96,9 @@ export async function saveServiceQuoteAction(input: ServiceQuoteInput): Promise<
     monthly_amount: mensal,
     plan_months: temPlano ? input.planMonths : null,
     lead_time_days: prazoDias,
+    include_contract: input.includeContract,
+    // Só faz sentido com o contrato anexado — é ele que tem a Cláusula 2.
+    client_has_domain: input.includeContract && input.clientHasDomain,
     updated_at: new Date().toISOString(),
   };
 

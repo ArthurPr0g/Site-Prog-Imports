@@ -1176,9 +1176,11 @@ export type Database = {
       }
       service_quotes: {
         Row: {
+          client_has_domain: boolean
           created_at: string
           customer_id: string | null
           id: string
+          include_contract: boolean
           lead_time_days: number
           monthly_amount: number
           notes: string
@@ -1189,9 +1191,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          client_has_domain?: boolean
           created_at?: string
           customer_id?: string | null
           id?: string
+          include_contract?: boolean
           lead_time_days?: number
           monthly_amount?: number
           notes?: string
@@ -1202,9 +1206,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          client_has_domain?: boolean
           created_at?: string
           customer_id?: string | null
           id?: string
+          include_contract?: boolean
           lead_time_days?: number
           monthly_amount?: number
           notes?: string
@@ -1301,6 +1307,10 @@ export type Database = {
       }
       site_settings: {
         Row: {
+          contract_forum: string
+          contractor_doc: string
+          contractor_name: string
+          contractor_role: string
           default_delivery_time: string | null
           id: boolean
           show_small_banners: boolean
@@ -1308,6 +1318,10 @@ export type Database = {
           usd_rate_spread: number
         }
         Insert: {
+          contract_forum?: string
+          contractor_doc?: string
+          contractor_name?: string
+          contractor_role?: string
           default_delivery_time?: string | null
           id?: boolean
           show_small_banners?: boolean
@@ -1315,6 +1329,10 @@ export type Database = {
           usd_rate_spread?: number
         }
         Update: {
+          contract_forum?: string
+          contractor_doc?: string
+          contractor_name?: string
+          contractor_role?: string
           default_delivery_time?: string | null
           id?: boolean
           show_small_banners?: boolean

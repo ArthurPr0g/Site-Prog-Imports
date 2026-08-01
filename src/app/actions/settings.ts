@@ -11,6 +11,12 @@ export type SystemSettingsInput = {
   usdRate: number | null;
   usdRateSpread: number;
   defaultDeliveryTime: string;
+  /** Dados que saem no PDF de proposta. Ficam no banco e não no código porque
+   *  o repositório é público — CPF versionado fica exposto para sempre. */
+  contractorName: string;
+  contractorDoc: string;
+  contractorRole: string;
+  contractForum: string;
 };
 
 async function adminClient() {
@@ -90,6 +96,10 @@ export async function saveSystemSettingsAction(input: SystemSettingsInput): Prom
       usd_rate: input.usdRate,
       usd_rate_spread: input.usdRateSpread,
       default_delivery_time: input.defaultDeliveryTime.trim() || null,
+      contractor_name: input.contractorName.trim(),
+      contractor_doc: input.contractorDoc.trim(),
+      contractor_role: input.contractorRole.trim(),
+      contract_forum: input.contractForum.trim(),
     })
     .eq('id', true);
 

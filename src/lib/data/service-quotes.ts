@@ -23,6 +23,8 @@ type QuoteRow = {
   plan_months: number | null;
   lead_time_days: number;
   created_at: string;
+  include_contract: boolean;
+  client_has_domain: boolean;
   customers: { name: string } | null;
   service_quote_items: ItemRow[] | null;
   service_orders: { id: string }[] | null;
@@ -63,6 +65,8 @@ export async function listServiceQuotes(): Promise<ServiceQuote[]> {
       planMonths: row.plan_months,
       leadTimeDays: row.lead_time_days,
       createdAt: row.created_at,
+      includeContract: row.include_contract,
+      clientHasDomain: row.client_has_domain,
       orderId: row.service_orders?.[0]?.id ?? null,
       items: (row.service_quote_items ?? []).sort((a, b) => a.position - b.position).map(toItem),
     };

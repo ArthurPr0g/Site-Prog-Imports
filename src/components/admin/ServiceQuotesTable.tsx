@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useTransition } from 'react';
 import Link from 'next/link';
-import { Pencil, Trash2, Plus, X, Search, ArrowRightCircle } from 'lucide-react';
+import { Pencil, Trash2, Plus, X, Search, ArrowRightCircle, FileDown } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { formatBRL, parseNumeroBR, formatDateBR, formatNumeroInput } from '@/lib/format';
 import {
@@ -63,8 +63,17 @@ function formVazio(): ServiceQuoteInput {
     notes: '',
     status: 'Em elaboração',
     planMonths: PLAN_MONTHS_DEFAULT,
+    includeContract: false,
+    clientHasDomain: false,
     items: [itemVazio()],
   };
+}
+
+/** O contrato do dono é de site institucional. Sugere anexá-lo quando algum
+ *  serviço do orçamento parece ser de site — o dono confirma na caixa. Palpite
+ *  em cima do nome é o suficiente: errar aqui só custa um clique. */
+function pareceSite(itens: ServiceOrderItem[]): boolean {
+  return itens.some((i) => /site|website|institucional|landing/i.test(i.name));
 }
 
 export function ServiceQuotesTable({
@@ -148,6 +157,8 @@ export function ServiceQuotesTable({
       notes: q.notes,
       status: q.status,
       planMonths: q.planMonths ?? PLAN_MONTHS_DEFAULT,
+      includeContract: q.includeContract,
+      clientHasDomain: q.clientHasDomain,
       items: q.items.length ? q.items : [itemVazio()],
     });
   }
@@ -165,13 +176,25 @@ export function ServiceQuotesTable({
   function escolherServico(indice: number, serviceId: string) {
     const s = ativos.find((x) => x.id === serviceId);
     if (!s) return setItem(indice, { internalServiceId: null });
-    setItem(indice, {
-      internalServiceId: s.id,
-      name: s.name,
-      description: s.description,
-      amount: s.price,
-      billingType: s.billingType,
-      leadTimeDays: s.leadTimeDays,
+
+    setForm((f) => {
+      if (!f) return f;
+      const items = f.items.map((it, i) =>
+        i === indice
+          ? {
+              ...it,
+              internalServiceId: s.id,
+              name: s.name,
+              description: s.description,
+              amount: s.price,
+              billingType: s.billingType,
+              leadTimeDays: s.leadTimeDays,
+            }
+          : it
+      );
+      // Sugere o contrato ao escolher um serviço de site, mas nunca desmarca o
+      // que o dono já marcou de propósito.
+      return { ...f, items, includeContract: f.includeContract || pareceSite(items) };
     });
   }
 
@@ -278,6 +301,19 @@ export function ServiceQuotesTable({
                 )}
               </div>
               <div className="flex justify-end gap-1.5">
+                {/* Link e não botão: abre o PDF numa aba, de onde dá para
+                    conferir antes de mandar. Um fetch traria o arquivo para a
+                    memória sem nada para olhar. */}
+                <a
+                  href={`/api/orcamentos-servicos/${q.id}/pdf`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={q.includeContract ? 'Gerar proposta + contrato (PDF)' : 'Gerar proposta (PDF)'}
+                  aria-label={`Gerar PDF de ${q.title}`}
+                  className="grid h-7 w-7 place-items-center rounded-full border border-border-strong text-fg-tertiary hover:border-accent hover:text-accent"
+                >
+                  <FileDown size={12} />
+                </a>
                 {convertivel && (
                   <button
                     onClick={() => setConversao({ quote: q, paymentMethod: '', startDate: hojeISO(), planStartDate: hojeISO() })}
@@ -490,10 +526,50 @@ export function ServiceQuotesTable({
               </div>
             )}
 
+            <div className="mb-4 rounded-control border border-border bg-card-dark p-4">
+              <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+                Contrato no PDF
+              </div>
+
+              <label className="flex cursor-pointer items-start gap-2.5 text-[13.5px]">
+                <input
+                  type="checkbox"
+                  checked={form.includeContract}
+                  onChange={(e) => set('includeContract', e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-accent"
+                />
+                <span>
+                  Anexar o contrato de site institucional
+                  <span className="block text-[11px] text-fg-faded">
+                    A proposta fica na primeira página e o contrato nas seguintes, para o cliente assinar. Os valores,
+                    o prazo e a duração do plano vêm deste orçamento.
+                  </span>
+                </span>
+              </label>
+
+              {form.includeContract && (
+                <label className="mt-3 flex cursor-pointer items-start gap-2.5 border-t border-divider pt-3 text-[13.5px]">
+                  <input
+                    type="checkbox"
+                    checked={form.clientHasDomain}
+                    onChange={(e) => set('clientHasDomain', e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-accent"
+                  />
+                  <span>
+                    Cliente já possui domínio próprio
+                    <span className="block text-[11px] text-fg-faded">
+                      Marcado, o domínio sai da lista de itens inclusos e entra na de não inclusos, e a cláusula de
+                      domínio passa a falar só em configuração e apontamento.
+                    </span>
+                  </span>
+                </label>
+              )}
+            </div>
+
             <textarea
               value={form.notes}
               onChange={(e) => set('notes', e.target.value)}
-              placeholder="Observações"
+              placeholder="Observações (saem no PDF)"
               rows={2}
               className={`mb-5 w-full resize-none ${inputClass}`}
             />
