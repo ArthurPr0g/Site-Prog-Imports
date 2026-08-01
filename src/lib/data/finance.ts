@@ -37,15 +37,3 @@ export async function listFinanceEntries(): Promise<FinanceEntry[]> {
     .order('created_at', { ascending: false });
   return (data ?? []).map((r) => toEntry(r as Row));
 }
-
-/** Data do primeiro lançamento, para o filtro "Tudo" saber onde começar. */
-export async function primeiraMovimentacao(): Promise<string | undefined> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from('finance_entries')
-    .select('entry_date')
-    .order('entry_date', { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  return data?.entry_date ?? undefined;
-}

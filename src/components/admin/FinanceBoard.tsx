@@ -115,13 +115,7 @@ function TabelaLancamentos({
   );
 }
 
-export function FinanceBoard({
-  entries,
-  primeiraData,
-}: {
-  entries: FinanceEntry[];
-  primeiraData?: string;
-}) {
+export function FinanceBoard({ entries }: { entries: FinanceEntry[] }) {
   const [tudo, setTudo] = useState(false);
   const [ano, setAno] = useState<number | null>(null);
   const [mes, setMes] = useState<number | null>(null);
@@ -131,9 +125,16 @@ export function FinanceBoard({
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 
+  // A lista já vem ordenada por data decrescente do servidor, então os extremos
+  // do livro estão nas pontas — não precisa de consulta separada para o "Tudo".
+  const limites = useMemo(
+    () => ({ primeira: entries.at(-1)?.entryDate, ultima: entries[0]?.entryDate }),
+    [entries]
+  );
+
   const periodo = useMemo(
-    () => resolverPeriodo({ tudo, ano, mes, inicio, fim }, new Date(), primeiraData),
-    [tudo, ano, mes, inicio, fim, primeiraData]
+    () => resolverPeriodo({ tudo, ano, mes, inicio, fim }, new Date(), limites),
+    [tudo, ano, mes, inicio, fim, limites]
   );
 
   const doPeriodo = useMemo(() => entries.filter((e) => dentroDoPeriodo(e, periodo)), [entries, periodo]);

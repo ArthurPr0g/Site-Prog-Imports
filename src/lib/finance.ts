@@ -55,20 +55,27 @@ function ultimoDia(ano: number, mes: number): Date {
   return new Date(ano, mes, 0);
 }
 
+/** Extremos do livro, para o filtro "Tudo" saber onde começa e onde termina. */
+export type LimitesDoLivro = { primeira?: string; ultima?: string };
+
 /** Resolve o período com prioridade fixa, para que dois filtros preenchidos ao
  *  mesmo tempo nunca deem resultado ambíguo:
  *  1) "tudo"  2) ano (com mês opcional dentro dele)  3) mês no ano corrente
- *  4) datas manuais, com padrão do dia 1 do mês corrente até hoje.
+ *  4) datas manuais, com padrão no mês corrente inteiro.
  *
- *  `primeiraMovimentacao` só é usada no caso "tudo" — sem lançamento nenhum,
- *  cai no início do ano corrente em vez de numa data arbitrária. */
-export function resolverPeriodo(filtro: FiltroPeriodo, hoje: Date, primeiraMovimentacao?: string): Periodo {
+ *  O padrão cobre o MÊS INTEIRO, não até hoje: lançamento 'Previsto' é por
+ *  definição futuro, e cortar em hoje deixaria os indicadores de previsto
+ *  sempre zerados na abertura da tela — justamente a informação que eles
+ *  existem para dar. Pelo mesmo motivo "Tudo" vai até a última movimentação,
+ *  e não até hoje. */
+export function resolverPeriodo(filtro: FiltroPeriodo, hoje: Date, limites?: LimitesDoLivro): Periodo {
   const anoAtual = hoje.getFullYear();
 
   if (filtro.tudo) {
+    // Sem lançamento nenhum, cai no ano corrente em vez de numa data arbitrária.
     return {
-      inicio: primeiraMovimentacao || `${anoAtual}-01-01`,
-      fim: iso(hoje),
+      inicio: limites?.primeira || `${anoAtual}-01-01`,
+      fim: limites?.ultima || `${anoAtual}-12-31`,
       rotulo: 'Tudo',
     };
   }
@@ -94,11 +101,11 @@ export function resolverPeriodo(filtro: FiltroPeriodo, hoje: Date, primeiraMovim
     };
   }
 
-  const inicioPadrao = iso(new Date(anoAtual, hoje.getMonth(), 1));
+  const mesCorrente = hoje.getMonth() + 1;
   return {
-    inicio: filtro.inicio || inicioPadrao,
-    fim: filtro.fim || iso(hoje),
-    rotulo: 'Período personalizado',
+    inicio: filtro.inicio || iso(new Date(anoAtual, mesCorrente - 1, 1)),
+    fim: filtro.fim || iso(ultimoDia(anoAtual, mesCorrente)),
+    rotulo: filtro.inicio || filtro.fim ? 'Período personalizado' : `${MESES[mesCorrente - 1]} de ${anoAtual}`,
   };
 }
 

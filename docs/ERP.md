@@ -175,9 +175,16 @@ existem). `installment_id` agrupa as parcelas de um mesmo lançamento.
 
 **Filtro de período** com prioridade fixa, para dois filtros preenchidos ao mesmo
 tempo nunca darem resultado ambíguo: `tudo` > `ano` (com `mês` opcional dentro) >
-`mês` no ano corrente > datas manuais. O padrão é do dia 1º do mês corrente até
-hoje. Os campos se anulam na tela — escolher ano desmarca "Tudo" —, senão o
-usuário mexe num filtro e o resultado não muda, sem explicação.
+`mês` no ano corrente > datas manuais. Os campos se anulam na tela — escolher ano
+desmarca "Tudo" —, senão o usuário mexe num filtro e o resultado não muda, sem
+explicação.
+
+O padrão cobre o **mês corrente inteiro**, não "até hoje". A primeira versão
+cortava em hoje e o teste em produção mostrou o estrago: lançamento `Previsto` é
+por definição futuro, então os três indicadores de previsto abriam sempre zerados
+e uma despesa marcada para o dia 20 ficava invisível na tela — justamente a
+informação que esses cards existem para dar. Pelo mesmo motivo "Tudo" vai até a
+**última** movimentação, não até hoje.
 
 **Datas são dias de calendário, não instantes.** `toISOString()` converte para
 UTC antes de cortar, o que no Brasil devolve o dia anterior para qualquer horário
