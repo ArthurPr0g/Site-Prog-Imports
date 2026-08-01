@@ -284,6 +284,76 @@ removidos ao final, incluindo o catálogo, que é do dono para preencher.
 
 ---
 
+## Planos mensais — regras confirmadas
+
+Serviço do catálogo tem `billing_type` = `unico` | `mensal`. Em `mensal`, o
+`price` é a **mensalidade**, e a prestação que o inclui vira um **plano** de
+**6, 12 ou 24 meses** (12 é o padrão do dono).
+
+**Uma parcela por mês, todas lançadas de uma vez.** É o que faz o gráfico de
+fluxo de caixa mostrar o que entra em cada mês; um lançamento único com o total
+do contrato criaria um pico num mês que nunca acontece. Alternativa descartada:
+gerar a parcela só quando o mês chega — perderia a visão do contratado para
+frente, que é justamente para o que o status `Previsto` existe.
+
+**Valor único e mensalidade em colunas separadas** (`total_amount` e
+`monthly_amount`). É como o contrato é lido — "R$ 4.500 + R$ 149/mês" — e somar
+os dois apagaria quanto é recorrente. O valor de contrato (`total + mensal ×
+meses`) é só de exibição; o Financeiro nunca recebe esse número de uma vez.
+
+**A data da primeira mensalidade é escolhida na criação** (`plan_start_date`),
+com a data de início como padrão. As demais caem no mesmo dia dos meses
+seguintes.
+
+**Serviço mensal não entra na soma do prazo.** Hospedagem e manutenção são
+contínuas, não têm entrega, e somar o "prazo" delas empurraria a entrega do
+trabalho real para meses à frente.
+
+**`somarMeses` prende no último dia do mês** quando o dia não existe. Sem isso um
+plano começado em 31/01 pularia fevereiro: o JavaScript transborda `new
+Date(2026, 1, 31)` para 3 de março, e a parcela de fevereiro apareceria em março
+junto da de março. Contrato mensal cobra "todo dia 31, ou o último se o mês não
+tiver".
+
+**A sincronização casa alvo com existente pelo NÚMERO da parcela**
+(`installment_number`), não pela data. É isso que **preserva o status das
+parcelas já baixadas**: sem o casamento, a única saída seria apagar e recriar, e
+um plano de 24 meses perderia todos os recebimentos marcados por causa de uma
+correção de título. O lançamento do trabalho é a exceção — o status dele vem do
+`payment_status` da prestação. As parcelas nascem sempre `Previsto`: cada mês é
+um recebimento independente.
+
+**O Financeiro aceita mudança de STATUS em lançamento gerado, e só isso.** É como
+se baixa cada parcela. Valor, data e descrição continuam vindo da origem — se
+fossem editáveis, a próxima sincronização os reescreveria em silêncio. Os campos
+aparecem travados na tela, com a razão escrita.
+
+Indicadores de Prestação: **Recorrente/mês** (soma das mensalidades ativas, o
+tamanho da receita recorrente) e **Valor em contratos** (trabalho + todas as
+mensalidades). Perguntas diferentes; nenhum dos dois sozinho responde as duas.
+
+Testado em `scratchpad/test-planos.mjs` (37 asserções: clamp do dia 31, virada de
+ano, fevereiro bissexto, plano sem trabalho, trabalho sem plano, 6/12/24 meses).
+
+Verificado em produção (2026-08-01): site R$ 4.500 + manutenção R$ 149/mês deu
+contrato de R$ 6.288 e **13 lançamentos** — 1 do trabalho e 12 parcelas somando
+R$ 1.788, de 08/2026 a 07/2027, num só `installment_id`; prazo ficou em 20 dias,
+ignorando o mensal; no Financeiro os campos da parcela abriram travados e só o
+status mudou. **Marcar duas parcelas como recebidas e depois editar o título da
+prestação manteve as duas pagas** — a preservação funciona. Encurtar de 12 para 6
+meses removeu as parcelas 7–12 e manteve as pagas; cancelar removeu as 6. Dados
+de teste removidos ao final.
+
+### Em aberto sobre planos
+
+- **Renovação** não existe: ao fim do contrato o plano simplesmente termina. Um
+  novo período exige nova prestação.
+- **Cancelamento no meio** só existe pelo status `Cancelada` da prestação, que
+  apaga **todas** as parcelas, inclusive as já recebidas. Para encerrar um plano
+  mantendo o histórico do que foi pago, hoje a saída é encurtar a duração.
+
+---
+
 ## Orçamentos de Serviços (M7) — regras confirmadas
 
 `service_quotes` + `service_quote_items`. Espelha o fluxo da loja: lá é
