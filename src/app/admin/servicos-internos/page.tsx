@@ -1,17 +1,17 @@
-import { ModuloPendente } from '@/components/admin/ModuloPendente';
+import { listInternalServices } from '@/lib/data/internal-services';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { InternalServicesTable } from '@/components/admin/InternalServicesTable';
 
-export default function AdminPageServicosInternos() {
+export default async function AdminServicosInternosPage() {
+  const services = await listInternalServices();
+
   return (
-    <ModuloPendente
-      titulo="Serviços"
-      subtitulo="Cadastro dos serviços que não aparecem no site público"
-      modulo="M6 — Serviços e Prestação"
-      entrega={[
-        'Catálogo separado do de Serviços da Loja',
-        'Exemplos: criação de sites, sistemas, design',
-        'Valor usado como base em orçamentos e prestações',
-      ]}
-      depende="M1 — Clientes"
-    />
+    <div>
+      <AdminPageHeader
+        title="Serviços"
+        subtitle="Serviços que a Prog presta fora da loja — sites, sistemas, design. Não aparecem no site público."
+      />
+      <InternalServicesTable services={services} />
+    </div>
   );
 }

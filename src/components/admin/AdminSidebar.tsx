@@ -56,7 +56,7 @@ const NAV: NavGroup[] = [
     items: [
       { href: '/admin/clientes', label: 'Clientes', Icon: Users },
       { href: '/admin/produtos', label: 'Produtos', Icon: Package },
-      { href: '/admin/servicos-internos', label: 'Serviços', Icon: Briefcase, pendente: true },
+      { href: '/admin/servicos-internos', label: 'Serviços', Icon: Briefcase },
     ],
   },
   {
@@ -74,7 +74,7 @@ const NAV: NavGroup[] = [
       { href: '/admin/orcamentos-servicos', label: 'Orçamentos Serviços', Icon: FileSpreadsheet, pendente: true },
       { href: '/admin/vendas', label: 'Vendas', Icon: ClipboardList },
       { href: '/admin/avaliacao-troca', label: 'Avaliação de Troca', Icon: ArrowLeftRight, pendente: true },
-      { href: '/admin/prestacao-servico', label: 'Prestação de Serviço', Icon: HandPlatter, pendente: true },
+      { href: '/admin/prestacao-servico', label: 'Prestação de Serviço', Icon: HandPlatter },
     ],
   },
   {

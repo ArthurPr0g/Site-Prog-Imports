@@ -21,7 +21,7 @@ Serviços, extraída de um sistema Flask anterior).
 | M3 | Orçamentos Loja + cotação automática | **Pronto** | `/admin/orcamentos-loja` |
 | M4 | Vendas | Pendente | `/admin/vendas` |
 | M5 | Financeiro (livro-caixa) | **Pronto** | `/admin/financeiro` |
-| M6 | Serviços (cadastro) + Prestação | Pendente | `/admin/servicos-internos`, `/admin/prestacao-servico` |
+| M6 | Serviços (cadastro) + Prestação | **Pronto** | `/admin/servicos-internos`, `/admin/prestacao-servico` |
 | M7 | Orçamentos Serviços | Pendente | `/admin/orcamentos-servicos` |
 | M8 | Avaliação de Troca | Pendente | `/admin/avaliacao-troca` |
 | M9 | Relatórios | Pendente | `/admin/relatorios` |
@@ -219,6 +219,58 @@ primeira à última movimentação, não até hoje); no gráfico, R$ 3.450,13 re
 75px contra 150px de R$ 6.900,25 — escala exata —, e o lançamento `Previsto`
 ficou de fora; exclusão de lançamento com origem `venda` foi recusada com ✕
 vermelho, a de lançamento manual passou. Dados de teste removidos ao final.
+
+---
+
+## Serviços e Prestação (M6) — regras confirmadas
+
+Três tabelas: `internal_services` (catálogo), `service_orders` (a execução) e
+`service_order_items` (os serviços de cada prestação).
+
+**Catálogo separado da vitrine.** `internal_services` não tem relação com
+`services`, que é o que o visitante vê no site. Públicos e ciclos de vida
+diferentes; misturar faria um serviço interno aparecer para o cliente. Campos:
+título, descrição, categoria, valor, prazo em dias, ativo.
+
+**Prazo é SOMA, não máximo.** Os serviços de uma prestação são executados em
+sequência — quem faz o site depois faz o sistema. Prazo por máximo prometeria ao
+cliente uma entrega que a operação não cumpre. A data de entrega é
+`início + soma dos prazos`, montada pelos componentes locais da data (`new
+Date('2026-08-01')` é meia-noite UTC e no Brasil devolve 31/07).
+
+**Item copia do catálogo, não referencia.** Escolher um serviço preenche nome,
+valor e prazo; a partir daí o item é dele. Preço de catálogo que muda depois não
+pode reescrever uma prestação já fechada. Por isso `total_amount` e
+`lead_time_days` também ficam gravados na prestação.
+
+**Execução e pagamento são campos separados.** `status` (Em andamento →
+Concluída, com Cancelada como saída) e `payment_status` (Previsto | Recebido).
+Serviço entregue não é serviço pago; com um campo só, um dos dois teria que
+mentir.
+
+**Cada prestação lança UMA receita no Financeiro**, nunca uma por serviço — é
+assim que a contagem dupla é impedida por construção. `source = 'servico'`,
+`reference_id` = id da prestação. O status da receita espelha o **pagamento**,
+não a execução. **Cancelada não lança nada** e remove o lançamento existente:
+serviço cancelado não é dinheiro previsto, e deixá-lo lá inflaria o previsto com
+algo que ninguém vai receber.
+
+A sincronia roda **depois de todo salvamento**, não só na criação, porque o
+lançamento depende de campos que mudam ao longo da vida da prestação. Não é
+transacional: se o Financeiro falhar, a prestação continua salva e um novo
+salvamento conserta. Função no banco seria mais peso do que este volume paga.
+
+Excluir a prestação apaga o lançamento **primeiro** — a tela do Financeiro
+recusa excluir linha de origem `servico`, então a ordem inversa deixaria a
+receita órfã e impossível de remover pela interface.
+
+Serviço do catálogo em uso por alguma prestação **não pode ser excluído**; a
+saída é desativá-lo, que o tira de novos orçamentos sem mexer no histórico.
+
+Regras testadas antes da UI em `scratchpad/test-services.mjs` (28 asserções:
+soma de valores e prazos, virada de mês/ano e fevereiro bissexto na entrega, as
+seis combinações de status × pagamento no lançamento, canceladas fora dos
+indicadores).
 
 ---
 

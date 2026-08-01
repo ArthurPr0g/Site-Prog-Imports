@@ -344,6 +344,45 @@ export type Database = {
         }
         Relationships: []
       }
+      internal_services: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          description: string
+          id: string
+          lead_time_days: number
+          name: string
+          position: number
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          lead_time_days?: number
+          name: string
+          position?: number
+          price?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          lead_time_days?: number
+          name?: string
+          position?: number
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       newsletter_subscribers: {
         Row: {
           created_at: string
@@ -1021,6 +1060,113 @@ export type Database = {
           {
             foreignKeyName: "stock_items_reserved_customer_id_fkey"
             columns: ["reserved_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_order_items: {
+        Row: {
+          amount: number
+          description: string
+          id: string
+          internal_service_id: string | null
+          lead_time_days: number
+          name: string
+          order_id: string
+          position: number
+        }
+        Insert: {
+          amount?: number
+          description?: string
+          id?: string
+          internal_service_id?: string | null
+          lead_time_days?: number
+          name: string
+          order_id: string
+          position?: number
+        }
+        Update: {
+          amount?: number
+          description?: string
+          id?: string
+          internal_service_id?: string | null
+          lead_time_days?: number
+          name?: string
+          order_id?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_order_items_internal_service_id_fkey"
+            columns: ["internal_service_id"]
+            isOneToOne: false
+            referencedRelation: "internal_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_orders: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          due_date: string | null
+          id: string
+          lead_time_days: number
+          notes: string
+          payment_method: string
+          payment_status: string
+          quote_id: string | null
+          start_date: string
+          status: string
+          title: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          due_date?: string | null
+          id?: string
+          lead_time_days?: number
+          notes?: string
+          payment_method?: string
+          payment_status?: string
+          quote_id?: string | null
+          start_date?: string
+          status?: string
+          title: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          due_date?: string | null
+          id?: string
+          lead_time_days?: number
+          notes?: string
+          payment_method?: string
+          payment_status?: string
+          quote_id?: string | null
+          start_date?: string
+          status?: string
+          title?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_orders_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["id"]
