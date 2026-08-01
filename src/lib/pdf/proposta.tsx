@@ -56,7 +56,8 @@ function estilos(accent: string) {
       paddingBottom: 10,
       marginBottom: 16,
     },
-    logo: { height: 34, objectFit: 'contain' },
+    // Sem largura: só a altura, para a proporção original ser mantida.
+    logo: { height: 40, objectFit: 'contain' },
     marcaNome: { fontSize: 15, fontWeight: 'bold', color: '#1a1a1f' },
     marcaTagline: { fontSize: 8, color: CINZA_CLARO, marginTop: 2 },
     topoDireita: { alignItems: 'flex-end' },
@@ -199,13 +200,17 @@ export function PropostaDocument(d: DadosDaProposta) {
   // recriado a cada passagem, e o lint barra isso com razão.
   const topo = () => (
     <View style={s.topo}>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        {d.marca.logo && <Image src={d.marca.logo} style={s.logo} />}
-        <View style={{ marginLeft: d.marca.logo ? 10 : 0 }}>
+      {/* A logo já traz o nome da marca desenhado. Repetir "Prog Imports" ao
+          lado dela era o mesmo texto duas vezes. O nome escrito só aparece
+          quando não há arquivo de logo — aí ele é a única identificação. */}
+      {d.marca.logo ? (
+        <Image src={d.marca.logo} style={s.logo} />
+      ) : (
+        <View>
           <Text style={s.marcaNome}>{d.marca.nome}</Text>
           <Text style={s.marcaTagline}>{d.marca.tagline}</Text>
         </View>
-      </View>
+      )}
       <View style={s.topoDireita}>
         <Text style={s.etiqueta}>Proposta</Text>
         <Text style={s.numero}>{d.numero}</Text>
