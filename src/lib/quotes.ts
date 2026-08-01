@@ -81,8 +81,23 @@ export function calculateQuote(inputs: QuoteInputs, usdRate: number): QuoteTotal
   };
 }
 
-/** Orçamento já convertido em estoque tem histórico congelado: recalcular
- *  mudaria retroativamente o custo de um item que já entrou no patrimônio. */
+/** Status a partir dos quais a cotação do orçamento congela.
+ *
+ *  Enquanto a proposta não foi aprovada, ela deve acompanhar a cotação atual:
+ *  o cliente ainda não fechou, e se fechar amanhã o preço é o de amanhã. No
+ *  momento em que ele aprova, o valor vira compromisso — recalcular depois
+ *  mudaria retroativamente um preço já acordado. */
+const STATUS_CONGELADOS: readonly QuoteStatus[] = ['Aprovado', 'Reprovado', 'Convertido em Estoque'];
+
 export function podeRecalcular(status: QuoteStatus): boolean {
-  return status !== 'Convertido em Estoque';
+  return !STATUS_CONGELADOS.includes(status);
+}
+
+/** Cotação a aplicar num orçamento: a de mercado somada à taxa que a Prog paga
+ *  por dólar comprado. Sem o acréscimo o custo sai subestimado e a margem
+ *  aparece maior do que é. */
+export function cotacaoComTaxa(cotacaoMercado: number, taxaPorDolar: number): number {
+  const base = Number.isFinite(cotacaoMercado) ? cotacaoMercado : 0;
+  const taxa = Number.isFinite(taxaPorDolar) ? taxaPorDolar : 0;
+  return Math.round((base + taxa) * 10000) / 10000;
 }

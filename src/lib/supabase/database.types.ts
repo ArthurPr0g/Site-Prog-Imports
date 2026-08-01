@@ -991,18 +991,21 @@ export type Database = {
           id: boolean
           show_small_banners: boolean
           usd_rate: number | null
+          usd_rate_spread: number
         }
         Insert: {
           default_delivery_time?: string | null
           id?: boolean
           show_small_banners?: boolean
           usd_rate?: number | null
+          usd_rate_spread?: number
         }
         Update: {
           default_delivery_time?: string | null
           id?: boolean
           show_small_banners?: boolean
           usd_rate?: number | null
+          usd_rate_spread?: number
         }
         Relationships: []
       }

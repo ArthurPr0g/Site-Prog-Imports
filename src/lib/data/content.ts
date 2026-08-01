@@ -25,13 +25,14 @@ export async function getSiteSettings() {
   const supabase = await createClient();
   const { data } = await supabase
     .from('site_settings')
-    .select('show_small_banners, usd_rate, default_delivery_time')
+    .select('show_small_banners, usd_rate, usd_rate_spread, default_delivery_time')
     .maybeSingle();
   return {
     showSmallBanners: data?.show_small_banners ?? true,
     // Parâmetros do ERP. Cotação nula significa "ainda não configurada" — os
     // orçamentos precisam recusar o cálculo nesse caso em vez de assumir 1.
     usdRate: data?.usd_rate !== null && data?.usd_rate !== undefined ? Number(data.usd_rate) : null,
+    usdRateSpread: data?.usd_rate_spread !== null && data?.usd_rate_spread !== undefined ? Number(data.usd_rate_spread) : 0.1,
     defaultDeliveryTime: data?.default_delivery_time ?? '',
   };
 }

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
-import { calculateQuote, QUOTE_STATUSES, type QuoteStatus } from '@/lib/quotes';
+import { calculateQuote, podeRecalcular, QUOTE_STATUSES, type QuoteStatus } from '@/lib/quotes';
 
 export type QuoteFormInput = {
   id?: string;
@@ -211,9 +211,11 @@ export async function sendQuoteToStockAction(id: string): Promise<ActionResult> 
   return okResult('Item criado no estoque e orçamento marcado como convertido.');
 }
 
-/** Recalcula em massa quando a cotação oficial muda. Orçamentos já convertidos
- *  ficam de fora: o custo deles já entrou no patrimônio via item de estoque, e
- *  mudar retroativamente falsearia o histórico. */
+/** Recálculo manual. O automático já roda ao salvar a cotação em Configurações;
+ *  este botão existe para forçar a reaplicação sem mexer nos parâmetros.
+ *
+ *  Só alcança orçamentos ainda não aprovados: a partir de "Aprovado" o valor
+ *  virou compromisso com o cliente e recalcular mudaria um preço acordado. */
 export async function recalculateQuotesAction(): Promise<ActionResult> {
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
@@ -221,12 +223,10 @@ export async function recalculateQuotesAction(): Promise<ActionResult> {
   const taxa = await cotacaoOficial(supabase);
   if (taxa === null || taxa <= 0) return errResult('Configure a cotação do dólar antes de recalcular.');
 
-  const { data: quotes } = await supabase
-    .from('store_quotes')
-    .select('*')
-    .neq('status', 'Convertido em Estoque');
+  const { data: todos } = await supabase.from('store_quotes').select('*');
+  const quotes = (todos ?? []).filter((q) => podeRecalcular(q.status as QuoteStatus));
 
-  if (!quotes?.length) return okResult('Nenhum orçamento para recalcular.');
+  if (!quotes.length) return okResult('Nenhum orçamento não aprovado para recalcular.');
 
   let atualizados = 0;
   for (const q of quotes) {
