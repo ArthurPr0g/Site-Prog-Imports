@@ -15,7 +15,11 @@ export default async function AdminConfiguracoesPage() {
         subtitle="Parâmetros do sistema e organização do catálogo"
       />
       <div className="flex flex-col gap-3.5">
-        <SystemSettings usdRate={settings.usdRate} defaultDeliveryTime={settings.defaultDeliveryTime} />
+        <SystemSettings
+          usdRate={settings.usdRate}
+          usdRateSpread={settings.usdRateSpread}
+          defaultDeliveryTime={settings.defaultDeliveryTime}
+        />
         <div className="grid grid-cols-1 items-start gap-3.5 md:grid-cols-2">
           <CoverImageCatalogGroup title="Categorias" items={categories} placeholder="Nova categoria…" />
           <CatalogGroup title="Marcas" table="brands" items={brands} placeholder="Nova marca…" />

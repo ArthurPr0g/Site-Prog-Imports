@@ -194,14 +194,15 @@ export function QuotesTable({
           onClick={() =>
             executar(
               recalculateQuotesAction,
-              'Recalcular todos os orçamentos com a cotação atual? Os já convertidos em estoque não são afetados.'
+              'Reaplicar a cotação atual nos orçamentos ainda não aprovados? Os aprovados ficam congelados.'
             )
           }
           disabled={pending || semCotacao}
+          title="O recálculo já acontece sozinho ao salvar a cotação em Configurações"
           className="flex items-center gap-2 rounded-control border border-border-strong px-4 py-2.5 text-[13.5px] font-bold text-fg-secondary hover:border-accent hover:text-accent disabled:opacity-50"
         >
           <RefreshCw size={15} />
-          Recalcular com a cotação atual
+          Reaplicar cotação
         </button>
         <button
           onClick={() => setForm({ ...VAZIO })}
