@@ -326,6 +326,23 @@ Regras testadas em `scratchpad/test-service-quotes.mjs` (19 asserções: quem po
 converter, o status fora do seletor, e os convertidos/reprovados fora dos
 indicadores).
 
+**Excluir a prestação devolve o orçamento para `Aprovado`.** Isso não existia e
+criava um beco sem saída: o orçamento ficava em `Convertido em Prestação` sem
+prestação nenhuma, sem poder ser editado (a action bloqueia convertidos) nem
+reconvertido (só `Aprovado` converte) — pelo caminho que a própria mensagem de
+exclusão recomendava. **O mesmo valia para a loja desde o M3**;
+`deleteStockItemAction` foi corrigida junto. As duas ações leem o vínculo
+**antes** do delete, porque depois dele não há como saber a origem.
+
+Verificado em produção (2026-08-01): 'Convertido em Prestação' fora do seletor;
+dois serviços do catálogo deram R$ 5.700,50 / 27 dias; **orçamento aprovado não
+lançou nada** no Financeiro; a conversão criou a prestação com os itens copiados
+(orçamento manteve os seus), `quote_id` ligado, pagamento Previsto e uma receita
+de R$ 5.700,50 em 28/08; o botão de converter sumiu e o link "ver prestação"
+apareceu; editar e excluir o convertido foram recusados com ✕; excluir a
+prestação devolveu o orçamento para Aprovado e permitiu reconverter. Dados de
+teste removidos ao final.
+
 ---
 
 ## Botão "Gerar Venda" (pedido, ainda não construído)
