@@ -346,8 +346,27 @@ de teste removidos ao final.
 
 ### Em aberto sobre planos
 
+- **Aviso de contrato perto do fim** (pedido do dono, 2026-08-01, ainda não
+  construído). Ele quer ser avisado **antes** do plano acabar, para procurar o
+  cliente e negociar a renovação a tempo. Sem isso o contrato vence em silêncio
+  e a conversa acontece depois de o cliente já ter parado de pagar — que é a
+  pior hora para propor renovação.
+
+  Os dados necessários já existem: `plan_start_date` e `plan_months` na
+  `service_orders` dão a data de fim (`somarMeses(planStartDate, planMonths - 1)`
+  é a última parcela). Falta decidir com o dono: **quantos dias de
+  antecedência** (30 e 60 são os usuais; talvez configurável em Parâmetros do
+  sistema), **onde o aviso aparece** (Dashboard, um cartão na tela de Prestação,
+  ou os dois) e se basta destaque na tela ou se precisa de e-mail — este último
+  exigiria envio agendado, que o projeto ainda não tem.
+
+  Cuidado ao construir: o aviso deve considerar só prestações **não canceladas**
+  e ignorar as que já foram substituídas por um contrato novo, senão vira ruído
+  e passa a ser ignorado.
+
 - **Renovação** não existe: ao fim do contrato o plano simplesmente termina. Um
-  novo período exige nova prestação.
+  novo período exige nova prestação. Anda junto com o aviso acima — avisar sem
+  ter como renovar em um clique resolve metade do problema.
 - **Cancelamento no meio** só existe pelo status `Cancelada` da prestação, que
   apaga **todas** as parcelas, inclusive as já recebidas. Para encerrar um plano
   mantendo o histórico do que foi pago, hoje a saída é encurtar a duração.
