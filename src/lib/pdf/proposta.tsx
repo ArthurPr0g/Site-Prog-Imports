@@ -39,8 +39,8 @@ function estilos(accent: string) {
   return StyleSheet.create({
     pagina: {
       backgroundColor: '#ffffff',
-      paddingTop: 40,
-      paddingBottom: 56,
+      paddingTop: 34,
+      paddingBottom: 50,
       paddingHorizontal: 44,
       fontSize: 10,
       color: '#1a1a1f',
@@ -52,8 +52,8 @@ function estilos(accent: string) {
       justifyContent: 'space-between',
       borderBottomWidth: 2,
       borderBottomColor: accent,
-      paddingBottom: 12,
-      marginBottom: 22,
+      paddingBottom: 10,
+      marginBottom: 16,
     },
     logo: { height: 34, objectFit: 'contain' },
     marcaNome: { fontSize: 15, fontWeight: 'bold', color: '#1a1a1f' },
@@ -62,11 +62,11 @@ function estilos(accent: string) {
     etiqueta: { fontSize: 8, color: CINZA_CLARO, textTransform: 'uppercase', letterSpacing: 1 },
     numero: { fontSize: 12, fontWeight: 'bold', color: accent, marginTop: 2 },
 
-    tituloProposta: { fontSize: 17, fontWeight: 'bold', marginBottom: 3 },
-    subtitulo: { fontSize: 9.5, color: CINZA, marginBottom: 16 },
+    tituloProposta: { fontSize: 16, fontWeight: 'bold', marginBottom: 3 },
+    subtitulo: { fontSize: 9.5, color: CINZA, marginBottom: 14 },
 
     secao: { fontSize: 8.5, fontWeight: 'bold', color: accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 7 },
-    bloco: { marginBottom: 16 },
+    bloco: { marginBottom: 14 },
 
     linhaDado: { flexDirection: 'row', marginBottom: 3 },
     rotuloDado: { width: 92, fontSize: 9, color: CINZA_CLARO },
@@ -78,7 +78,7 @@ function estilos(accent: string) {
       borderTopWidth: 1,
       borderBottomWidth: 1,
       borderColor: LINHA,
-      paddingVertical: 6,
+      paddingVertical: 5,
       paddingHorizontal: 8,
     },
     th: { fontSize: 8, fontWeight: 'bold', color: CINZA, textTransform: 'uppercase', letterSpacing: 0.6 },
@@ -86,7 +86,7 @@ function estilos(accent: string) {
       flexDirection: 'row',
       borderBottomWidth: 1,
       borderBottomColor: LINHA,
-      paddingVertical: 6,
+      paddingVertical: 5,
       paddingHorizontal: 8,
     },
     colServico: { flex: 1, paddingRight: 12 },
@@ -97,11 +97,11 @@ function estilos(accent: string) {
      *  daí a descrição espremida e o vão enorme ao lado de "7 dias". */
     celulaPrazo: { width: 58, fontSize: 9 },
     nomeServico: { fontSize: 10, fontWeight: 'bold' },
-    descServico: { fontSize: 8.5, color: CINZA_CLARO, marginTop: 2, lineHeight: 1.4 },
+    descServico: { fontSize: 8, color: CINZA_CLARO, marginTop: 2, lineHeight: 1.35 },
     valorServico: { fontSize: 10, fontWeight: 'bold' },
     mensalTag: { fontSize: 8, color: accent, fontWeight: 'bold' },
 
-    totais: { marginTop: 14, alignItems: 'flex-end' },
+    totais: { marginTop: 10, alignItems: 'flex-end' },
     linhaTotal: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 4 },
     rotuloTotal: { fontSize: 9.5, color: CINZA, textAlign: 'right', width: 190 },
     valorTotal: { fontSize: 10.5, fontWeight: 'bold', width: 100, textAlign: 'right' },
@@ -122,10 +122,10 @@ function estilos(accent: string) {
       borderLeftWidth: 3,
       borderLeftColor: accent,
       backgroundColor: '#fafafb',
-      padding: 12,
+      padding: 10,
       marginTop: 4,
     },
-    textoCaixa: { fontSize: 9.5, color: CINZA, marginBottom: 3 },
+    textoCaixa: { fontSize: 9, color: CINZA, marginBottom: 2.5 },
 
     rodape: {
       position: 'absolute',
@@ -295,7 +295,10 @@ export function PropostaDocument(d: DadosDaProposta) {
           </View>
         </View>
 
-        <View style={s.bloco}>
+        {/* `wrap={false}` aqui, e não nas linhas da tabela: este bloco é curto e
+            precisa ficar inteiro. Sem isso o título ficava sozinho no pé de uma
+            página e a caixa começava na seguinte. */}
+        <View style={s.bloco} wrap={false}>
           <Text style={s.secao}>Condições de pagamento</Text>
           <View style={s.caixa}>
             {d.totalUnico > 0 && (
@@ -321,7 +324,7 @@ export function PropostaDocument(d: DadosDaProposta) {
         </View>
 
         {!!d.observacoes && (
-          <View style={s.bloco}>
+          <View style={s.bloco} wrap={false}>
             <Text style={s.secao}>Observações</Text>
             <Text style={s.paragrafo}>{d.observacoes}</Text>
           </View>
