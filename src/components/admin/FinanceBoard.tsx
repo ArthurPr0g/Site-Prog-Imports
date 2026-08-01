@@ -3,7 +3,7 @@
 import { useState, useMemo, useTransition } from 'react';
 import { Pencil, Trash2, Plus, Minus } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
-import { formatBRL, parseNumeroBR, formatDateBR } from '@/lib/format';
+import { formatBRL, parseNumeroBR, formatDateBR, formatNumeroInput } from '@/lib/format';
 import {
   resolverPeriodo,
   dentroDoPeriodo,
@@ -323,7 +323,7 @@ export function FinanceBoard({ entries }: { entries: FinanceEntry[] }) {
               <div>
                 <div className="mb-1.5 text-[11px] text-fg-faded">Valor (R$)</div>
                 <input
-                  defaultValue={form.amount || ''}
+                  defaultValue={formatNumeroInput(form.amount)}
                   onChange={(e) => set('amount', parseNumeroBR(e.target.value))}
                   inputMode="decimal"
                   placeholder="0,00"

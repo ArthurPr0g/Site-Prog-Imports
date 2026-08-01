@@ -3,7 +3,7 @@
 import { useState, useMemo, useTransition } from 'react';
 import { Pencil, Trash2, PackagePlus } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
-import { formatBRL, parseNumeroBR } from '@/lib/format';
+import { formatBRL, parseNumeroBR, formatNumeroInput } from '@/lib/format';
 import { saveStockItemAction, deleteStockItemAction, type StockFormInput } from '@/app/actions/stock';
 import {
   STOCK_STATUSES,
@@ -318,7 +318,7 @@ export function StockTable({
               <div>
                 <div className="mb-1.5 text-[11px] text-fg-faded">Valor pago (R$)</div>
                 <input
-                  defaultValue={form.paidAmount || ''}
+                  defaultValue={formatNumeroInput(form.paidAmount)}
                   onChange={(e) => set('paidAmount', parseNumeroBR(e.target.value))}
                   inputMode="decimal"
                   placeholder="0,00"
@@ -328,7 +328,7 @@ export function StockTable({
               <div>
                 <div className="mb-1.5 text-[11px] text-fg-faded">Valor de venda (R$)</div>
                 <input
-                  defaultValue={form.saleAmount || ''}
+                  defaultValue={formatNumeroInput(form.saleAmount)}
                   onChange={(e) => set('saleAmount', parseNumeroBR(e.target.value))}
                   inputMode="decimal"
                   placeholder="0,00"

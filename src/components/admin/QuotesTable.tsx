@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useTransition } from 'react';
 import Link from 'next/link';
 import { Pencil, Trash2, Copy, PackageCheck, FilePlus2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
-import { formatBRL, parseNumeroBR } from '@/lib/format';
+import { formatBRL, parseNumeroBR, formatNumeroInput } from '@/lib/format';
 import { calculateQuote, QUOTE_STATUSES, type QuoteStatus } from '@/lib/quotes';
 import {
   saveQuoteAction,
@@ -399,7 +399,7 @@ export function QuotesTable({
                   <div className="px-3.5 py-2 text-[13px] text-fg-secondary">{c.rotulo}</div>
                   <div className="p-1.5">
                     <input
-                      defaultValue={form[c.campo] || ''}
+                      defaultValue={formatNumeroInput(form[c.campo])}
                       onChange={(e) => set(c.campo, parseNumeroBR(e.target.value))}
                       inputMode="decimal"
                       placeholder="0,00"
@@ -423,7 +423,7 @@ export function QuotesTable({
                 </div>
                 <div className="p-1.5">
                   <input
-                    defaultValue={form.shippingBrl || ''}
+                    defaultValue={formatNumeroInput(form.shippingBrl)}
                     onChange={(e) => set('shippingBrl', parseNumeroBR(e.target.value))}
                     inputMode="decimal"
                     placeholder="0,00"
@@ -443,7 +443,7 @@ export function QuotesTable({
               <div>
                 <div className="mb-1.5 text-[11px] text-fg-faded">Valor de venda (R$)</div>
                 <input
-                  defaultValue={form.salePriceBrl || ''}
+                  defaultValue={formatNumeroInput(form.salePriceBrl)}
                   onChange={(e) => set('salePriceBrl', parseNumeroBR(e.target.value))}
                   inputMode="decimal"
                   placeholder="0,00"

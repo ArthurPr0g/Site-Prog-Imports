@@ -31,6 +31,20 @@ export function parseNumeroBR(texto: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Pré-preenche um campo de texto numérico no formato que o usuário digita.
+ *
+ *  Sem isso o campo mostra a representação de máquina — 3500.5 em vez de
+ *  3.500,50 —, que num formulário em português parece valor errado e convida a
+ *  "corrigir" o que já estava certo. O resultado é lido de volta por
+ *  `parseNumeroBR` sem perda.
+ *
+ *  Zero vira vazio de propósito: campo pré-preenchido com "0,00" obriga a
+ *  apagar antes de digitar. */
+export function formatNumeroInput(valor: number, casas = 2): string {
+  if (!valor) return '';
+  return valor.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
+}
+
 export function formatParcel(value: number): string {
   return formatBRL(value / 12);
 }
