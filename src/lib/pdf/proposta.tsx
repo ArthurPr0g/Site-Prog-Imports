@@ -63,10 +63,10 @@ function estilos(accent: string) {
     numero: { fontSize: 12, fontWeight: 'bold', color: accent, marginTop: 2 },
 
     tituloProposta: { fontSize: 17, fontWeight: 'bold', marginBottom: 3 },
-    subtitulo: { fontSize: 9.5, color: CINZA, marginBottom: 20 },
+    subtitulo: { fontSize: 9.5, color: CINZA, marginBottom: 16 },
 
     secao: { fontSize: 8.5, fontWeight: 'bold', color: accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 7 },
-    bloco: { marginBottom: 20 },
+    bloco: { marginBottom: 16 },
 
     linhaDado: { flexDirection: 'row', marginBottom: 3 },
     rotuloDado: { width: 92, fontSize: 9, color: CINZA_CLARO },
@@ -86,14 +86,18 @@ function estilos(accent: string) {
       flexDirection: 'row',
       borderBottomWidth: 1,
       borderBottomColor: LINHA,
-      paddingVertical: 8,
+      paddingVertical: 6,
       paddingHorizontal: 8,
     },
-    colServico: { flex: 1, paddingRight: 10 },
-    colPrazo: { width: 78 },
-    colValor: { width: 92, textAlign: 'right' },
+    colServico: { flex: 1, paddingRight: 12 },
+    colPrazo: { width: 58 },
+    colValor: { width: 86, textAlign: 'right' },
+    /** Largura fixa e SEM flex. Reaproveitar `textoItem` aqui fazia a coluna de
+     *  prazo herdar `flex: 1` e disputar o espaço com a descrição meio a meio —
+     *  daí a descrição espremida e o vão enorme ao lado de "7 dias". */
+    celulaPrazo: { width: 58, fontSize: 9 },
     nomeServico: { fontSize: 10, fontWeight: 'bold' },
-    descServico: { fontSize: 8.5, color: CINZA_CLARO, marginTop: 2 },
+    descServico: { fontSize: 8.5, color: CINZA_CLARO, marginTop: 2, lineHeight: 1.4 },
     valorServico: { fontSize: 10, fontWeight: 'bold' },
     mensalTag: { fontSize: 8, color: accent, fontWeight: 'bold' },
 
@@ -245,13 +249,17 @@ export function PropostaDocument(d: DadosDaProposta) {
             <Text style={{ ...s.th, ...s.colValor }}>Valor</Text>
           </View>
 
+          {/* Sem `wrap={false}`: uma linha que não cabe no resto da página era
+              empurrada inteira para a seguinte, deixando meia página em branco
+              e criando uma segunda página que o conteúdo não pedia. Deixando
+              quebrar, a descrição continua na página de baixo. */}
           {d.itens.map((item, i) => (
-            <View key={i} style={s.tr} wrap={false}>
+            <View key={i} style={s.tr}>
               <View style={s.colServico}>
                 <Text style={s.nomeServico}>{item.name}</Text>
                 {!!item.description && <Text style={s.descServico}>{item.description}</Text>}
               </View>
-              <Text style={{ ...s.textoItem, ...s.colPrazo }}>
+              <Text style={s.celulaPrazo}>
                 {item.billingType === 'mensal' ? 'contínuo' : formatPrazo(item.leadTimeDays)}
               </Text>
               <View style={s.colValor}>
