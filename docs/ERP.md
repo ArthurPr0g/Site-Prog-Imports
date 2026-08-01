@@ -434,6 +434,66 @@ teste removidos ao final.
 
 ---
 
+## PDF de proposta com contrato — regras confirmadas
+
+Cada linha de orçamento tem um botão que abre
+`/api/orcamentos-servicos/[id]/pdf`. Página 1 é a proposta; se `include_contract`
+estiver marcado, as seguintes trazem o contrato para assinatura. Gerado com
+`@react-pdf/renderer` (runtime `nodejs` — precisa de acesso a arquivo).
+
+**Fundo branco**, por decisão do dono: é documento para imprimir e assinar. A
+identidade entra pela cor de destaque e pela logo (`public/images/logo.png`, lida
+do disco e embutida como data URI), não pelo fundo escuro do site — que gastaria
+tinta e sairia ilegível impresso.
+
+**⚠️ Dado pessoal fora do código.** Nome, CPF/CNPJ, qualificação e foro do
+contratado ficam em `site_settings` e são editados em Parâmetros do sistema. **O
+repositório é público**: CPF em arquivo versionado fica exposto para sempre,
+inclusive no histórico do git. `lib/contract.ts` não contém nenhum dado pessoal —
+e não pode passar a conter.
+
+**Um contrato, não dois.** Os dois `.docx` do dono ("com domínio" e "sem
+domínio") são idênticos exceto por **uma linha** da Cláusula 2. A caixa "Cliente
+já possui domínio" move `Domínio` da lista de inclusos para a de não inclusos e
+troca o parágrafo da cláusula de domínio. Verificado: aparece em exatamente uma
+das duas listas, nunca nas duas nem em nenhuma.
+
+**Anexar o contrato é escolha por orçamento** (decisão do dono). O modelo é de
+site institucional e não faz sentido numa mentoria ou num dashboard. A caixa se
+sugere sozinha quando algum item tem "site" no nome, mas nunca desmarca o que o
+dono marcou.
+
+**Os valores vêm do orçamento, não do modelo** — R$ 1.000, R$ 149 e 12 meses do
+`.docx` são substituídos pelo que está na proposta, e o prazo da Cláusula 3
+também. Um contrato dizendo R$ 1.000 atrás de uma proposta de R$ 4.500, no mesmo
+PDF, é o erro mais caro que este documento pode conter. Os totais são
+**recalculados dos itens** na hora de gerar, em vez de lidos das colunas, para o
+contrato não poder contradizer a lista logo acima dele.
+
+**As cláusulas são numeradas pela ordem final**, nunca escritas à mão: Plano de
+Hospedagem e Prazo Mínimo somem quando não há mensalidade, e com número fixo o
+contrato pularia da 9 para a 11 — erro que só aparece depois de assinado. Com
+plano são 17 cláusulas; sem, 15.
+
+**As metades de 50%** arredondam ao centavo com a primeira levando o a mais, para
+as duas somarem exatamente o total.
+
+Testado em `scratchpad/test-contrato.mjs` (28 asserções). Verificado em produção
+(2026-08-01): proposta de R$ 4.500 + R$ 149/mês gerou 5 páginas com contrato e 1
+sem; contrato trouxe "até 20 (vinte) dias" e R$ 2.250 + R$ 2.250 do orçamento;
+marcar "cliente possui domínio" moveu o item entre as listas; a última cláusula
+foi a 17 (FORO) com o foro de Parâmetros. Orçamento de teste removido ao final.
+
+### Em aberto sobre o PDF
+
+- **Só existe o contrato de site institucional.** Orçamento de mentoria ou
+  dashboard sai sem contrato. Contratos por tipo de serviço exigiriam um cadastro
+  de modelos, ainda não discutido.
+- **A proposta não tem validade** (decisão do dono para o orçamento), então o PDF
+  também não traz prazo para o cliente responder.
+
+---
+
 ## Botão "Gerar Venda" (pedido, ainda não construído)
 
 Cada orçamento deve ganhar um botão que faz de uma vez o que hoje seria manual:
