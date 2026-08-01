@@ -18,7 +18,7 @@ Serviços, extraída de um sistema Flask anterior).
 | M0 | Navegação (6 grupos no menu) | **Pronto** | — |
 | M1 | Clientes + Parâmetros do sistema | **Pronto** | `/admin/clientes`, `/admin/configuracoes` |
 | M2 | Estoque + selo de pronta entrega | **Pronto** | `/admin/estoque` |
-| M3 | Orçamentos Loja | Pendente | `/admin/orcamentos-loja` |
+| M3 | Orçamentos Loja + cotação automática | **Pronto** | `/admin/orcamentos-loja` |
 | M4 | Vendas | Pendente | `/admin/vendas` |
 | M5 | Financeiro | Pendente | `/admin/financeiro` |
 | M6 | Serviços (cadastro) + Prestação | Pendente | `/admin/servicos-internos`, `/admin/prestacao-servico` |
@@ -69,11 +69,26 @@ com N itens. Os 8 pedidos existentes eram teste e **podem ser apagados**.
 Consequência a tratar no M4: `/conta/pedidos`, a timeline de 10 etapas e o
 checkout leem `orders` hoje e precisarão ler a tabela nova.
 
-**Cotação do dólar.** Digitada à mão em Configurações, nunca no formulário do
-orçamento — fonte única de verdade. Quando mudar, todos os orçamentos com
-status diferente de "Convertido em Estoque" são recalculados (histórico
-convertido fica congelado). Cotação nula = "não configurada": o M3 precisa
-**recusar o cálculo**, não assumir 1.
+**Cotação do dólar.** Definida em Configurações, nunca no formulário do
+orçamento — fonte única de verdade. Cotação nula = "não configurada": o cálculo
+é **recusado**, nunca assume 1.
+
+O ponto de congelamento é **"Aprovado"**, não a conversão em estoque: enquanto
+a proposta não foi aprovada ela acompanha o câmbio (se o cliente fechar amanhã,
+o preço é o de amanhã); a partir de aprovada o valor virou compromisso e
+recalcular mudaria um preço já acordado. Salvar a cotação **reaplica sozinho**
+nos não aprovados — não depende de ninguém lembrar de clicar em nada.
+
+**Busca automática da cotação.** Botão em Configurações consulta duas APIs
+gratuitas sem chave, em ordem (AwesomeAPI e open.er-api), e soma a
+`usd_rate_spread` — a taxa que a Prog paga por dólar comprado, configurável,
+padrão R$ 0,10. **A AwesomeAPI falha a partir da Vercel** mesmo funcionando de
+rede residencial; a segunda fonte é quem responde na prática. O valor buscado
+não é salvo sozinho: entra no campo para conferência.
+
+Não há atualização diária automática, por decisão do dono. Em compensação, a
+tela de orçamentos **avisa quando a cotação salva está velha** (diferença de 5
+centavos ou mais em relação ao mercado).
 
 **Serviços.** Dois cadastros independentes: os da **Loja** aparecem no site
 público; os de **Cadastro** são os que a Prog presta fora dela (criação de
@@ -120,7 +135,25 @@ em dólar são digitados. Confirmado com o dono.
 Status: `Em elaboração` → `Enviado` → `Aguardando Cliente` → `Aprovado` →
 `Convertido em Estoque`. `Reprovado` é a saída negativa.
 
+Verificado em produção (2026-08-01): cálculo ao vivo igual ao gravado no banco;
+frete invertido correto; orçamento não aprovado acompanhou o câmbio ao subir de
+5,1664 para 6,00 (margem caiu de 21,70% para 9,33%); aprovado permaneceu em
+6,00 com o sistema em 7,50; conversão em estoque herdou custo, cotação
+congelada e cliente; exclusão com item vinculado foi recusada.
+
 ---
+
+## Botão "Gerar Venda" (pedido, ainda não construído)
+
+Cada orçamento deve ganhar um botão que faz de uma vez o que hoje seria manual:
+cria a **Venda**, alimenta o **Financeiro** e lança o(s) produto(s) no
+**Estoque**. Antes de gerar, precisa **conferir se a cotação salva é a de
+mercado**, porque a atualização é manual e o dono pode esquecer — a função
+`checkUsdRateFreshnessAction` já existe e resolve essa parte.
+
+Depende de M4 e M5. Construir antes seria escrever em tabelas que não existem.
+Quando os dois estiverem prontos, este botão é o melhor teste de que os módulos
+conversam: se o fluxo inteiro roda num clique, a integração está certa.
 
 ## Em aberto
 
@@ -130,6 +163,11 @@ Status: `Em elaboração` → `Enviado` → `Aguardando Cliente` → `Aprovado` 
 3. **Proteções de exclusão do estoque** (item vendido, item usado em troca)
    dependem de M4 e M8 — o `deleteStockItemAction` já tem o lugar marcado.
 4. **Variável de ambiente para esconder o ERP** em lojas de cliente.
+5. **Prazo de entrega, forma de pagamento e PIX parcelado** ficaram fora do
+   formulário de orçamento por decisão do dono, mas as colunas existem no banco
+   (`delivery_time`, `payment_method`). Sem forma de pagamento, o orçamento
+   exportado não comunica condições ao cliente, e o "prazo padrão" configurado
+   no M1 segue sem uso.
 
 ---
 
@@ -150,3 +188,17 @@ Status: `Em elaboração` → `Enviado` → `Aguardando Cliente` → `Aprovado` 
 - **Validar em produção com o navegador embutido** exige frontear a aba
   (`tabs_select`) antes de medir ou tirar screenshot: aba em background congela
   animações e devolve frames intermediários que parecem bug.
+- **Número digitado passa por `parseNumeroBR`** (`lib/format.ts`), nunca por
+  conversão improvisada. A versão anterior era duplicada em três componentes e
+  tratava todo ponto como milhar — quando a busca automática preencheu a
+  cotação com "5.1664", gravou 51664 como câmbio oficial. Valor plausível o
+  bastante para passar despercebido, e salvar a cotação dispara recálculo em
+  massa.
+- **Cálculo que aparece na tela e é gravado no banco usa a MESMA função**
+  (`lib/quotes.ts` roda no formulário e na action). Duas implementações
+  divergem com o tempo e a tela passa a mostrar um número enquanto o banco
+  grava outro.
+- **Testar a regra de negócio antes da tela.** O motor de orçamento foi
+  validado com casos conferidos à mão (`scratchpad/test-quotes.mjs`) antes de
+  existir formulário — dois deles quebrariam em produção (`Infinity` por
+  cotação zero, `NaN` por venda zero).
