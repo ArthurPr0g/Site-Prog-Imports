@@ -40,7 +40,8 @@ function estilos(accent: string) {
     pagina: {
       backgroundColor: '#ffffff',
       paddingTop: 34,
-      paddingBottom: 50,
+      // Só o suficiente para o rodapé fixo (bottom 22 + ~15 de altura).
+      paddingBottom: 44,
       paddingHorizontal: 44,
       fontSize: 10,
       color: '#1a1a1f',
@@ -125,11 +126,14 @@ function estilos(accent: string) {
       padding: 9,
       marginTop: 3,
     },
-    textoCaixa: { fontSize: 8.5, color: CINZA, marginBottom: 2 },
+    /** `lineHeight` menor que o da página: a caixa é uma lista curta de linhas
+     *  independentes, não texto corrido, e o espaçamento de leitura contínua
+     *  aqui só empurra o bloco para a página seguinte. */
+    textoCaixa: { fontSize: 8.5, color: CINZA, marginBottom: 2, lineHeight: 1.3 },
 
     rodape: {
       position: 'absolute',
-      bottom: 26,
+      bottom: 22,
       left: 44,
       right: 44,
       flexDirection: 'row',
@@ -316,9 +320,8 @@ export function PropostaDocument(d: DadosDaProposta) {
                 • Plano mensal de {formatBRL(d.totalMensal)}, cobrado na data acordada de cada mês, por {meses} meses.
               </Text>
             )}
-            <Text style={{ ...s.textoCaixa, marginTop: 3, fontSize: 8 }}>
-              O pagamento pode ser à vista ou parcelado; no parcelamento podem incidir juros ou taxas da instituição
-              financeira ou da plataforma de pagamento utilizada.
+            <Text style={{ ...s.textoCaixa, marginTop: 3, fontSize: 7.5, marginBottom: 0 }}>
+              À vista ou parcelado; no parcelamento podem incidir juros ou taxas da operadora de pagamento.
             </Text>
           </View>
         </View>
