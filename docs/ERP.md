@@ -160,11 +160,21 @@ lados têm os mesmos campos e todo relatório precisa deles juntos e ordenados p
 data — duas tabelas obrigariam a um `UNION` em toda consulta.
 
 `status` = `Pago` | `Previsto`, com padrão **Previsto** (parcela e conta a pagar
-são o caso mais frequente). Só o que está `Pago` entra no **resultado real** e no
-**gráfico de fluxo de caixa**; o previsto aparece na segunda linha de
-indicadores. Na tela, receita `Pago` é rotulada **Recebido** — quem recebe não
+são o caso mais frequente). Só o que está `Pago` entra na **linha "no período"**
+e no **gráfico de fluxo de caixa**. Na tela, receita `Pago` é rotulada
+**Recebido** — quem recebe não
 "pagou" nada. O dado guardado é o mesmo; a diferença é só de linguagem
 (`rotuloStatus` em `lib/finance.ts`).
+
+**As duas linhas de indicadores são leituras diferentes do mesmo filtro**
+(decisão do dono). A de cima, "no período", é só o que já movimentou dinheiro. A
+de baixo, "prevista", é **tudo que foi lançado no período** — movimentado ou não,
+o total esperado, não "o que falta". Lidas juntas, a diferença é o que ainda está
+por acontecer: previsto R$ 10.000 com real R$ 6.900 significa R$ 3.100 a entrar.
+Se o previsto excluísse o já pago, os dois cards não seriam comparáveis e o total
+do período não apareceria em lugar nenhum. Cada card carrega a nota "já
+recebida" / "tudo lançado", porque dois rótulos parecidos com regras diferentes
+confundem sem isso.
 
 `source` = `manual` | `venda` | `servico`. Lançamento gerado por venda ou
 serviço **não pode ser excluído pela tela do Financeiro**: o registro de origem
@@ -198,8 +208,17 @@ aquisição some da conta e o resultado infla. Lançamento manual continua entra
 integral: quem lança R$ 500 recebidos e não lança o custo está declarando que não
 houve custo.
 
-Testado em `scratchpad/test-finance.mjs` antes da UI (21 asserções: prioridade do
-filtro, fevereiro bissexto, virada de mês às 00h, indicadores, fluxo mensal).
+Regras testadas antes da UI (34 asserções: prioridade do filtro, fevereiro
+bissexto, virada de mês às 00h, mês inteiro no padrão, previsto nunca menor que
+o real, fluxo mensal).
+
+Verificado em produção (2026-08-01): "3.500,50" e "1.200" gravados certos;
+edição reabriu o campo em formato brasileiro; período padrão abriu em agosto
+inteiro e trouxe a despesa prevista do dia 20; "Tudo" foi de 10/05 a 20/08 (da
+primeira à última movimentação, não até hoje); no gráfico, R$ 3.450,13 rendeu
+75px contra 150px de R$ 6.900,25 — escala exata —, e o lançamento `Previsto`
+ficou de fora; exclusão de lançamento com origem `venda` foi recusada com ✕
+vermelho, a de lançamento manual passou. Dados de teste removidos ao final.
 
 ---
 
@@ -211,9 +230,11 @@ cria a **Venda**, alimenta o **Financeiro** e lança o(s) produto(s) no
 mercado**, porque a atualização é manual e o dono pode esquecer — a função
 `checkUsdRateFreshnessAction` já existe e resolve essa parte.
 
-Depende de M4 e M5. Construir antes seria escrever em tabelas que não existem.
-Quando os dois estiverem prontos, este botão é o melhor teste de que os módulos
-conversam: se o fluxo inteiro roda num clique, a integração está certa.
+O Financeiro (M5) já existe e a tabela aceita `source = 'venda'` com
+`reference_id`. Falta o M4. Quando ele estiver pronto, este botão é o melhor
+teste de que os módulos conversam: se o fluxo inteiro roda num clique, a
+integração está certa. Ao lançar no caixa, lembrar da ressalva do M5 — a receita
+de venda entra pelo **lucro**, não pelo faturamento.
 
 ## Em aberto
 
@@ -226,6 +247,11 @@ conversam: se o fluxo inteiro roda num clique, a integração está certa.
    (`delivery_time`, `payment_method`). Sem forma de pagamento, o orçamento
    exportado não comunica condições ao cliente, e o "prazo padrão" configurado
    no M1 segue sem uso.
+5. **Parcelamento no Financeiro.** A coluna `installment_id` existe para agrupar
+   as parcelas de um mesmo lançamento, mas nada na tela cria parcelas ainda —
+   hoje o usuário lançaria uma linha por parcela na mão.
+6. **`toast` com resultado da ação** foi corrigido no Financeiro; as demais telas
+   do admin ainda passam só a mensagem e mostram ✓ em recusa.
 
 ---
 

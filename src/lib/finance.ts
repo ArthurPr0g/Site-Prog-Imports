@@ -122,13 +122,22 @@ export type FinanceIndicators = {
   resultadoPrevisto: number;
 };
 
-function somar(entries: FinanceEntry[], kind: FinanceKind, status: FinanceStatus): number {
+/** Soma por tipo. Sem `status`, soma tudo daquele tipo no período. */
+function somar(entries: FinanceEntry[], kind: FinanceKind, status?: FinanceStatus): number {
   return entries
-    .filter((e) => e.kind === kind && e.status === status)
+    .filter((e) => e.kind === kind && (status === undefined || e.status === status))
     .reduce((s, e) => s + e.amount, 0);
 }
 
-/** Indicadores do período.
+/** Indicadores do período, em duas leituras do mesmo filtro.
+ *
+ *  **Real** é só o que já movimentou dinheiro (status `Pago`). **Previsto** é
+ *  TUDO que foi lançado no período, movimentado ou não — é o total esperado do
+ *  período, não "o que falta". Lido junto com o real, a diferença entre os dois
+ *  é justamente o que ainda está por acontecer: previsto R$ 10.000 com real
+ *  R$ 6.900 significa R$ 3.100 a entrar. Se o previsto excluísse o já pago, os
+ *  dois cards não seriam comparáveis e o total do período não apareceria em
+ *  lugar nenhum.
  *
  *  Uma ressalva importante sobre "resultado": enquanto Vendas (M4) e Prestação
  *  (M6) não existem, ele é receita menos despesa. Quando existirem, a receita
@@ -140,8 +149,8 @@ function somar(entries: FinanceEntry[], kind: FinanceKind, status: FinanceStatus
 export function computeFinanceIndicators(entries: FinanceEntry[]): FinanceIndicators {
   const receitaReal = somar(entries, 'receita', 'Pago');
   const despesaReal = somar(entries, 'despesa', 'Pago');
-  const receitaPrevista = somar(entries, 'receita', 'Previsto');
-  const despesaPrevista = somar(entries, 'despesa', 'Previsto');
+  const receitaPrevista = somar(entries, 'receita');
+  const despesaPrevista = somar(entries, 'despesa');
 
   return {
     receitaReal,

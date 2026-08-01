@@ -201,12 +201,12 @@ export function FinanceBoard({ entries }: { entries: FinanceEntry[] }) {
     setForm((f) => (f ? { ...f, [campo]: valor } : f));
 
   const cards = [
-    { rotulo: 'Receita no período', valor: ind.receitaReal, cor: VERDE },
-    { rotulo: 'Despesa no período', valor: ind.despesaReal, cor: VERMELHO },
-    { rotulo: 'Resultado no período', valor: ind.resultadoReal, cor: ind.resultadoReal >= 0 ? VERDE : VERMELHO },
-    { rotulo: 'Receita prevista', valor: ind.receitaPrevista, cor: undefined },
-    { rotulo: 'Despesa prevista', valor: ind.despesaPrevista, cor: undefined },
-    { rotulo: 'Resultado previsto', valor: ind.resultadoPrevisto, cor: undefined },
+    { rotulo: 'Receita no período', nota: 'já recebida', valor: ind.receitaReal, cor: VERDE },
+    { rotulo: 'Despesa no período', nota: 'já paga', valor: ind.despesaReal, cor: VERMELHO },
+    { rotulo: 'Resultado no período', nota: 'movimentado', valor: ind.resultadoReal, cor: ind.resultadoReal >= 0 ? VERDE : VERMELHO },
+    { rotulo: 'Receita prevista', nota: 'tudo lançado', valor: ind.receitaPrevista, cor: undefined },
+    { rotulo: 'Despesa prevista', nota: 'tudo lançado', valor: ind.despesaPrevista, cor: undefined },
+    { rotulo: 'Resultado previsto', nota: 'tudo lançado', valor: ind.resultadoPrevisto, cor: undefined },
   ];
 
   return (
@@ -268,7 +268,10 @@ export function FinanceBoard({ entries }: { entries: FinanceEntry[] }) {
       <div className="mb-3.5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {cards.map((c) => (
           <div key={c.rotulo} className="rounded-[18px] border border-border bg-card px-5 py-4">
-            <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{c.rotulo}</div>
+            <div className="mb-1 flex items-baseline gap-2">
+              <span className="text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{c.rotulo}</span>
+              <span className="text-[10.5px] text-fg-faded/70">{c.nota}</span>
+            </div>
             <div className="text-[22px] font-extrabold" style={c.cor ? { color: c.cor } : undefined}>
               {formatBRL(c.valor)}
             </div>
