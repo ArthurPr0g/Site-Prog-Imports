@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useTransition } from 'react';
 import Link from 'next/link';
 import { Pencil, Trash2, Copy, PackageCheck, FilePlus2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
-import { formatBRL } from '@/lib/format';
+import { formatBRL, parseNumeroBR } from '@/lib/format';
 import { calculateQuote, QUOTE_STATUSES, type QuoteStatus } from '@/lib/quotes';
 import {
   saveQuoteAction,
@@ -70,10 +70,6 @@ function paraFormulario(q: StoreQuote): QuoteFormInput {
   };
 }
 
-function paraNumero(valor: string): number {
-  const n = Number(valor.replace(/\./g, '').replace(',', '.'));
-  return Number.isFinite(n) ? n : 0;
-}
 
 const fmtUSD = (v: number) => `US$ ${v.toFixed(2).replace('.', ',')}`;
 
@@ -404,7 +400,7 @@ export function QuotesTable({
                   <div className="p-1.5">
                     <input
                       defaultValue={form[c.campo] || ''}
-                      onChange={(e) => set(c.campo, paraNumero(e.target.value))}
+                      onChange={(e) => set(c.campo, parseNumeroBR(e.target.value))}
                       inputMode="decimal"
                       placeholder="0,00"
                       className={`w-full ${inputClass}`}
@@ -428,7 +424,7 @@ export function QuotesTable({
                 <div className="p-1.5">
                   <input
                     defaultValue={form.shippingBrl || ''}
-                    onChange={(e) => set('shippingBrl', paraNumero(e.target.value))}
+                    onChange={(e) => set('shippingBrl', parseNumeroBR(e.target.value))}
                     inputMode="decimal"
                     placeholder="0,00"
                     className={`w-full ${inputClass}`}
@@ -448,7 +444,7 @@ export function QuotesTable({
                 <div className="mb-1.5 text-[11px] text-fg-faded">Valor de venda (R$)</div>
                 <input
                   defaultValue={form.salePriceBrl || ''}
-                  onChange={(e) => set('salePriceBrl', paraNumero(e.target.value))}
+                  onChange={(e) => set('salePriceBrl', parseNumeroBR(e.target.value))}
                   inputMode="decimal"
                   placeholder="0,00"
                   className={`w-full ${inputClass}`}

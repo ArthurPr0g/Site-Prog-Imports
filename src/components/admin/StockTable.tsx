@@ -3,7 +3,7 @@
 import { useState, useMemo, useTransition } from 'react';
 import { Pencil, Trash2, PackagePlus } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
-import { formatBRL } from '@/lib/format';
+import { formatBRL, parseNumeroBR } from '@/lib/format';
 import { saveStockItemAction, deleteStockItemAction, type StockFormInput } from '@/app/actions/stock';
 import {
   STOCK_STATUSES,
@@ -60,11 +60,6 @@ function paraFormulario(i: StockItem): StockFormInput {
   };
 }
 
-/** Aceita "5,42" e "5.42" — o operador digita como está acostumado. */
-function paraNumero(valor: string): number {
-  const n = Number(valor.replace(/\./g, '').replace(',', '.'));
-  return Number.isFinite(n) ? n : 0;
-}
 
 export function StockTable({
   items,
@@ -310,7 +305,7 @@ export function StockTable({
                 <div className="mb-1.5 text-[11px] text-fg-faded">Cotação utilizada</div>
                 <input
                   value={form.usdRate ?? ''}
-                  onChange={(e) => set('usdRate', e.target.value ? paraNumero(e.target.value) : null)}
+                  onChange={(e) => set('usdRate', e.target.value ? parseNumeroBR(e.target.value) : null)}
                   inputMode="decimal"
                   placeholder="Ex: 5,42"
                   className={`w-full ${inputClass}`}
@@ -324,7 +319,7 @@ export function StockTable({
                 <div className="mb-1.5 text-[11px] text-fg-faded">Valor pago (R$)</div>
                 <input
                   defaultValue={form.paidAmount || ''}
-                  onChange={(e) => set('paidAmount', paraNumero(e.target.value))}
+                  onChange={(e) => set('paidAmount', parseNumeroBR(e.target.value))}
                   inputMode="decimal"
                   placeholder="0,00"
                   className={`w-full ${inputClass}`}
@@ -334,7 +329,7 @@ export function StockTable({
                 <div className="mb-1.5 text-[11px] text-fg-faded">Valor de venda (R$)</div>
                 <input
                   defaultValue={form.saleAmount || ''}
-                  onChange={(e) => set('saleAmount', paraNumero(e.target.value))}
+                  onChange={(e) => set('saleAmount', parseNumeroBR(e.target.value))}
                   inputMode="decimal"
                   placeholder="0,00"
                   className={`w-full ${inputClass}`}

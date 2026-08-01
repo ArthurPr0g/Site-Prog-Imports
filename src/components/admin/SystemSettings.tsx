@@ -3,15 +3,11 @@
 import { useState, useTransition } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { parseNumeroBR } from '@/lib/format';
 import { saveSystemSettingsAction, fetchUsdRateAction } from '@/app/actions/settings';
 
 const inputClass =
   'rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px] outline-none focus:border-accent';
-
-function paraNumero(valor: string): number {
-  const n = Number(valor.replace(/\./g, '').replace(',', '.'));
-  return Number.isFinite(n) ? n : 0;
-}
 
 export function SystemSettings({
   usdRate,
@@ -43,8 +39,8 @@ export function SystemSettings({
   function salvar() {
     startTransition(async () => {
       const result = await saveSystemSettingsAction({
-        usdRate: cotacao.trim() === '' ? null : paraNumero(cotacao),
-        usdRateSpread: paraNumero(taxa),
+        usdRate: cotacao.trim() === '' ? null : parseNumeroBR(cotacao),
+        usdRateSpread: parseNumeroBR(taxa),
         defaultDeliveryTime: prazo,
       });
       toast(result.message);
