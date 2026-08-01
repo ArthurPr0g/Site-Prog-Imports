@@ -8,7 +8,11 @@ import {
   totalizarItens,
   calcularEntrega,
   computeServiceIndicators,
+  valorDoContrato,
+  somarMeses,
   formatPrazo,
+  PLAN_MONTHS_OPTIONS,
+  PLAN_MONTHS_DEFAULT,
   SERVICE_ORDER_STATUSES,
   SERVICE_PAYMENT_STATUSES,
   type InternalService,
@@ -48,7 +52,7 @@ function hojeISO(): string {
 }
 
 function itemVazio(): ServiceOrderItem {
-  return { internalServiceId: null, name: '', description: '', amount: 0, leadTimeDays: 0 };
+  return { internalServiceId: null, name: '', description: '', amount: 0, billingType: 'unico', leadTimeDays: 0 };
 }
 
 function formVazio(): ServiceOrderInput {
@@ -60,6 +64,8 @@ function formVazio(): ServiceOrderInput {
     paymentStatus: 'Previsto',
     paymentMethod: '',
     startDate: hojeISO(),
+    planMonths: PLAN_MONTHS_DEFAULT,
+    planStartDate: '',
     items: [itemVazio()],
   };
 }
@@ -92,7 +98,7 @@ export function ServiceOrdersTable({
 
   // Recalculado ao vivo com a MESMA função que a action usa para gravar, para
   // o que o dono vê no formulário não poder divergir do que vai para o banco.
-  const totais = useMemo(() => (form ? totalizarItens(form.items) : { total: 0, prazoDias: 0 }), [form]);
+  const totais = useMemo(() => totalizarItens(form?.items ?? []), [form]);
   const entrega = form ? calcularEntrega(form.startDate, totais.prazoDias) : null;
 
   const ativos = services.filter((s) => s.active);
@@ -123,6 +129,8 @@ export function ServiceOrdersTable({
       paymentStatus: o.paymentStatus,
       paymentMethod: o.paymentMethod,
       startDate: o.startDate,
+      planMonths: o.planMonths ?? PLAN_MONTHS_DEFAULT,
+      planStartDate: o.planStartDate ?? '',
       items: o.items.length ? o.items : [itemVazio()],
     });
   }
@@ -146,6 +154,7 @@ export function ServiceOrdersTable({
       name: s.name,
       description: s.description,
       amount: s.price,
+      billingType: s.billingType,
       leadTimeDays: s.leadTimeDays,
     });
   }
@@ -153,8 +162,9 @@ export function ServiceOrdersTable({
   const cards = [
     { rotulo: 'Em andamento', valor: String(ind.emAndamento), nota: 'prestações' },
     { rotulo: 'Concluídas', valor: String(ind.concluidas), nota: 'prestações' },
+    { rotulo: 'Recorrente', valor: `${formatBRL(ind.recorrenteMensal)}/mês`, nota: `${ind.planosAtivos} plano(s)` },
     { rotulo: 'Receita recebida', valor: formatBRL(ind.receitaRecebida), nota: 'já paga' },
-    { rotulo: 'Receita prevista', valor: formatBRL(ind.receitaPrevista), nota: 'tudo lançado' },
+    { rotulo: 'Valor em contratos', valor: formatBRL(ind.receitaPrevista), nota: 'trabalho + planos' },
   ];
 
   return (
@@ -177,7 +187,7 @@ export function ServiceOrdersTable({
         </button>
       </div>
 
-      <div className="mb-3.5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-3.5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {cards.map((c) => (
           <div key={c.rotulo} className="rounded-[18px] border border-border bg-card px-5 py-4">
             <div className="mb-1 flex items-baseline gap-2">
@@ -218,12 +228,24 @@ export function ServiceOrdersTable({
             <div className="min-w-0">
               <div className="truncate font-bold">{o.title}</div>
               <div className="truncate text-[11.5px] text-fg-tertiary">
-                {o.items.length} serviço(s) · {formatPrazo(o.leadTimeDays)}
+                {o.items.length} serviço(s)
+                {o.leadTimeDays > 0 ? ` · ${formatPrazo(o.leadTimeDays)}` : ''}
+                {o.planMonths ? ` · plano de ${o.planMonths} meses` : ''}
                 {o.quoteId ? ' · veio de orçamento' : ''}
               </div>
             </div>
             <div className="truncate text-fg-secondary">{o.customerName || '—'}</div>
-            <div className="text-right font-bold text-accent">{formatBRL(o.totalAmount)}</div>
+            {/* Valor único e mensalidade aparecem separados, como o contrato é
+                lido — somar os dois apagaria quanto é recorrente. */}
+            <div className="text-right font-bold">
+              {o.totalAmount > 0 && <div className="text-accent">{formatBRL(o.totalAmount)}</div>}
+              {o.monthlyAmount > 0 && (
+                <div className={o.totalAmount > 0 ? 'text-[11.5px] text-fg-secondary' : 'text-accent'}>
+                  {formatBRL(o.monthlyAmount)}/mês
+                </div>
+              )}
+              {o.totalAmount === 0 && o.monthlyAmount === 0 && <span className="text-fg-tertiary">—</span>}
+            </div>
             <div className="text-fg-secondary">{o.dueDate ? formatDateBR(o.dueDate + 'T12:00:00') : '—'}</div>
             <div>
               <span
@@ -338,7 +360,9 @@ export function ServiceOrdersTable({
                     >
                       <option value="">Avulso</option>
                       {ativos.map((s) => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
+                        <option key={s.id} value={s.id}>
+                          {s.name}{s.billingType === 'mensal' ? ' (mensal)' : ''}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -361,14 +385,20 @@ export function ServiceOrdersTable({
                     />
                   </div>
                   <div className="p-1.5">
-                    <input
-                      key={`prazo-${i}-${item.internalServiceId ?? 'avulso'}`}
-                      defaultValue={item.leadTimeDays || ''}
-                      onChange={(e) => setItem(i, { leadTimeDays: Math.round(parseNumeroBR(e.target.value)) })}
-                      inputMode="numeric"
-                      placeholder="dias"
-                      className={`w-full ${inputClass}`}
-                    />
+                    {/* Mensal é contínuo: não tem entrega, e um prazo aqui
+                        empurraria a entrega do trabalho real para frente. */}
+                    {item.billingType === 'mensal' ? (
+                      <div className="px-2 text-[11.5px] font-bold text-accent">mensal</div>
+                    ) : (
+                      <input
+                        key={`prazo-${i}-${item.internalServiceId ?? 'avulso'}`}
+                        defaultValue={item.leadTimeDays || ''}
+                        onChange={(e) => setItem(i, { leadTimeDays: Math.round(parseNumeroBR(e.target.value)) })}
+                        inputMode="numeric"
+                        placeholder="dias"
+                        className={`w-full ${inputClass}`}
+                      />
+                    )}
                   </div>
                   <div className="flex justify-center p-1.5">
                     <button
@@ -387,9 +417,16 @@ export function ServiceOrdersTable({
               <div className="grid grid-cols-[1.6fr_1.4fr_110px_90px_36px] items-center gap-px border-t border-border-strong bg-card-dark text-[13px] font-extrabold">
                 <div className="px-3 py-2.5">Total</div>
                 <div className="px-3 py-2.5 text-[11.5px] font-bold text-fg-tertiary">
-                  {entrega ? `entrega em ${formatDateBR(entrega + 'T12:00:00')}` : ''}
+                  {entrega && totais.prazoDias > 0 ? `entrega em ${formatDateBR(entrega + 'T12:00:00')}` : ''}
                 </div>
-                <div className="px-3 py-2.5 text-accent">{formatBRL(totais.total)}</div>
+                <div className="px-3 py-2.5">
+                  {totais.total > 0 && <span className="text-accent">{formatBRL(totais.total)}</span>}
+                  {totais.mensal > 0 && (
+                    <div className={totais.total > 0 ? 'text-[11.5px] font-bold text-fg-secondary' : 'text-accent'}>
+                      {formatBRL(totais.mensal)}/mês
+                    </div>
+                  )}
+                </div>
                 <div className="px-3 py-2.5">{totais.prazoDias || 0}d</div>
                 <div />
               </div>
@@ -397,7 +434,52 @@ export function ServiceOrdersTable({
 
             <div className="mb-1.5 text-[11px] text-fg-faded">
               O prazo é a <strong>soma</strong> dos serviços, não o maior: eles são executados em sequência.
+              Serviço mensal não entra no prazo — é contínuo.
             </div>
+
+            {totais.temPlano && (
+              <div className="mb-4 mt-4 rounded-control border border-accent/40 bg-[rgb(var(--brand-accent-rgb)/.05)] p-4">
+                <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-accent">
+                  Plano mensal
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div>
+                    <div className="mb-1.5 text-[11px] text-fg-faded">Duração</div>
+                    <select
+                      value={form.planMonths ?? PLAN_MONTHS_DEFAULT}
+                      onChange={(e) => set('planMonths', Number(e.target.value))}
+                      className={`w-full ${inputClass}`}
+                    >
+                      {PLAN_MONTHS_OPTIONS.map((m) => (
+                        <option key={m} value={m}>{m} meses</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <div className="mb-1.5 text-[11px] text-fg-faded">Primeira mensalidade</div>
+                    <input
+                      type="date"
+                      value={form.planStartDate || form.startDate}
+                      onChange={(e) => set('planStartDate', e.target.value)}
+                      className={`w-full ${inputClass}`}
+                    />
+                  </div>
+                  <div>
+                    <div className="mb-1.5 text-[11px] text-fg-faded">Valor do contrato</div>
+                    <div className="rounded-control border border-border bg-card-dark px-3.5 py-2.5 text-[13.5px] font-extrabold">
+                      {formatBRL(valorDoContrato(totais, form.planMonths))}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 text-[11.5px] text-fg-tertiary">
+                  O Financeiro recebe <strong>{form.planMonths} parcelas</strong> de{' '}
+                  <strong className="text-accent">{formatBRL(totais.mensal)}</strong>, de{' '}
+                  {formatDateBR((form.planStartDate || form.startDate) + 'T12:00:00')} a{' '}
+                  {formatDateBR(somarMeses(form.planStartDate || form.startDate, (form.planMonths ?? 1) - 1) + 'T12:00:00')}
+                  , todas como Previsto. Cada uma é baixada no Financeiro quando o mês entra.
+                </div>
+              </div>
+            )}
 
             <div className="mb-5 mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
@@ -444,14 +526,27 @@ export function ServiceOrdersTable({
 
             <div className="mb-5 rounded-control border border-border bg-card-dark px-4 py-3 text-[12px] text-fg-tertiary">
               {form.status === 'Cancelada' ? (
-                <>Prestação cancelada <strong>não lança nada</strong> no Financeiro — e o lançamento existente é removido ao salvar.</>
+                <>Prestação cancelada <strong>não lança nada</strong> no Financeiro — e os lançamentos existentes são removidos ao salvar.</>
               ) : (
                 <>
-                  Ao salvar, o Financeiro recebe <strong>uma receita</strong> de{' '}
-                  <strong className="text-accent">{formatBRL(totais.total)}</strong> como{' '}
-                  <strong>{form.paymentStatus === 'Recebido' ? 'Pago' : 'Previsto'}</strong>
-                  {entrega ? ` em ${formatDateBR(entrega + 'T12:00:00')}` : ''}. Ela acompanha esta prestação e não
-                  pode ser editada pela tela do Financeiro.
+                  Ao salvar, o Financeiro recebe
+                  {totais.total > 0 && (
+                    <>
+                      {' '}<strong>uma receita</strong> de{' '}
+                      <strong className="text-accent">{formatBRL(totais.total)}</strong> como{' '}
+                      <strong>{form.paymentStatus === 'Recebido' ? 'Pago' : 'Previsto'}</strong>
+                      {entrega ? ` em ${formatDateBR(entrega + 'T12:00:00')}` : ''}
+                    </>
+                  )}
+                  {totais.total > 0 && totais.temPlano && ' e'}
+                  {totais.temPlano && (
+                    <>
+                      {' '}<strong>{form.planMonths} parcelas</strong> de{' '}
+                      <strong className="text-accent">{formatBRL(totais.mensal)}</strong>
+                    </>
+                  )}
+                  . Esses lançamentos acompanham a prestação — no Financeiro só dá para marcar se já foram
+                  recebidos.
                 </>
               )}
             </div>

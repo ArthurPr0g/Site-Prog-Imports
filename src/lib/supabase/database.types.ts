@@ -310,6 +310,7 @@ export type Database = {
           entry_date: string
           id: string
           installment_id: string | null
+          installment_number: number | null
           kind: string
           reference_id: string | null
           source: string
@@ -323,6 +324,7 @@ export type Database = {
           entry_date?: string
           id?: string
           installment_id?: string | null
+          installment_number?: number | null
           kind: string
           reference_id?: string | null
           source?: string
@@ -336,6 +338,7 @@ export type Database = {
           entry_date?: string
           id?: string
           installment_id?: string | null
+          installment_number?: number | null
           kind?: string
           reference_id?: string | null
           source?: string
@@ -347,6 +350,7 @@ export type Database = {
       internal_services: {
         Row: {
           active: boolean
+          billing_type: string
           category: string
           created_at: string
           description: string
@@ -359,6 +363,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          billing_type?: string
           category?: string
           created_at?: string
           description?: string
@@ -371,6 +376,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          billing_type?: string
           category?: string
           created_at?: string
           description?: string
@@ -1069,6 +1075,7 @@ export type Database = {
       service_order_items: {
         Row: {
           amount: number
+          billing_type: string
           description: string
           id: string
           internal_service_id: string | null
@@ -1079,6 +1086,7 @@ export type Database = {
         }
         Insert: {
           amount?: number
+          billing_type?: string
           description?: string
           id?: string
           internal_service_id?: string | null
@@ -1089,6 +1097,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          billing_type?: string
           description?: string
           id?: string
           internal_service_id?: string | null
@@ -1117,6 +1126,7 @@ export type Database = {
       service_quote_items: {
         Row: {
           amount: number
+          billing_type: string
           description: string
           id: string
           internal_service_id: string | null
@@ -1127,6 +1137,7 @@ export type Database = {
         }
         Insert: {
           amount?: number
+          billing_type?: string
           description?: string
           id?: string
           internal_service_id?: string | null
@@ -1137,6 +1148,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          billing_type?: string
           description?: string
           id?: string
           internal_service_id?: string | null
@@ -1168,7 +1180,9 @@ export type Database = {
           customer_id: string | null
           id: string
           lead_time_days: number
+          monthly_amount: number
           notes: string
+          plan_months: number | null
           status: string
           title: string
           total_amount: number
@@ -1179,7 +1193,9 @@ export type Database = {
           customer_id?: string | null
           id?: string
           lead_time_days?: number
+          monthly_amount?: number
           notes?: string
+          plan_months?: number | null
           status?: string
           title: string
           total_amount?: number
@@ -1190,7 +1206,9 @@ export type Database = {
           customer_id?: string | null
           id?: string
           lead_time_days?: number
+          monthly_amount?: number
           notes?: string
+          plan_months?: number | null
           status?: string
           title?: string
           total_amount?: number
@@ -1213,9 +1231,12 @@ export type Database = {
           due_date: string | null
           id: string
           lead_time_days: number
+          monthly_amount: number
           notes: string
           payment_method: string
           payment_status: string
+          plan_months: number | null
+          plan_start_date: string | null
           quote_id: string | null
           start_date: string
           status: string
@@ -1229,9 +1250,12 @@ export type Database = {
           due_date?: string | null
           id?: string
           lead_time_days?: number
+          monthly_amount?: number
           notes?: string
           payment_method?: string
           payment_status?: string
+          plan_months?: number | null
+          plan_start_date?: string | null
           quote_id?: string | null
           start_date?: string
           status?: string
@@ -1245,9 +1269,12 @@ export type Database = {
           due_date?: string | null
           id?: string
           lead_time_days?: number
+          monthly_amount?: number
           notes?: string
           payment_method?: string
           payment_status?: string
+          plan_months?: number | null
+          plan_start_date?: string | null
           quote_id?: string | null
           start_date?: string
           status?: string

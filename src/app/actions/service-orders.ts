@@ -7,6 +7,7 @@ import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/a
 import {
   totalizarItens,
   calcularEntrega,
+  PLAN_MONTHS_OPTIONS,
   SERVICE_ORDER_STATUSES,
   SERVICE_PAYMENT_STATUSES,
   type ServiceOrderItem,
@@ -24,6 +25,10 @@ export type ServiceOrderInput = {
   paymentStatus: ServicePaymentStatus;
   paymentMethod: string;
   startDate: string;
+  /** Duração do plano. Só vale quando há algum serviço mensal. */
+  planMonths: number | null;
+  /** Data da primeira mensalidade. Vazio cai na data de início. */
+  planStartDate: string;
   items: ServiceOrderItem[];
 };
 
@@ -54,9 +59,13 @@ export async function saveServiceOrderAction(input: ServiceOrderInput): Promise<
     return errResult('Todos os valores precisam ser números iguais ou maiores que zero.');
   }
 
-  // Total e prazo são derivados dos itens e gravados: o histórico não pode
+  // Totais e prazo são derivados dos itens e gravados: o histórico não pode
   // mudar se o preço do catálogo mudar depois.
-  const { total, prazoDias } = totalizarItens(itens);
+  const { total, mensal, prazoDias, temPlano } = totalizarItens(itens);
+
+  if (temPlano && !PLAN_MONTHS_OPTIONS.includes(input.planMonths as 6 | 12 | 24)) {
+    return errResult('Escolha a duração do plano: 6, 12 ou 24 meses.');
+  }
 
   const payload = {
     customer_id: input.customerId,
@@ -66,6 +75,11 @@ export async function saveServiceOrderAction(input: ServiceOrderInput): Promise<
     payment_status: input.paymentStatus,
     payment_method: input.paymentMethod.trim(),
     total_amount: total,
+    monthly_amount: mensal,
+    // Sem serviço mensal não há plano. Zerar aqui evita que uma duração
+    // esquecida de uma edição anterior continue gerando parcelas de nada.
+    plan_months: temPlano ? input.planMonths : null,
+    plan_start_date: temPlano ? input.planStartDate || input.startDate : null,
     lead_time_days: prazoDias,
     start_date: input.startDate,
     due_date: calcularEntrega(input.startDate, prazoDias),
@@ -93,7 +107,8 @@ export async function saveServiceOrderAction(input: ServiceOrderInput): Promise<
       name: i.name.trim(),
       description: i.description.trim(),
       amount: i.amount,
-      lead_time_days: Number.isFinite(i.leadTimeDays) ? i.leadTimeDays : 0,
+      billing_type: i.billingType,
+      lead_time_days: i.billingType === 'mensal' ? 0 : Number.isFinite(i.leadTimeDays) ? i.leadTimeDays : 0,
       position: indice,
     }))
   );

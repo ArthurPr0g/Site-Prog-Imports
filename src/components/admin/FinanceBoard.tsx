@@ -20,6 +20,9 @@ import { saveFinanceEntryAction, deleteFinanceEntryAction, type FinanceFormInput
 const inputClass =
   'rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px] outline-none focus:border-accent';
 
+/** Campo mantido pela origem: visível para conferência, mas não editável. */
+const travadoClass = 'cursor-not-allowed opacity-55';
+
 const VERDE = '#4ade80';
 const VERMELHO = '#e05555';
 
@@ -186,8 +189,12 @@ export function FinanceBoard({ entries }: { entries: FinanceEntry[] }) {
       amount: e.amount,
       entryDate: e.entryDate,
       status: e.status,
+      source: e.source,
     });
   }
+
+  /** Lançamento mantido por venda ou prestação: só o status é editável aqui. */
+  const gerado = !!form?.id && !!form.source && form.source !== 'manual';
 
   function excluir(e: FinanceEntry) {
     if (!window.confirm(`Excluir "${e.description}"?`)) return;
@@ -316,12 +323,23 @@ export function FinanceBoard({ entries }: { entries: FinanceEntry[] }) {
             <div className="mb-5 text-[15px] font-extrabold">
               {form.id ? 'Editar lançamento' : form.kind === 'receita' ? 'Nova receita' : 'Nova despesa'}
             </div>
+
+            {gerado && (
+              <div className="mb-5 rounded-control border border-border bg-card-dark px-4 py-3 text-[12px] text-fg-tertiary">
+                Este lançamento vem de {form.source === 'venda' ? 'uma venda' : 'uma prestação de serviço'} e é
+                mantido por ela. Aqui você só marca se já foi{' '}
+                <strong>{form.kind === 'receita' ? 'recebido' : 'pago'}</strong> — valor, data e descrição mudam na
+                origem, senão a próxima atualização de lá desfaria a alteração em silêncio.
+              </div>
+            )}
+
             <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <input
                 value={form.description}
                 onChange={(e) => set('description', e.target.value)}
                 placeholder="Descrição *"
-                className={`sm:col-span-2 ${inputClass}`}
+                disabled={gerado}
+                className={`sm:col-span-2 ${inputClass} ${gerado ? travadoClass : ''}`}
               />
               <div>
                 <div className="mb-1.5 text-[11px] text-fg-faded">Valor (R$)</div>
@@ -330,12 +348,19 @@ export function FinanceBoard({ entries }: { entries: FinanceEntry[] }) {
                   onChange={(e) => set('amount', parseNumeroBR(e.target.value))}
                   inputMode="decimal"
                   placeholder="0,00"
-                  className={`w-full ${inputClass}`}
+                  disabled={gerado}
+                  className={`w-full ${inputClass} ${gerado ? travadoClass : ''}`}
                 />
               </div>
               <div>
                 <div className="mb-1.5 text-[11px] text-fg-faded">Data</div>
-                <input type="date" value={form.entryDate} onChange={(e) => set('entryDate', e.target.value)} className={`w-full ${inputClass}`} />
+                <input
+                  type="date"
+                  value={form.entryDate}
+                  onChange={(e) => set('entryDate', e.target.value)}
+                  disabled={gerado}
+                  className={`w-full ${inputClass} ${gerado ? travadoClass : ''}`}
+                />
               </div>
               <div className="sm:col-span-2">
                 <div className="mb-1.5 text-[11px] text-fg-faded">Status</div>

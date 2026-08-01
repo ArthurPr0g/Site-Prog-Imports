@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import type { InternalService } from '@/lib/services';
+import type { BillingType, InternalService } from '@/lib/services';
 
 type Row = {
   id: string;
@@ -7,6 +7,7 @@ type Row = {
   description: string;
   category: string;
   price: number;
+  billing_type: string;
   lead_time_days: number;
   active: boolean;
   position: number;
@@ -19,6 +20,7 @@ function toService(r: Row): InternalService {
     description: r.description,
     category: r.category,
     price: Number(r.price),
+    billingType: r.billing_type as BillingType,
     leadTimeDays: r.lead_time_days,
     active: r.active,
     position: r.position,

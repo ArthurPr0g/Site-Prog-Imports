@@ -8,6 +8,7 @@ import {
   totalizarItens,
   calcularEntrega,
   podeConverterEmPrestacao,
+  PLAN_MONTHS_OPTIONS,
   SERVICE_QUOTE_STATUSES,
   type ServiceOrderItem,
   type ServiceQuoteStatus,
@@ -20,6 +21,8 @@ export type ServiceQuoteInput = {
   title: string;
   notes: string;
   status: ServiceQuoteStatus;
+  /** Duração proposta do plano. Só vale quando há serviço mensal. */
+  planMonths: number | null;
   items: ServiceOrderItem[];
 };
 
@@ -28,6 +31,8 @@ export type ConversaoInput = {
   quoteId: string;
   paymentMethod: string;
   startDate: string;
+  /** Primeira mensalidade. Vazio cai na data de início da execução. */
+  planStartDate: string;
 };
 
 async function adminClient() {
@@ -72,7 +77,11 @@ export async function saveServiceQuoteAction(input: ServiceQuoteInput): Promise<
     }
   }
 
-  const { total, prazoDias } = totalizarItens(itens);
+  const { total, mensal, prazoDias, temPlano } = totalizarItens(itens);
+
+  if (temPlano && !PLAN_MONTHS_OPTIONS.includes(input.planMonths as 6 | 12 | 24)) {
+    return errResult('Escolha a duração do plano: 6, 12 ou 24 meses.');
+  }
 
   const payload = {
     customer_id: input.customerId,
@@ -80,6 +89,8 @@ export async function saveServiceQuoteAction(input: ServiceQuoteInput): Promise<
     notes: input.notes.trim(),
     status: input.status,
     total_amount: total,
+    monthly_amount: mensal,
+    plan_months: temPlano ? input.planMonths : null,
     lead_time_days: prazoDias,
     updated_at: new Date().toISOString(),
   };
@@ -103,7 +114,8 @@ export async function saveServiceQuoteAction(input: ServiceQuoteInput): Promise<
       name: i.name.trim(),
       description: i.description.trim(),
       amount: i.amount,
-      lead_time_days: Number.isFinite(i.leadTimeDays) ? i.leadTimeDays : 0,
+      billing_type: i.billingType,
+      lead_time_days: i.billingType === 'mensal' ? 0 : Number.isFinite(i.leadTimeDays) ? i.leadTimeDays : 0,
       position: indice,
     }))
   );
@@ -174,13 +186,20 @@ export async function convertServiceQuoteAction(input: ConversaoInput): Promise<
     name: string;
     description: string;
     amount: number;
+    billing_type: string;
     lead_time_days: number;
     position: number;
   }[];
 
   if (itens.length === 0) return errResult('Este orçamento não tem serviços para converter.');
 
-  const prazoDias = itens.reduce((s, i) => s + i.lead_time_days, 0);
+  // Serviço mensal não tem entrega: somar o prazo dele empurraria a data de
+  // conclusão do trabalho real para meses à frente.
+  const prazoDias = itens
+    .filter((i) => i.billing_type !== 'mensal')
+    .reduce((s, i) => s + i.lead_time_days, 0);
+
+  const temPlano = Number(q.monthly_amount) > 0 && (q.plan_months ?? 0) > 0;
 
   const { data: order, error: erroOrder } = await supabase
     .from('service_orders')
@@ -195,6 +214,9 @@ export async function convertServiceQuoteAction(input: ConversaoInput): Promise<
       payment_status: 'Previsto',
       payment_method: input.paymentMethod.trim(),
       total_amount: q.total_amount,
+      monthly_amount: q.monthly_amount,
+      plan_months: temPlano ? q.plan_months : null,
+      plan_start_date: temPlano ? input.planStartDate || input.startDate : null,
       lead_time_days: prazoDias,
       start_date: input.startDate,
       due_date: calcularEntrega(input.startDate, prazoDias),
@@ -215,6 +237,7 @@ export async function convertServiceQuoteAction(input: ConversaoInput): Promise<
         name: i.name,
         description: i.description,
         amount: i.amount,
+        billing_type: i.billing_type,
         lead_time_days: i.lead_time_days,
         position: indice,
       }))

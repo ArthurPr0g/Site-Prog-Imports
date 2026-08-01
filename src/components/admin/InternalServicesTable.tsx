@@ -4,7 +4,7 @@ import { useState, useMemo, useTransition } from 'react';
 import { Pencil, Trash2, Plus, Search } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { formatBRL, parseNumeroBR, formatNumeroInput } from '@/lib/format';
-import { formatPrazo, type InternalService } from '@/lib/services';
+import { formatPrazo, type BillingType, type InternalService } from '@/lib/services';
 import { saveInternalServiceAction, deleteInternalServiceAction, type InternalServiceInput } from '@/app/actions/internal-services';
 
 const inputClass =
@@ -13,7 +13,7 @@ const inputClass =
 const COLUNAS = 'grid grid-cols-[1.8fr_1fr_120px_110px_90px_70px] gap-2';
 
 function formVazio(): InternalServiceInput {
-  return { name: '', description: '', category: '', price: 0, leadTimeDays: 0, active: true };
+  return { name: '', description: '', category: '', price: 0, billingType: 'unico', leadTimeDays: 0, active: true };
 }
 
 export function InternalServicesTable({ services }: { services: InternalService[] }) {
@@ -50,6 +50,10 @@ export function InternalServicesTable({ services }: { services: InternalService[
 
   const set = <K extends keyof InternalServiceInput>(campo: K, valor: InternalServiceInput[K]) =>
     setForm((f) => (f ? { ...f, [campo]: valor } : f));
+
+  // Serviço mensal é contínuo: não tem prazo de entrega, então o campo some em
+  // vez de ficar aceitando um número que seria ignorado.
+  const mensal = form?.billingType === 'mensal';
 
   return (
     <div>
@@ -102,8 +106,13 @@ export function InternalServicesTable({ services }: { services: InternalService[
               {s.description && <div className="truncate text-[11.5px] text-fg-tertiary">{s.description}</div>}
             </div>
             <div className="truncate text-fg-secondary">{s.category || '—'}</div>
-            <div className="text-right font-bold text-accent">{formatBRL(s.price)}</div>
-            <div className="text-fg-secondary">{formatPrazo(s.leadTimeDays)}</div>
+            <div className="text-right font-bold text-accent">
+              {formatBRL(s.price)}
+              {s.billingType === 'mensal' && <span className="text-[11px] font-bold text-fg-tertiary">/mês</span>}
+            </div>
+            <div className="text-fg-secondary">
+              {s.billingType === 'mensal' ? 'Plano mensal' : formatPrazo(s.leadTimeDays)}
+            </div>
             <div>
               <span
                 className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-extrabold ${
@@ -122,6 +131,7 @@ export function InternalServicesTable({ services }: { services: InternalService[
                     description: s.description,
                     category: s.category,
                     price: s.price,
+                    billingType: s.billingType,
                     leadTimeDays: s.leadTimeDays,
                     active: s.active,
                   })
@@ -178,8 +188,22 @@ export function InternalServicesTable({ services }: { services: InternalService[
                 />
               </div>
               <div>
-                <div className="mb-1.5 text-[11px] text-fg-faded">Valor (R$)</div>
+                <div className="mb-1.5 text-[11px] text-fg-faded">Cobrança</div>
+                <select
+                  value={form.billingType}
+                  onChange={(e) => set('billingType', e.target.value as BillingType)}
+                  className={`w-full ${inputClass}`}
+                >
+                  <option value="unico">Valor único</option>
+                  <option value="mensal">Mensal (plano)</option>
+                </select>
+              </div>
+              <div>
+                <div className="mb-1.5 text-[11px] text-fg-faded">
+                  {mensal ? 'Mensalidade (R$)' : 'Valor (R$)'}
+                </div>
                 <input
+                  key={form.billingType}
                   defaultValue={formatNumeroInput(form.price)}
                   onChange={(e) => set('price', parseNumeroBR(e.target.value))}
                   inputMode="decimal"
@@ -187,16 +211,18 @@ export function InternalServicesTable({ services }: { services: InternalService[
                   className={`w-full ${inputClass}`}
                 />
               </div>
-              <div>
-                <div className="mb-1.5 text-[11px] text-fg-faded">Prazo (dias)</div>
-                <input
-                  defaultValue={form.leadTimeDays || ''}
-                  onChange={(e) => set('leadTimeDays', Math.round(parseNumeroBR(e.target.value)))}
-                  inputMode="numeric"
-                  placeholder="Ex: 20"
-                  className={`w-full ${inputClass}`}
-                />
-              </div>
+              {!mensal && (
+                <div>
+                  <div className="mb-1.5 text-[11px] text-fg-faded">Prazo (dias)</div>
+                  <input
+                    defaultValue={form.leadTimeDays || ''}
+                    onChange={(e) => set('leadTimeDays', Math.round(parseNumeroBR(e.target.value)))}
+                    inputMode="numeric"
+                    placeholder="Ex: 20"
+                    className={`w-full ${inputClass}`}
+                  />
+                </div>
+              )}
               <label className="flex cursor-pointer items-center gap-2.5 self-end pb-2.5 text-[13.5px]">
                 <input
                   type="checkbox"

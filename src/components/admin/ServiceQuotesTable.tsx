@@ -10,7 +10,11 @@ import {
   calcularEntrega,
   computeServiceQuoteIndicators,
   podeConverterEmPrestacao,
+  valorDoContrato,
+  somarMeses,
   formatPrazo,
+  PLAN_MONTHS_OPTIONS,
+  PLAN_MONTHS_DEFAULT,
   SERVICE_QUOTE_STATUSES_EDITAVEIS,
   type InternalService,
   type ServiceQuote,
@@ -49,7 +53,7 @@ function hojeISO(): string {
 }
 
 function itemVazio(): ServiceOrderItem {
-  return { internalServiceId: null, name: '', description: '', amount: 0, leadTimeDays: 0 };
+  return { internalServiceId: null, name: '', description: '', amount: 0, billingType: 'unico', leadTimeDays: 0 };
 }
 
 function formVazio(): ServiceQuoteInput {
@@ -58,6 +62,7 @@ function formVazio(): ServiceQuoteInput {
     title: '',
     notes: '',
     status: 'Em elaboração',
+    planMonths: PLAN_MONTHS_DEFAULT,
     items: [itemVazio()],
   };
 }
@@ -73,7 +78,12 @@ export function ServiceQuotesTable({
 }) {
   const [busca, setBusca] = useState('');
   const [form, setForm] = useState<ServiceQuoteInput | null>(null);
-  const [conversao, setConversao] = useState<{ quote: ServiceQuote; paymentMethod: string; startDate: string } | null>(null);
+  const [conversao, setConversao] = useState<{
+    quote: ServiceQuote;
+    paymentMethod: string;
+    startDate: string;
+    planStartDate: string;
+  } | null>(null);
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 
@@ -91,12 +101,14 @@ export function ServiceQuotesTable({
 
   // Mesma função que a action usa para gravar, para o que aparece no formulário
   // não poder divergir do que vai para o banco.
-  const totais = useMemo(() => (form ? totalizarItens(form.items) : { total: 0, prazoDias: 0 }), [form]);
+  const totais = useMemo(() => totalizarItens(form?.items ?? []), [form]);
   const ativos = services.filter((s) => s.active);
 
   const entregaPrevista = conversao
     ? calcularEntrega(conversao.startDate, conversao.quote.leadTimeDays)
     : null;
+
+  const temPlanoNaConversao = !!conversao && conversao.quote.monthlyAmount > 0 && !!conversao.quote.planMonths;
 
   function salvar() {
     if (!form) return;
@@ -121,6 +133,7 @@ export function ServiceQuotesTable({
         quoteId: conversao.quote.id,
         paymentMethod: conversao.paymentMethod,
         startDate: conversao.startDate,
+        planStartDate: conversao.planStartDate,
       });
       toast(result);
       if (result.ok) setConversao(null);
@@ -134,6 +147,7 @@ export function ServiceQuotesTable({
       title: q.title,
       notes: q.notes,
       status: q.status,
+      planMonths: q.planMonths ?? PLAN_MONTHS_DEFAULT,
       items: q.items.length ? q.items : [itemVazio()],
     });
   }
@@ -156,6 +170,7 @@ export function ServiceQuotesTable({
       name: s.name,
       description: s.description,
       amount: s.price,
+      billingType: s.billingType,
       leadTimeDays: s.leadTimeDays,
     });
   }
@@ -230,11 +245,21 @@ export function ServiceQuotesTable({
               <div className="min-w-0">
                 <div className="truncate font-bold">{q.title}</div>
                 <div className="truncate text-[11.5px] text-fg-tertiary">
-                  {q.items.length} serviço(s) · {formatPrazo(q.leadTimeDays)}
+                  {q.items.length} serviço(s)
+                  {q.leadTimeDays > 0 ? ` · ${formatPrazo(q.leadTimeDays)}` : ''}
+                  {q.planMonths ? ` · plano de ${q.planMonths} meses` : ''}
                 </div>
               </div>
               <div className="truncate text-fg-secondary">{q.customerName || '—'}</div>
-              <div className="text-right font-bold text-accent">{formatBRL(q.totalAmount)}</div>
+              <div className="text-right font-bold">
+                {q.totalAmount > 0 && <div className="text-accent">{formatBRL(q.totalAmount)}</div>}
+                {q.monthlyAmount > 0 && (
+                  <div className={q.totalAmount > 0 ? 'text-[11.5px] text-fg-secondary' : 'text-accent'}>
+                    {formatBRL(q.monthlyAmount)}/mês
+                  </div>
+                )}
+                {q.totalAmount === 0 && q.monthlyAmount === 0 && <span className="text-fg-tertiary">—</span>}
+              </div>
               <div className="text-fg-secondary">{formatDateBR(q.createdAt)}</div>
               <div className="min-w-0">
                 <span
@@ -255,7 +280,7 @@ export function ServiceQuotesTable({
               <div className="flex justify-end gap-1.5">
                 {convertivel && (
                   <button
-                    onClick={() => setConversao({ quote: q, paymentMethod: '', startDate: hojeISO() })}
+                    onClick={() => setConversao({ quote: q, paymentMethod: '', startDate: hojeISO(), planStartDate: hojeISO() })}
                     disabled={pending}
                     title="Gerar prestação"
                     aria-label={`Gerar prestação de ${q.title}`}
@@ -360,7 +385,9 @@ export function ServiceQuotesTable({
                     >
                       <option value="">Avulso</option>
                       {ativos.map((s) => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
+                        <option key={s.id} value={s.id}>
+                          {s.name}{s.billingType === 'mensal' ? ' (mensal)' : ''}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -383,14 +410,18 @@ export function ServiceQuotesTable({
                     />
                   </div>
                   <div className="p-1.5">
-                    <input
-                      key={`prazo-${i}-${item.internalServiceId ?? 'avulso'}`}
-                      defaultValue={item.leadTimeDays || ''}
-                      onChange={(e) => setItem(i, { leadTimeDays: Math.round(parseNumeroBR(e.target.value)) })}
-                      inputMode="numeric"
-                      placeholder="dias"
-                      className={`w-full ${inputClass}`}
-                    />
+                    {item.billingType === 'mensal' ? (
+                      <div className="px-2 text-[11.5px] font-bold text-accent">mensal</div>
+                    ) : (
+                      <input
+                        key={`prazo-${i}-${item.internalServiceId ?? 'avulso'}`}
+                        defaultValue={item.leadTimeDays || ''}
+                        onChange={(e) => setItem(i, { leadTimeDays: Math.round(parseNumeroBR(e.target.value)) })}
+                        inputMode="numeric"
+                        placeholder="dias"
+                        className={`w-full ${inputClass}`}
+                      />
+                    )}
                   </div>
                   <div className="flex justify-center p-1.5">
                     <button
@@ -409,7 +440,14 @@ export function ServiceQuotesTable({
               <div className="grid grid-cols-[1.6fr_1.4fr_110px_90px_36px] items-center gap-px border-t border-border-strong bg-card-dark text-[13px] font-extrabold">
                 <div className="px-3 py-2.5">Total</div>
                 <div />
-                <div className="px-3 py-2.5 text-accent">{formatBRL(totais.total)}</div>
+                <div className="px-3 py-2.5">
+                  {totais.total > 0 && <span className="text-accent">{formatBRL(totais.total)}</span>}
+                  {totais.mensal > 0 && (
+                    <div className={totais.total > 0 ? 'text-[11.5px] font-bold text-fg-secondary' : 'text-accent'}>
+                      {formatBRL(totais.mensal)}/mês
+                    </div>
+                  )}
+                </div>
                 <div className="px-3 py-2.5">{totais.prazoDias || 0}d</div>
                 <div />
               </div>
@@ -417,8 +455,40 @@ export function ServiceQuotesTable({
 
             <div className="mb-4 text-[11px] text-fg-faded">
               O valor vem do catálogo mas é <strong>ajustável nesta proposta</strong>. O prazo é a{' '}
-              <strong>soma</strong> dos serviços, não o maior.
+              <strong>soma</strong> dos serviços, não o maior — serviço mensal não entra nele.
             </div>
+
+            {totais.temPlano && (
+              <div className="mb-4 rounded-control border border-accent/40 bg-[rgb(var(--brand-accent-rgb)/.05)] p-4">
+                <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-accent">
+                  Plano mensal proposto
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <div className="mb-1.5 text-[11px] text-fg-faded">Duração</div>
+                    <select
+                      value={form.planMonths ?? PLAN_MONTHS_DEFAULT}
+                      onChange={(e) => set('planMonths', Number(e.target.value))}
+                      className={`w-full ${inputClass}`}
+                    >
+                      {PLAN_MONTHS_OPTIONS.map((m) => (
+                        <option key={m} value={m}>{m} meses</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <div className="mb-1.5 text-[11px] text-fg-faded">Valor do contrato</div>
+                    <div className="rounded-control border border-border bg-card-dark px-3.5 py-2.5 text-[13.5px] font-extrabold">
+                      {formatBRL(valorDoContrato(totais, form.planMonths))}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 text-[11.5px] text-fg-tertiary">
+                  {formatBRL(totais.total)} de trabalho mais {form.planMonths}× {formatBRL(totais.mensal)}. A data
+                  da primeira mensalidade é escolhida na conversão.
+                </div>
+              </div>
+            )}
 
             <textarea
               value={form.notes}
@@ -459,8 +529,11 @@ export function ServiceQuotesTable({
           <div className="w-full max-w-[520px] rounded-[20px] border border-border-strong bg-card p-7">
             <div className="mb-1 text-[15px] font-extrabold">Gerar prestação</div>
             <div className="mb-5 text-[12.5px] text-fg-tertiary">
-              {conversao.quote.title} · {formatBRL(conversao.quote.totalAmount)} ·{' '}
-              {formatPrazo(conversao.quote.leadTimeDays)}
+              {conversao.quote.title}
+              {conversao.quote.totalAmount > 0 && ` · ${formatBRL(conversao.quote.totalAmount)}`}
+              {conversao.quote.monthlyAmount > 0 &&
+                ` · ${formatBRL(conversao.quote.monthlyAmount)}/mês por ${conversao.quote.planMonths} meses`}
+              {conversao.quote.leadTimeDays > 0 && ` · ${formatPrazo(conversao.quote.leadTimeDays)}`}
             </div>
 
             <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -482,14 +555,41 @@ export function ServiceQuotesTable({
                   className={`w-full ${inputClass}`}
                 />
               </div>
+              {temPlanoNaConversao && (
+                <div className="sm:col-span-2">
+                  <div className="mb-1.5 text-[11px] text-fg-faded">Primeira mensalidade</div>
+                  <input
+                    type="date"
+                    value={conversao.planStartDate}
+                    onChange={(e) => setConversao({ ...conversao, planStartDate: e.target.value })}
+                    className={`w-full ${inputClass}`}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="mb-5 rounded-control border border-border bg-card-dark px-4 py-3 text-[12px] text-fg-tertiary">
               A prestação nasce <strong>Em andamento</strong> com pagamento <strong>Previsto</strong> — aprovar
-              é acordo, não recebimento. O Financeiro recebe uma receita de{' '}
-              <strong className="text-accent">{formatBRL(conversao.quote.totalAmount)}</strong>
-              {entregaPrevista ? ` prevista para ${formatDateBR(entregaPrevista + 'T12:00:00')}` : ''}. Marque
-              Recebido na prestação quando o dinheiro entrar.
+              é acordo, não recebimento. O Financeiro recebe
+              {conversao.quote.totalAmount > 0 && (
+                <>
+                  {' '}uma receita de{' '}
+                  <strong className="text-accent">{formatBRL(conversao.quote.totalAmount)}</strong>
+                  {entregaPrevista ? ` prevista para ${formatDateBR(entregaPrevista + 'T12:00:00')}` : ''}
+                </>
+              )}
+              {conversao.quote.totalAmount > 0 && temPlanoNaConversao && ' e'}
+              {temPlanoNaConversao && (
+                <>
+                  {' '}<strong>{conversao.quote.planMonths} parcelas</strong> de{' '}
+                  <strong className="text-accent">{formatBRL(conversao.quote.monthlyAmount)}</strong>, de{' '}
+                  {formatDateBR(conversao.planStartDate + 'T12:00:00')} a{' '}
+                  {formatDateBR(
+                    somarMeses(conversao.planStartDate, (conversao.quote.planMonths ?? 1) - 1) + 'T12:00:00'
+                  )}
+                </>
+              )}
+              . Marque cada uma como recebida quando o dinheiro entrar.
             </div>
 
             <div className="flex justify-end gap-2.5">

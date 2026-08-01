@@ -4,13 +4,16 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
+import { BILLING_TYPES, type BillingType } from '@/lib/services';
 
 export type InternalServiceInput = {
   id?: string;
   name: string;
   description: string;
   category: string;
+  /** Em `unico`, o valor do trabalho. Em `mensal`, a mensalidade do plano. */
   price: number;
+  billingType: BillingType;
   leadTimeDays: number;
   active: boolean;
 };
@@ -38,13 +41,17 @@ export async function saveInternalServiceAction(input: InternalServiceInput): Pr
   if (!Number.isInteger(input.leadTimeDays) || input.leadTimeDays < 0) {
     return errResult('O prazo precisa ser um número inteiro de dias.');
   }
+  if (!BILLING_TYPES.includes(input.billingType)) return errResult('Tipo de cobrança inválido.');
 
   const payload = {
     name,
     description: input.description.trim(),
     category: input.category.trim(),
     price: input.price,
-    lead_time_days: input.leadTimeDays,
+    billing_type: input.billingType,
+    // Serviço mensal é contínuo: não tem entrega, e um prazo aqui entraria na
+    // soma da prestação empurrando a entrega do trabalho real para frente.
+    lead_time_days: input.billingType === 'mensal' ? 0 : input.leadTimeDays,
     active: input.active,
     updated_at: new Date().toISOString(),
   };

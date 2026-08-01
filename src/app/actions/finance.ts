@@ -4,7 +4,13 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
-import { FINANCE_KINDS, FINANCE_STATUSES, type FinanceKind, type FinanceStatus } from '@/lib/finance';
+import {
+  FINANCE_KINDS,
+  FINANCE_STATUSES,
+  type FinanceKind,
+  type FinanceSource,
+  type FinanceStatus,
+} from '@/lib/finance';
 
 export type FinanceFormInput = {
   id?: string;
@@ -13,6 +19,9 @@ export type FinanceFormInput = {
   amount: number;
   entryDate: string;
   status: FinanceStatus;
+  /** Origem do lançamento sendo editado. Gerado por venda/serviço só aceita
+   *  mudança de status — a action confere de novo no servidor. */
+  source?: FinanceSource;
 };
 
 async function adminClient() {
@@ -44,6 +53,28 @@ export async function saveFinanceEntryAction(input: FinanceFormInput): Promise<A
   };
 
   if (input.id) {
+    const { data: existente } = await supabase
+      .from('finance_entries')
+      .select('source')
+      .eq('id', input.id)
+      .maybeSingle();
+
+    // Lançamento gerado por venda ou serviço só aceita mudança de STATUS. É o
+    // que permite baixar as parcelas de um plano mês a mês, sem abrir caminho
+    // para o valor ou a data divergirem da origem — que os reescreveria na
+    // próxima sincronização, em silêncio.
+    if (existente && existente.source !== 'manual') {
+      const { error } = await supabase
+        .from('finance_entries')
+        .update({ status: input.status, updated_at: payload.updated_at })
+        .eq('id', input.id);
+      if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar o lançamento.'));
+      revalidatePath('/admin/financeiro');
+      return okResult(
+        input.status === 'Pago' ? 'Marcado como recebido.' : 'Marcado como previsto.'
+      );
+    }
+
     const { error } = await supabase.from('finance_entries').update(payload).eq('id', input.id);
     if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar o lançamento.'));
     revalidatePath('/admin/financeiro');

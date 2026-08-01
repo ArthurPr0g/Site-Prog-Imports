@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import type { ServiceQuote, ServiceOrderItem, ServiceQuoteStatus } from '@/lib/services';
+import type { BillingType, ServiceQuote, ServiceOrderItem, ServiceQuoteStatus } from '@/lib/services';
 
 type ItemRow = {
   id: string;
@@ -7,6 +7,7 @@ type ItemRow = {
   name: string;
   description: string;
   amount: number;
+  billing_type: string;
   lead_time_days: number;
   position: number;
 };
@@ -18,6 +19,8 @@ type QuoteRow = {
   notes: string;
   status: string;
   total_amount: number;
+  monthly_amount: number;
+  plan_months: number | null;
   lead_time_days: number;
   created_at: string;
   customers: { name: string } | null;
@@ -32,6 +35,7 @@ function toItem(r: ItemRow): ServiceOrderItem {
     name: r.name,
     description: r.description,
     amount: Number(r.amount),
+    billingType: r.billing_type as BillingType,
     leadTimeDays: r.lead_time_days,
   };
 }
@@ -55,6 +59,8 @@ export async function listServiceQuotes(): Promise<ServiceQuote[]> {
       notes: row.notes,
       status: row.status as ServiceQuoteStatus,
       totalAmount: Number(row.total_amount),
+      monthlyAmount: Number(row.monthly_amount),
+      planMonths: row.plan_months,
       leadTimeDays: row.lead_time_days,
       createdAt: row.created_at,
       orderId: row.service_orders?.[0]?.id ?? null,
