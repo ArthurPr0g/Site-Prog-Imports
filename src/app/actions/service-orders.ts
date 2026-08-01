@@ -109,6 +109,14 @@ export async function deleteServiceOrderAction(id: string): Promise<ActionResult
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
 
+  // Guarda a origem antes de apagar: depois do delete o vínculo some e não há
+  // como saber de qual orçamento esta prestação veio.
+  const { data: prestacao } = await supabase
+    .from('service_orders')
+    .select('quote_id')
+    .eq('id', id)
+    .maybeSingle();
+
   // O lançamento sai primeiro: a tela do Financeiro recusa excluir linha de
   // origem 'servico', então apagar a prestação antes deixaria a receita órfã
   // e impossível de remover pela interface.
@@ -117,6 +125,23 @@ export async function deleteServiceOrderAction(id: string): Promise<ActionResult
   const { error } = await supabase.from('service_orders').delete().eq('id', id);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível excluir a prestação.'));
 
+  // Devolve o orçamento para 'Aprovado'. Sem isto ele fica preso em
+  // 'Convertido em Prestação' sem prestação nenhuma: não pode ser editado (a
+  // action bloqueia convertidos) nem reconvertido (só 'Aprovado' converte) —
+  // um beco sem saída, e exatamente o oposto do que a mensagem de exclusão do
+  // orçamento promete ao mandar apagar a prestação primeiro.
+  if (prestacao?.quote_id) {
+    await supabase
+      .from('service_quotes')
+      .update({ status: 'Aprovado', updated_at: new Date().toISOString() })
+      .eq('id', prestacao.quote_id);
+    revalidatePath('/admin/orcamentos-servicos');
+  }
+
   revalidar();
-  return okResult('Prestação excluída.');
+  return okResult(
+    prestacao?.quote_id
+      ? 'Prestação excluída. O orçamento de origem voltou para Aprovado e pode ser convertido de novo.'
+      : 'Prestação excluída.'
+  );
 }

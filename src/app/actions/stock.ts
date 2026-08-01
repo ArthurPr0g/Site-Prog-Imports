@@ -92,6 +92,14 @@ export async function deleteStockItemAction(id: string): Promise<ActionResult> {
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
 
+  // Guarda a origem antes de apagar: depois do delete o vínculo some e não há
+  // como saber de qual orçamento este item veio.
+  const { data: item } = await supabase
+    .from('stock_items')
+    .select('budget_id')
+    .eq('id', id)
+    .maybeSingle();
+
   // As proteções de integridade do documento (item já vendido, item que é
   // produto principal de uma troca, item recebido em troca) dependem das
   // tabelas de Vendas e Trocas, que ainda não existem. Quando M4 e M8
@@ -106,7 +114,24 @@ export async function deleteStockItemAction(id: string): Promise<ActionResult> {
     return errResult(friendlyDbError(error, 'Não foi possível excluir o item.'));
   }
 
+  // Devolve o orçamento para 'Aprovado'. `deleteQuoteAction` manda apagar o
+  // item de estoque prometendo que "isso reabre o orçamento para nova
+  // conversão" — sem esta reversão o orçamento ficava preso em 'Convertido em
+  // Estoque' sem item nenhum, e `sendQuoteToStockAction` recusava converter
+  // de novo.
+  if (item?.budget_id) {
+    await supabase
+      .from('store_quotes')
+      .update({ status: 'Aprovado', updated_at: new Date().toISOString() })
+      .eq('id', item.budget_id);
+    revalidatePath('/admin/orcamentos-loja');
+  }
+
   revalidatePath('/admin/estoque');
   revalidatePath('/');
-  return okResult('Item excluído do estoque.');
+  return okResult(
+    item?.budget_id
+      ? 'Item excluído. O orçamento de origem voltou para Aprovado e pode ser convertido de novo.'
+      : 'Item excluído do estoque.'
+  );
 }
