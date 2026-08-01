@@ -65,8 +65,8 @@ function estilos(accent: string) {
     tituloProposta: { fontSize: 16, fontWeight: 'bold', marginBottom: 3 },
     subtitulo: { fontSize: 9.5, color: CINZA, marginBottom: 14 },
 
-    secao: { fontSize: 8.5, fontWeight: 'bold', color: accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 7 },
-    bloco: { marginBottom: 14 },
+    secao: { fontSize: 8.5, fontWeight: 'bold', color: accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
+    bloco: { marginBottom: 12 },
 
     linhaDado: { flexDirection: 'row', marginBottom: 3 },
     rotuloDado: { width: 92, fontSize: 9, color: CINZA_CLARO },
@@ -97,7 +97,7 @@ function estilos(accent: string) {
      *  daí a descrição espremida e o vão enorme ao lado de "7 dias". */
     celulaPrazo: { width: 58, fontSize: 9 },
     nomeServico: { fontSize: 10, fontWeight: 'bold' },
-    descServico: { fontSize: 8, color: CINZA_CLARO, marginTop: 2, lineHeight: 1.35 },
+    descServico: { fontSize: 8, color: CINZA_CLARO, marginTop: 2, lineHeight: 1.3 },
     valorServico: { fontSize: 10, fontWeight: 'bold' },
     mensalTag: { fontSize: 8, color: accent, fontWeight: 'bold' },
 
@@ -122,10 +122,10 @@ function estilos(accent: string) {
       borderLeftWidth: 3,
       borderLeftColor: accent,
       backgroundColor: '#fafafb',
-      padding: 10,
-      marginTop: 4,
+      padding: 9,
+      marginTop: 3,
     },
-    textoCaixa: { fontSize: 9, color: CINZA, marginBottom: 2.5 },
+    textoCaixa: { fontSize: 8.5, color: CINZA, marginBottom: 2 },
 
     rodape: {
       position: 'absolute',
@@ -316,7 +316,7 @@ export function PropostaDocument(d: DadosDaProposta) {
                 • Plano mensal de {formatBRL(d.totalMensal)}, cobrado na data acordada de cada mês, por {meses} meses.
               </Text>
             )}
-            <Text style={{ ...s.textoCaixa, marginTop: 4, fontSize: 8.5 }}>
+            <Text style={{ ...s.textoCaixa, marginTop: 3, fontSize: 8 }}>
               O pagamento pode ser à vista ou parcelado; no parcelamento podem incidir juros ou taxas da instituição
               financeira ou da plataforma de pagamento utilizada.
             </Text>
