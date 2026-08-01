@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useEffect, useTransition } from 'react';
+import Link from 'next/link';
 import { Pencil, Trash2, Copy, PackageCheck, FilePlus2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { formatBRL } from '@/lib/format';
@@ -13,6 +14,7 @@ import {
   recalculateQuotesAction,
   type QuoteFormInput,
 } from '@/app/actions/quotes';
+import { checkUsdRateFreshnessAction } from '@/app/actions/settings';
 import type { StoreQuote } from '@/lib/data/quotes';
 
 const inputClass =
@@ -133,6 +135,22 @@ export function QuotesTable({
 
   const semCotacao = usdRate === null || usdRate <= 0;
 
+  // Como a cotação é atualizada à mão, por decisão do dono, o sistema precisa
+  // avisar quando ela envelhece — senão um orçamento sai com câmbio de semanas
+  // atrás e o erro só aparece na hora de pagar o fornecedor.
+  const [cotacaoVelha, setCotacaoVelha] = useState<{ suggested: number; market: number } | null>(null);
+  useEffect(() => {
+    let ativo = true;
+    checkUsdRateFreshnessAction().then((r) => {
+      if (ativo && r.ok && r.stale && r.suggested !== null && r.market !== null) {
+        setCotacaoVelha({ suggested: r.suggested, market: r.market });
+      }
+    });
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
   function salvar() {
     if (!form) return;
     startTransition(async () => {
@@ -166,6 +184,19 @@ export function QuotesTable({
         <div className="mb-3.5 rounded-[18px] border border-warning/40 bg-warning/10 px-5 py-4 text-[13.5px] text-warning">
           A cotação do dólar ainda não foi configurada. Defina em <strong>Configurações</strong> antes de criar
           orçamentos — sem ela o cálculo não acontece.
+        </div>
+      )}
+
+      {!semCotacao && cotacaoVelha && (
+        <div className="mb-3.5 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[18px] border border-warning/40 bg-warning/10 px-5 py-4 text-[13.5px] text-warning">
+          <span>
+            A cotação salva é <strong>R$ {(usdRate ?? 0).toFixed(2)}</strong>, mas o mercado está em{' '}
+            <strong>R$ {cotacaoVelha.market.toFixed(4)}</strong> — com sua taxa, daria{' '}
+            <strong>R$ {cotacaoVelha.suggested.toFixed(2)}</strong>.
+          </span>
+          <Link href="/admin/configuracoes" className="font-extrabold underline underline-offset-2">
+            Atualizar em Configurações
+          </Link>
         </div>
       )}
 

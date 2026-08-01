@@ -110,6 +110,39 @@ export async function saveSystemSettingsAction(input: SystemSettingsInput): Prom
   );
 }
 
+/** Diferença a partir da qual vale avisar que a cotação salva está velha.
+ *  Cinco centavos por dólar são R$ 50 num orçamento de US$ 1.000 — abaixo
+ *  disso o aviso viraria ruído e o operador aprenderia a ignorá-lo. */
+const DIFERENCA_RELEVANTE = 0.05;
+
+/** Compara a cotação salva com a de mercado. Existe porque a atualização é
+ *  manual, por decisão do dono: sem um aviso, um orçamento sai com câmbio de
+ *  semanas atrás e o erro só aparece na hora de pagar o fornecedor. */
+export async function checkUsdRateFreshnessAction(): Promise<{
+  ok: boolean;
+  stale: boolean;
+  saved: number | null;
+  suggested: number | null;
+  market: number | null;
+}> {
+  const supabase = await adminClient();
+  if (!supabase) return { ok: false, stale: false, saved: null, suggested: null, market: null };
+
+  const { data } = await supabase.from('site_settings').select('usd_rate, usd_rate_spread').maybeSingle();
+  const salva = data?.usd_rate !== null && data?.usd_rate !== undefined ? Number(data.usd_rate) : null;
+  const taxa = Number(data?.usd_rate_spread ?? 0.1);
+
+  const mercado = await buscarCotacaoMercado();
+  // API fora do ar não é motivo para alarmar: sem referência, não há como dizer
+  // que a cotação salva está errada.
+  if (!mercado) return { ok: true, stale: false, saved: salva, suggested: null, market: null };
+
+  const sugerida = cotacaoComTaxa(mercado.valor, taxa);
+  const stale = salva === null || Math.abs(salva - sugerida) >= DIFERENCA_RELEVANTE;
+
+  return { ok: true, stale, saved: salva, suggested: sugerida, market: mercado.valor };
+}
+
 /** Busca a cotação de mercado e devolve já com a taxa somada, para o operador
  *  conferir antes de salvar. Não grava sozinha: cotação é a base de todo preço,
  *  e mudança automática sem confirmação é o tipo de coisa que se descobre
