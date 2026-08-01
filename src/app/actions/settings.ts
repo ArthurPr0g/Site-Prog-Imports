@@ -132,15 +132,15 @@ export async function checkUsdRateFreshnessAction(): Promise<{
   const salva = data?.usd_rate !== null && data?.usd_rate !== undefined ? Number(data.usd_rate) : null;
   const taxa = Number(data?.usd_rate_spread ?? 0.1);
 
-  const mercado = await buscarCotacaoMercado();
+  const resultado = await buscarCotacaoMercado();
   // API fora do ar não é motivo para alarmar: sem referência, não há como dizer
   // que a cotação salva está errada.
-  if (!mercado) return { ok: true, stale: false, saved: salva, suggested: null, market: null };
+  if (!resultado.ok) return { ok: true, stale: false, saved: salva, suggested: null, market: null };
 
-  const sugerida = cotacaoComTaxa(mercado.valor, taxa);
+  const sugerida = cotacaoComTaxa(resultado.cotacao.valor, taxa);
   const stale = salva === null || Math.abs(salva - sugerida) >= DIFERENCA_RELEVANTE;
 
-  return { ok: true, stale, saved: salva, suggested: sugerida, market: mercado.valor };
+  return { ok: true, stale, saved: salva, suggested: sugerida, market: resultado.cotacao.valor };
 }
 
 /** Busca a cotação de mercado e devolve já com a taxa somada, para o operador
@@ -154,18 +154,23 @@ export async function fetchUsdRateAction(): Promise<ActionResult & { rate?: numb
   const { data } = await supabase.from('site_settings').select('usd_rate_spread').maybeSingle();
   const taxa = Number(data?.usd_rate_spread ?? 0.1);
 
-  const mercado = await buscarCotacaoMercado();
-  if (!mercado) {
-    return errResult('Não foi possível consultar a cotação agora. Tente de novo ou preencha à mão.');
+  const resultado = await buscarCotacaoMercado();
+  if (!resultado.ok) {
+    // O motivo entra na mensagem de propósito: é tela de admin, e "não deu
+    // certo" sem causa transformaria qualquer diagnóstico em tentativa e erro.
+    return errResult(
+      `Não foi possível consultar a cotação agora (${resultado.motivo}). Preencha à mão ou tente de novo.`
+    );
   }
 
-  const comTaxa = cotacaoComTaxa(mercado.valor, taxa);
+  const { valor, atualizadaEm, fonte } = resultado.cotacao;
+  const comTaxa = cotacaoComTaxa(valor, taxa);
   return {
     ...okResult(
-      `Cotação de mercado R$ ${mercado.valor.toFixed(4)} + taxa R$ ${taxa.toFixed(2)} = R$ ${comTaxa.toFixed(4)}. Confira e salve.`
+      `Mercado R$ ${valor.toFixed(4)} + taxa R$ ${taxa.toFixed(2)} = R$ ${comTaxa.toFixed(4)} (${fonte}). Confira e salve.`
     ),
     rate: comTaxa,
-    market: mercado.valor,
-    when: mercado.atualizadaEm,
+    market: valor,
+    when: atualizadaEm,
   };
 }
