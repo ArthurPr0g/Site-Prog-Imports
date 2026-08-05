@@ -218,15 +218,18 @@ export async function sincronizarFinanceiroDaPrestacao(orderId: string): Promise
       updated_at: agora,
     };
 
-    if (existente) {
-      // Mensalidade do plano mantém o status que tiver: quem a baixou foi o
-      // dono, mês a mês, direto no Financeiro. Já a parcela do PIX tem o status
-      // vindo do carnê, e o trabalho segue o payment_status da prestação.
-      const status =
-        alvo.parcela === null || ehParcelaPix(alvo.parcela) ? alvo.status : existente.status;
-      await supabase.from('finance_entries').update({ ...payload, status }).eq('id', existente.id);
-    } else {
-      await supabase.from('finance_entries').insert({ ...payload, status: alvo.status });
+    // Mensalidade do plano mantém o status que tiver: quem a baixou foi o dono,
+    // mês a mês, direto no Financeiro. Já a parcela do PIX tem o status vindo
+    // do carnê, e o trabalho segue o payment_status da prestação.
+    const status =
+      existente && alvo.parcela !== null && !ehParcelaPix(alvo.parcela) ? existente.status : alvo.status;
+
+    const { error } = existente
+      ? await supabase.from('finance_entries').update({ ...payload, status }).eq('id', existente.id)
+      : await supabase.from('finance_entries').insert({ ...payload, status });
+
+    if (error) {
+      console.error('[financeiro/servico] linha não gravada', { orderId, parcela: alvo.parcela, error });
     }
   }
 

@@ -212,10 +212,16 @@ async function aplicarLinhas(
     };
 
     const existente = porChave.get(l.chave);
-    if (existente) {
-      await supabase.from('finance_entries').update(payload).eq('id', existente.id);
-    } else {
-      await supabase.from('finance_entries').insert(payload);
+    const { error } = existente
+      ? await supabase.from('finance_entries').update(payload).eq('id', existente.id)
+      : await supabase.from('finance_entries').insert(payload);
+
+    // Falha aqui era engolida em silêncio, e foi assim que a entrada do
+    // parcelamento sumiu do caixa sem nada indicar o motivo: o check da coluna
+    // recusava a parcela 0. Registrar não conserta, mas o próximo problema
+    // aparece no log em vez de virar um número errado na tela.
+    if (error) {
+      console.error('[financeiro/venda] linha não gravada', { orderId, chave: l.chave, error });
     }
   }
 
