@@ -745,22 +745,37 @@ removido junto com a origem.
 
 ## Em aberto
 
-1. **Confirmação de vínculo no cadastro do site** (M1, não implementado).
-2. **Proteções de exclusão do estoque** (item vendido, item usado em troca)
-   dependem de M4 e M8 — o `deleteStockItemAction` já tem o lugar marcado.
-3. **Variável de ambiente para esconder o ERP** em lojas de cliente.
-4. **Prazo de entrega, forma de pagamento e PIX parcelado** ficaram fora do
-   formulário de orçamento por decisão do dono, mas as colunas existem no banco
-   (`delivery_time`, `payment_method`). Sem forma de pagamento, o orçamento
-   exportado não comunica condições ao cliente, e o "prazo padrão" configurado
-   no M1 segue sem uso.
-5. **Ordenação do catálogo de serviços.** A coluna `position` existe mas a tela
-   ainda não permite reordenar; hoje a lista sai por `position` e depois nome.
-6. **Parcelamento no Financeiro.** A coluna `installment_id` existe para agrupar
-   as parcelas de um mesmo lançamento, mas nada na tela cria parcelas ainda —
-   hoje o usuário lançaria uma linha por parcela na mão.
-6. **`toast` com resultado da ação** foi corrigido no Financeiro; as demais telas
-   do admin ainda passam só a mensagem e mostram ✓ em recusa.
+### Módulos que faltam
+
+1. **M8 — Avaliação de Troca.** O mais complexo: uma troca cria item de estoque,
+   gera venda e lança no Financeiro numa transação só. Dependia de M2, M4 e M5
+   estarem sólidos — e agora estão.
+2. **M9 — Relatórios.** Dados brutos das tabelas macro (vendas, estoque,
+   orçamentos, financeiro, clientes), com filtro por período e exportação.
+
+### Pedidos registrados e ainda não construídos
+
+3. **Aviso antes do fim do contrato** de plano mensal — ver a seção "Em aberto
+   sobre planos", que tem o que falta decidir com o dono.
+
+### Dívidas técnicas
+
+4. **Confirmação de vínculo no cadastro do site** (M1): `findCustomerCandidates`
+   identifica candidatos, mas não existe a tela onde a pessoa confirma que é ela.
+5. **Proteções de exclusão do estoque** (item usado em troca) dependem do M8 —
+   `deleteStockItemAction` já tem o lugar marcado. A parte de item vendido foi
+   resolvida no M4, que dá baixa e devolve o item conforme o status da venda.
+6. **Variável de ambiente para esconder o ERP** em lojas de cliente (RFC-0001).
+7. **Prazo de entrega no orçamento de loja.** O "prazo padrão" configurado no M1
+   segue sem uso, e a coluna `delivery_time` existe sem tela. Forma de pagamento
+   deixou de ser problema: o M4 e o parcelamento cobriram isso na venda.
+8. **Ordenação do catálogo de serviços.** A coluna `position` existe mas a tela
+   não permite reordenar; hoje sai por `position` e depois nome.
+9. **`toast` com resultado da ação** foi corrigido no Financeiro, em Vendas e nos
+   módulos novos; as telas mais antigas do admin ainda passam só a mensagem e
+   mostram ✓ em recusa.
+10. **Orçamento de Loja não tem PDF** — só o de Serviços. Ver "Em aberto sobre
+    desconto".
 
 ---
 
