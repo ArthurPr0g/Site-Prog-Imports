@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+﻿import { createClient } from '@/lib/supabase/server';
 import type { Trade, TradeItem, CondicaoItem } from '@/lib/trades';
 
 type ItemRow = {
@@ -82,13 +82,21 @@ function toTrade(r: TradeRow): Trade {
   };
 }
 
+// `orders!trades_order_id_fkey` nomeia a chave de propósito: existem DUAS
+// ligações entre as tabelas — `trades.order_id` e `orders.trade_id` — e sem
+// dizer qual usar o PostgREST recusa a consulta por ambiguidade. A recusa vinha
+// como `data: null`, então a tela mostrava "nenhuma negociação" com o banco
+// cheio, sem erro em lugar nenhum.
 export async function listTrades(): Promise<Trade[]> {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('trades')
-    .select('*, customers(name), orders(order_number), trade_items(*)')
+    .select('*, customers(name), orders!trades_order_id_fkey(order_number), trade_items(*)')
     .order('trade_date', { ascending: false })
     .order('created_at', { ascending: false });
+
+  if (error) console.error('[trocas] listagem falhou', error);
+
   return (data ?? []).map((r) => toTrade(r as unknown as TradeRow));
 }
 
@@ -96,7 +104,7 @@ export async function getTrade(id: string): Promise<Trade | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from('trades')
-    .select('*, customers(name), orders(order_number), trade_items(*)')
+    .select('*, customers(name), orders!trades_order_id_fkey(order_number), trade_items(*)')
     .eq('id', id)
     .maybeSingle();
   return data ? toTrade(data as unknown as TradeRow) : null;
