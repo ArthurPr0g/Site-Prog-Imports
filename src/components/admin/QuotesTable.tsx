@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useTransition } from 'react';
 import Link from 'next/link';
-import { Pencil, Trash2, Copy, PackageCheck, FilePlus2, RefreshCw } from 'lucide-react';
+import { Pencil, Trash2, Copy, PackageCheck, FilePlus2, RefreshCw, ShoppingCart } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { formatBRL, parseNumeroBR, formatNumeroInput } from '@/lib/format';
 import { calculateQuote, QUOTE_STATUSES, type QuoteStatus } from '@/lib/quotes';
@@ -15,6 +15,7 @@ import {
   recalculateQuotesAction,
   type QuoteFormInput,
 } from '@/app/actions/quotes';
+import { generateSaleFromQuoteAction } from '@/app/actions/sales';
 import { checkUsdRateFreshnessAction } from '@/app/actions/settings';
 import type { StoreQuote } from '@/lib/data/quotes';
 
@@ -350,6 +351,25 @@ export function QuotesTable({
                       className="grid h-8 w-8 place-items-center rounded-full border border-border-strong text-fg-tertiary hover:border-success hover:text-success disabled:opacity-50"
                     >
                       <PackageCheck size={14} />
+                    </button>
+                  )}
+                  {/* Gerar Venda só aparece em orçamento aprovado: antes disso
+                      não há acordo com o cliente, e vender criaria receita de
+                      algo que ninguém comprou. */}
+                  {q.status === 'Aprovado' && (
+                    <button
+                      onClick={() =>
+                        executar(
+                          () => generateSaleFromQuoteAction(q.id),
+                          `Gerar a venda de "${q.name}"?\n\nA venda nasce Aguardando pagamento, e o Financeiro recebe a receita e o custo — o resultado já sai como lucro.`
+                        )
+                      }
+                      disabled={pending}
+                      title="Gerar venda"
+                      aria-label={`Gerar venda de ${q.name}`}
+                      className="grid h-8 w-8 place-items-center rounded-full border border-accent/50 text-accent hover:bg-accent hover:text-page disabled:opacity-50"
+                    >
+                      <ShoppingCart size={14} />
                     </button>
                   )}
                   <button

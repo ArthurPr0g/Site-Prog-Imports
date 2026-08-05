@@ -6,6 +6,7 @@ import { requireAdmin } from '@/lib/auth';
 import { STATUS_TO_STAGE, type OrderStatus } from '@/lib/constants';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
 import { composeVariantName } from '@/lib/product-specs';
+import { sincronizarFinanceiroDaVenda, removerFinanceiroDaVenda } from '@/lib/data/sales';
 
 async function adminClient() {
   const admin = await requireAdmin();
@@ -465,7 +466,13 @@ export async function updateOrderStatusAction(orderId: string, status: OrderStat
     .update({ status, timeline_stage: STATUS_TO_STAGE[status], updated_at: new Date().toISOString() })
     .eq('id', orderId);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível atualizar o status do pedido.'));
+
+  // O status decide se o dinheiro já entrou: as linhas do Financeiro passam de
+  // Previsto a Pago, ou somem se a venda foi cancelada.
+  await sincronizarFinanceiroDaVenda(orderId);
+
   revalidatePath('/admin/vendas');
+  revalidatePath('/admin/financeiro');
   revalidatePath('/admin');
   return okResult();
 }
@@ -549,9 +556,16 @@ export async function createOrderAction(input: {
 export async function deleteOrderAction(orderId: string): Promise<ActionResult> {
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  // Os lançamentos saem primeiro: a tela do Financeiro recusa excluir linha de
+  // origem 'venda', então a ordem inversa as deixaria órfãs e sem remoção
+  // possível pela interface.
+  await removerFinanceiroDaVenda(orderId);
+
   const { error } = await supabase.from('orders').delete().eq('id', orderId);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível excluir o pedido.'));
   revalidatePath('/admin/vendas');
+  revalidatePath('/admin/financeiro');
   revalidatePath('/admin');
   return okResult('Pedido excluído.');
 }

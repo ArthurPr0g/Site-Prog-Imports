@@ -446,6 +446,8 @@ export type Database = {
           product_id: string | null
           product_name: string
           qty: number
+          stock_item_id: string | null
+          unit_cost: number
           unit_price: number
         }
         Insert: {
@@ -454,6 +456,8 @@ export type Database = {
           product_id?: string | null
           product_name: string
           qty?: number
+          stock_item_id?: string | null
+          unit_cost?: number
           unit_price: number
         }
         Update: {
@@ -462,6 +466,8 @@ export type Database = {
           product_id?: string | null
           product_name?: string
           qty?: number
+          stock_item_id?: string | null
+          unit_cost?: number
           unit_price?: number
         }
         Relationships: [
@@ -484,6 +490,8 @@ export type Database = {
       orders: {
         Row: {
           address_snapshot: Json | null
+          budget_id: string | null
+          cost_total: number
           coupon_code: string | null
           created_at: string
           customer_id: string | null
@@ -492,6 +500,7 @@ export type Database = {
           id: string
           is_import: boolean
           order_number: number
+          origin: string
           payment_method: string
           shipping: number
           status: string
@@ -504,6 +513,8 @@ export type Database = {
         }
         Insert: {
           address_snapshot?: Json | null
+          budget_id?: string | null
+          cost_total?: number
           coupon_code?: string | null
           created_at?: string
           customer_id?: string | null
@@ -512,6 +523,7 @@ export type Database = {
           id?: string
           is_import?: boolean
           order_number: number
+          origin?: string
           payment_method?: string
           shipping?: number
           status?: string
@@ -524,6 +536,8 @@ export type Database = {
         }
         Update: {
           address_snapshot?: Json | null
+          budget_id?: string | null
+          cost_total?: number
           coupon_code?: string | null
           created_at?: string
           customer_id?: string | null
@@ -532,6 +546,7 @@ export type Database = {
           id?: string
           is_import?: boolean
           order_number?: number
+          origin?: string
           payment_method?: string
           shipping?: number
           status?: string
