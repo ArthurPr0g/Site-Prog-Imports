@@ -434,6 +434,56 @@ teste removidos ao final.
 
 ---
 
+## Histórico do cliente e adimplência — regras confirmadas
+
+Clicar no nome do cliente abre `/admin/clientes/[id]` com abas **Financeiro,
+Compras, Serviços e Orçamentos**, mais os cartões de total comprado, já pago, em
+aberto e atrasado, e um aviso de produtos a caminho.
+
+**A ponte que faltava.** As vendas apontavam para `profiles` (conta do site) e
+os orçamentos/prestações para `customers` (cadastro do ERP). Sem unir, o
+histórico apareceria pela metade — e era por isso que a venda gerada de orçamento
+nascia sem vínculo, pendência registrada no M4. `orders` ganhou
+`erp_customer_id`, com backfill do que dava para deduzir (venda cujo profile já
+estava ligado a um cliente). A leitura busca **pelos dois vínculos**, para vendas
+antigas não sumirem enquanto o cadastro não estiver todo ligado.
+
+**A adimplência é derivada das parcelas, nunca gravada.** Um campo no cadastro
+envelheceria em silêncio: a parcela vence sozinha e ninguém vai lá marcar. Assim
+a resposta é sempre a de hoje. Uma parcela atrasada torna o cliente
+**Inadimplente** mesmo com todas as outras em dia — é o pior caso que define a
+situação. Sem nada vencido mas com parcelas a vencer: **Possui parcelas
+pendentes**. Nada em aberto: **Adimplente**.
+
+**O selo aparece nos três momentos pedidos:** cadastro, venda e criação de
+orçamento. Nas listagens só aparece **quando há algo em aberto** — selo verde em
+toda linha vira ruído e ninguém repara no vermelho.
+
+**No consolidado, compra parcelada conta pelas parcelas e compra à vista pelo
+status do próprio registro.** Misturar os dois critérios contaria duas vezes o
+mesmo dinheiro. Cancelados ficam fora de tudo: não são compra nem dívida.
+
+A venda manual agora também escolhe o cliente do cadastro, e a venda gerada de
+orçamento já nasce vinculada.
+
+Testado em `scratchpad/test-cliente.mjs` (31 asserções). Verificado em produção
+(2026-08-05): cliente com 3 parcelas (1 recebida, 1 vencida, 1 a vencer) apareceu
+como **Inadimplente (1)** na lista e no detalhe; os cartões deram R$ 29.697
+comprado, R$ 2.000 em aberto e R$ 1.000 atrasado; a parcela de julho virou
+**Atrasada sozinha**; e as 3 compras antigas do site apareceram junto da nova,
+confirmando o backfill. Dados de teste removidos ao final.
+
+### Em aberto sobre o histórico
+
+- **A venda casa com o cliente pelo nome** nas listagens de Vendas, porque
+  `orders.customer_name` é texto livre e nem toda venda tem vínculo. Errar só
+  deixa o selo de fora, nunca mostra a situação de outra pessoa — mas o certo é
+  ligar as 5 vendas antigas que ficaram sem `erp_customer_id`.
+- **A mensalidade do plano não entra no "em aberto"** do cliente: ela é cobrada
+  mês a mês e o recebimento vive no Financeiro, não no carnê.
+
+---
+
 ## Parcelamento via PIX — regras confirmadas
 
 Formas de pagamento viraram lista fechada, em Vendas e em Prestação: **PIX, PIX
