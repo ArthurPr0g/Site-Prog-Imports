@@ -513,6 +513,7 @@ export type Database = {
           subtotal: number
           timeline_stage: number
           total: number
+          trade_id: string | null
           tracking_code: string | null
           tracking_url: string | null
           updated_at: string
@@ -542,6 +543,7 @@ export type Database = {
           subtotal?: number
           timeline_stage?: number
           total?: number
+          trade_id?: string | null
           tracking_code?: string | null
           tracking_url?: string | null
           updated_at?: string
@@ -571,6 +573,7 @@ export type Database = {
           subtotal?: number
           timeline_stage?: number
           total?: number
+          trade_id?: string | null
           tracking_code?: string | null
           tracking_url?: string | null
           updated_at?: string
@@ -1454,6 +1457,153 @@ export type Database = {
           usd_rate_spread?: number
         }
         Relationships: []
+      }
+      trade_items: {
+        Row: {
+          category: string
+          condition: string
+          id: string
+          market_value: number
+          name: string
+          notes: string
+          paid_value: number
+          position: number
+          resale_value: number
+          specs: string
+          stock_item_id: string | null
+          trade_id: string
+        }
+        Insert: {
+          category?: string
+          condition?: string
+          id?: string
+          market_value?: number
+          name: string
+          notes?: string
+          paid_value?: number
+          position?: number
+          resale_value?: number
+          specs?: string
+          stock_item_id?: string | null
+          trade_id: string
+        }
+        Update: {
+          category?: string
+          condition?: string
+          id?: string
+          market_value?: number
+          name?: string
+          notes?: string
+          paid_value?: number
+          position?: number
+          resale_value?: number
+          specs?: string
+          stock_item_id?: string | null
+          trade_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trade_items_trade_id_fkey"
+            columns: ["trade_id"]
+            isOneToOne: false
+            referencedRelation: "trades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trades: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          difference_to_pay: number
+          down_payment: number
+          first_due_date: string | null
+          id: string
+          installment_count: number
+          installment_notes: string
+          interest_pct: number
+          main_cost: number
+          main_product_name: string
+          main_sale_price: number
+          margin_pct: number
+          notes: string
+          order_id: string | null
+          payment_method: string
+          stock_item_id: string | null
+          total_profit: number
+          total_received: number
+          trade_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          difference_to_pay?: number
+          down_payment?: number
+          first_due_date?: string | null
+          id?: string
+          installment_count?: number
+          installment_notes?: string
+          interest_pct?: number
+          main_cost?: number
+          main_product_name: string
+          main_sale_price?: number
+          margin_pct?: number
+          notes?: string
+          order_id?: string | null
+          payment_method?: string
+          stock_item_id?: string | null
+          total_profit?: number
+          total_received?: number
+          trade_date?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          difference_to_pay?: number
+          down_payment?: number
+          first_due_date?: string | null
+          id?: string
+          installment_count?: number
+          installment_notes?: string
+          interest_pct?: number
+          main_cost?: number
+          main_product_name?: string
+          main_sale_price?: number
+          margin_pct?: number
+          notes?: string
+          order_id?: string | null
+          payment_method?: string
+          stock_item_id?: string | null
+          total_profit?: number
+          total_received?: number
+          trade_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trades_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trades_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trades_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       testimonials: {
         Row: {
