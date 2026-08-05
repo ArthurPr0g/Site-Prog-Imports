@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -874,6 +874,9 @@ export type Database = {
       store_quotes: {
         Row: {
           category: string | null
+          discount_note: string
+          discount_type: string
+          discount_value: number
           created_at: string
           customer_id: string | null
           delivery_time: string | null
@@ -907,6 +910,9 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          discount_note?: string
+          discount_type?: string
+          discount_value?: number
           created_at?: string
           customer_id?: string | null
           delivery_time?: string | null
@@ -940,6 +946,9 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          discount_note?: string
+          discount_type?: string
+          discount_value?: number
           created_at?: string
           customer_id?: string | null
           delivery_time?: string | null
@@ -1178,6 +1187,9 @@ export type Database = {
         Row: {
           client_has_domain: boolean
           created_at: string
+          discount_note: string
+          discount_type: string
+          discount_value: number
           customer_id: string | null
           id: string
           include_contract: boolean
@@ -1193,6 +1205,9 @@ export type Database = {
         Insert: {
           client_has_domain?: boolean
           created_at?: string
+          discount_note?: string
+          discount_type?: string
+          discount_value?: number
           customer_id?: string | null
           id?: string
           include_contract?: boolean
@@ -1208,6 +1223,9 @@ export type Database = {
         Update: {
           client_has_domain?: boolean
           created_at?: string
+          discount_note?: string
+          discount_type?: string
+          discount_value?: number
           customer_id?: string | null
           id?: string
           include_contract?: boolean
@@ -1234,6 +1252,9 @@ export type Database = {
         Row: {
           created_at: string
           customer_id: string | null
+          discount_note: string
+          discount_type: string
+          discount_value: number
           due_date: string | null
           id: string
           lead_time_days: number
@@ -1253,6 +1274,9 @@ export type Database = {
         Insert: {
           created_at?: string
           customer_id?: string | null
+          discount_note?: string
+          discount_type?: string
+          discount_value?: number
           due_date?: string | null
           id?: string
           lead_time_days?: number
@@ -1272,6 +1296,9 @@ export type Database = {
         Update: {
           created_at?: string
           customer_id?: string | null
+          discount_note?: string
+          discount_type?: string
+          discount_value?: number
           due_date?: string | null
           id?: string
           lead_time_days?: number

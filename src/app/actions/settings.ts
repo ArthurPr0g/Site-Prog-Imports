@@ -53,6 +53,13 @@ async function reaplicarCotacao(
         processing: Number(q.processing_usd),
         shippingBrl: Number(q.shipping_brl),
         salePriceBrl: Number(q.sale_price_brl),
+        // Reaplica o desconto já acordado: sem isto o recálculo devolveria
+        // lucro e margem do preço cheio, apagando o desconto do painel.
+        desconto: {
+          tipo: q.discount_type as 'percentual' | 'valor',
+          valor: Number(q.discount_value),
+          descricao: q.discount_note,
+        },
       },
       taxa
     );

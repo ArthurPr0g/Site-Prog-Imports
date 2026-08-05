@@ -6,6 +6,7 @@ import { requireAdmin } from '@/lib/auth';
 import { BRAND } from '@/lib/brand';
 import { totalizarItens, type BillingType, type ServiceOrderItem } from '@/lib/services';
 import { PropostaDocument } from '@/lib/pdf/proposta';
+import type { Desconto } from '@/lib/discount';
 
 // react-pdf precisa do runtime Node: usa APIs de arquivo e fontes que o edge
 // não tem.
@@ -93,6 +94,11 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       prazoDias: totais.prazoDias,
       incluirContrato: q.include_contract,
       clientePossuiDominio: q.client_has_domain,
+      desconto: {
+        tipo: q.discount_type as Desconto['tipo'],
+        valor: Number(q.discount_value),
+        descricao: q.discount_note,
+      },
       marca: {
         nome: BRAND.name,
         tagline: BRAND.tagline,

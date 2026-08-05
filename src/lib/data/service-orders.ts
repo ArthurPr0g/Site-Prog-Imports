@@ -7,6 +7,7 @@ import {
   type ServiceOrderStatus,
   type ServicePaymentStatus,
 } from '@/lib/services';
+import type { Desconto } from '@/lib/discount';
 
 type ItemRow = {
   id: string;
@@ -30,6 +31,9 @@ type OrderRow = {
   payment_method: string;
   total_amount: number;
   monthly_amount: number;
+  discount_type: string;
+  discount_value: number;
+  discount_note: string;
   plan_months: number | null;
   plan_start_date: string | null;
   lead_time_days: number;
@@ -64,6 +68,11 @@ function toOrder(r: OrderRow): ServiceOrder {
     paymentMethod: r.payment_method,
     totalAmount: Number(r.total_amount),
     monthlyAmount: Number(r.monthly_amount),
+    desconto: {
+      tipo: r.discount_type as Desconto['tipo'],
+      valor: Number(r.discount_value),
+      descricao: r.discount_note ?? '',
+    },
     planMonths: r.plan_months,
     planStartDate: r.plan_start_date,
     leadTimeDays: r.lead_time_days,
@@ -106,7 +115,9 @@ export async function sincronizarFinanceiroDaPrestacao(orderId: string): Promise
 
   const { data } = await supabase
     .from('service_orders')
-    .select('title, status, payment_status, total_amount, monthly_amount, plan_months, plan_start_date, start_date, due_date')
+    .select(
+      'title, status, payment_status, total_amount, monthly_amount, plan_months, plan_start_date, start_date, due_date, discount_type, discount_value, discount_note'
+    )
     .eq('id', orderId)
     .maybeSingle();
 
@@ -122,6 +133,11 @@ export async function sincronizarFinanceiroDaPrestacao(orderId: string): Promise
     planStartDate: data.plan_start_date,
     startDate: data.start_date,
     dueDate: data.due_date,
+    desconto: {
+      tipo: data.discount_type as Desconto['tipo'],
+      valor: Number(data.discount_value),
+      descricao: data.discount_note,
+    },
   });
 
   const { data: existentes } = await supabase

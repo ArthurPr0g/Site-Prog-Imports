@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo, useEffect, useTransition } from 'react';
 import Link from 'next/link';
@@ -6,6 +6,7 @@ import { Pencil, Trash2, Copy, PackageCheck, FilePlus2, RefreshCw } from 'lucide
 import { useToast } from '@/components/ui/Toast';
 import { formatBRL, parseNumeroBR, formatNumeroInput } from '@/lib/format';
 import { calculateQuote, QUOTE_STATUSES, type QuoteStatus } from '@/lib/quotes';
+import { SEM_DESCONTO, temDesconto, rotuloDoDesconto, aplicarDesconto, type DiscountType } from '@/lib/discount';
 import {
   saveQuoteAction,
   deleteQuoteAction,
@@ -45,6 +46,7 @@ const VAZIO: QuoteFormInput = {
   processingUsd: 0,
   shippingBrl: 0,
   salePriceBrl: 0,
+  desconto: SEM_DESCONTO,
   notes: '',
   status: 'Em elaboração',
 };
@@ -65,6 +67,7 @@ function paraFormulario(q: StoreQuote): QuoteFormInput {
     processingUsd: q.processingUsd,
     shippingBrl: q.shippingBrl,
     salePriceBrl: q.salePriceBrl,
+    desconto: q.desconto,
     notes: q.notes,
     status: q.status,
   };
@@ -122,6 +125,7 @@ export function QuotesTable({
               processing: form.processingUsd,
               shippingBrl: form.shippingBrl,
               salePriceBrl: form.salePriceBrl,
+              desconto: form.desconto,
             },
             usdRate ?? 0
           )
@@ -166,6 +170,10 @@ export function QuotesTable({
 
   const set = <K extends keyof QuoteFormInput>(campo: K, valor: QuoteFormInput[K]) =>
     setForm((f) => (f ? { ...f, [campo]: valor } : f));
+
+  /** Atualiza um pedaço do desconto sem apagar os outros. */
+  const setDesconto = (patch: Partial<QuoteFormInput['desconto']>) =>
+    setForm((f) => (f ? { ...f, desconto: { ...f.desconto, ...patch } } : f));
 
   function escolherProduto(id: string) {
     const p = products.find((x) => x.id === id);
@@ -284,7 +292,24 @@ export function QuotesTable({
                   </span>
                 </div>
                 <div className="text-right text-[13px] text-fg-secondary">{formatBRL(q.totalBrl)}</div>
-                <div className="text-right text-[13px] font-bold">{formatBRL(q.salePriceBrl)}</div>
+                {/* Com desconto, o cheio aparece riscado acima do que o cliente
+                    paga — senão a listagem mostraria um preço que não é o
+                    combinado. */}
+                <div className="text-right text-[13px] font-bold">
+                  {temDesconto(q.desconto) ? (
+                    <>
+                      <div className="text-[11px] font-normal text-fg-faded line-through">
+                        {formatBRL(q.salePriceBrl)}
+                      </div>
+                      <div>{formatBRL(aplicarDesconto(q.salePriceBrl, q.desconto))}</div>
+                      <div className="text-[10.5px] font-bold text-accent">
+                        −{rotuloDoDesconto(q.desconto)}
+                      </div>
+                    </>
+                  ) : (
+                    formatBRL(q.salePriceBrl)
+                  )}
+                </div>
                 <div
                   className="text-right text-[13px] font-extrabold"
                   style={{ color: q.profitBrl >= 0 ? '#4ade80' : '#e05555' }}
@@ -439,7 +464,7 @@ export function QuotesTable({
               </div>
             </div>
 
-            <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-4">
               <div>
                 <div className="mb-1.5 text-[11px] text-fg-faded">Valor de venda (R$)</div>
                 <input
@@ -449,6 +474,27 @@ export function QuotesTable({
                   placeholder="0,00"
                   className={`w-full ${inputClass}`}
                 />
+              </div>
+              <div>
+                <div className="mb-1.5 text-[11px] text-fg-faded">Desconto</div>
+                <div className="flex gap-1.5">
+                  <select
+                    value={form.desconto.tipo}
+                    onChange={(e) => setDesconto({ tipo: e.target.value as DiscountType })}
+                    className={`w-[64px] flex-shrink-0 ${inputClass}`}
+                  >
+                    <option value="valor">R$</option>
+                    <option value="percentual">%</option>
+                  </select>
+                  <input
+                    key={form.desconto.tipo}
+                    defaultValue={form.desconto.valor || ''}
+                    onChange={(e) => setDesconto({ valor: parseNumeroBR(e.target.value) })}
+                    inputMode="decimal"
+                    placeholder="0"
+                    className={`min-w-0 flex-1 ${inputClass}`}
+                  />
+                </div>
               </div>
               <div>
                 <div className="mb-1.5 text-[11px] text-fg-faded">Lucro</div>
@@ -464,6 +510,31 @@ export function QuotesTable({
                 <div className={readOnlyClass}>{totais.marginPct.toFixed(2)}%</div>
               </div>
             </div>
+
+            {temDesconto(form.desconto) && (
+              <div className="mb-5 rounded-control border border-border bg-card-dark px-4 py-3">
+                <div className="mb-2.5 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[12.5px]">
+                  <span className="text-fg-tertiary">De</span>
+                  <span className="font-bold text-fg-secondary line-through">{formatBRL(totais.salePriceBrl)}</span>
+                  <span className="text-fg-tertiary">por</span>
+                  <span className="text-[15px] font-extrabold text-accent">{formatBRL(totais.finalPriceBrl)}</span>
+                  <span className="text-fg-tertiary">
+                    — desconto de {rotuloDoDesconto(form.desconto)} ({formatBRL(totais.discountBrl)})
+                  </span>
+                </div>
+                <input
+                  value={form.desconto.descricao}
+                  onChange={(e) => setDesconto({ descricao: e.target.value })}
+                  placeholder="Descrição do desconto (sai na proposta). Ex: cliente indicado, pagamento à vista"
+                  className={`w-full ${inputClass}`}
+                />
+                {/* O desconto sai do bolso da Prog: o fornecedor cobra o mesmo.
+                    Por isso lucro e margem acima já vêm reduzidos. */}
+                <div className="mt-2 text-[11px] text-fg-faded">
+                  O lucro e a margem acima já consideram o desconto — o custo com o fornecedor não muda.
+                </div>
+              </div>
+            )}
 
             <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">Finalização</div>
             <div className="mb-5 grid grid-cols-1 gap-3">

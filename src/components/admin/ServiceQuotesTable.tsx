@@ -21,6 +21,8 @@ import {
   type ServiceOrderItem,
   type ServiceQuoteStatus,
 } from '@/lib/services';
+import { SEM_DESCONTO, temDesconto, aplicarDesconto, rotuloDoDesconto, type Desconto } from '@/lib/discount';
+import { DescontoFields } from '@/components/admin/DescontoFields';
 import {
   saveServiceQuoteAction,
   deleteServiceQuoteAction,
@@ -65,6 +67,7 @@ function formVazio(): ServiceQuoteInput {
     planMonths: PLAN_MONTHS_DEFAULT,
     includeContract: false,
     clientHasDomain: false,
+    desconto: SEM_DESCONTO,
     items: [itemVazio()],
   };
 }
@@ -159,12 +162,16 @@ export function ServiceQuotesTable({
       planMonths: q.planMonths ?? PLAN_MONTHS_DEFAULT,
       includeContract: q.includeContract,
       clientHasDomain: q.clientHasDomain,
+      desconto: q.desconto,
       items: q.items.length ? q.items : [itemVazio()],
     });
   }
 
   const set = <K extends keyof ServiceQuoteInput>(campo: K, valor: ServiceQuoteInput[K]) =>
     setForm((f) => (f ? { ...f, [campo]: valor } : f));
+
+  const setDesconto = (patch: Partial<Desconto>) =>
+    setForm((f) => (f ? { ...f, desconto: { ...f.desconto, ...patch } } : f));
 
   function setItem(indice: number, patch: Partial<ServiceOrderItem>) {
     setForm((f) => (f ? { ...f, items: f.items.map((it, i) => (i === indice ? { ...it, ...patch } : it)) } : f));
@@ -275,7 +282,19 @@ export function ServiceQuotesTable({
               </div>
               <div className="truncate text-fg-secondary">{q.customerName || '—'}</div>
               <div className="text-right font-bold">
-                {q.totalAmount > 0 && <div className="text-accent">{formatBRL(q.totalAmount)}</div>}
+                {q.totalAmount > 0 && (
+                  <>
+                    {temDesconto(q.desconto) && (
+                      <div className="text-[11px] font-normal text-fg-faded line-through">
+                        {formatBRL(q.totalAmount)}
+                      </div>
+                    )}
+                    <div className="text-accent">{formatBRL(aplicarDesconto(q.totalAmount, q.desconto))}</div>
+                    {temDesconto(q.desconto) && (
+                      <div className="text-[10.5px] font-bold text-accent">−{rotuloDoDesconto(q.desconto)}</div>
+                    )}
+                  </>
+                )}
                 {q.monthlyAmount > 0 && (
                   <div className={q.totalAmount > 0 ? 'text-[11.5px] text-fg-secondary' : 'text-accent'}>
                     {formatBRL(q.monthlyAmount)}/mês
@@ -515,16 +534,19 @@ export function ServiceQuotesTable({
                   <div>
                     <div className="mb-1.5 text-[11px] text-fg-faded">Valor do contrato</div>
                     <div className="rounded-control border border-border bg-card-dark px-3.5 py-2.5 text-[13.5px] font-extrabold">
-                      {formatBRL(valorDoContrato(totais, form.planMonths))}
+                      {formatBRL(valorDoContrato(totais, form.planMonths, form.desconto))}
                     </div>
                   </div>
                 </div>
                 <div className="mt-3 text-[11.5px] text-fg-tertiary">
-                  {formatBRL(totais.total)} de trabalho mais {form.planMonths}× {formatBRL(totais.mensal)}. A data
-                  da primeira mensalidade é escolhida na conversão.
+                  {formatBRL(aplicarDesconto(totais.total, form.desconto))} de trabalho
+                  {temDesconto(form.desconto) ? ' (já com desconto)' : ''} mais {form.planMonths}×{' '}
+                  {formatBRL(totais.mensal)}. A data da primeira mensalidade é escolhida na conversão.
                 </div>
               </div>
             )}
+
+            <DescontoFields desconto={form.desconto} base={totais.total} onChange={setDesconto} />
 
             <div className="mb-4 rounded-control border border-border bg-card-dark p-4">
               <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">

@@ -14,6 +14,7 @@ import {
   type ServiceQuoteStatus,
 } from '@/lib/services';
 import { sincronizarFinanceiroDaPrestacao } from '@/lib/data/service-orders';
+import { DISCOUNT_TYPES, type Desconto } from '@/lib/discount';
 
 export type ServiceQuoteInput = {
   id?: string;
@@ -27,6 +28,8 @@ export type ServiceQuoteInput = {
   includeContract: boolean;
   /** Cliente já tem domínio: muda a Cláusula 2 do contrato. */
   clientHasDomain: boolean;
+  /** Incide sobre o valor único, não sobre a mensalidade. */
+  desconto: Desconto;
   items: ServiceOrderItem[];
 };
 
@@ -86,6 +89,13 @@ export async function saveServiceQuoteAction(input: ServiceQuoteInput): Promise<
   if (temPlano && !PLAN_MONTHS_OPTIONS.includes(input.planMonths as 6 | 12 | 24)) {
     return errResult('Escolha a duração do plano: 6, 12 ou 24 meses.');
   }
+  if (!DISCOUNT_TYPES.includes(input.desconto.tipo)) return errResult('Tipo de desconto inválido.');
+  if (!Number.isFinite(input.desconto.valor) || input.desconto.valor < 0) {
+    return errResult('O desconto precisa ser um número igual ou maior que zero.');
+  }
+  if (input.desconto.tipo === 'percentual' && input.desconto.valor > 100) {
+    return errResult('O desconto em porcentagem não pode passar de 100%.');
+  }
 
   const payload = {
     customer_id: input.customerId,
@@ -99,6 +109,9 @@ export async function saveServiceQuoteAction(input: ServiceQuoteInput): Promise<
     include_contract: input.includeContract,
     // Só faz sentido com o contrato anexado — é ele que tem a Cláusula 2.
     client_has_domain: input.includeContract && input.clientHasDomain,
+    discount_type: input.desconto.tipo,
+    discount_value: input.desconto.valor,
+    discount_note: input.desconto.descricao.trim(),
     updated_at: new Date().toISOString(),
   };
 
@@ -222,6 +235,11 @@ export async function convertServiceQuoteAction(input: ConversaoInput): Promise<
       payment_method: input.paymentMethod.trim(),
       total_amount: q.total_amount,
       monthly_amount: q.monthly_amount,
+      // O desconto vem junto: sem ele a prestação passaria a valer o preço
+      // cheio e o Financeiro esperaria mais do que foi combinado.
+      discount_type: q.discount_type,
+      discount_value: q.discount_value,
+      discount_note: q.discount_note,
       plan_months: temPlano ? q.plan_months : null,
       plan_start_date: temPlano ? input.planStartDate || input.startDate : null,
       lead_time_days: prazoDias,

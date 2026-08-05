@@ -3,6 +3,8 @@
 // cada tecla digitada, e a action revalida no servidor com a mesma função —
 // duas implementações do mesmo cálculo divergiriam com o tempo.
 
+import { valorDoDesconto, SEM_DESCONTO, type Desconto } from '@/lib/discount';
+
 export const QUOTE_STATUSES = [
   'Em elaboração',
   'Enviado',
@@ -28,11 +30,19 @@ export type QuoteInputs = QuoteUsdInputs & {
   /** Frete em BRL — único componente com origem em reais. */
   shippingBrl: number;
   salePriceBrl: number;
+  /** Opcional: sem desconto, o cálculo é o de sempre. */
+  desconto?: Desconto;
 };
 
 export type QuoteTotals = {
   usd: QuoteUsdInputs & { shipping: number; total: number };
   brl: QuoteUsdInputs & { shipping: number; total: number };
+  /** Preço cheio, antes do desconto. */
+  salePriceBrl: number;
+  /** Quanto o desconto vale em reais. Zero quando não há. */
+  discountBrl: number;
+  /** O que o cliente paga: preço cheio menos desconto. */
+  finalPriceBrl: number;
   profitBrl: number;
   marginPct: number;
 };
@@ -68,14 +78,26 @@ export function calculateQuote(inputs: QuoteInputs, usdRate: number): QuoteTotal
   const totalBrl = arredondar(USD_KEYS.reduce((s, k) => s + brl[k], 0) + shippingBrl);
 
   const salePrice = arredondar(inputs.salePriceBrl);
-  const profitBrl = arredondar(salePrice - totalBrl);
-  // Margem sobre o preço de venda, não sobre o custo. Venda zero não tem
+
+  // O desconto sai do bolso da Prog, não do custo: o fornecedor continua
+  // cobrando o mesmo. Por isso ele reduz o preço final e, com ele, lucro e
+  // margem — que é o número que o dono precisa ver antes de conceder.
+  const desconto = inputs.desconto ?? SEM_DESCONTO;
+  const discountBrl = valorDoDesconto(salePrice, desconto);
+  const finalPrice = arredondar(salePrice - discountBrl);
+
+  const profitBrl = arredondar(finalPrice - totalBrl);
+  // Margem sobre o preço que o cliente paga, não sobre o cheio: com desconto,
+  // usar o cheio mostraria uma margem que não existe. Venda zero não tem
   // margem definida — devolver 0 evita NaN aparecendo na tela e no banco.
-  const marginPct = salePrice > 0 ? arredondar((profitBrl / salePrice) * 100) : 0;
+  const marginPct = finalPrice > 0 ? arredondar((profitBrl / finalPrice) * 100) : 0;
 
   return {
     usd: { ...usd, shipping: shippingUsd, total: totalUsd },
     brl: { ...brl, shipping: shippingBrl, total: totalBrl },
+    salePriceBrl: salePrice,
+    discountBrl,
+    finalPriceBrl: finalPrice,
     profitBrl,
     marginPct,
   };

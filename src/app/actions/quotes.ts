@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
 import { calculateQuote, podeRecalcular, QUOTE_STATUSES, type QuoteStatus } from '@/lib/quotes';
+import { DISCOUNT_TYPES, type Desconto } from '@/lib/discount';
 
 export type QuoteFormInput = {
   id?: string;
@@ -21,6 +22,7 @@ export type QuoteFormInput = {
   processingUsd: number;
   shippingBrl: number;
   salePriceBrl: number;
+  desconto: Desconto;
   notes: string;
   status: QuoteStatus;
 };
@@ -29,6 +31,16 @@ async function adminClient() {
   const admin = await requireAdmin();
   if (!admin) return null;
   return createClient();
+}
+
+/** Desconto de uma linha do banco. Usado nos recálculos em massa, que precisam
+ *  reaplicar o mesmo desconto já acordado. */
+function descontoDaLinha(q: { discount_type: string; discount_value: number; discount_note: string }): Desconto {
+  return {
+    tipo: q.discount_type as Desconto['tipo'],
+    valor: Number(q.discount_value),
+    descricao: q.discount_note,
+  };
 }
 
 async function cotacaoOficial(supabase: Awaited<ReturnType<typeof createClient>>): Promise<number | null> {
@@ -44,6 +56,13 @@ export async function saveQuoteAction(input: QuoteFormInput): Promise<ActionResu
   if (!input.name.trim()) return errResult('Informe o nome do produto.');
   if (!input.customerId) return errResult('Escolha o cliente solicitante.');
   if (!QUOTE_STATUSES.includes(input.status)) return errResult('Status inválido.');
+  if (!DISCOUNT_TYPES.includes(input.desconto.tipo)) return errResult('Tipo de desconto inválido.');
+  if (!Number.isFinite(input.desconto.valor) || input.desconto.valor < 0) {
+    return errResult('O desconto precisa ser um número igual ou maior que zero.');
+  }
+  if (input.desconto.tipo === 'percentual' && input.desconto.valor > 100) {
+    return errResult('O desconto em porcentagem não pode passar de 100%.');
+  }
 
   // A cotação vem sempre de Configurações, nunca do formulário. Sem ela o
   // cálculo inteiro sai zerado e o orçamento nasceria errado sem ninguém notar.
@@ -61,6 +80,7 @@ export async function saveQuoteAction(input: QuoteFormInput): Promise<ActionResu
       processing: input.processingUsd,
       shippingBrl: input.shippingBrl,
       salePriceBrl: input.salePriceBrl,
+      desconto: input.desconto,
     },
     taxa
   );
@@ -88,6 +108,9 @@ export async function saveQuoteAction(input: QuoteFormInput): Promise<ActionResu
     total_usd: totais.usd.total,
     total_brl: totais.brl.total,
     sale_price_brl: input.salePriceBrl,
+    discount_type: input.desconto.tipo,
+    discount_value: input.desconto.valor,
+    discount_note: input.desconto.descricao.trim(),
     profit_brl: totais.profitBrl,
     margin_pct: totais.marginPct,
     notes: input.notes.trim() || null,
@@ -239,6 +262,9 @@ export async function recalculateQuotesAction(): Promise<ActionResult> {
         processing: Number(q.processing_usd),
         shippingBrl: Number(q.shipping_brl),
         salePriceBrl: Number(q.sale_price_brl),
+        // Sem isto o recálculo devolveria lucro e margem do preço cheio,
+        // apagando o desconto do painel sem mexer no valor gravado.
+        desconto: descontoDaLinha(q),
       },
       taxa
     );

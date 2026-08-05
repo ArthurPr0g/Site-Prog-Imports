@@ -32,6 +32,8 @@ export function podeConverterEmPrestacao(status: ServiceQuoteStatus): boolean {
   return status === 'Aprovado';
 }
 
+import { aplicarDesconto, type Desconto } from '@/lib/discount';
+
 export const BILLING_TYPES = ['unico', 'mensal'] as const;
 export type BillingType = (typeof BILLING_TYPES)[number];
 
@@ -78,6 +80,8 @@ export type ServiceQuote = {
   includeContract: boolean;
   /** Move "Domínio" de incluso para não incluso na Cláusula 2. */
   clientHasDomain: boolean;
+  /** Incide sobre o valor único (o trabalho), não sobre a mensalidade. */
+  desconto: Desconto;
   /** Prestação gerada a partir deste orçamento, se já houve conversão. */
   orderId: string | null;
   items: ServiceOrderItem[];
@@ -93,9 +97,11 @@ export type ServiceOrder = {
   status: ServiceOrderStatus;
   paymentStatus: ServicePaymentStatus;
   paymentMethod: string;
-  /** Só os serviços de cobrança única. A mensalidade fica em `monthlyAmount`. */
+  /** Só os serviços de cobrança única, antes do desconto. A mensalidade fica em
+   *  `monthlyAmount` e nunca é descontada. */
   totalAmount: number;
   monthlyAmount: number;
+  desconto: Desconto;
   planMonths: number | null;
   planStartDate: string | null;
   leadTimeDays: number;
@@ -141,9 +147,18 @@ export function totalizarItens(itens: ServiceOrderItem[]): TotaisDosItens {
 }
 
 /** Valor do contrato inteiro: o trabalho mais todas as mensalidades. Só para
- *  exibição — o Financeiro nunca recebe este número de uma vez. */
-export function valorDoContrato(totais: TotaisDosItens, meses: number | null): number {
-  return totais.total + totais.mensal * (meses ?? 0);
+ *  exibição — o Financeiro nunca recebe este número de uma vez.
+ *
+ *  O desconto incide sobre o TRABALHO, não sobre a mensalidade: ela é preço de
+ *  tabela recorrente, e descontá-la mudaria o contrato mensal inteiro. Para dar
+ *  desconto na mensalidade, o valor do próprio item já é editável na proposta. */
+export function valorDoContrato(
+  totais: TotaisDosItens,
+  meses: number | null,
+  desconto?: Desconto
+): number {
+  const trabalho = desconto ? aplicarDesconto(totais.total, desconto) : totais.total;
+  return trabalho + totais.mensal * (meses ?? 0);
 }
 
 /** Data de entrega = início + prazo, em dias de calendário.
@@ -219,15 +234,22 @@ export function lancamentosDaPrestacao(order: {
   planStartDate: string | null;
   startDate: string;
   dueDate: string | null;
+  desconto?: Desconto;
 }): LancamentoAlvo[] {
   if (order.status === 'Cancelada') return [];
 
   const alvos: LancamentoAlvo[] = [];
 
-  if (order.totalAmount > 0) {
+  // O caixa recebe o que o cliente vai pagar, não o preço de tabela. O desconto
+  // incide só no trabalho — a mensalidade é preço recorrente e fica intacta.
+  const trabalho = order.desconto
+    ? aplicarDesconto(order.totalAmount, order.desconto)
+    : order.totalAmount;
+
+  if (trabalho > 0) {
     alvos.push({
       parcela: null,
-      amount: order.totalAmount,
+      amount: trabalho,
       status: order.paymentStatus === 'Recebido' ? 'Pago' : 'Previsto',
       description: `Serviço: ${order.title}`,
       // Cai na data de entrega quando ela existe (é quando o dinheiro costuma

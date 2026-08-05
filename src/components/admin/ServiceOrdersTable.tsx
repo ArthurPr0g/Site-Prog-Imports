@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo, useTransition } from 'react';
 import { Pencil, Trash2, Plus, X, Search } from 'lucide-react';
@@ -21,6 +21,8 @@ import {
   type ServiceOrderStatus,
   type ServicePaymentStatus,
 } from '@/lib/services';
+import { SEM_DESCONTO, temDesconto, aplicarDesconto, rotuloDoDesconto, type Desconto } from '@/lib/discount';
+import { DescontoFields } from '@/components/admin/DescontoFields';
 import { saveServiceOrderAction, deleteServiceOrderAction, type ServiceOrderInput } from '@/app/actions/service-orders';
 
 const inputClass =
@@ -66,6 +68,7 @@ function formVazio(): ServiceOrderInput {
     startDate: hojeISO(),
     planMonths: PLAN_MONTHS_DEFAULT,
     planStartDate: '',
+    desconto: SEM_DESCONTO,
     items: [itemVazio()],
   };
 }
@@ -131,12 +134,16 @@ export function ServiceOrdersTable({
       startDate: o.startDate,
       planMonths: o.planMonths ?? PLAN_MONTHS_DEFAULT,
       planStartDate: o.planStartDate ?? '',
+      desconto: o.desconto,
       items: o.items.length ? o.items : [itemVazio()],
     });
   }
 
   const set = <K extends keyof ServiceOrderInput>(campo: K, valor: ServiceOrderInput[K]) =>
     setForm((f) => (f ? { ...f, [campo]: valor } : f));
+
+  const setDesconto = (patch: Partial<Desconto>) =>
+    setForm((f) => (f ? { ...f, desconto: { ...f.desconto, ...patch } } : f));
 
   function setItem(indice: number, patch: Partial<ServiceOrderItem>) {
     setForm((f) =>
@@ -238,7 +245,19 @@ export function ServiceOrdersTable({
             {/* Valor único e mensalidade aparecem separados, como o contrato é
                 lido — somar os dois apagaria quanto é recorrente. */}
             <div className="text-right font-bold">
-              {o.totalAmount > 0 && <div className="text-accent">{formatBRL(o.totalAmount)}</div>}
+              {o.totalAmount > 0 && (
+                <>
+                  {temDesconto(o.desconto) && (
+                    <div className="text-[11px] font-normal text-fg-faded line-through">
+                      {formatBRL(o.totalAmount)}
+                    </div>
+                  )}
+                  <div className="text-accent">{formatBRL(aplicarDesconto(o.totalAmount, o.desconto))}</div>
+                  {temDesconto(o.desconto) && (
+                    <div className="text-[10.5px] font-bold text-accent">−{rotuloDoDesconto(o.desconto)}</div>
+                  )}
+                </>
+              )}
               {o.monthlyAmount > 0 && (
                 <div className={o.totalAmount > 0 ? 'text-[11.5px] text-fg-secondary' : 'text-accent'}>
                   {formatBRL(o.monthlyAmount)}/mês
@@ -437,8 +456,12 @@ export function ServiceOrdersTable({
               Serviço mensal não entra no prazo — é contínuo.
             </div>
 
+            <div className="mt-4">
+              <DescontoFields desconto={form.desconto} base={totais.total} onChange={setDesconto} />
+            </div>
+
             {totais.temPlano && (
-              <div className="mb-4 mt-4 rounded-control border border-accent/40 bg-[rgb(var(--brand-accent-rgb)/.05)] p-4">
+              <div className="mb-4 rounded-control border border-accent/40 bg-[rgb(var(--brand-accent-rgb)/.05)] p-4">
                 <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-accent">
                   Plano mensal
                 </div>
@@ -533,7 +556,8 @@ export function ServiceOrdersTable({
                   {totais.total > 0 && (
                     <>
                       {' '}<strong>uma receita</strong> de{' '}
-                      <strong className="text-accent">{formatBRL(totais.total)}</strong> como{' '}
+                      <strong className="text-accent">{formatBRL(aplicarDesconto(totais.total, form.desconto))}</strong>
+                      {temDesconto(form.desconto) && ' (já com desconto)'} como{' '}
                       <strong>{form.paymentStatus === 'Recebido' ? 'Pago' : 'Previsto'}</strong>
                       {entrega ? ` em ${formatDateBR(entrega + 'T12:00:00')}` : ''}
                     </>

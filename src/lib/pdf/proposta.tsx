@@ -13,6 +13,7 @@ import { Document, Page, Text, View, Image, StyleSheet } from '@react-pdf/render
 import { formatBRL, formatDateBR } from '@/lib/format';
 import { formatPrazo, type ServiceOrderItem } from '@/lib/services';
 import { montarClausulas, metadesDoPagamento, TITULO_CONTRATO, type DadosDoContratado } from '@/lib/contract';
+import { temDesconto, valorDoDesconto, aplicarDesconto, rotuloDoDesconto, type Desconto } from '@/lib/discount';
 
 export type DadosDaProposta = {
   numero: string;
@@ -27,6 +28,7 @@ export type DadosDaProposta = {
   prazoDias: number;
   incluirContrato: boolean;
   clientePossuiDominio: boolean;
+  desconto: Desconto;
   marca: { nome: string; tagline: string; accent: string; logo?: string };
   contratado: DadosDoContratado;
 };
@@ -176,16 +178,25 @@ function Dado({ rotulo, valor, s }: { rotulo: string; valor: string; s: ReturnTy
 
 export function PropostaDocument(d: DadosDaProposta) {
   const s = estilos(d.marca.accent);
-  const { primeira, segunda } = metadesDoPagamento(d.totalUnico);
   const temPlano = d.totalMensal > 0 && (d.mesesPlano ?? 0) > 0;
   const meses = d.mesesPlano ?? 0;
-  const valorContrato = d.totalUnico + d.totalMensal * meses;
+
+  // O desconto incide só no trabalho; a mensalidade é preço recorrente e não
+  // entra. Daqui para baixo, `trabalho` é o que o cliente realmente paga — e é
+  // ele que alimenta as parcelas de 50% e o contrato, para os três números não
+  // poderem se contradizer dentro do mesmo documento.
+  const descontoBrl = valorDoDesconto(d.totalUnico, d.desconto);
+  const trabalho = aplicarDesconto(d.totalUnico, d.desconto);
+  const comDesconto = temDesconto(d.desconto) && descontoBrl > 0;
+
+  const { primeira, segunda } = metadesDoPagamento(trabalho);
+  const valorContrato = trabalho + d.totalMensal * meses;
 
   const clausulas = d.incluirContrato
     ? montarClausulas({
         contratante: d.cliente.nome,
         documentoContratante: d.cliente.documento,
-        valorDesenvolvimento: d.totalUnico,
+        valorDesenvolvimento: trabalho,
         valorMensal: d.totalMensal,
         mesesPlano: d.mesesPlano,
         prazoDias: d.prazoDias,
@@ -281,9 +292,24 @@ export function PropostaDocument(d: DadosDaProposta) {
           <View style={s.totais}>
             {d.totalUnico > 0 && (
               <View style={s.linhaTotal}>
-                <Text style={s.rotuloTotal}>Investimento inicial</Text>
+                <Text style={s.rotuloTotal}>{comDesconto ? 'Subtotal dos serviços' : 'Investimento inicial'}</Text>
                 <Text style={s.valorTotal}>{formatBRL(d.totalUnico)}</Text>
               </View>
+            )}
+            {comDesconto && (
+              <>
+                <View style={s.linhaTotal}>
+                  <Text style={{ ...s.rotuloTotal, color: d.marca.accent }}>
+                    Desconto ({rotuloDoDesconto(d.desconto)})
+                    {d.desconto.descricao ? ` — ${d.desconto.descricao}` : ''}
+                  </Text>
+                  <Text style={{ ...s.valorTotal, color: d.marca.accent }}>−{formatBRL(descontoBrl)}</Text>
+                </View>
+                <View style={s.linhaTotal}>
+                  <Text style={s.rotuloTotal}>Investimento inicial</Text>
+                  <Text style={s.valorTotal}>{formatBRL(trabalho)}</Text>
+                </View>
+              </>
             )}
             {temPlano && (
               <>

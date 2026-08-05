@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import type { BillingType, ServiceQuote, ServiceOrderItem, ServiceQuoteStatus } from '@/lib/services';
+import type { Desconto } from '@/lib/discount';
 
 type ItemRow = {
   id: string;
@@ -25,6 +26,9 @@ type QuoteRow = {
   created_at: string;
   include_contract: boolean;
   client_has_domain: boolean;
+  discount_type: string;
+  discount_value: number;
+  discount_note: string;
   customers: { name: string } | null;
   service_quote_items: ItemRow[] | null;
   service_orders: { id: string }[] | null;
@@ -67,6 +71,11 @@ export async function listServiceQuotes(): Promise<ServiceQuote[]> {
       createdAt: row.created_at,
       includeContract: row.include_contract,
       clientHasDomain: row.client_has_domain,
+      desconto: {
+        tipo: row.discount_type as Desconto['tipo'],
+        valor: Number(row.discount_value),
+        descricao: row.discount_note ?? '',
+      },
       orderId: row.service_orders?.[0]?.id ?? null,
       items: (row.service_quote_items ?? []).sort((a, b) => a.position - b.position).map(toItem),
     };

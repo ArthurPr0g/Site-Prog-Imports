@@ -15,6 +15,7 @@ import {
   type ServicePaymentStatus,
 } from '@/lib/services';
 import { sincronizarFinanceiroDaPrestacao, removerFinanceiroDaPrestacao } from '@/lib/data/service-orders';
+import { DISCOUNT_TYPES, type Desconto } from '@/lib/discount';
 
 export type ServiceOrderInput = {
   id?: string;
@@ -29,6 +30,8 @@ export type ServiceOrderInput = {
   planMonths: number | null;
   /** Data da primeira mensalidade. Vazio cai na data de início. */
   planStartDate: string;
+  /** Incide sobre o valor único, não sobre a mensalidade. */
+  desconto: Desconto;
   items: ServiceOrderItem[];
 };
 
@@ -66,6 +69,13 @@ export async function saveServiceOrderAction(input: ServiceOrderInput): Promise<
   if (temPlano && !PLAN_MONTHS_OPTIONS.includes(input.planMonths as 6 | 12 | 24)) {
     return errResult('Escolha a duração do plano: 6, 12 ou 24 meses.');
   }
+  if (!DISCOUNT_TYPES.includes(input.desconto.tipo)) return errResult('Tipo de desconto inválido.');
+  if (!Number.isFinite(input.desconto.valor) || input.desconto.valor < 0) {
+    return errResult('O desconto precisa ser um número igual ou maior que zero.');
+  }
+  if (input.desconto.tipo === 'percentual' && input.desconto.valor > 100) {
+    return errResult('O desconto em porcentagem não pode passar de 100%.');
+  }
 
   const payload = {
     customer_id: input.customerId,
@@ -76,6 +86,9 @@ export async function saveServiceOrderAction(input: ServiceOrderInput): Promise<
     payment_method: input.paymentMethod.trim(),
     total_amount: total,
     monthly_amount: mensal,
+    discount_type: input.desconto.tipo,
+    discount_value: input.desconto.valor,
+    discount_note: input.desconto.descricao.trim(),
     // Sem serviço mensal não há plano. Zerar aqui evita que uma duração
     // esquecida de uma edição anterior continue gerando parcelas de nada.
     plan_months: temPlano ? input.planMonths : null,

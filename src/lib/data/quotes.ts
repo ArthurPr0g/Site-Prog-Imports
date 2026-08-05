@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import type { QuoteStatus } from '@/lib/quotes';
+import type { Desconto } from '@/lib/discount';
 
 export type StoreQuote = {
   id: string;
@@ -19,7 +20,9 @@ export type StoreQuote = {
   shippingBrl: number;
   totalUsd: number;
   totalBrl: number;
+  /** Preço cheio, antes do desconto. */
   salePriceBrl: number;
+  desconto: Desconto;
   profitBrl: number;
   marginPct: number;
   notes: string;
@@ -45,6 +48,9 @@ type Row = {
   total_usd: number;
   total_brl: number;
   sale_price_brl: number;
+  discount_type: string;
+  discount_value: number;
+  discount_note: string | null;
   profit_brl: number;
   margin_pct: number;
   notes: string | null;
@@ -73,6 +79,11 @@ function toQuote(r: Row): StoreQuote {
     totalUsd: Number(r.total_usd),
     totalBrl: Number(r.total_brl),
     salePriceBrl: Number(r.sale_price_brl),
+    desconto: {
+      tipo: r.discount_type as Desconto['tipo'],
+      valor: Number(r.discount_value),
+      descricao: r.discount_note ?? '',
+    },
     profitBrl: Number(r.profit_brl),
     marginPct: Number(r.margin_pct),
     notes: r.notes ?? '',
