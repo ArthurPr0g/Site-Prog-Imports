@@ -19,7 +19,7 @@ Serviços, extraída de um sistema Flask anterior).
 | M1 | Clientes + Parâmetros do sistema | **Pronto** | `/admin/clientes`, `/admin/configuracoes` |
 | M2 | Estoque + selo de pronta entrega | **Pronto** | `/admin/estoque` |
 | M3 | Orçamentos Loja + cotação automática | **Pronto** | `/admin/orcamentos-loja` |
-| M4 | Vendas | Pendente | `/admin/vendas` |
+| M4 | Vendas + botão Gerar Venda | **Pronto** | `/admin/vendas` |
 | M5 | Financeiro (livro-caixa) | **Pronto** | `/admin/financeiro` |
 | M6 | Serviços (cadastro) + Prestação | **Pronto** | `/admin/servicos-internos`, `/admin/prestacao-servico` |
 | M7 | Orçamentos Serviços | **Pronto** | `/admin/orcamentos-servicos` |
@@ -434,6 +434,68 @@ teste removidos ao final.
 
 ---
 
+## Vendas (M4) — regras confirmadas
+
+**Nenhuma tabela nova.** `orders` + `order_items` já era o "cabeçalho e itens"
+decidido, então o ERP as estendeu com `origin`, `cost_total`, `budget_id`,
+`unit_cost` e `stock_item_id`. O checkout, `/conta/pedidos` e a timeline de 10
+etapas continuam funcionando sem reescrita — o que estava previsto como
+consequência a tratar deixou de existir.
+
+**A venda lança DUAS linhas no Financeiro: receita do total e despesa do custo.**
+É assim que a ressalva do M5 se resolve sem mexer na fórmula do resultado —
+receita menos despesa vira o lucro por construção, e o fluxo de caixa mostra as
+duas pontas reais: o dinheiro que entrou do cliente e o que saiu para o
+fornecedor. Lançar só o lucro esconderia o faturamento; lançar só a receita
+inflaria o resultado com um custo que existe.
+
+**O frete entra no total mas não no lucro** — é repasse, não margem. A margem
+também é calculada sobre a mercadoria: no total, um frete maior faria a mesma
+venda parecer pior.
+
+**O status decide se o dinheiro entrou.** `Aguardando pagamento` deixa as duas
+linhas como `Previsto`; `Pago`, `Enviado` e `Entregue` viram `Pago`. `Cancelado`
+não lança nada. Trocar o status pela tela também sincroniza — sem isso o caixa
+ficaria em Previsto depois de o cliente pagar.
+
+**Vender item de estoque dá baixa nele**, e cancelar devolve para `Disponível`.
+Sem isso o mesmo notebook continuaria como pronta entrega no site depois de
+vendido, e o selo mentiria para o visitante.
+
+**⚠️ Vendas sem custo inflam o lucro.** Venda do site nasce sem custo — o produto
+é por encomenda e o custo só se conhece na compra. A tela conta quantas estão
+assim e avisa, no lugar da margem. Em produção isso apareceu como R$ 70.440 de
+lucro com 88% de margem, quase tudo faturamento sem custo lançado: número errado
+com aparência de certo é pior que número ausente.
+
+### Botão "Gerar Venda" — entregue
+
+De um orçamento **Aprovado** sai a venda com preço e custo preenchidos: preço de
+`sale_price_brl` menos o desconto, custo de `total_brl`. Só aparece em aprovado —
+antes disso não há acordo, e vender criaria receita de algo que ninguém comprou.
+Recusa se já houver venda gerada, dizendo o número dela. Excluir a venda devolve
+o orçamento para `Aprovado`, como já fazem Estoque e Prestação.
+
+Testado em `scratchpad/test-vendas.mjs` (34 asserções). Verificado em produção
+(2026-08-05): orçamento de R$ 14.000 com 10% de desconto gerou a venda #1048 por
+R$ 12.600 com custo R$ 9.600 e **duas linhas no Financeiro** (receita 12.600 +
+despesa 9.600 = lucro 3.000), as duas como Previsto; mudar para Pago virou as
+duas **sem duplicar**; excluir devolveu o orçamento para Aprovado e limpou o
+caixa. Dados de teste removidos ao final.
+
+### Em aberto sobre vendas
+
+- **Custo do frete não é separado.** O frete cobrado do cliente entra na receita,
+  mas o que a Prog paga de frete só entra se estiver embutido no custo do item.
+  Numa venda vinda de orçamento isso já acontece (o frete é componente do
+  orçamento); numa venda manual, não.
+- **`customer_id` da venda gerada fica nulo.** `orders.customer_id` aponta para
+  `profiles` (quem tem conta no site) e o orçamento guarda um `customers` do ERP
+  — são tabelas diferentes. O nome do cliente é copiado, mas o vínculo não.
+  Unificar isso é decisão maior, ligada à pendência de vínculo do M1.
+
+---
+
 ## Desconto nos orçamentos — regras confirmadas
 
 Campo de desconto em **porcentagem ou reais**, com **descrição** que sai no PDF.
@@ -615,3 +677,13 @@ removido junto com a origem.
   validado com casos conferidos à mão (`scratchpad/test-quotes.mjs`) antes de
   existir formulário — dois deles quebrariam em produção (`Infinity` por
   cotação zero, `NaN` por venda zero).
+- **Quem gera lançamento no Financeiro sincroniza a cada salvamento**, casando
+  alvo com existente por uma chave estável (número da parcela no M6, `kind` no
+  M4) em vez de apagar e recriar. Recriar perde o que o dono já baixou como
+  recebido. E a exclusão do registro de origem tira os lançamentos **antes** de
+  apagar a si mesmo — a tela do Financeiro recusa excluir linha gerada, então a
+  ordem inversa as deixa órfãs e sem remoção possível pela interface.
+- **Número agregado que pode estar errado precisa dizer isso na tela.** O lucro
+  das vendas soma faturamento menos custo; com vendas sem custo lançado ele fica
+  perto do faturamento e a margem beira 100%. A tela conta quantas estão assim e
+  avisa. Número errado com aparência de certo é pior que número ausente.
