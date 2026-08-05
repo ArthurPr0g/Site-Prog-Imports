@@ -33,6 +33,7 @@ export function podeConverterEmPrestacao(status: ServiceQuoteStatus): boolean {
 }
 
 import { aplicarDesconto, type Desconto } from '@/lib/discount';
+import type { Installment } from '@/lib/installments';
 
 export const BILLING_TYPES = ['unico', 'mensal'] as const;
 export type BillingType = (typeof BILLING_TYPES)[number];
@@ -97,6 +98,14 @@ export type ServiceOrder = {
   status: ServiceOrderStatus;
   paymentStatus: ServicePaymentStatus;
   paymentMethod: string;
+  /** Condições do PIX parcelado. `installmentCount` 0 significa 50/50. */
+  installmentCount: number;
+  downPayment: number;
+  interestPct: number;
+  firstDueDate: string | null;
+  installmentNotes: string;
+  /** O carnê, quando a prestação é parcelada. */
+  installments: Installment[];
   /** Só os serviços de cobrança única, antes do desconto. A mensalidade fica em
    *  `monthlyAmount` e nunca é descontada. */
   totalAmount: number;

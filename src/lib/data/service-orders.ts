@@ -8,6 +8,8 @@ import {
   type ServicePaymentStatus,
 } from '@/lib/services';
 import type { Desconto } from '@/lib/discount';
+import { listInstallments, listInstallmentsBySource } from '@/lib/data/installments';
+import { OFFSET_PARCELA_PIX, type Installment } from '@/lib/installments';
 
 type ItemRow = {
   id: string;
@@ -36,6 +38,11 @@ type OrderRow = {
   discount_note: string;
   plan_months: number | null;
   plan_start_date: string | null;
+  installment_count: number;
+  down_payment: number;
+  interest_pct: number;
+  first_due_date: string | null;
+  installment_notes: string;
   lead_time_days: number;
   start_date: string;
   due_date: string | null;
@@ -55,7 +62,7 @@ function toItem(r: ItemRow): ServiceOrderItem {
   };
 }
 
-function toOrder(r: OrderRow): ServiceOrder {
+function toOrder(r: OrderRow, parcelas: Installment[] = []): ServiceOrder {
   return {
     id: r.id,
     customerId: r.customer_id,
@@ -75,6 +82,12 @@ function toOrder(r: OrderRow): ServiceOrder {
     },
     planMonths: r.plan_months,
     planStartDate: r.plan_start_date,
+    installmentCount: r.installment_count,
+    downPayment: Number(r.down_payment),
+    interestPct: Number(r.interest_pct),
+    firstDueDate: r.first_due_date,
+    installmentNotes: r.installment_notes,
+    installments: parcelas,
     leadTimeDays: r.lead_time_days,
     startDate: r.start_date,
     dueDate: r.due_date,
@@ -89,7 +102,11 @@ export async function listServiceOrders(): Promise<ServiceOrder[]> {
     .select('*, customers(name), service_order_items(*)')
     .order('start_date', { ascending: false })
     .order('created_at', { ascending: false });
-  return (data ?? []).map((r) => toOrder(r as unknown as OrderRow));
+
+  const linhas = (data ?? []) as unknown as OrderRow[];
+  const parcelas = await listInstallmentsBySource('servico', linhas.map((r) => r.id));
+
+  return linhas.map((r) => toOrder(r, parcelas.get(r.id) ?? []));
 }
 
 /** Deixa o Financeiro coerente com a prestação: cria, atualiza ou remove os
@@ -140,6 +157,27 @@ export async function sincronizarFinanceiroDaPrestacao(orderId: string): Promise
     },
   });
 
+  // Com PIX parcelado, o TRABALHO vira um carnê: as parcelas substituem a
+  // receita única. As mensalidades do plano continuam intactas — são coisas
+  // diferentes e podem coexistir na mesma prestação.
+  const parcelasPix = await listInstallments('servico', orderId);
+  const alvosFinais =
+    parcelasPix.length > 0
+      ? [
+          ...alvos.filter((a) => a.parcela !== null),
+          ...parcelasPix
+            .filter((p) => p.status !== 'Cancelada')
+            .map((p) => ({
+              // Faixa deslocada para não colidir com as mensalidades do plano.
+              parcela: OFFSET_PARCELA_PIX + p.number,
+              amount: p.amount,
+              status: p.status === 'Recebida' ? ('Pago' as const) : ('Previsto' as const),
+              description: `Serviço: ${data.title} — ${p.number === 0 ? 'entrada' : `parcela ${p.number}`}`,
+              entryDate: p.dueDate,
+            })),
+        ]
+      : alvos;
+
   const { data: existentes } = await supabase
     .from('finance_entries')
     .select('id, installment_id, installment_number, status')
@@ -149,17 +187,21 @@ export async function sincronizarFinanceiroDaPrestacao(orderId: string): Promise
   const atuais = existentes ?? [];
   const porNumero = new Map(atuais.map((e) => [e.installment_number ?? 0, e]));
 
+  // As parcelas do PIX têm status próprio, vindo do carnê — ao contrário das
+  // mensalidades, que o dono baixa direto no Financeiro.
+  const ehParcelaPix = (n: number | null) => n !== null && n >= OFFSET_PARCELA_PIX;
+
   // Todas as parcelas de um plano compartilham o mesmo installment_id. Reusa o
   // que já existe para o agrupamento sobreviver a edições.
   const grupoExistente = atuais.find((e) => e.installment_id)?.installment_id ?? null;
-  const grupo = alvos.some((a) => a.parcela !== null)
+  const grupo = alvosFinais.some((a) => a.parcela !== null)
     ? grupoExistente ?? crypto.randomUUID()
     : null;
 
   const agora = new Date().toISOString();
   const numerosAlvo = new Set<number>();
 
-  for (const alvo of alvos) {
+  for (const alvo of alvosFinais) {
     const chave = alvo.parcela ?? 0;
     numerosAlvo.add(chave);
     const existente = porNumero.get(chave);
@@ -177,9 +219,11 @@ export async function sincronizarFinanceiroDaPrestacao(orderId: string): Promise
     };
 
     if (existente) {
-      // Parcela mantém o status que tiver: quem a baixou foi o dono, mês a mês.
-      // O trabalho segue o payment_status da prestação.
-      const status = alvo.parcela === null ? alvo.status : existente.status;
+      // Mensalidade do plano mantém o status que tiver: quem a baixou foi o
+      // dono, mês a mês, direto no Financeiro. Já a parcela do PIX tem o status
+      // vindo do carnê, e o trabalho segue o payment_status da prestação.
+      const status =
+        alvo.parcela === null || ehParcelaPix(alvo.parcela) ? alvo.status : existente.status;
       await supabase.from('finance_entries').update({ ...payload, status }).eq('id', existente.id);
     } else {
       await supabase.from('finance_entries').insert({ ...payload, status: alvo.status });

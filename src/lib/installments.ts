@@ -21,6 +21,14 @@ export function geraParcelas(metodo: string): boolean {
 
 export const MAX_JUROS_PCT = 20;
 
+/** Deslocamento das parcelas de PIX dentro de `finance_entries.installment_number`.
+ *
+ *  Uma prestação pode ter as duas coisas ao mesmo tempo: as mensalidades do
+ *  plano (1..N) e o trabalho parcelado no PIX. Sem separar a faixa, a parcela 1
+ *  do PIX e a mensalidade 1 colidiriam na hora de casar alvo com existente, e
+ *  uma sobrescreveria a outra. */
+export const OFFSET_PARCELA_PIX = 1000;
+
 /** Status gravado. 'Atrasada' fica de fora de propósito: é derivado da data,
  *  não um estado que alguém marca. Gravá-lo exigiria uma rotina diária, e
  *  qualquer falha dela deixaria o painel mentindo. */

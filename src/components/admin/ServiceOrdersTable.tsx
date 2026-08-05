@@ -23,6 +23,9 @@ import {
 } from '@/lib/services';
 import { SEM_DESCONTO, temDesconto, aplicarDesconto, rotuloDoDesconto, type Desconto } from '@/lib/discount';
 import { DescontoFields } from '@/components/admin/DescontoFields';
+import { ParcelamentoFields } from '@/components/admin/ParcelamentoFields';
+import { ParcelasList } from '@/components/admin/ParcelasList';
+import { geraParcelas, type Installment } from '@/lib/installments';
 import { saveServiceOrderAction, deleteServiceOrderAction, type ServiceOrderInput } from '@/app/actions/service-orders';
 
 const inputClass =
@@ -69,6 +72,11 @@ function formVazio(): ServiceOrderInput {
     planMonths: PLAN_MONTHS_DEFAULT,
     planStartDate: '',
     desconto: SEM_DESCONTO,
+    installmentCount: 2,
+    downPayment: 0,
+    interestPct: 0,
+    firstDueDate: hojeISO(),
+    installmentNotes: '',
     items: [itemVazio()],
   };
 }
@@ -84,6 +92,8 @@ export function ServiceOrdersTable({
 }) {
   const [busca, setBusca] = useState('');
   const [form, setForm] = useState<ServiceOrderInput | null>(null);
+  /** Carnê já gravado, só existente na edição. */
+  const [parcelasDaEdicao, setParcelasDaEdicao] = useState<Installment[]>([]);
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 
@@ -111,7 +121,10 @@ export function ServiceOrdersTable({
     startTransition(async () => {
       const result = await saveServiceOrderAction(form);
       toast(result);
-      if (result.ok) setForm(null);
+      if (result.ok) {
+        setForm(null);
+        setParcelasDaEdicao([]);
+      }
     });
   }
 
@@ -135,8 +148,14 @@ export function ServiceOrdersTable({
       planMonths: o.planMonths ?? PLAN_MONTHS_DEFAULT,
       planStartDate: o.planStartDate ?? '',
       desconto: o.desconto,
+      installmentCount: o.installmentCount || 2,
+      downPayment: o.downPayment,
+      interestPct: o.interestPct,
+      firstDueDate: o.firstDueDate ?? hojeISO(),
+      installmentNotes: o.installmentNotes,
       items: o.items.length ? o.items : [itemVazio()],
     });
+    setParcelasDaEdicao(o.installments);
   }
 
   const set = <K extends keyof ServiceOrderInput>(campo: K, valor: ServiceOrderInput[K]) =>
@@ -504,7 +523,38 @@ export function ServiceOrdersTable({
               </div>
             )}
 
-            <div className="mb-5 mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="mt-4">
+              <ParcelamentoFields
+                condicoes={{
+                  paymentMethod: form.paymentMethod,
+                  installmentCount: form.installmentCount,
+                  downPayment: form.downPayment,
+                  interestPct: form.interestPct,
+                  firstDueDate: form.firstDueDate,
+                  installmentNotes: form.installmentNotes,
+                }}
+                // Só o trabalho entra no carnê: a mensalidade do plano tem
+                // ciclo próprio e já vira parcela por conta dela.
+                total={aplicarDesconto(totais.total, form.desconto)}
+                onChange={(patch) => setForm((f) => (f ? { ...f, ...patch } : f))}
+              />
+            </div>
+
+            {!geraParcelas(form.paymentMethod) && totais.total > 0 && (
+              <div className="mb-4 rounded-control border border-border bg-card-dark px-4 py-3 text-[12px] text-fg-tertiary">
+                Sem parcelamento, vale o padrão do contrato: <strong>50% na contratação</strong> e{' '}
+                <strong>50% na entrega</strong>. O Financeiro recebe o valor do trabalho numa linha só, e o
+                controle das duas metades fica com você.
+              </div>
+            )}
+
+            {parcelasDaEdicao.length > 0 && (
+              <div className="mb-4">
+                <ParcelasList parcelas={parcelasDaEdicao} />
+              </div>
+            )}
+
+            <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <div className="mb-1.5 text-[11px] text-fg-faded">Status da execução</div>
                 <select
@@ -523,20 +573,17 @@ export function ServiceOrdersTable({
                   value={form.paymentStatus}
                   onChange={(e) => set('paymentStatus', e.target.value as ServicePaymentStatus)}
                   className={`w-full ${inputClass}`}
+                  disabled={geraParcelas(form.paymentMethod)}
                 >
                   {SERVICE_PAYMENT_STATUSES.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
-              </div>
-              <div>
-                <div className="mb-1.5 text-[11px] text-fg-faded">Forma de pagamento</div>
-                <input
-                  value={form.paymentMethod}
-                  onChange={(e) => set('paymentMethod', e.target.value)}
-                  placeholder="Ex: PIX, 3x no cartão"
-                  className={`w-full ${inputClass}`}
-                />
+                {geraParcelas(form.paymentMethod) && (
+                  <div className="mt-1.5 text-[10.5px] text-fg-faded">
+                    Com parcelamento, quem manda no caixa é o status de cada parcela.
+                  </div>
+                )}
               </div>
               <textarea
                 value={form.notes}

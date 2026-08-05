@@ -15,7 +15,9 @@ import {
   type ServicePaymentStatus,
 } from '@/lib/services';
 import { sincronizarFinanceiroDaPrestacao, removerFinanceiroDaPrestacao } from '@/lib/data/service-orders';
-import { DISCOUNT_TYPES, type Desconto } from '@/lib/discount';
+import { DISCOUNT_TYPES, aplicarDesconto, type Desconto } from '@/lib/discount';
+import { salvarParcelas, removerParcelas } from '@/lib/data/installments';
+import { geraParcelas, gerarParcelas, MAX_JUROS_PCT } from '@/lib/installments';
 
 export type ServiceOrderInput = {
   id?: string;
@@ -32,6 +34,12 @@ export type ServiceOrderInput = {
   planStartDate: string;
   /** Incide sobre o valor único, não sobre a mensalidade. */
   desconto: Desconto;
+  /** Condições do PIX parcelado do trabalho. O plano mensal é independente. */
+  installmentCount: number;
+  downPayment: number;
+  interestPct: number;
+  firstDueDate: string;
+  installmentNotes: string;
   items: ServiceOrderItem[];
 };
 
@@ -77,6 +85,24 @@ export async function saveServiceOrderAction(input: ServiceOrderInput): Promise<
     return errResult('O desconto em porcentagem não pode passar de 100%.');
   }
 
+  // O trabalho já com desconto é o que vai para o carnê — parcelar o preço
+  // cheio cobraria do cliente um valor que ninguém combinou.
+  const trabalho = aplicarDesconto(total, input.desconto);
+
+  const parcelado = geraParcelas(input.paymentMethod);
+  if (parcelado) {
+    if (!input.firstDueDate) return errResult('Informe a data da primeira parcela.');
+    if (!Number.isInteger(input.installmentCount) || input.installmentCount < 1) {
+      return errResult('Informe a quantidade de parcelas.');
+    }
+    if (!Number.isFinite(input.interestPct) || input.interestPct < 0 || input.interestPct > MAX_JUROS_PCT) {
+      return errResult(`A taxa de juros precisa ficar entre 0% e ${MAX_JUROS_PCT}%.`);
+    }
+    if (input.downPayment > trabalho) {
+      return errResult('A entrada não pode ser maior que o valor dos serviços.');
+    }
+  }
+
   const payload = {
     customer_id: input.customerId,
     title,
@@ -89,6 +115,11 @@ export async function saveServiceOrderAction(input: ServiceOrderInput): Promise<
     discount_type: input.desconto.tipo,
     discount_value: input.desconto.valor,
     discount_note: input.desconto.descricao.trim(),
+    installment_count: parcelado ? input.installmentCount : 0,
+    down_payment: parcelado ? input.downPayment : 0,
+    interest_pct: parcelado ? input.interestPct : 0,
+    first_due_date: parcelado ? input.firstDueDate : null,
+    installment_notes: parcelado ? input.installmentNotes.trim() : '',
     // Sem serviço mensal não há plano. Zerar aqui evita que uma duração
     // esquecida de uma edição anterior continue gerando parcelas de nada.
     plan_months: temPlano ? input.planMonths : null,
@@ -127,6 +158,22 @@ export async function saveServiceOrderAction(input: ServiceOrderInput): Promise<
   );
   if (erroItens) return errResult(friendlyDbError(erroItens, 'A prestação foi salva, mas os serviços não.'));
 
+  if (parcelado) {
+    await salvarParcelas(
+      'servico',
+      orderId,
+      gerarParcelas({
+        total: trabalho,
+        parcelas: input.installmentCount,
+        entrada: input.downPayment,
+        jurosPct: input.interestPct,
+        primeiroVencimento: input.firstDueDate,
+      })
+    );
+  } else {
+    await removerParcelas('servico', orderId);
+  }
+
   await sincronizarFinanceiroDaPrestacao(orderId);
 
   revalidar();
@@ -149,6 +196,7 @@ export async function deleteServiceOrderAction(id: string): Promise<ActionResult
   // origem 'servico', então apagar a prestação antes deixaria a receita órfã
   // e impossível de remover pela interface.
   await removerFinanceiroDaPrestacao(id);
+  await removerParcelas('servico', id);
 
   const { error } = await supabase.from('service_orders').delete().eq('id', id);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível excluir a prestação.'));
