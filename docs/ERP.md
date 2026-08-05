@@ -434,6 +434,74 @@ teste removidos ao final.
 
 ---
 
+## Parcelamento via PIX — regras confirmadas
+
+Formas de pagamento viraram lista fechada, em Vendas e em Prestação: **PIX, PIX
+Parcelado, Cartão de Crédito, Débito, Transferência**. Só o **PIX Parcelado**
+gera carnê — no cartão a operadora repassa o valor cheio, então para o caixa da
+Prog é uma entrada só, e o parcelamento é entre o cliente e o banco dele.
+
+**As parcelas têm tabela própria** (`payment_installments`), não vivem só em
+`finance_entries`. O dono precisa editar vencimento e cancelar parcela a parcela,
+e a sincronização com o caixa recalcula os lançamentos a cada salvamento — essas
+edições se perderiam. A tabela guarda o **plano de pagamento**; o Financeiro é o
+**espelho contábil** dele.
+
+**Juros simples sobre o valor financiado**, de 0 a 20%. É o que se combina num
+parcelamento informal por PIX e o único que o cliente confere de cabeça: 10% de
+R$ 1.000 é R$ 100, total R$ 1.100. **A entrada sai da base de juros** — quem paga
+na hora não deve juros sobre aquilo.
+
+**A parcela é truncada ao centavo e a ÚLTIMA absorve a sobra**, para as N
+parcelas somarem exatamente o devido. Arredondar todas para cima faria o cliente
+pagar centavos a mais; para baixo, a Prog receber menos.
+
+**'Atrasada' não é status gravado** — é derivado de vencimento passado com a
+parcela pendente. Gravá-lo exigiria uma rotina diária, e qualquer falha dela
+deixaria o painel mentindo. Os gravados são Pendente, Recebida e Cancelada.
+
+**Venda retroativa não precisa de tratamento especial:** a data informada é
+sempre o vencimento da primeira parcela, então um carnê lançado hoje com primeira
+em maio já nasce com as vencidas marcadas como atrasadas.
+
+**Integração com o Financeiro — o ponto do pedido.** Com parcelamento, as
+**parcelas são a receita**: uma linha por parcela em vez de uma receita única do
+total. Cada uma entra como `Previsto` e **só vira `Pago` quando o dono marca
+Recebida** — e aí o valor entra na receita, no fluxo de caixa e nos indicadores.
+Parcela cancelada sai do caixa. O carnê casa por número ao regravar, então editar
+a venda não apaga baixas nem vencimentos já ajustados; só o valor é reescrito,
+porque vem do cálculo.
+
+**Serviços:** o padrão continua **50% na contratação e 50% na entrega**, e a tela
+lembra isso quando não há parcelamento. O carnê cobre só o **trabalho, já com
+desconto** — parcelar o preço cheio cobraria um valor que ninguém combinou. A
+mensalidade do plano fica de fora: ela já vira parcela por conta própria.
+
+**As duas coisas coexistem**, e por isso as parcelas de PIX ocupam uma **faixa
+deslocada** de `installment_number` (`OFFSET_PARCELA_PIX = 1000`). Sem isso a
+parcela 1 do PIX e a mensalidade 1 colidiriam ao casar alvo com existente, e uma
+sobrescreveria a outra. Quem manda no status também difere: a mensalidade é
+baixada direto no Financeiro e a sincronização preserva o que estiver lá; a
+parcela de PIX tem status vindo do carnê e sobrescreve.
+
+Testado em `scratchpad/test-parcelas.mjs` (47 asserções). Verificado em produção
+(2026-08-05): venda de R$ 3.000 com entrada de R$ 600, 6× e 10% deu financiado
+R$ 2.400, juros R$ 240, total R$ 3.240 e 6× de R$ 440, tudo ao vivo; o carnê saiu
+com entrada + 6 parcelas somando R$ 3.240; baixar só a entrada deixou o
+Financeiro com **R$ 600 recebido e R$ 3.240 previsto**; editar o nome do cliente
+**não desfez a baixa**. Dados de teste removidos ao final.
+
+### ⚠️ Bug encontrado no teste e corrigido
+
+A entrada sumia do Financeiro: o `check` de `installment_number`, criado no M6
+para as mensalidades, exigia número **≥ 1**, e a entrada é a parcela **0**. O
+banco recusava a linha e, como o insert **não verificava erro**, a recusa era
+engolida — o carnê somava R$ 3.240 e o caixa R$ 2.640, sem nada indicando o
+motivo. O check passou a aceitar 0 e os inserts do Financeiro passaram a
+registrar falha no log.
+
+---
+
 ## Vendas (M4) — regras confirmadas
 
 **Nenhuma tabela nova.** `orders` + `order_items` já era o "cabeçalho e itens"
@@ -683,6 +751,11 @@ removido junto com a origem.
   recebido. E a exclusão do registro de origem tira os lançamentos **antes** de
   apagar a si mesmo — a tela do Financeiro recusa excluir linha gerada, então a
   ordem inversa as deixa órfãs e sem remoção possível pela interface.
+- **Escrita no banco sem verificar erro esconde o problema.** A entrada do
+  parcelamento sumiu do Financeiro por um `check` que recusava a parcela 0, e o
+  insert engolia a recusa: o carnê somava R$ 3.240 e o caixa R$ 2.640, sem nada
+  na tela nem no log. Toda gravação em `finance_entries` verifica `error` e
+  registra.
 - **Número agregado que pode estar errado precisa dizer isso na tela.** O lucro
   das vendas soma faturamento menos custo; com vendas sem custo lançado ele fica
   perto do faturamento e a margem beira 100%. A tela conta quantas estão assim e
