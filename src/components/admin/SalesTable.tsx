@@ -143,7 +143,11 @@ export function SalesTable({
     { rotulo: 'Vendas', valor: String(ind.vendas), nota: 'sem canceladas' },
     { rotulo: 'Faturamento', valor: formatBRL(ind.faturamento), nota: 'total cobrado' },
     { rotulo: 'Custo', valor: formatBRL(ind.custo), nota: 'pago a fornecedor' },
-    { rotulo: 'Lucro', valor: formatBRL(ind.lucro), nota: `${ind.margemPct.toFixed(1)}% de margem` },
+    {
+      rotulo: 'Lucro',
+      valor: formatBRL(ind.lucro),
+      nota: ind.semCusto > 0 ? `${ind.semCusto} venda(s) sem custo` : `${ind.margemPct.toFixed(1)}% de margem`,
+    },
     { rotulo: 'A receber', valor: String(ind.aguardandoPagamento), nota: 'aguardando pagamento' },
   ];
 
@@ -183,6 +187,17 @@ export function SalesTable({
           </div>
         ))}
       </div>
+
+      {/* Sem este aviso o lucro agregado engana em silêncio: venda sem custo
+          lançado conta como ganho integral e a margem sobe para perto de 100%. */}
+      {ind.semCusto > 0 && (
+        <div className="mb-3.5 rounded-control border border-warning/40 bg-warning/[0.06] px-4 py-3 text-[12.5px] text-fg-secondary">
+          <strong>{ind.semCusto} venda(s) sem custo preenchido.</strong> Enquanto o custo não for informado, elas
+          contam como lucro integral — o número acima está maior do que a realidade. Vendas do site nascem assim,
+          porque o produto é por encomenda e o custo só se conhece na compra: edite a venda e preencha o custo do
+          item para o Financeiro passar a registrar o lucro certo.
+        </div>
+      )}
 
       <div className="overflow-x-auto rounded-[18px] border border-border bg-card p-6">
         <div className="min-w-[1080px]">

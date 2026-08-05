@@ -149,10 +149,17 @@ export type SaleIndicators = {
   lucro: number;
   margemPct: number;
   aguardandoPagamento: number;
+  /** Vendas sem custo preenchido. Enquanto houver alguma, o lucro acima está
+   *  superestimado — a venda inteira entra como ganho. */
+  semCusto: number;
 };
 
 /** Canceladas ficam de fora de toda soma: não são faturamento nem custo.
- *  Continuam na lista, para o histórico não sumir. */
+ *  Continuam na lista, para o histórico não sumir.
+ *
+ *  `semCusto` existe porque o lucro agregado engana em silêncio: uma venda do
+ *  site sem custo lançado conta como lucro integral, e a margem sobe para perto
+ *  de 100% sem nada na tela indicando que o número não é confiável. */
 export function computeSaleIndicators(vendas: Sale[]): SaleIndicators {
   const vivas = vendas.filter((v) => v.status !== 'Cancelado');
 
@@ -167,5 +174,6 @@ export function computeSaleIndicators(vendas: Sale[]): SaleIndicators {
     lucro,
     margemPct: faturamento > 0 ? arredondar((lucro / faturamento) * 100) : 0,
     aguardandoPagamento: vivas.filter((v) => v.status === 'Aguardando pagamento').length,
+    semCusto: vivas.filter((v) => v.total > 0 && v.costTotal === 0).length,
   };
 }
