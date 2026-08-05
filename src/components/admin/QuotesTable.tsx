@@ -15,6 +15,8 @@ import {
   recalculateQuotesAction,
   type QuoteFormInput,
 } from '@/app/actions/quotes';
+import { SeloAdimplencia } from '@/components/admin/SeloAdimplencia';
+import type { Adimplencia } from '@/lib/customer-history';
 import { generateSaleFromQuoteAction } from '@/app/actions/sales';
 import { checkUsdRateFreshnessAction } from '@/app/actions/settings';
 import type { StoreQuote } from '@/lib/data/quotes';
@@ -93,7 +95,7 @@ export function QuotesTable({
   usdRate,
 }: {
   quotes: StoreQuote[];
-  customers: { id: string; name: string }[];
+  customers: { id: string; name: string; adimplencia: Adimplencia; parcelasAtrasadas: number }[];
   products: { id: string; name: string; category: string }[];
   usdRate: number | null;
 }) {
@@ -171,6 +173,10 @@ export function QuotesTable({
 
   const set = <K extends keyof QuoteFormInput>(campo: K, valor: QuoteFormInput[K]) =>
     setForm((f) => (f ? { ...f, [campo]: valor } : f));
+
+  const clienteEscolhido = form?.customerId
+    ? customers.find((c) => c.id === form.customerId)
+    : undefined;
 
   /** Atualiza um pedaço do desconto sem apagar os outros. */
   const setDesconto = (patch: Partial<QuoteFormInput['desconto']>) =>
@@ -400,7 +406,7 @@ export function QuotesTable({
             <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
               Solicitante e produto
             </div>
-            <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="mb-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <select
                 value={form.customerId ?? ''}
                 onChange={(e) => set('customerId', e.target.value || null)}
@@ -422,6 +428,29 @@ export function QuotesTable({
               <input value={form.productLink} onChange={(e) => set('productLink', e.target.value)} placeholder="Link do produto" className={inputClass} />
               <textarea value={form.specs} onChange={(e) => set('specs', e.target.value)} rows={2} placeholder="Especificações" className={`resize-y sm:col-span-2 ${inputClass}`} />
             </div>
+
+            {/* A situação do cliente aparece na hora de montar a proposta, que é
+                quando ainda dá para decidir pedir entrada ou recusar prazo. */}
+            {clienteEscolhido && clienteEscolhido.adimplencia !== 'Adimplente' && (
+              <div className="mb-5 flex flex-wrap items-center gap-2.5 rounded-control border border-border bg-card-dark px-4 py-3">
+                <SeloAdimplencia
+                  situacao={clienteEscolhido.adimplencia}
+                  atrasadas={clienteEscolhido.parcelasAtrasadas}
+                />
+                <span className="text-[12px] text-fg-tertiary">
+                  {clienteEscolhido.adimplencia === 'Inadimplente'
+                    ? 'Este cliente tem parcela vencida e não paga.'
+                    : 'Este cliente tem parcelas a vencer.'}
+                </span>
+                <Link
+                  href={`/admin/clientes/${clienteEscolhido.id}`}
+                  target="_blank"
+                  className="text-[12px] font-bold text-accent hover:underline"
+                >
+                  ver histórico
+                </Link>
+              </div>
+            )}
 
             <div className="mb-2 flex items-baseline justify-between">
               <span className="text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">

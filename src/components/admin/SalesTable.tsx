@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo, useTransition } from 'react';
 import { Pencil, Trash2, Plus, X, Search } from 'lucide-react';
@@ -12,7 +12,10 @@ import {
   type SaleItem,
   type SaleStatus,
 } from '@/lib/sales';
+import Link from 'next/link';
 import { geraParcelas, type Installment } from '@/lib/installments';
+import { SeloAdimplencia } from '@/components/admin/SeloAdimplencia';
+import type { Adimplencia } from '@/lib/customer-history';
 import { ParcelamentoFields } from '@/components/admin/ParcelamentoFields';
 import { ParcelasList } from '@/components/admin/ParcelasList';
 import { saveSaleAction, deleteSaleAction, type SaleFormInput } from '@/app/actions/sales';
@@ -45,6 +48,7 @@ function hojeISO(): string {
 function formVazio(): SaleFormInput {
   return {
     customerId: null,
+    erpCustomerId: null,
     customerName: '',
     status: 'Aguardando pagamento',
     paymentMethod: '',
@@ -63,11 +67,14 @@ export function SalesTable({
   sales,
   products,
   stockItems,
+  clientes,
 }: {
   sales: Sale[];
   products: { id: string; name: string; price: number }[];
   /** Itens disponíveis em estoque, para a venda dar baixa neles. */
   stockItems: { id: string; name: string; paidAmount: number; saleAmount: number }[];
+  /** Situação financeira por nome, para o selo aparecer na linha da venda. */
+  clientes: { id: string; name: string; adimplencia: Adimplencia; parcelasAtrasadas: number }[];
 }) {
   const [busca, setBusca] = useState('');
   const [form, setForm] = useState<SaleFormInput | null>(null);
@@ -78,6 +85,14 @@ export function SalesTable({
   const toast = useToast();
 
   const ind = useMemo(() => computeSaleIndicators(sales), [sales]);
+
+  /** Casa a venda com o cliente pelo nome: `orders.customer_name` é texto livre
+   *  e nem toda venda tem vínculo. Nome exato é o suficiente aqui — errar só
+   *  deixa o selo de fora, nunca mostra a situação de outra pessoa. */
+  const situacaoPorNome = useMemo(
+    () => new Map(clientes.map((c) => [c.name.trim().toLowerCase(), c])),
+    [clientes]
+  );
 
   const filtradas = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -119,6 +134,7 @@ export function SalesTable({
     setForm({
       id: v.id,
       customerId: v.customerId,
+      erpCustomerId: v.erpCustomerId,
       customerName: v.customerName,
       status: v.status,
       paymentMethod: v.paymentMethod,
@@ -257,8 +273,27 @@ export function SalesTable({
               >
                 <div className="font-extrabold text-accent">#{v.orderNumber}</div>
                 <div className="min-w-0">
-                  <div className="truncate font-bold">{v.customerName}</div>
-                  <div className="text-[11px] text-fg-faded">{formatDateBR(v.createdAt)}</div>
+                  {(() => {
+                    const c = situacaoPorNome.get(v.customerName.trim().toLowerCase());
+                    return c ? (
+                      <Link href={`/admin/clientes/${c.id}`} className="block truncate font-bold hover:text-accent hover:underline">
+                        {v.customerName}
+                      </Link>
+                    ) : (
+                      <div className="truncate font-bold">{v.customerName}</div>
+                    );
+                  })()}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-fg-faded">{formatDateBR(v.createdAt)}</span>
+                    {(() => {
+                      const c = situacaoPorNome.get(v.customerName.trim().toLowerCase());
+                      // Só chama atenção quando há algo em aberto: um selo verde
+                      // em toda linha vira ruído e ninguém repara no vermelho.
+                      return c && c.adimplencia !== 'Adimplente' ? (
+                        <SeloAdimplencia situacao={c.adimplencia} compacto atrasadas={c.parcelasAtrasadas} />
+                      ) : null;
+                    })()}
+                  </div>
                 </div>
                 <div className="min-w-0 truncate text-fg-secondary">
                   {v.items.map((i) => (i.qty > 1 ? `${i.qty}× ${i.productName}` : i.productName)).join(' + ') || '—'}
@@ -310,14 +345,52 @@ export function SalesTable({
           <div className="max-h-[92vh] w-full max-w-[960px] overflow-y-auto rounded-[20px] border border-border-strong bg-card p-7">
             <div className="mb-5 text-[15px] font-extrabold">{form.id ? 'Editar venda' : 'Nova venda'}</div>
 
-            <div className="mb-5">
-              <div className="mb-1.5 text-[11px] text-fg-faded">Cliente *</div>
-              <input
-                value={form.customerName}
-                onChange={(e) => set('customerName', e.target.value)}
-                placeholder="Nome de quem comprou"
-                className={`w-full ${inputClass}`}
-              />
+            <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <div className="mb-1.5 text-[11px] text-fg-faded">Cliente do cadastro</div>
+                <select
+                  value={form.erpCustomerId ?? ''}
+                  onChange={(e) => {
+                    const c = clientes.find((x) => x.id === e.target.value);
+                    // Escolher do cadastro preenche o nome e cria o vínculo que
+                    // faz a venda aparecer no histórico do cliente.
+                    setForm((f) =>
+                      f ? { ...f, erpCustomerId: c?.id ?? null, customerName: c?.name ?? f.customerName } : f
+                    );
+                  }}
+                  className={`w-full ${inputClass}`}
+                >
+                  <option value="">Não vincular</option>
+                  {clientes.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <div className="mb-1.5 text-[11px] text-fg-faded">Nome na venda *</div>
+                <input
+                  value={form.customerName}
+                  onChange={(e) => set('customerName', e.target.value)}
+                  placeholder="Nome de quem comprou"
+                  className={`w-full ${inputClass}`}
+                />
+              </div>
+              {form.erpCustomerId && (() => {
+                const c = clientes.find((x) => x.id === form.erpCustomerId);
+                return c && c.adimplencia !== 'Adimplente' ? (
+                  <div className="flex flex-wrap items-center gap-2.5 sm:col-span-2">
+                    <SeloAdimplencia situacao={c.adimplencia} atrasadas={c.parcelasAtrasadas} />
+                    <span className="text-[12px] text-fg-tertiary">
+                      {c.adimplencia === 'Inadimplente'
+                        ? 'Cliente com parcela vencida e não paga.'
+                        : 'Cliente com parcelas a vencer.'}
+                    </span>
+                    <Link href={`/admin/clientes/${c.id}`} target="_blank" className="text-[12px] font-bold text-accent hover:underline">
+                      ver histórico
+                    </Link>
+                  </div>
+                ) : null;
+              })()}
             </div>
 
             <div className="mb-2 flex items-center justify-between">

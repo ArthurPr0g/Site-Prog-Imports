@@ -1,4 +1,4 @@
-'use server';
+﻿'use server';
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
@@ -12,6 +12,8 @@ import { geraParcelas, gerarParcelas, MAX_JUROS_PCT } from '@/lib/installments';
 export type SaleFormInput = {
   id?: string;
   customerId: string | null;
+  /** Cliente do ERP. É o que faz a venda entrar no histórico dele. */
+  erpCustomerId: string | null;
   customerName: string;
   status: SaleStatus;
   paymentMethod: string;
@@ -73,6 +75,7 @@ export async function saveSaleAction(input: SaleFormInput): Promise<ActionResult
 
   const payload = {
     customer_id: input.customerId,
+    erp_customer_id: input.erpCustomerId,
     customer_name: nome,
     status: input.status,
     payment_method: input.paymentMethod.trim(),
@@ -256,6 +259,9 @@ export async function generateSaleFromQuoteAction(quoteId: string): Promise<Acti
       // gravar um id na tabela errada.
       customer_id: null,
       origin: 'Orçamento',
+      // Agora existe: liga a venda ao cliente do ERP, que é o que faz ela
+      // aparecer no histórico dele.
+      erp_customer_id: q.customer_id,
       status: 'Aguardando pagamento',
       payment_method: q.payment_method ?? '',
       subtotal: preco,

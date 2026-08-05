@@ -35,7 +35,10 @@ export type SaleItem = {
 export type Sale = {
   id: string;
   orderNumber: number;
+  /** Conta do site (`profiles`), quando a venda veio do checkout. */
   customerId: string | null;
+  /** Cliente do ERP (`customers`). É por ele que a venda entra no histórico. */
+  erpCustomerId: string | null;
   customerName: string;
   origin: SaleOrigin;
   status: SaleStatus;

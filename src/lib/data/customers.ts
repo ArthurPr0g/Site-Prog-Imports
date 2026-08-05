@@ -1,4 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
+import { carregarParcelasPorCliente } from '@/lib/data/customer-history';
+import { calcularAdimplencia, type Adimplencia } from '@/lib/customer-history';
+import { statusExibido, type Installment } from '@/lib/installments';
 
 // Clientes do ERP. Diferente de `profiles`, que é "quem tem conta no site":
 // aqui entra também quem comprou pelo WhatsApp, trouxe produto para troca ou
@@ -21,6 +24,9 @@ export type Customer = {
   /** Preenchido só quando o cliente também tem conta no site. */
   profileId: string | null;
   createdAt: string;
+  /** Derivado das parcelas em aberto, nunca gravado. */
+  adimplencia: Adimplencia;
+  parcelasAtrasadas: number;
 };
 
 type Row = {
@@ -41,8 +47,16 @@ type Row = {
   created_at: string;
 };
 
-function toCustomer(r: Row): Customer {
+function hojeISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function toCustomer(r: Row, parcelas: Installment[] = []): Customer {
+  const hoje = hojeISO();
   return {
+    adimplencia: calcularAdimplencia(parcelas, hoje),
+    parcelasAtrasadas: parcelas.filter((p) => statusExibido(p, hoje) === 'Atrasada').length,
     id: r.id,
     name: r.name,
     email: r.email ?? '',
@@ -74,7 +88,10 @@ export async function listCustomers(search?: string): Promise<Customer[]> {
   }
 
   const { data } = await query;
-  return (data ?? []).map((r) => toCustomer(r as Row));
+  // Uma consulta só traz as parcelas de todos os clientes, para a listagem não
+  // fazer uma ida ao banco por linha.
+  const parcelas = await carregarParcelasPorCliente();
+  return (data ?? []).map((r) => toCustomer(r as Row, parcelas.get(r.id) ?? []));
 }
 
 /** Clientes do ERP que parecem ser a mesma pessoa de um perfil do site.

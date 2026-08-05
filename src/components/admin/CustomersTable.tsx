@@ -9,7 +9,9 @@ import {
   unlinkCustomerProfileAction,
   type CustomerFormInput,
 } from '@/app/actions/customers';
+import Link from 'next/link';
 import type { Customer } from '@/lib/data/customers';
+import { SeloAdimplencia } from '@/components/admin/SeloAdimplencia';
 
 const inputClass =
   'rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px] outline-none focus:border-accent';
@@ -97,11 +99,11 @@ export function CustomersTable({ customers }: { customers: Customer[] }) {
 
       <div className="overflow-x-auto rounded-[18px] border border-border bg-card p-6">
         <div className="min-w-[860px]">
-          <div className="grid grid-cols-[1.5fr_1.6fr_1fr_1fr_120px] gap-3 border-b border-border pb-2.5 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+          <div className="grid grid-cols-[1.5fr_1.4fr_1fr_150px_120px] gap-3 border-b border-border pb-2.5 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
             <div>Cliente</div>
             <div>E-mail</div>
             <div>Telefone</div>
-            <div>Cidade</div>
+            <div>Situação</div>
             <div className="text-right">Ações</div>
           </div>
 
@@ -116,14 +118,21 @@ export function CustomersTable({ customers }: { customers: Customer[] }) {
           {visiveis.map((c) => (
             <div
               key={c.id}
-              className="grid grid-cols-[1.5fr_1.6fr_1fr_1fr_120px] items-center gap-3 border-b border-divider py-3 text-[13.5px] last:border-b-0"
+              className="grid grid-cols-[1.5fr_1.4fr_1fr_150px_120px] items-center gap-3 border-b border-divider py-3 text-[13.5px] last:border-b-0"
             >
               <div className="flex items-center gap-2.5">
                 <div className="grid h-7.5 w-7.5 flex-shrink-0 place-items-center rounded-full border border-border-hover bg-[#1c1c21] text-xs font-extrabold text-accent">
                   {c.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <div className="truncate font-bold">{c.name}</div>
+                  {/* O nome é o caminho para o histórico: é onde o operador
+                      procura quando quer saber tudo do cliente. */}
+                  <Link
+                    href={`/admin/clientes/${c.id}`}
+                    className="block truncate font-bold hover:text-accent hover:underline"
+                  >
+                    {c.name}
+                  </Link>
                   {c.profileId && (
                     // Sinaliza que este cliente também tem conta na loja — evita
                     // o operador cadastrar a mesma pessoa duas vezes.
@@ -133,7 +142,9 @@ export function CustomersTable({ customers }: { customers: Customer[] }) {
               </div>
               <div className="truncate text-[13px] text-fg-secondary">{c.email || '—'}</div>
               <div className="text-[13px] text-fg-secondary">{c.phone || '—'}</div>
-              <div className="truncate text-[13px] text-fg-secondary">{c.city || '—'}</div>
+              <div>
+                <SeloAdimplencia situacao={c.adimplencia} compacto atrasadas={c.parcelasAtrasadas} />
+              </div>
               <div className="flex justify-end gap-1.5">
                 {c.profileId && (
                   <button

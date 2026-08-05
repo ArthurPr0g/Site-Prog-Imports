@@ -31,7 +31,12 @@ export default async function AdminOrcamentosLojaPage() {
       />
       <QuotesTable
         quotes={quotes}
-        customers={customers.map((c) => ({ id: c.id, name: c.name }))}
+        customers={customers.map((c) => ({
+          id: c.id,
+          name: c.name,
+          adimplencia: c.adimplencia,
+          parcelasAtrasadas: c.parcelasAtrasadas,
+        }))}
         products={products}
         usdRate={settings.usdRate}
       />

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+﻿import { createClient } from '@/lib/supabase/server';
 import { lancamentosDaVenda, type Sale, type SaleItem, type SaleOrigin, type SaleStatus } from '@/lib/sales';
 import { listInstallments, listInstallmentsBySource } from '@/lib/data/installments';
 import type { Installment } from '@/lib/installments';
@@ -17,6 +17,7 @@ type SaleRow = {
   id: string;
   order_number: number;
   customer_id: string | null;
+  erp_customer_id: string | null;
   customer_name: string;
   origin: string;
   status: string;
@@ -41,6 +42,7 @@ function toSale(r: SaleRow, parcelas: Installment[] = []): Sale {
     id: r.id,
     orderNumber: r.order_number,
     customerId: r.customer_id,
+    erpCustomerId: r.erp_customer_id,
     customerName: r.customer_name,
     origin: r.origin as SaleOrigin,
     status: r.status as SaleStatus,

@@ -1,14 +1,16 @@
 import { listSales } from '@/lib/data/sales';
 import { listStockItems } from '@/lib/data/stock';
+import { listCustomers } from '@/lib/data/customers';
 import { listProductOptions } from '@/lib/data/admin';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { SalesTable } from '@/components/admin/SalesTable';
 
 export default async function AdminVendasPage() {
-  const [sales, stock, products] = await Promise.all([
+  const [sales, stock, products, customers] = await Promise.all([
     listSales(),
     listStockItems(),
     listProductOptions(),
+    listCustomers(),
   ]);
 
   // Só o que está em mãos e livre pode ser vendido: reservado é de outro
@@ -27,6 +29,12 @@ export default async function AdminVendasPage() {
         sales={sales}
         products={products.map((p) => ({ id: p.id, name: p.name, price: Number(p.price) }))}
         stockItems={disponiveis}
+        clientes={customers.map((c) => ({
+          id: c.id,
+          name: c.name,
+          adimplencia: c.adimplencia,
+          parcelasAtrasadas: c.parcelasAtrasadas,
+        }))}
       />
     </div>
   );

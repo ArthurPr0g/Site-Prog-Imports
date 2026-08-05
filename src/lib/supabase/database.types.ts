@@ -498,6 +498,7 @@ export type Database = {
           customer_name: string
           discount: number
           down_payment: number
+          erp_customer_id: string | null
           first_due_date: string | null
           id: string
           installment_count: number
@@ -526,6 +527,7 @@ export type Database = {
           customer_name: string
           discount?: number
           down_payment?: number
+          erp_customer_id?: string | null
           first_due_date?: string | null
           id?: string
           installment_count?: number
@@ -554,6 +556,7 @@ export type Database = {
           customer_name?: string
           discount?: number
           down_payment?: number
+          erp_customer_id?: string | null
           first_due_date?: string | null
           id?: string
           installment_count?: number
