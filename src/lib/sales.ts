@@ -1,5 +1,7 @@
 // Regras de Vendas (M4). Puro, sem dependência de servidor.
 
+import type { Installment } from '@/lib/installments';
+
 export const SALE_ORIGINS = ['Site', 'Manual', 'Orçamento', 'Troca'] as const;
 export type SaleOrigin = (typeof SALE_ORIGINS)[number];
 
@@ -46,6 +48,14 @@ export type Sale = {
   budgetId: string | null;
   createdAt: string;
   items: SaleItem[];
+  /** Condições do PIX parcelado. `installmentCount` 0 significa à vista. */
+  installmentCount: number;
+  downPayment: number;
+  interestPct: number;
+  firstDueDate: string | null;
+  installmentNotes: string;
+  /** O carnê. Vazio quando a venda não é parcelada. */
+  installments: Installment[];
 };
 
 function arredondar(v: number): number {

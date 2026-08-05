@@ -6,6 +6,8 @@ import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
 import { totalizarVenda, SALE_STATUSES, type SaleItem, type SaleStatus } from '@/lib/sales';
 import { sincronizarFinanceiroDaVenda, removerFinanceiroDaVenda } from '@/lib/data/sales';
+import { salvarParcelas, removerParcelas } from '@/lib/data/installments';
+import { geraParcelas, gerarParcelas, MAX_JUROS_PCT } from '@/lib/installments';
 
 export type SaleFormInput = {
   id?: string;
@@ -15,6 +17,12 @@ export type SaleFormInput = {
   paymentMethod: string;
   discount: number;
   shipping: number;
+  /** Condições do PIX parcelado. Ignoradas nas outras formas de pagamento. */
+  installmentCount: number;
+  downPayment: number;
+  interestPct: number;
+  firstDueDate: string;
+  installmentNotes: string;
   items: SaleItem[];
 };
 
@@ -49,6 +57,20 @@ export async function saveSaleAction(input: SaleFormInput): Promise<ActionResult
 
   const totais = totalizarVenda(itens, input.discount, input.shipping);
 
+  const parcelado = geraParcelas(input.paymentMethod);
+  if (parcelado) {
+    if (!input.firstDueDate) return errResult('Informe a data da primeira parcela.');
+    if (!Number.isInteger(input.installmentCount) || input.installmentCount < 1) {
+      return errResult('Informe a quantidade de parcelas.');
+    }
+    if (!Number.isFinite(input.interestPct) || input.interestPct < 0 || input.interestPct > MAX_JUROS_PCT) {
+      return errResult(`A taxa de juros precisa ficar entre 0% e ${MAX_JUROS_PCT}%.`);
+    }
+    if (input.downPayment > totais.total) {
+      return errResult('A entrada não pode ser maior que o total da venda.');
+    }
+  }
+
   const payload = {
     customer_id: input.customerId,
     customer_name: nome,
@@ -59,6 +81,13 @@ export async function saveSaleAction(input: SaleFormInput): Promise<ActionResult
     shipping: input.shipping,
     total: totais.total,
     cost_total: totais.custo,
+    // Zerado quando não é parcelado: condições esquecidas de uma edição
+    // anterior continuariam gerando carnê depois de trocar a forma de pagamento.
+    installment_count: parcelado ? input.installmentCount : 0,
+    down_payment: parcelado ? input.downPayment : 0,
+    interest_pct: parcelado ? input.interestPct : 0,
+    first_due_date: parcelado ? input.firstDueDate : null,
+    installment_notes: parcelado ? input.installmentNotes.trim() : '',
     updated_at: new Date().toISOString(),
   };
 
@@ -93,6 +122,24 @@ export async function saveSaleAction(input: SaleFormInput): Promise<ActionResult
     }))
   );
   if (erroItens) return errResult(friendlyDbError(erroItens, 'A venda foi salva, mas os itens não.'));
+
+  // As parcelas vêm antes da sincronização: é delas que sai a receita no caixa
+  // quando o pagamento é parcelado.
+  if (parcelado) {
+    await salvarParcelas(
+      'venda',
+      orderId,
+      gerarParcelas({
+        total: totais.total,
+        parcelas: input.installmentCount,
+        entrada: input.downPayment,
+        jurosPct: input.interestPct,
+        primeiroVencimento: input.firstDueDate,
+      })
+    );
+  } else {
+    await removerParcelas('venda', orderId);
+  }
 
   await sincronizarFinanceiroDaVenda(orderId);
   await baixarEstoqueDaVenda(supabase, orderId, input.status);
@@ -135,6 +182,7 @@ export async function deleteSaleAction(id: string): Promise<ActionResult> {
   // como saber o que precisa voltar a ficar disponível.
   await baixarEstoqueDaVenda(supabase, id, 'Cancelado');
   await removerFinanceiroDaVenda(id);
+  await removerParcelas('venda', id);
 
   const { data: venda } = await supabase.from('orders').select('budget_id').eq('id', id).maybeSingle();
 

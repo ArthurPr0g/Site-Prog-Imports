@@ -497,7 +497,12 @@ export type Database = {
           customer_id: string | null
           customer_name: string
           discount: number
+          down_payment: number
+          first_due_date: string | null
           id: string
+          installment_count: number
+          installment_notes: string
+          interest_pct: number
           is_import: boolean
           order_number: number
           origin: string
@@ -520,7 +525,12 @@ export type Database = {
           customer_id?: string | null
           customer_name: string
           discount?: number
+          down_payment?: number
+          first_due_date?: string | null
           id?: string
+          installment_count?: number
+          installment_notes?: string
+          interest_pct?: number
           is_import?: boolean
           order_number: number
           origin?: string
@@ -543,7 +553,12 @@ export type Database = {
           customer_id?: string | null
           customer_name?: string
           discount?: number
+          down_payment?: number
+          first_due_date?: string | null
           id?: string
+          installment_count?: number
+          installment_notes?: string
+          interest_pct?: number
           is_import?: boolean
           order_number?: number
           origin?: string
@@ -566,6 +581,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_installments: {
+        Row: {
+          amount: number
+          created_at: string
+          due_date: string
+          id: string
+          notes: string
+          number: number
+          source_id: string
+          source_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          due_date: string
+          id?: string
+          notes?: string
+          number: number
+          source_id: string
+          source_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          due_date?: string
+          id?: string
+          notes?: string
+          number?: number
+          source_id?: string
+          source_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       product_collections: {
         Row: {
@@ -1270,8 +1324,13 @@ export type Database = {
           discount_note: string
           discount_type: string
           discount_value: number
+          down_payment: number
           due_date: string | null
+          first_due_date: string | null
           id: string
+          installment_count: number
+          installment_notes: string
+          interest_pct: number
           lead_time_days: number
           monthly_amount: number
           notes: string
@@ -1292,8 +1351,13 @@ export type Database = {
           discount_note?: string
           discount_type?: string
           discount_value?: number
+          down_payment?: number
           due_date?: string | null
+          first_due_date?: string | null
           id?: string
+          installment_count?: number
+          installment_notes?: string
+          interest_pct?: number
           lead_time_days?: number
           monthly_amount?: number
           notes?: string
@@ -1314,8 +1378,13 @@ export type Database = {
           discount_note?: string
           discount_type?: string
           discount_value?: number
+          down_payment?: number
           due_date?: string | null
+          first_due_date?: string | null
           id?: string
+          installment_count?: number
+          installment_notes?: string
+          interest_pct?: number
           lead_time_days?: number
           monthly_amount?: number
           notes?: string

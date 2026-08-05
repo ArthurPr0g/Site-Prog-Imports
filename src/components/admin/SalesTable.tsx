@@ -12,6 +12,9 @@ import {
   type SaleItem,
   type SaleStatus,
 } from '@/lib/sales';
+import { geraParcelas, type Installment } from '@/lib/installments';
+import { ParcelamentoFields } from '@/components/admin/ParcelamentoFields';
+import { ParcelasList } from '@/components/admin/ParcelasList';
 import { saveSaleAction, deleteSaleAction, type SaleFormInput } from '@/app/actions/sales';
 
 const inputClass =
@@ -34,6 +37,11 @@ function itemVazio(): SaleItem {
   return { productId: null, stockItemId: null, productName: '', qty: 1, unitPrice: 0, unitCost: 0 };
 }
 
+function hojeISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function formVazio(): SaleFormInput {
   return {
     customerId: null,
@@ -42,6 +50,11 @@ function formVazio(): SaleFormInput {
     paymentMethod: '',
     discount: 0,
     shipping: 0,
+    installmentCount: 6,
+    downPayment: 0,
+    interestPct: 0,
+    firstDueDate: hojeISO(),
+    installmentNotes: '',
     items: [itemVazio()],
   };
 }
@@ -58,6 +71,9 @@ export function SalesTable({
 }) {
   const [busca, setBusca] = useState('');
   const [form, setForm] = useState<SaleFormInput | null>(null);
+  /** Carnê já gravado da venda em edição. Só existe depois de salvar — no
+   *  formulário de uma venda nova o que aparece é a prévia do cálculo. */
+  const [parcelasDaEdicao, setParcelasDaEdicao] = useState<Installment[]>([]);
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 
@@ -85,7 +101,10 @@ export function SalesTable({
     startTransition(async () => {
       const result = await saveSaleAction(form);
       toast(result);
-      if (result.ok) setForm(null);
+      if (result.ok) {
+        setForm(null);
+        setParcelasDaEdicao([]);
+      }
     });
   }
 
@@ -105,8 +124,14 @@ export function SalesTable({
       paymentMethod: v.paymentMethod,
       discount: v.discount,
       shipping: v.shipping,
+      installmentCount: v.installmentCount || 6,
+      downPayment: v.downPayment,
+      interestPct: v.interestPct,
+      firstDueDate: v.firstDueDate ?? hojeISO(),
+      installmentNotes: v.installmentNotes,
       items: v.items.length ? v.items : [itemVazio()],
     });
+    setParcelasDaEdicao(v.installments);
   }
 
   const set = <K extends keyof SaleFormInput>(campo: K, valor: SaleFormInput[K]) =>
@@ -285,25 +310,14 @@ export function SalesTable({
           <div className="max-h-[92vh] w-full max-w-[960px] overflow-y-auto rounded-[20px] border border-border-strong bg-card p-7">
             <div className="mb-5 text-[15px] font-extrabold">{form.id ? 'Editar venda' : 'Nova venda'}</div>
 
-            <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="sm:col-span-2">
-                <div className="mb-1.5 text-[11px] text-fg-faded">Cliente *</div>
-                <input
-                  value={form.customerName}
-                  onChange={(e) => set('customerName', e.target.value)}
-                  placeholder="Nome de quem comprou"
-                  className={`w-full ${inputClass}`}
-                />
-              </div>
-              <div>
-                <div className="mb-1.5 text-[11px] text-fg-faded">Forma de pagamento</div>
-                <input
-                  value={form.paymentMethod}
-                  onChange={(e) => set('paymentMethod', e.target.value)}
-                  placeholder="Ex: PIX, 3x no cartão"
-                  className={`w-full ${inputClass}`}
-                />
-              </div>
+            <div className="mb-5">
+              <div className="mb-1.5 text-[11px] text-fg-faded">Cliente *</div>
+              <input
+                value={form.customerName}
+                onChange={(e) => set('customerName', e.target.value)}
+                placeholder="Nome de quem comprou"
+                className={`w-full ${inputClass}`}
+              />
             </div>
 
             <div className="mb-2 flex items-center justify-between">
@@ -443,6 +457,28 @@ export function SalesTable({
               </div>
             </div>
 
+            <ParcelamentoFields
+              condicoes={{
+                paymentMethod: form.paymentMethod,
+                installmentCount: form.installmentCount,
+                downPayment: form.downPayment,
+                interestPct: form.interestPct,
+                firstDueDate: form.firstDueDate,
+                installmentNotes: form.installmentNotes,
+              }}
+              total={totais.total}
+              onChange={(patch) => setForm((f) => (f ? { ...f, ...patch } : f))}
+            />
+
+            {/* O carnê gravado só aparece na edição: numa venda nova ainda não
+                existe parcela para dar baixa, e o bloco acima já mostra a
+                prévia do que vai ser criado. */}
+            {parcelasDaEdicao.length > 0 && (
+              <div className="mb-4">
+                <ParcelasList parcelas={parcelasDaEdicao} />
+              </div>
+            )}
+
             <div className="mb-5">
               <div className="mb-1.5 text-[11px] text-fg-faded">Status</div>
               <select
@@ -461,17 +497,29 @@ export function SalesTable({
                 <>Venda cancelada <strong>não lança nada</strong> no Financeiro, e os itens de estoque voltam para Disponível.</>
               ) : (
                 <>
-                  O Financeiro recebe <strong>uma receita</strong> de{' '}
-                  <strong className="text-accent">{formatBRL(totais.total)}</strong>
+                  O Financeiro recebe{' '}
+                  {geraParcelas(form.paymentMethod) ? (
+                    <>
+                      <strong>
+                        {form.installmentCount || 1} parcela(s)
+                        {form.downPayment > 0 ? ' mais a entrada' : ''}
+                      </strong>
+                      , cada uma como <strong>Previsto</strong> até você marcar como recebida
+                    </>
+                  ) : (
+                    <>
+                      <strong>uma receita</strong> de{' '}
+                      <strong className="text-accent">{formatBRL(totais.total)}</strong> como{' '}
+                      <strong>{form.status === 'Aguardando pagamento' ? 'Previsto' : 'Pago'}</strong>
+                    </>
+                  )}
                   {totais.custo > 0 && (
                     <>
-                      {' '}e <strong>uma despesa</strong> de{' '}
+                      , e <strong>uma despesa</strong> de{' '}
                       <strong className="text-accent">{formatBRL(totais.custo)}</strong>
                     </>
                   )}
-                  , as duas como{' '}
-                  <strong>{form.status === 'Aguardando pagamento' ? 'Previsto' : 'Pago'}</strong>. É lançando as
-                  duas pontas que o resultado do caixa vira o lucro, e não o faturamento.
+                  . É lançando as duas pontas que o resultado do caixa vira o lucro, e não o faturamento.
                   {totais.custo === 0 && (
                     <> <strong>Sem custo preenchido</strong>, o resultado do Financeiro vai contar a venda inteira como ganho.</>
                   )}
