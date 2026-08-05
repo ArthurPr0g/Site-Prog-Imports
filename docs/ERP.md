@@ -23,7 +23,7 @@ Serviços, extraída de um sistema Flask anterior).
 | M5 | Financeiro (livro-caixa) | **Pronto** | `/admin/financeiro` |
 | M6 | Serviços (cadastro) + Prestação | **Pronto** | `/admin/servicos-internos`, `/admin/prestacao-servico` |
 | M7 | Orçamentos Serviços | **Pronto** | `/admin/orcamentos-servicos` |
-| M8 | Avaliação de Troca | Pendente | `/admin/avaliacao-troca` |
+| M8 | Avaliação de Troca | **Pronto** | `/admin/avaliacao-troca` |
 | M9 | Relatórios | Pendente | `/admin/relatorios` |
 
 Os módulos pendentes aparecem **apagados no menu lateral** (propriedade
@@ -434,6 +434,68 @@ teste removidos ao final.
 
 ---
 
+## Avaliação de Troca (M8) — regras confirmadas
+
+`trades` + `trade_items`. O cliente entrega produtos usados como parte do
+pagamento de um item do estoque: troca e venda na mesma negociação.
+
+**A regra que governa tudo: produto recebido NÃO é caixa.** Ele vira item de
+estoque — um ativo — e só vale dinheiro quando for revendido. Lançar o valor
+abatido como receita inventaria uma entrada que nunca aconteceu.
+
+Então a venda gerada tem como receita apenas a **diferença em dinheiro**,
+enquanto o **custo do principal entra inteiro** (mesmo critério do M4, onde o
+custo é reconhecido na venda). **Consequência que a tela avisa antes de
+concluir:** numa troca em que os produtos cobrem boa parte do preço, o resultado
+imediato fica pequeno ou negativo. Está certo — o valor que falta está nos itens
+que entraram no estoque, esperando revenda.
+
+**Ao concluir**, em sequência: cada produto recebido vira item de estoque com
+origem `Troca`; nasce a venda do principal; o item principal passa a `Vendido`;
+o Financeiro recebe só a diferença. **Não é transacional** — o Supabase não expõe
+transação pelo cliente HTTP —, então a ordem foi escolhida para uma falha no meio
+deixar o estado legível: a troca é gravada primeiro e a venda por último, de modo
+que uma interrupção deixa uma negociação **sem venda** (visível e corrigível) em
+vez de uma venda órfã sem negociação.
+
+**A diferença nunca fica negativa.** Se os produtos valem mais que o principal, o
+cliente não paga nada e a sobra aparece como **excedente**, com aviso de que a
+loja precisa acertar por fora. Número negativo ali seria impossível de
+interpretar.
+
+**A venda gerada só nasce pendente** quando há diferença **e** ela foi parcelada.
+Diferença zero (produtos cobriram tudo) ou paga à vista já nasce quitada.
+
+**PIX Parcelado usa o mesmo mecanismo dos outros módulos**, com uma diferença: o
+carnê é calculado sobre a **diferença**, não sobre o preço do produto — o resto
+já foi pago em mercadoria.
+
+**Excluir a negociação** reverte a venda e devolve o principal ao estoque, mas os
+**itens recebidos permanecem**: a essa altura são unidades independentes, que
+podem já ter sido vendidas ou reservadas. Apagá-las destruiria estoque real por
+causa de um registro administrativo.
+
+Testado em `scratchpad/test-trocas.mjs` (32 asserções). Verificado em produção
+(2026-08-05): principal de R$ 3.000 (custo R$ 2.000) com iPhone recebido por
+R$ 1.200 deu diferença de R$ 1.800 e lucro total de R$ 1.400; o carnê saiu **sobre
+os R$ 1.800**, não sobre os R$ 3.000; ao concluir, o principal virou `Vendido`, o
+iPhone entrou como estoque `Disponível` com custo R$ 1.200, nasceu a venda #1051
+e o caixa recebeu 3 parcelas de R$ 600 mais a despesa de R$ 2.000; excluir
+devolveu o principal a `Disponível`, apagou venda e parcelas, e **o iPhone
+permaneceu no estoque**. Dados de teste removidos ao final.
+
+### ⚠️ Bug encontrado no teste e corrigido
+
+A lista vinha vazia com o banco cheio. Existem **duas** chaves estrangeiras entre
+`trades` e `orders` — `trades.order_id` e `orders.trade_id` — e sem dizer qual
+usar o PostgREST recusa a consulta por ambiguidade. A recusa chegava como
+`data: null`, então a tela dizia "nenhuma negociação" logo depois de concluir
+uma. Mesmo padrão da entrada que sumia do Financeiro: **leitura sem verificar
+`error` escondendo o motivo**. A consulta passou a nomear a chave
+(`orders!trades_order_id_fkey`) e a falha vai para o log.
+
+---
+
 ## Histórico do cliente e adimplência — regras confirmadas
 
 Clicar no nome do cliente abre `/admin/clientes/[id]` com abas **Financeiro,
@@ -747,11 +809,9 @@ removido junto com a origem.
 
 ### Módulos que faltam
 
-1. **M8 — Avaliação de Troca.** O mais complexo: uma troca cria item de estoque,
-   gera venda e lança no Financeiro numa transação só. Dependia de M2, M4 e M5
-   estarem sólidos — e agora estão.
-2. **M9 — Relatórios.** Dados brutos das tabelas macro (vendas, estoque,
-   orçamentos, financeiro, clientes), com filtro por período e exportação.
+1. **M9 — Relatórios.** Dados brutos das tabelas macro (vendas, estoque,
+   orçamentos, financeiro, clientes), com filtro por período e exportação. É o
+   único módulo do roadmap ainda não construído.
 
 ### Pedidos registrados e ainda não construídos
 
@@ -762,9 +822,10 @@ removido junto com a origem.
 
 4. **Confirmação de vínculo no cadastro do site** (M1): `findCustomerCandidates`
    identifica candidatos, mas não existe a tela onde a pessoa confirma que é ela.
-5. **Proteções de exclusão do estoque** (item usado em troca) dependem do M8 —
-   `deleteStockItemAction` já tem o lugar marcado. A parte de item vendido foi
-   resolvida no M4, que dá baixa e devolve o item conforme o status da venda.
+5. **Proteções de exclusão do estoque.** Item vendido foi resolvido no M4 (a
+   venda dá baixa e devolve conforme o status). Falta barrar a exclusão de item
+   que é produto principal ou produto recebido de uma troca — hoje o `on delete
+   set null` das FKs deixa a negociação com o vínculo vazio em vez de recusar.
 6. **Variável de ambiente para esconder o ERP** em lojas de cliente (RFC-0001).
 7. **Prazo de entrega no orçamento de loja.** O "prazo padrão" configurado no M1
    segue sem uso, e a coluna `delivery_time` existe sem tela. Forma de pagamento
@@ -816,6 +877,10 @@ removido junto com a origem.
   recebido. E a exclusão do registro de origem tira os lançamentos **antes** de
   apagar a si mesmo — a tela do Financeiro recusa excluir linha gerada, então a
   ordem inversa as deixa órfãs e sem remoção possível pela interface.
+- **Relação ambígua entre duas tabelas precisa nomear a chave.** Quando existem
+  duas FKs entre as mesmas tabelas (`trades.order_id` e `orders.trade_id`), o
+  PostgREST recusa o join e devolve `data: null` — a tela mostra vazio sem erro.
+  Use `tabela!nome_da_fkey(campos)`.
 - **Escrita no banco sem verificar erro esconde o problema.** A entrada do
   parcelamento sumiu do Financeiro por um `check` que recusava a parcela 0, e o
   insert engolia a recusa: o carnê somava R$ 3.240 e o caixa R$ 2.640, sem nada
