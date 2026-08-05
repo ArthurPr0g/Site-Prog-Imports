@@ -434,6 +434,56 @@ teste removidos ao final.
 
 ---
 
+## Desconto nos orçamentos — regras confirmadas
+
+Campo de desconto em **porcentagem ou reais**, com **descrição** que sai no PDF.
+Uma função só em `lib/discount.ts` para os dois orçamentos, o PDF e a prestação.
+
+**Onde incide, e por quê é diferente nos dois:**
+
+- **Loja:** sobre o **preço de venda**, derrubando lucro e margem. O custo com o
+  fornecedor não muda — o desconto sai do bolso da Prog, e a margem precisa
+  mostrar isso *antes* de o dono conceder. A margem passou a ser calculada sobre
+  o preço que o cliente paga, não sobre o cheio: com desconto, usar o cheio
+  mostraria uma margem que não existe.
+- **Serviços:** sobre o **valor único**, nunca sobre a mensalidade. Ela é preço
+  de tabela recorrente e descontá-la mudaria o contrato mensal inteiro. Para dar
+  desconto na mensalidade, o valor do próprio item já é editável na proposta.
+
+**A prestação também guarda o desconto**, herdado na conversão. Sem isso ele se
+perdia: `total_amount` da prestação é recalculado dos itens a cada salvamento, e
+os itens vêm com o valor cheio — editar a prestação devolveria o preço sem
+desconto e o Financeiro passaria a esperar mais do que foi combinado.
+
+**Os dois recálculos em massa da cotação** (`quotes.ts` e `settings.ts`)
+reaplicam o desconto. Sem isso devolveriam lucro e margem do preço cheio,
+apagando o desconto do painel sem mexer no valor gravado.
+
+**No PDF** o desconto vira três linhas: subtotal, desconto com a descrição ao
+lado, e investimento inicial. As **parcelas de 50% e o contrato usam o valor já
+descontado** — os três números não podem se contradizer dentro do mesmo
+documento.
+
+**Limites presos no cálculo**, não em cada tela: percentual acima de 100 e
+desconto maior que a base viram o teto. Sem isso o preço ficaria negativo e o
+cliente receberia dinheiro para comprar.
+
+Testado em `scratchpad/test-desconto.mjs` (29 asserções, incluindo o prejuízo
+aparecendo quando o desconto come todo o lucro). Verificado em produção
+(2026-08-05): 10% sobre R$ 4.500 deu R$ 4.050, contrato de R$ 5.838, parcelas de
+R$ 2.025 e Cláusula 6 do contrato com o mesmo R$ 4.050; na Loja, 10% sobre
+R$ 21.999 derrubou o lucro de R$ 3.005 para R$ 805 e a margem de 13,66% para
+4,07%, ao vivo.
+
+### Em aberto sobre desconto
+
+- **Orçamento de Loja não tem PDF.** O desconto aparece na tela e no cálculo,
+  mas o botão de proposta em PDF só existe em Orçamentos de Serviços. Se o dono
+  quiser proposta impressa da loja, é reaproveitar `lib/pdf/proposta.tsx` com os
+  campos de importação no lugar dos serviços.
+
+---
+
 ## PDF de proposta com contrato — regras confirmadas
 
 Cada linha de orçamento tem um botão que abre
