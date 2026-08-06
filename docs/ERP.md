@@ -641,6 +641,40 @@ sobrescreveria a outra. Quem manda no status também difere: a mensalidade é
 baixada direto no Financeiro e a sincronização preserva o que estiver lá; a
 parcela de PIX tem status vindo do carnê e sobrescreve.
 
+### Farol do carnê na conta do cliente (2026-08-06)
+
+Quem tem carnê vê em `/conta` (a página **Resumo**) quantas parcelas ao todo,
+quantas pagas, quantas em aberto e quantas vencidas, com o valor de cada grupo, o
+próximo vencimento e as próximas parcelas. Some para quem comprou à vista.
+
+**O estado é o mesmo do gerenciamento** — reusa `calcularAdimplencia`, uma regra
+só para os dois lados. Muda o texto: "Inadimplente" é palavra de cobrança
+interna, não informa nada que "1 parcela vencida" já não diga, e soa como
+acusação para quem talvez nem saiba que venceu. Na conta aparece como **Carnê
+quitado**, **Em dia** ou **Parcela vencida**. Com atraso, o painel também para de
+anunciar o "próximo vencimento": isso soaria como se estivesse tudo em dia.
+
+O painel fica **acima do pedido em andamento** — dívida vencida é o que o cliente
+mais precisa ver ao abrir a conta e o que ele resolve mais rápido — e traz o
+atalho de WhatsApp quando há algo em aberto: aviso de vencimento sem caminho para
+pagar só gera mensagem perguntando como pagar.
+
+**`payment_installments` continua admin-only.** Quem responde é
+`my_installments()`, `security definer`, como já é `ready_stock_counts()`. Policy
+não serviria: precisaria consultar `orders`, `customers` e `service_orders`, as
+três com RLS própria, e **subconsulta dentro de policy respeita a RLS da tabela
+consultada** — a policy não veria nada e o cliente ficaria sem carnê, sem erro
+nenhum aparecendo. A função busca o vínculo pelos **dois lados**
+(`orders.customer_id` e `orders.erp_customer_id`), porque venda de PIX parcelado
+costuma nascer no gerenciamento ligada só ao segundo. Cancelados ficam de fora e
+o anônimo não tem `execute`.
+
+Verificado em produção (2026-08-06): venda de teste de R$ 2.000 em 4× com a
+primeira em maio deu **4 parcelas, 1 paga, 3 em aberto, 2 vencidas** no painel,
+com o farol vermelho; o `anon` levou `permission denied` na função; e um cliente
+com vendas mas sem carnê **não viu parcela nenhuma dos outros** (impersonação por
+`request.jwt.claims`). Dados de teste removidos ao final.
+
 A edição do carnê foi testada contra o **código real**, não contra cópia das
 funções (`scratchpad/test-nome-e-carne.ts`, 34 asserções, roda com `npx tsx` na
 raiz do projeto): nome, etiqueta, descrição no caixa, soma do carnê, divergência
@@ -948,6 +982,11 @@ removido junto com a origem.
   recebido. E a exclusão do registro de origem tira os lançamentos **antes** de
   apagar a si mesmo — a tela do Financeiro recusa excluir linha gerada, então a
   ordem inversa as deixa órfãs e sem remoção possível pela interface.
+- **Subconsulta dentro de policy respeita a RLS da tabela consultada.** Uma
+  policy que precisa olhar tabelas com RLS própria simplesmente não vê nada, e a
+  tela fica vazia sem erro. Quando a resposta depende de cruzar tabelas
+  protegidas, use função `security definer` (`my_installments()`,
+  `ready_stock_counts()`) e dê `execute` só a quem precisa.
 - **Relação ambígua entre duas tabelas precisa nomear a chave.** Quando existem
   duas FKs entre as mesmas tabelas (`trades.order_id` e `orders.trade_id`), o
   PostgREST recusa o join e devolve `data: null` — a tela mostra vazio sem erro.
