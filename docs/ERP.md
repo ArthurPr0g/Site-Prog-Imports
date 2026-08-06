@@ -618,6 +618,31 @@ página do cliente, que é a mesma lista. Isso obrigou a mudar duas regras:
   foi pago para consertar um cálculo seria destruir histórico de dinheiro
   recebido.
 
+**⚠️ A data do caixa é a do RECEBIMENTO, não a do vencimento (2026-08-06).** O
+lançamento usava o vencimento mesmo depois da baixa. Enquanto a parcela é
+previsão isso está certo — o dinheiro é esperado naquele dia. Depois de recebida,
+não: parcela vencida em 27/07 e paga em agosto ficava arquivada em julho, e como
+o Financeiro abre no mês corrente, **dar baixa não mexia em nada na tela**.
+Parecia falta de sincronia; era data errada.
+
+A parcela guarda `paid_at`, e `dataDeCaixa()` decide: recebida vale o dia do
+pagamento, pendente vale o vencimento. O formulário tem o campo **"Recebida em"**
+(só aparece com a parcela recebida) e a lista mostra "pago em dd/mm" quando o
+pagamento saiu do vencimento — que é o que explica o valor ter caído noutro mês.
+A baixa pelo botão assume hoje; data diferente se corrige no formulário.
+
+O backfill deu `paid_at = due_date` às já recebidas, que é o que o sistema vinha
+usando: nenhum mês fechado se move sozinho. O que foi pago fora do prazo o dono
+corrige uma a uma.
+
+**⚠️ Baixar pelo Financeiro escreve na PARCELA.** Antes, marcar Pago naquela tela
+gravava o status só na linha do caixa: a parcela continuava pendente na página do
+cliente, e a próxima sincronização da venda reescrevia o status de volta para
+Previsto, em silêncio. Agora a tela do Financeiro atualiza a parcela e
+ressincroniza — quem manda é o carnê, o Financeiro é o espelho dele. As
+mensalidades de plano seguem como eram: não têm registro próprio e são baixadas
+ali mesmo.
+
 **Carnê que não fecha se anuncia.** O bloco de parcelas soma o carnê e compara
 com o devido (total **mais juros**, não o total puro), avisando quanto sobra ou
 falta. Mesma regra do lucro de venda sem custo: número agregado que pode estar
@@ -1181,6 +1206,16 @@ removido junto com a origem.
   avisa. Número errado com aparência de certo é pior que número ausente. Mesma
   regra no carnê: se a soma das parcelas deixa de bater com o valor devido, o
   bloco diz quanto sobra ou falta.
+- **Quem mostra o mesmo dado é invalidado junto** (`lib/data/revalidate.ts`).
+  Cada action mantinha a própria lista de telas para revalidar e as listas
+  divergiram: baixa de parcela atualizava o Financeiro mas não o histórico do
+  cliente; salvar venda atualizava o estoque mas não o painel. O sintoma é sempre
+  a mesma informação com dois valores conforme a tela por onde se entra, e a
+  causa nunca está na tela que mostra errado — o que torna isso caro de achar.
+- **Dado que existe em dois lugares tem um dono.** A parcela é o registro; a
+  linha do Financeiro é o espelho. Toda tela que altera o espelho escreve no
+  registro e ressincroniza, nunca no espelho direto — senão a próxima
+  sincronização desfaz a alteração sem avisar.
 - **Ajuste manual do dono não pode ser desfeito por rotina automática.** O carnê
   só é regerado quando o total ou as condições mudam, e refazer de propósito é um
   botão. Recalcular "para garantir" apaga trabalho sem avisar — e o dono só
