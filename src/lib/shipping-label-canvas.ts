@@ -82,17 +82,6 @@ function separador(ctx: CanvasRenderingContext2D, y: number): void {
   ctx.stroke();
 }
 
-/** Carrega a logo. Falha não impede a etiqueta de sair: uma etiqueta sem logo
- *  entrega a encomenda do mesmo jeito; um erro na hora de despachar, não. */
-export function carregarLogo(src: string): Promise<HTMLImageElement | null> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = src;
-  });
-}
-
 /** Desenha a etiqueta inteira. Fundo branco e tinta preta de propósito: é papel
  *  para colar em caixa, muitas vezes impresso em térmica monocromática. */
 export function desenharEtiqueta(

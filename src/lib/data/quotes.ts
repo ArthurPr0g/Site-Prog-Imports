@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { listProductCovers } from '@/lib/data/product-covers';
 import type { QuoteStatus } from '@/lib/quotes';
 import type { Desconto } from '@/lib/discount';
 
@@ -28,6 +29,9 @@ export type StoreQuote = {
   notes: string;
   status: QuoteStatus;
   createdAt: string;
+  /** Capa do produto no catálogo. Vazio quando o orçamento não está ligado a um
+   *  produto, ou quando o produto ainda não tem foto. */
+  coverUrl: string;
 };
 
 type Row = {
@@ -59,7 +63,7 @@ type Row = {
   customers?: { name: string } | null;
 };
 
-function toQuote(r: Row): StoreQuote {
+function toQuote(r: Row, capa = ''): StoreQuote {
   return {
     id: r.id,
     customerId: r.customer_id,
@@ -89,6 +93,7 @@ function toQuote(r: Row): StoreQuote {
     notes: r.notes ?? '',
     status: r.status as QuoteStatus,
     createdAt: r.created_at,
+    coverUrl: capa,
   };
 }
 
@@ -98,5 +103,9 @@ export async function listStoreQuotes(): Promise<StoreQuote[]> {
     .from('store_quotes')
     .select('*, customers(name)')
     .order('created_at', { ascending: false });
-  return (data ?? []).map((r) => toQuote(r as Row));
+
+  const linhas = (data ?? []) as Row[];
+  const capas = await listProductCovers(linhas.map((r) => r.product_id));
+
+  return linhas.map((r) => toQuote(r, r.product_id ? (capas.get(r.product_id) ?? '') : ''));
 }

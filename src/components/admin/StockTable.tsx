@@ -5,6 +5,7 @@ import { Pencil, Trash2, PackagePlus } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { formatBRL, parseNumeroBR, formatNumeroInput } from '@/lib/format';
 import { saveStockItemAction, deleteStockItemAction, type StockFormInput } from '@/app/actions/stock';
+import { ProdutoMiniatura } from '@/components/admin/ProdutoMiniatura';
 import {
   STOCK_STATUSES,
   STOCK_ORIGINS,
@@ -203,9 +204,12 @@ export function StockTable({
               key={i.id}
               className="grid grid-cols-[1.8fr_100px_120px_1.1fr_110px_110px_110px_90px] items-center gap-3 border-b border-divider py-3 text-[13.5px] last:border-b-0"
             >
-              <div className="min-w-0">
-                <div className="truncate font-bold">{i.name}</div>
-                {i.category && <div className="truncate text-[12px] text-fg-tertiary">{i.category}</div>}
+              <div className="flex min-w-0 items-center gap-2.5">
+                <ProdutoMiniatura src={i.photoUrl} alt={i.name} />
+                <div className="min-w-0">
+                  <div className="truncate font-bold">{i.name}</div>
+                  {i.category && <div className="truncate text-[12px] text-fg-tertiary">{i.category}</div>}
+                </div>
               </div>
               <div className="text-[12px] text-fg-secondary">{i.origin}</div>
               <div>

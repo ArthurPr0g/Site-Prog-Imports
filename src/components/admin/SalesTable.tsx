@@ -20,6 +20,7 @@ import type { Adimplencia } from '@/lib/customer-history';
 import { ParcelamentoFields } from '@/components/admin/ParcelamentoFields';
 import { ParcelasList } from '@/components/admin/ParcelasList';
 import { EtiquetaModal } from '@/components/admin/EtiquetaModal';
+import { ProdutoMiniatura } from '@/components/admin/ProdutoMiniatura';
 import { destinatarioDaVenda, type EnderecoDaEtiqueta, type Etiqueta } from '@/lib/shipping-label';
 import { saveSaleAction, deleteSaleAction, type SaleFormInput } from '@/app/actions/sales';
 
@@ -326,15 +327,21 @@ export function SalesTable({
                     })()}
                   </div>
                 </div>
-                <div className="min-w-0">
-                  <div className="truncate font-bold text-fg-secondary">{nomeDaVenda(v) || '—'}</div>
-                  {/* A lista de itens só aparece quando o nome é apelido: se o
-                      nome saiu deles, repeti-los não acrescenta nada. */}
-                  {!!v.name.trim() && (
-                    <div className="truncate text-[11px] text-fg-faded">
-                      {v.items.map((i) => (i.qty > 1 ? `${i.qty}× ${i.productName}` : i.productName)).join(' + ')}
-                    </div>
-                  )}
+                <div className="flex min-w-0 items-center gap-2.5">
+                  {/* A foto do primeiro item: numa venda de vários produtos ela
+                      identifica a linha melhor que nenhuma, e enfileirar todas
+                      estouraria a coluna. */}
+                  <ProdutoMiniatura src={v.items[0]?.coverUrl} alt={nomeDaVenda(v)} tamanho={36} />
+                  <div className="min-w-0">
+                    <div className="truncate font-bold text-fg-secondary">{nomeDaVenda(v) || '—'}</div>
+                    {/* A lista de itens só aparece quando o nome é apelido: se o
+                        nome saiu deles, repeti-los não acrescenta nada. */}
+                    {!!v.name.trim() && (
+                      <div className="truncate text-[11px] text-fg-faded">
+                        {v.items.map((i) => (i.qty > 1 ? `${i.qty}× ${i.productName}` : i.productName)).join(' + ')}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="text-[11.5px] text-fg-tertiary">{v.origin}</div>
                 <div className="text-right font-bold">{formatBRL(v.total)}</div>

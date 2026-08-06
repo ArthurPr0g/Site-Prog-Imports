@@ -8,6 +8,7 @@ import {
   type SaleStatus,
 } from '@/lib/sales';
 import { listInstallments, listInstallmentsBySource } from '@/lib/data/installments';
+import { listProductCovers } from '@/lib/data/product-covers';
 import type { Installment } from '@/lib/installments';
 
 type ItemRow = {
@@ -58,7 +59,7 @@ type SaleRow = {
   } | null;
 };
 
-function toSale(r: SaleRow, parcelas: Installment[] = []): Sale {
+function toSale(r: SaleRow, parcelas: Installment[] = [], capas = new Map<string, string>()): Sale {
   return {
     id: r.id,
     orderNumber: r.order_number,
@@ -114,6 +115,7 @@ function toSale(r: SaleRow, parcelas: Installment[] = []): Sale {
         qty: i.qty,
         unitPrice: Number(i.unit_price),
         unitCost: Number(i.unit_cost),
+        coverUrl: i.product_id ? capas.get(i.product_id) : undefined,
       })
     ),
   };
@@ -135,10 +137,13 @@ export async function listSales(): Promise<Sale[]> {
   if (error) console.error('[vendas] listagem falhou', error);
 
   const linhas = (data ?? []) as unknown as SaleRow[];
-  // Uma consulta só para o carnê de todas as vendas, em vez de uma por linha.
-  const parcelas = await listInstallmentsBySource('venda', linhas.map((r) => r.id));
+  // Uma consulta só para o carnê e outra para as capas, em vez de duas por linha.
+  const [parcelas, capas] = await Promise.all([
+    listInstallmentsBySource('venda', linhas.map((r) => r.id)),
+    listProductCovers(linhas.flatMap((r) => (r.order_items ?? []).map((i) => i.product_id))),
+  ]);
 
-  return linhas.map((r) => toSale(r, parcelas.get(r.id) ?? []));
+  return linhas.map((r) => toSale(r, parcelas.get(r.id) ?? [], capas));
 }
 
 /** Deixa o Financeiro coerente com a venda: uma receita do total e uma despesa

@@ -2,19 +2,21 @@
 
 import { useState, useMemo, useEffect, useTransition } from 'react';
 import Link from 'next/link';
-import { Pencil, Trash2, Copy, PackageCheck, FilePlus2, RefreshCw, ShoppingCart } from 'lucide-react';
+import { Pencil, Trash2, ImageDown, PackageCheck, FilePlus2, RefreshCw, ShoppingCart } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
-import { formatBRL, parseNumeroBR, formatNumeroInput } from '@/lib/format';
+import { formatBRL, parseNumeroBR, formatNumeroInput, formatDateBR } from '@/lib/format';
 import { calculateQuote, QUOTE_STATUSES, type QuoteStatus } from '@/lib/quotes';
 import { SEM_DESCONTO, temDesconto, rotuloDoDesconto, aplicarDesconto, type DiscountType } from '@/lib/discount';
 import {
   saveQuoteAction,
   deleteQuoteAction,
-  duplicateQuoteAction,
   sendQuoteToStockAction,
   recalculateQuotesAction,
   type QuoteFormInput,
 } from '@/app/actions/quotes';
+import { montarProposta, type PropostaDaLoja } from '@/lib/store-proposal';
+import { PropostaLojaModal } from '@/components/admin/PropostaLojaModal';
+import { ProdutoMiniatura } from '@/components/admin/ProdutoMiniatura';
 import { SeloAdimplencia } from '@/components/admin/SeloAdimplencia';
 import type { Adimplencia } from '@/lib/customer-history';
 import { generateSaleFromQuoteAction } from '@/app/actions/sales';
@@ -102,6 +104,7 @@ export function QuotesTable({
   const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
   const [form, setForm] = useState<QuoteFormInput | null>(null);
+  const [proposta, setProposta] = useState<PropostaDaLoja | null>(null);
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 
@@ -284,9 +287,12 @@ export function QuotesTable({
                 key={q.id}
                 className="grid grid-cols-[1.7fr_1.1fr_150px_110px_110px_110px_80px_130px] items-center gap-3 border-b border-divider py-3 text-[13.5px] last:border-b-0"
               >
-                <div className="min-w-0">
-                  <div className="truncate font-bold">{q.name}</div>
-                  {q.category && <div className="truncate text-[12px] text-fg-tertiary">{q.category}</div>}
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <ProdutoMiniatura src={q.coverUrl} alt={q.name} />
+                  <div className="min-w-0">
+                    <div className="truncate font-bold">{q.name}</div>
+                    {q.category && <div className="truncate text-[12px] text-fg-tertiary">{q.category}</div>}
+                  </div>
                 </div>
                 <div className="truncate text-[13px] text-fg-secondary">{q.customerName || '—'}</div>
                 <div>
@@ -335,13 +341,12 @@ export function QuotesTable({
                     <Pencil size={14} />
                   </button>
                   <button
-                    onClick={() => executar(() => duplicateQuoteAction(q.id))}
-                    disabled={pending}
-                    title="Duplicar"
-                    aria-label={`Duplicar orçamento de ${q.name}`}
-                    className="grid h-8 w-8 place-items-center rounded-full border border-border-strong text-fg-tertiary hover:border-accent hover:text-accent disabled:opacity-50"
+                    onClick={() => setProposta(montarProposta(q, q.coverUrl, formatDateBR(q.createdAt)))}
+                    title="Gerar proposta em PNG"
+                    aria-label={`Gerar proposta em PNG de ${q.name}`}
+                    className="grid h-8 w-8 place-items-center rounded-full border border-border-strong text-fg-tertiary hover:border-accent hover:text-accent"
                   >
-                    <Copy size={14} />
+                    <ImageDown size={14} />
                   </button>
                   {!convertido && (
                     <button
@@ -614,6 +619,8 @@ export function QuotesTable({
           </div>
         </div>
       )}
+
+      {proposta && <PropostaLojaModal proposta={proposta} onFechar={() => setProposta(null)} />}
     </div>
   );
 }

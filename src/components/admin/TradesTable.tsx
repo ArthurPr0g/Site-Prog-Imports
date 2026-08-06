@@ -4,6 +4,7 @@ import { useState, useMemo, useTransition } from 'react';
 import Link from 'next/link';
 import { Trash2, Plus, X, Search, ChevronDown, ChevronRight } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { ProdutoMiniatura } from '@/components/admin/ProdutoMiniatura';
 import { formatBRL, parseNumeroBR, formatDateBR, formatNumeroInput } from '@/lib/format';
 import {
   totalizarTroca,
@@ -193,6 +194,7 @@ export function TradesTable({
                     className="flex w-full items-center gap-1.5 text-left"
                   >
                     {aberta === t.id ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                    <ProdutoMiniatura src={t.mainPhotoUrl} alt={t.mainProductName} tamanho={36} />
                     <span className="min-w-0">
                       <span className="block truncate font-bold">{t.mainProductName}</span>
                       <span className="block text-[11px] text-fg-faded">

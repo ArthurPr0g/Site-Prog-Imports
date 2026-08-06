@@ -31,6 +31,9 @@ export type SaleItem = {
   qty: number;
   unitPrice: number;
   unitCost: number;
+  /** Capa do produto no catálogo, para a listagem mostrar a foto. Só leitura:
+   *  o formulário não a envia de volta. */
+  coverUrl?: string;
 };
 
 export type Sale = {

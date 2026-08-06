@@ -157,31 +157,9 @@ export async function deleteQuoteAction(id: string): Promise<ActionResult> {
   return okResult('Orçamento excluído.');
 }
 
-/** Cópia completa com status resetado — serve para variar configuração ou preço
- *  sem perder o orçamento já enviado ao cliente. */
-export async function duplicateQuoteAction(id: string): Promise<ActionResult> {
-  const supabase = await adminClient();
-  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
-
-  const { data: origem, error: erroLeitura } = await supabase
-    .from('store_quotes')
-    .select('*')
-    .eq('id', id)
-    .single();
-  if (erroLeitura || !origem) return errResult('Não foi possível ler o orçamento de origem.');
-
-  const copia = { ...origem } as Record<string, unknown>;
-  delete copia.id;
-  delete copia.created_at;
-  copia.status = 'Em elaboração';
-  copia.updated_at = new Date().toISOString();
-
-  const { error } = await supabase.from('store_quotes').insert(copia as never);
-  if (error) return errResult(friendlyDbError(error, 'Não foi possível duplicar o orçamento.'));
-
-  revalidatePath('/admin/orcamentos-loja');
-  return okResult('Orçamento duplicado como "Em elaboração".');
-}
+// `duplicateQuoteAction` foi removida junto com o botão de duplicar, que o dono
+// trocou pelo de gerar proposta. Ação sem porta de entrada é código que ninguém
+// mantém e que continua aparecendo nas buscas como se estivesse em uso.
 
 /** Converte o orçamento aprovado em item de estoque, copiando o custo total
  *  como valor pago e o preço de venda pretendido. */

@@ -35,6 +35,8 @@ export type Trade = {
   customerName: string;
   stockItemId: string | null;
   mainProductName: string;
+  /** Foto do item de estoque que saiu na negociação. */
+  mainPhotoUrl: string;
   mainSalePrice: number;
   mainCost: number;
   totalReceived: number;

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { listProductCovers } from '@/lib/data/product-covers';
 import type { StockItem, StockOrigin, StockStatus } from '@/lib/stock';
 
 // Consultas do estoque. Tipos, constantes e cálculos ficam em `lib/stock.ts`,
@@ -25,9 +26,12 @@ type Row = {
   customers?: { name: string } | null;
 };
 
-function toItem(r: Row): StockItem {
+function toItem(r: Row, capas = new Map<string, string>()): StockItem {
   const paid = Number(r.paid_amount ?? 0);
   const sale = Number(r.sale_amount ?? 0);
+  // A foto do próprio item vence a do catálogo: ela é a unidade que está na
+  // prateleira, com a marca de uso que ela tem. A do catálogo é a genérica.
+  const foto = r.photo_url || (r.product_id ? (capas.get(r.product_id) ?? '') : '');
   return {
     id: r.id,
     origin: r.origin as StockOrigin,
@@ -39,7 +43,7 @@ function toItem(r: Row): StockItem {
     category: r.category ?? '',
     specs: r.specs ?? '',
     productLink: r.product_link ?? '',
-    photoUrl: r.photo_url ?? '',
+    photoUrl: foto,
     purchaseDate: r.purchase_date ?? '',
     entryDate: r.entry_date ?? '',
     usdRate: r.usd_rate !== null && r.usd_rate !== undefined ? Number(r.usd_rate) : null,
@@ -58,7 +62,10 @@ export async function listStockItems(): Promise<StockItem[]> {
     .order('entry_date', { ascending: false })
     .order('created_at', { ascending: false });
 
-  return (data ?? []).map((r) => toItem(r as Row));
+  const linhas = (data ?? []) as Row[];
+  const capas = await listProductCovers(linhas.map((r) => r.product_id));
+
+  return linhas.map((r) => toItem(r, capas));
 }
 
 /** Unidades disponíveis por produto do catálogo, para o selo de pronta entrega
