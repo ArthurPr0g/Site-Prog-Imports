@@ -765,6 +765,54 @@ despesa 9.600 = lucro 3.000), as duas como Previsto; mudar para Pago virou as
 duas **sem duplicar**; excluir devolveu o orçamento para Aprovado e limpou o
 caixa. Dados de teste removidos ao final.
 
+### Etiqueta de transporte (2026-08-06)
+
+Botão na linha de cada venda abre a pré-visualização e baixa um **PNG de 10 × 15
+cm a 300 dpi** (1181 × 1772 px) — o formato que Correios e transportadoras
+aceitam e que a térmica comum imprime sem redimensionar.
+
+**Ver antes de baixar** porque etiqueta errada só aparece depois de impressa e
+colada: endereço truncado, remetente em branco, CEP incompleto. Na tela o erro
+custa um clique de fechar.
+
+**O remetente vem de Configurações**, num bloco novo, e vai para `site_settings`
+pelo mesmo motivo dos dados de contrato: repositório público, endereço com
+CPF/CNPJ versionado fica exposto para sempre. Campos separados em vez de bloco de
+texto porque a etiqueta destaca o CEP e quebra as linhas na ordem do envelope.
+
+**O destinatário sai do endereço da própria compra** (`address_snapshot`) e, na
+falta dele, do cadastro do cliente. Nessa ordem de propósito: o retrato é o
+endereço que o cliente escolheu naquela compra, e mudança de cadastro hoje não
+pode reescrever para onde uma encomenda antiga foi enviada. Nome, documento e
+telefone vêm do cadastro de qualquer forma — o retrato não os guarda e a
+transportadora precisa de alguém para procurar na entrega.
+
+**Faltando dado, a pré-visualização lista o que falta e cada item aponta a tela
+que o resolve**: remetente → Configurações, endereço → cadastro do cliente
+vinculado, nome → o formulário da venda. Mandar tudo para a mesma tela seria pior
+que não mandar para nenhuma.
+
+**Desenho em canvas, sem dependência nova.** A etiqueta é um retângulo com sete
+blocos de texto e uma imagem, e precisa sair idêntica toda vez, com pixel
+previsível para térmica. Converter HTML em imagem traria biblioteca, dependeria
+do CSS da página e mudaria de aparência a cada ajuste de tema. Fundo branco e
+tinta preta: é papel para colar em caixa, muitas vezes impresso em monocromática.
+O destinatário ocupa a maior área e o CEP tem caixa própria — é por ele que a
+triagem separa a encomenda. O remetente é ancorado no rodapé, então o espaço em
+branco fica no meio, onde a fita passa.
+
+Testado contra o código real (`scratchpad/test-etiqueta.ts`, 33 asserções):
+formatação de CEP, separação de cidade e UF (inclusive cidade com traço no nome,
+que não pode perder o pedaço final), prioridade entre retrato e cadastro, retrato
+vazio caindo no cadastro, rua sem número, linhas sem buraco e nome de arquivo sem
+acento. Verificado em produção (2026-08-06): a venda #1047, do site, saiu com o
+endereço do checkout; a #1050, manual, com o do cadastro; sem endereço, o aviso
+apontou o cadastro do cliente certo; e o arquivo baixado é PNG de verdade
+(assinatura `89 50 4E 47`), 1181 × 1772, ~177 KB. Dados de teste removidos.
+
+⚠️ **O endereço do remetente está vazio em produção** — é dado do dono, ninguém
+mais pode preencher. Sem ele nenhuma etiqueta sai.
+
 ### Em aberto sobre vendas
 
 - **Custo do frete não é separado.** O frete cobrado do cliente entra na receita,
