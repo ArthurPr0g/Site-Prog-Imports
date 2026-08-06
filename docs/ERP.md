@@ -867,6 +867,64 @@ R$ 2.025 e Cláusula 6 do contrato com o mesmo R$ 4.050; na Loja, 10% sobre
 R$ 21.999 derrubou o lucro de R$ 3.005 para R$ 805 e a margem de 13,66% para
 4,07%, ao vivo.
 
+### Proposta da loja em PNG (2026-08-06)
+
+O botão de **duplicar orçamento deu lugar ao de gerar proposta**, por decisão do
+dono. Sai uma imagem **1080 × 1350** — o retrato 4:5 que WhatsApp e Instagram
+mostram inteiro, sem cortar borda nem exigir tela cheia —, com pré-visualização
+antes de baixar.
+
+**Só o resultado.** O orçamento guarda a formação de preço inteira: valor do
+produto, imposto, taxa do viajante, processamento, câmbio, custo total, lucro e
+margem. Nada disso é assunto do cliente — mostrar custo convida a negociar a
+margem, e mostrar câmbio transforma cada oscilação do dólar em conversa. A
+proposta leva foto, nome, specs, valor final, frete, formas de pagamento e o
+aviso de que o valor acompanha o dólar até a confirmação.
+
+**PIX Parcelado fica de fora das formas de pagamento**, por pedido explícito:
+parcelar é concessão caso a caso, decidida na hora de lançar a venda. Anunciado
+na proposta, todo cliente pediria, e a exceção viraria expectativa. Há teste
+guardando isso.
+
+⚠️ **Frete.** No orçamento, `shipping_brl` é o que a Prog **paga** para trazer o
+produto — componente de custo, já coberto pelo preço de venda. Repassá-lo como
+linha separada faria o cliente somar duas vezes. Por isso a proposta diz
+**"incluso no valor"** quando há frete no custo, e "a combinar" quando não há.
+
+**Escura, com a cor da marca**, ao contrário do PDF de contrato, que é branco.
+São peças de uso diferente: o PDF vai para impressora e assinatura, esta imagem
+vai para o WhatsApp e fica ao lado das fotos do site.
+
+### Foto do produto nas listagens (2026-08-06)
+
+Onde aparece nome de produto agora aparece a foto, com canto arredondado igual ao
+dos cartões: **orçamentos de loja, vendas, estoque e trocas**. Numa lista de
+notebooks com nomes de sessenta caracteres, a foto identifica a linha antes da
+leitura.
+
+A capa vem de `product_images` (a de menor `position`, a mesma da vitrine) e
+**não filtra por produto ativo**: produto fora do ar continua aparecendo em
+orçamento e venda antigos, e esconder a foto justamente aí deixaria a tela menos
+reconhecível do que era antes. Em estoque e trocas, a **foto do próprio item
+vence a do catálogo** — é a unidade que está na prateleira. Sem foto, o espaço
+continua ocupado por um quadro neutro: sumir com ele faria as linhas dançarem de
+altura conforme o cadastro tem ou não imagem. Uma consulta de capas por listagem,
+nunca uma por linha.
+
+⚠️ **`crossOrigin` é obrigatório ao carregar imagem para canvas.** A foto vem do
+storage do Supabase, que é outro domínio; sem `img.crossOrigin = 'anonymous'` o
+navegador marca o canvas como contaminado e `toDataURL` passa a lançar
+`SecurityError` — o desenho aparece na tela e **o download morre**. O storage
+responde com CORS aberto, então basta pedir.
+
+Testado contra o código real (`scratchpad/test-proposta.ts`, 16 asserções):
+formas de pagamento, frete, desconto percentual e em valor, desconto maior que o
+preço, e uma verificação estrutural de que o modelo enviado ao cliente não
+carrega campo de custo, câmbio ou margem. Verificado em produção (2026-08-06): a
+proposta do Alienware saiu com a foto real do catálogo e o download gerou PNG de
+634 KB sem `SecurityError`; a etiqueta continuou funcionando depois de os dois
+modais passarem a compartilhar o mesmo componente de pré-visualização.
+
 ### Em aberto sobre desconto
 
 - **Orçamento de Loja não tem PDF.** O desconto aparece na tela e no cálculo,
@@ -985,8 +1043,8 @@ removido junto com a origem.
 9. **`toast` com resultado da ação** foi corrigido no Financeiro, em Vendas e nos
    módulos novos; as telas mais antigas do admin ainda passam só a mensagem e
    mostram ✓ em recusa.
-10. **Orçamento de Loja não tem PDF** — só o de Serviços. Ver "Em aberto sobre
-    desconto".
+10. **Orçamento de Loja não tem PDF** — só o de Serviços. Ganhou a **proposta em
+    PNG**, que cobre o envio ao cliente; falta o documento imprimível.
 11. **`window.confirm` nas telas antigas.** Existe `ui/ConfirmDialog.tsx`, usado
     na exclusão de parcela: diz o que a exclusão leva junto, foca no Cancelar e
     segue o tema. As outras telas ainda usam a caixa do navegador.
