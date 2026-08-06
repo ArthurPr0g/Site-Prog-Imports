@@ -115,7 +115,11 @@ export function TradesTable({
   function excluir(t: Trade) {
     if (
       !window.confirm(
-        `Excluir a negociação de "${t.mainProductName}"?\n\nA venda gerada é revertida e o produto volta ao estoque. Os produtos recebidos continuam no estoque.`
+        `Excluir a negociação de "${t.mainProductName}"?\n\n` +
+          `A venda gerada é revertida e o produto principal volta ao estoque.` +
+          (t.items.length > 0
+            ? `\n\nOs ${t.items.length} produto(s) recebido(s) SAEM do estoque — se a negociação não aconteceu, eles nunca entraram na loja.`
+            : '')
       )
     )
       return;
@@ -482,6 +486,13 @@ export function TradesTable({
               Ao concluir: os produtos recebidos entram no <strong>Estoque</strong>, o item principal passa a{' '}
               <strong>Vendido</strong> e nasce a <strong>venda</strong> como{' '}
               <strong>{statusDaVendaGerada(totais.diferenca, form.paymentMethod)}</strong>.
+              {form.items.some((i) => i.name.trim()) && (
+                <div className="mt-2">
+                  Os produtos recebidos entram <strong>sem vínculo com o catálogo</strong>, então{' '}
+                  <strong>não aparecem no site</strong> nem contam como pronta entrega. Para publicar um deles
+                  depois, ligue-o a um produto pela tela de Estoque.
+                </div>
+              )}
               <div className="mt-2">
                 No Financeiro entra <strong className="text-accent">{formatBRL(totais.diferenca)}</strong> de
                 receita — só o dinheiro. <strong>Produto recebido não é caixa</strong>: vira estoque e só vale

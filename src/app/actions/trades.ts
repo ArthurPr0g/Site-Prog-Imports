@@ -255,22 +255,59 @@ export async function createTradeAction(input: TradeFormInput): Promise<ActionRe
   };
 }
 
-/** Exclui a negociação e reverte a venda gerada.
+/** Exclui a negociação, revertendo tudo o que ela criou.
  *
- *  Os itens recebidos **permanecem no estoque**: a essa altura são unidades
- *  independentes, que podem já ter sido vendidas ou reservadas. Apagá-las
- *  destruiria estoque real por causa de um registro administrativo. */
+ *  Os itens recebidos **saem do estoque junto** (decisão do dono): se a
+ *  negociação não aconteceu, aqueles produtos nunca entraram na loja, e deixá-los
+ *  no estoque inventaria mercadoria que não existe.
+ *
+ *  Com uma trava: item que já seguiu adiante — vendido, reservado, em transporte
+ *  ou dentro de alguma venda — **impede a exclusão inteira**. Apagá-lo furaria o
+ *  histórico de uma venda real por causa de um acerto administrativo, e apagar
+ *  só os livres deixaria a negociação meio revertida, que é pior que não
+ *  reverter. */
 export async function deleteTradeAction(id: string): Promise<ActionResult> {
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
 
   const { data: troca } = await supabase
     .from('trades')
-    .select('order_id, stock_item_id')
+    .select('order_id, stock_item_id, trade_items(stock_item_id, name)')
     .eq('id', id)
     .maybeSingle();
 
   if (!troca) return errResult('Negociação não encontrada.');
+
+  const recebidos = (troca.trade_items ?? [])
+    .filter((i): i is { stock_item_id: string; name: string } => !!i.stock_item_id);
+  const idsRecebidos = recebidos.map((i) => i.stock_item_id);
+
+  if (idsRecebidos.length > 0) {
+    const { data: emUso } = await supabase
+      .from('stock_items')
+      .select('id, name, status')
+      .in('id', idsRecebidos)
+      .neq('status', 'Disponível');
+
+    if (emUso && emUso.length > 0) {
+      const nomes = emUso.map((i) => `${i.name} (${i.status})`).join(', ');
+      return errResult(
+        `Não dá para excluir: ${nomes} já saiu do estoque livre. Reverta essa movimentação antes, ou o histórico dela ficaria sem origem.`
+      );
+    }
+
+    const { data: emVendas } = await supabase
+      .from('order_items')
+      .select('product_name')
+      .in('stock_item_id', idsRecebidos)
+      .limit(1);
+
+    if (emVendas && emVendas.length > 0) {
+      return errResult(
+        `Não dá para excluir: "${emVendas[0].product_name}" recebido nesta troca já está em uma venda. Exclua a venda primeiro.`
+      );
+    }
+  }
 
   if (troca.order_id) {
     await removerFinanceiroDaVenda(troca.order_id);
@@ -286,11 +323,18 @@ export async function deleteTradeAction(id: string): Promise<ActionResult> {
       .eq('id', troca.stock_item_id);
   }
 
+  // Os recebidos saem do estoque: eles só existiam por causa desta negociação.
+  if (idsRecebidos.length > 0) {
+    await supabase.from('stock_items').delete().in('id', idsRecebidos);
+  }
+
   const { error } = await supabase.from('trades').delete().eq('id', id);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível excluir a negociação.'));
 
   revalidar();
   return okResult(
-    'Negociação excluída. A venda foi revertida e o produto voltou ao estoque — os itens recebidos continuam lá.'
+    idsRecebidos.length > 0
+      ? `Negociação excluída. A venda foi revertida, o produto voltou ao estoque e ${idsRecebidos.length} item(ns) recebido(s) saíram do estoque.`
+      : 'Negociação excluída. A venda foi revertida e o produto voltou ao estoque.'
   );
 }
