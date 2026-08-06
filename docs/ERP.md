@@ -755,6 +755,39 @@ ficaria em Previsto depois de o cliente pagar.
 Sem isso o mesmo notebook continuaria como pronta entrega no site depois de
 vendido, e o selo mentiria para o visitante.
 
+**⚠️ A venda tem data própria (2026-08-06).** `orders.sale_date` guarda o dia em
+que a venda aconteceu; `created_at` continua sendo só o registro do cadastro.
+Antes o Financeiro usava `created_at`, e numa venda retroativa isso jogava o
+**custo no mês do cadastro** — a receita ia para os meses certos, porque as
+parcelas têm data própria, e a despesa caía num mês que não teve venda nenhuma.
+O formulário tem "Data da venda", a venda gerada por troca usa o dia da
+negociação, e listagens e histórico mostram essa data. Backfill: `sale_date =
+created_at::date` em tudo que existia, que é o que o sistema vinha usando.
+
+**⚠️ Compra de estoque é despesa na ENTRADA, não na venda (2026-08-06).**
+Decisão do dono. Quem importa paga o fornecedor meses antes de vender: o mês da
+compra não mostrava saída nenhuma, o da venda mostrava uma saída que já tinha
+acontecido, e o dinheiro parado em estoque não aparecia em lugar nenhum.
+
+Cadastrar item no estoque lança a despesa na **data de entrada** (que já era
+editável). Em troca, **a venda desse item não lança custo** — senão o mesmo
+dinheiro sairia duas vezes. Encomenda, sem item de estoque vinculado, continua
+lançando o custo na venda: ali não houve compra para estoque. Venda mista lança
+só a parte que não veio do estoque.
+
+O **backfill era a parte crítica**: sem ele a mudança tiraria despesa sem repor
+(itens antigos nunca geraram lançamento, e a venda deles deixaria de gerar),
+inflando o lucro em silêncio. A migração 0042 cria a despesa de cada item já
+cadastrado na data de entrada dele e ajusta as linhas de venda. Em produção
+moveu R$ 3.942 de agosto para 06/03 e fez aparecer R$ 18.993,33 de mercadoria
+comprada e não vendida, que nunca tinha passado pelo caixa.
+
+**Os dois números medem coisas diferentes, e agora ambos dizem a verdade.** A
+tela de Vendas segue mostrando lucro por venda com o custo cheio — é margem de
+venda. O Financeiro virou fluxo de caixa de verdade: saída no mês em que se
+pagou, entrada no mês em que se recebeu. Eles não batem dentro do mesmo mês, e
+isso é correto.
+
 **Toda venda tem nome (2026-08-05).** "Venda #1051" não identifica nada em lista
 nenhuma. O nome é o **apelido** que o dono digitar e, quando ele não digita nada,
 **sai dos próprios itens** ("iPhone 15 Pro +2"): zero digitação no caso comum,
@@ -1212,6 +1245,14 @@ removido junto com a origem.
   cliente; salvar venda atualizava o estoque mas não o painel. O sintoma é sempre
   a mesma informação com dois valores conforme a tela por onde se entra, e a
   causa nunca está na tela que mostra errado — o que torna isso caro de achar.
+- **Data de registro não é data do fato.** `created_at` diz quando a linha
+  entrou no sistema; quem manda no caixa é a data do fato — `sale_date` na
+  venda, `paid_at` na parcela, `entry_date` no item de estoque. Todas editáveis,
+  porque lançamento retroativo é rotina e o mês precisa ficar certo.
+- **Mudança na regra de custo precisa de backfill no mesmo commit.** Passar a
+  lançar a despesa noutro lugar sem migrar o que já existe tira dinheiro do
+  caixa sem repor — e lucro inflado em silêncio é o pior erro que este sistema
+  pode cometer.
 - **Dado que existe em dois lugares tem um dono.** A parcela é o registro; a
   linha do Financeiro é o espelho. Toda tela que altera o espelho escreve no
   registro e ressincroniza, nunca no espelho direto — senão a próxima
