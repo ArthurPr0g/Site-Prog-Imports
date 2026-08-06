@@ -173,7 +173,12 @@ export async function deleteFinanceEntryAction(id: string): Promise<ActionResult
     .maybeSingle();
 
   if (existente && existente.source !== 'manual') {
-    const origem = existente.source === 'venda' ? 'uma venda' : 'uma prestação de serviço';
+    const origem =
+      existente.source === 'venda'
+        ? 'uma venda'
+        : existente.source === 'estoque'
+          ? 'a entrada de um item no estoque'
+          : 'uma prestação de serviço';
     return errResult(
       `Este lançamento foi gerado por ${origem} e não pode ser excluído aqui. Remova ou ajuste o registro de origem.`
     );

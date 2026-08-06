@@ -68,6 +68,72 @@ export async function listStockItems(): Promise<StockItem[]> {
   return linhas.map((r) => toItem(r, capas));
 }
 
+/** Deixa o Financeiro coerente com o item de estoque: uma despesa do que foi
+ *  pago por ele, na data em que entrou.
+ *
+ *  Comprar mercadoria é saída de caixa no dia da compra, não no dia da venda —
+ *  quem importa paga o fornecedor meses antes de vender. Antes disso, o dinheiro
+ *  parado em estoque não aparecia em lugar nenhum do caixa.
+ *
+ *  A contrapartida está em `sincronizarFinanceiroDaVenda`: item que veio do
+ *  estoque não lança custo de novo na venda. Sem isso o mesmo dinheiro sairia
+ *  duas vezes.
+ *
+ *  Item sem valor pago não vira linha: despesa de zero só polui o extrato. */
+export async function sincronizarFinanceiroDoEstoque(stockItemId: string): Promise<void> {
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from('stock_items')
+    .select('name, paid_amount, entry_date, purchase_date, created_at')
+    .eq('id', stockItemId)
+    .maybeSingle();
+
+  if (!data) return;
+
+  const valor = Number(data.paid_amount ?? 0);
+  // A data do cadastro no estoque, como o dono pediu. `purchase_date` é o
+  // segundo melhor palpite quando a entrada não foi preenchida.
+  const data_ = data.entry_date || data.purchase_date || data.created_at.slice(0, 10);
+
+  const { data: existente } = await supabase
+    .from('finance_entries')
+    .select('id')
+    .eq('source', 'estoque')
+    .eq('reference_id', stockItemId)
+    .maybeSingle();
+
+  if (valor <= 0) {
+    if (existente) await supabase.from('finance_entries').delete().eq('id', existente.id);
+    return;
+  }
+
+  const payload = {
+    kind: 'despesa' as const,
+    description: `Compra de estoque: ${data.name}`,
+    amount: valor,
+    entry_date: data_,
+    source: 'estoque' as const,
+    reference_id: stockItemId,
+    updated_at: new Date().toISOString(),
+  };
+
+  // O status não é reescrito na atualização: o dono pode ter marcado a compra
+  // como ainda não paga, e uma edição de nome não deve desfazer isso.
+  const { error } = existente
+    ? await supabase.from('finance_entries').update(payload).eq('id', existente.id)
+    : await supabase.from('finance_entries').insert({ ...payload, status: 'Pago' });
+
+  if (error) console.error('[financeiro/estoque] linha não gravada', { stockItemId, error });
+}
+
+/** Tira a despesa junto com o item. A tela do Financeiro recusa excluir linha
+ *  gerada, então a ordem inversa deixaria a linha órfã e sem remoção possível. */
+export async function removerFinanceiroDoEstoque(stockItemId: string): Promise<void> {
+  const supabase = await createClient();
+  await supabase.from('finance_entries').delete().eq('source', 'estoque').eq('reference_id', stockItemId);
+}
+
 /** Unidades disponíveis por produto do catálogo, para o selo de pronta entrega
  *  na loja. Vem de uma função `security definer` que devolve só a contagem — a
  *  tabela de estoque tem custo e margem, e nada disso pode chegar ao visitante. */

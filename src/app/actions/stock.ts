@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
 import { STOCK_STATUSES, type StockStatus } from '@/lib/stock';
+import { sincronizarFinanceiroDoEstoque, removerFinanceiroDoEstoque } from '@/lib/data/stock';
+import { revalidarDinheiro } from '@/lib/data/revalidate';
 
 export type StockFormInput = {
   id?: string;
@@ -27,6 +29,11 @@ async function adminClient() {
   const admin = await requireAdmin();
   if (!admin) return null;
   return createClient();
+}
+
+/** O item mexe no caixa (a compra é despesa) e no selo de pronta entrega. */
+function revalidar() {
+  revalidarDinheiro('/admin/estoque', '/');
 }
 
 export async function saveStockItemAction(input: StockFormInput): Promise<ActionResult & { id?: string }> {
@@ -69,8 +76,8 @@ export async function saveStockItemAction(input: StockFormInput): Promise<Action
   if (input.id) {
     const { error } = await supabase.from('stock_items').update(payload).eq('id', input.id);
     if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar as alterações do item.'));
-    revalidatePath('/admin/estoque');
-    revalidatePath('/');
+    await sincronizarFinanceiroDoEstoque(input.id);
+    revalidar();
     return { ...okResult('Item atualizado.'), id: input.id };
   }
 
@@ -83,9 +90,17 @@ export async function saveStockItemAction(input: StockFormInput): Promise<Action
     .single();
 
   if (error) return errResult(friendlyDbError(error, 'Não foi possível adicionar o item ao estoque.'));
-  revalidatePath('/admin/estoque');
-  revalidatePath('/');
-  return { ...okResult('Item adicionado ao estoque.'), id: data?.id };
+
+  if (data?.id) await sincronizarFinanceiroDoEstoque(data.id);
+  revalidar();
+  return {
+    ...okResult(
+      input.paidAmount > 0
+        ? 'Item adicionado ao estoque. A compra entrou como despesa no Financeiro, na data de entrada.'
+        : 'Item adicionado ao estoque.'
+    ),
+    id: data?.id,
+  };
 }
 
 export async function deleteStockItemAction(id: string): Promise<ActionResult> {
@@ -99,6 +114,10 @@ export async function deleteStockItemAction(id: string): Promise<ActionResult> {
     .select('budget_id')
     .eq('id', id)
     .maybeSingle();
+
+  // A despesa sai antes do item: a tela do Financeiro recusa excluir linha
+  // gerada, então a ordem inversa a deixaria órfã e impossível de remover.
+  await removerFinanceiroDoEstoque(id);
 
   // As proteções de integridade do documento (item já vendido, item que é
   // produto principal de uma troca, item recebido em troca) dependem das
@@ -127,11 +146,10 @@ export async function deleteStockItemAction(id: string): Promise<ActionResult> {
     revalidatePath('/admin/orcamentos-loja');
   }
 
-  revalidatePath('/admin/estoque');
-  revalidatePath('/');
+  revalidar();
   return okResult(
     item?.budget_id
       ? 'Item excluído. O orçamento de origem voltou para Aprovado e pode ser convertido de novo.'
-      : 'Item excluído do estoque.'
+      : 'Item excluído do estoque. A despesa da compra saiu do Financeiro junto.'
   );
 }

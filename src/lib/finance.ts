@@ -6,7 +6,16 @@ export const FINANCE_STATUSES = ['Pago', 'Previsto'] as const;
 
 export type FinanceKind = (typeof FINANCE_KINDS)[number];
 export type FinanceStatus = (typeof FINANCE_STATUSES)[number];
-export type FinanceSource = 'manual' | 'venda' | 'servico';
+export type FinanceSource = 'manual' | 'venda' | 'servico' | 'estoque';
+
+/** Como cada origem é apresentada no extrato. Linha gerada não é editável em
+ *  valor nem data: quem manda é o módulo que a criou. */
+export const ROTULO_DA_ORIGEM: Record<FinanceSource, string> = {
+  manual: 'lançamento manual',
+  venda: 'gerado por venda',
+  servico: 'gerado por serviço',
+  estoque: 'compra de estoque',
+};
 
 export type FinanceEntry = {
   id: string;

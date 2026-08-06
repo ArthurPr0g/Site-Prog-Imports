@@ -125,6 +125,10 @@ function toSale(r: SaleRow, parcelas: Installment[] = [], capas = new Map<string
   };
 }
 
+function arredondar(v: number): number {
+  return Math.round((Number.isFinite(v) ? v : 0) * 100) / 100;
+}
+
 export async function listSales(): Promise<Sale[]> {
   const supabase = await createClient();
   // O cadastro do cliente vem junto por causa da etiqueta de transporte: é dele
@@ -166,12 +170,24 @@ export async function sincronizarFinanceiroDaVenda(orderId: string): Promise<voi
   const { data } = await supabase
     .from('orders')
     .select(
-      'order_number, name, status, total, cost_total, created_at, sale_date, order_items(product_name, qty)'
+      'order_number, name, status, total, cost_total, created_at, sale_date, order_items(product_name, qty, unit_cost, stock_item_id)'
     )
     .eq('id', orderId)
     .maybeSingle();
 
   if (!data) return;
+
+  // Custo que ainda NÃO passou pelo caixa: só o dos itens que não vieram do
+  // estoque. A compra de um item de estoque já virou despesa no dia em que ele
+  // entrou — lançar de novo na venda tiraria o mesmo dinheiro duas vezes.
+  //
+  // Encomenda (item sem vínculo com estoque) continua lançando aqui: nesse caso
+  // não houve compra para estoque, e o custo nasce com a venda.
+  const custoForaDoEstoque = arredondar(
+    (data.order_items ?? [])
+      .filter((i) => !i.stock_item_id)
+      .reduce((s, i) => s + Number(i.unit_cost ?? 0) * (i.qty ?? 0), 0)
+  );
 
   // O nome entra na descrição do caixa: um extrato de "Venda #1051, Venda
   // #1052, Venda #1053" não diz nada sobre o que foi vendido.
@@ -186,7 +202,7 @@ export async function sincronizarFinanceiroDaVenda(orderId: string): Promise<voi
     descricao,
     status: data.status as SaleStatus,
     total: Number(data.total),
-    costTotal: Number(data.cost_total),
+    costTotal: custoForaDoEstoque,
     saleDate: data.sale_date ?? data.created_at.slice(0, 10),
   });
 

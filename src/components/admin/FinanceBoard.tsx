@@ -10,6 +10,7 @@ import {
   computeFinanceIndicators,
   fluxoMensal,
   rotuloStatus,
+  ROTULO_DA_ORIGEM,
   FINANCE_STATUSES,
   type FinanceEntry,
   type FinanceKind,
@@ -76,7 +77,7 @@ function TabelaLancamentos({
           <div className="min-w-0">
             <div className="truncate font-bold">{e.description}</div>
             {e.source !== 'manual' && (
-              <div className="text-[11px] text-fg-faded">gerado por {e.source === 'venda' ? 'venda' : 'serviço'}</div>
+              <div className="text-[11px] text-fg-faded">{ROTULO_DA_ORIGEM[e.source]}</div>
             )}
           </div>
           <div className="text-right font-bold" style={{ color: cor }}>{formatBRL(e.amount)}</div>
