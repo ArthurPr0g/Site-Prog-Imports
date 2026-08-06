@@ -138,70 +138,73 @@ export function desenharEtiqueta(
   y += 60;
   rotulo(ctx, 'DESTINATÁRIO', MARGEM, y);
 
-  y += 52;
+  y += 60;
   ctx.fillStyle = PRETO;
-  ctx.font = fonte(46, 800);
-  y = escreverQuebrando(ctx, etiqueta.destinatario.nome, MARGEM, y, largura, 56, 2);
+  ctx.font = fonte(58, 800);
+  y = escreverQuebrando(ctx, etiqueta.destinatario.nome, MARGEM, y, largura, 68, 2);
 
-  y += 18;
-  ctx.font = fonte(32);
+  y += 26;
+  ctx.font = fonte(38);
   for (const linha of linhasDoEndereco(etiqueta.destinatario)) {
-    y = escreverQuebrando(ctx, linha, MARGEM, y, largura, 44, 2);
-    y += 6;
+    y = escreverQuebrando(ctx, linha, MARGEM, y, largura, 50, 2);
+    y += 8;
   }
 
   // O CEP em caixa própria: é por ele que a triagem separa a encomenda, e
   // perdido no meio do endereço ele erra com muito mais frequência.
-  y += 24;
-  const alturaCaixa = 96;
+  y += 30;
+  const alturaCaixa = 118;
   ctx.strokeStyle = PRETO;
   ctx.lineWidth = 3;
   ctx.strokeRect(MARGEM, y, largura, alturaCaixa);
   ctx.fillStyle = CINZA;
   ctx.font = fonte(20, 700);
-  ctx.fillText('CEP', MARGEM + 26, y + 38);
+  ctx.fillText('CEP', MARGEM + 26, y + 42);
   ctx.fillStyle = PRETO;
-  ctx.font = fonte(52, 800);
-  ctx.fillText(etiqueta.destinatario.cep || '—', MARGEM + 26, y + 76);
+  ctx.font = fonte(66, 800);
+  ctx.fillText(etiqueta.destinatario.cep || '—', MARGEM + 26, y + 94);
 
   const contato = [etiqueta.destinatario.telefone, etiqueta.destinatario.doc].filter(Boolean).join('   ·   ');
   if (contato) {
     ctx.textAlign = 'right';
     ctx.fillStyle = CINZA;
     ctx.font = fonte(24);
-    ctx.fillText(contato, LARGURA - MARGEM - 26, y + 62);
+    ctx.fillText(contato, LARGURA - MARGEM - 26, y + 76);
     ctx.textAlign = 'left';
   }
 
-  y += alturaCaixa + 70;
-  separador(ctx, y);
-
   // --- remetente ------------------------------------------------------------
-  y += 56;
+  // Ancorado no rodapé, e não emendado no destinatário: assim o espaço em
+  // branco fica no meio da etiqueta — onde a fita passa — em vez de sobrar um
+  // vazio embaixo que faz a etiqueta parecer cortada. É também a posição em que
+  // o remetente aparece nas etiquetas dos Correios.
+  const yRemetente = ALTURA - MARGEM - 500;
+  separador(ctx, yRemetente - 44);
+  y = yRemetente;
   rotulo(ctx, 'REMETENTE', MARGEM, y);
 
-  y += 44;
+  y += 48;
   ctx.fillStyle = PRETO;
-  ctx.font = fonte(30, 700);
-  y = escreverQuebrando(ctx, etiqueta.remetente.nome, MARGEM, y, largura, 40, 2);
+  ctx.font = fonte(32, 700);
+  y = escreverQuebrando(ctx, etiqueta.remetente.nome, MARGEM, y, largura, 42, 1);
 
-  y += 10;
+  y += 12;
   ctx.fillStyle = CINZA;
-  ctx.font = fonte(26);
+  ctx.font = fonte(27);
+  // Uma linha por trecho: o endereço da própria loja é conhecido e curto, e
+  // limitar aqui é o que garante que o bloco nunca invada o rodapé.
   for (const linha of linhasDoEndereco(etiqueta.remetente)) {
-    y = escreverQuebrando(ctx, linha, MARGEM, y, largura, 36, 2);
-    y += 2;
+    y = escreverQuebrando(ctx, linha, MARGEM, y, largura, 37, 1);
   }
-  if (etiqueta.remetente.cep) {
-    ctx.fillText(`CEP ${etiqueta.remetente.cep}`, MARGEM, y + 34);
-    y += 34;
-  }
-  const contatoRemetente = [etiqueta.remetente.telefone, etiqueta.remetente.doc]
+  const rodapeRemetente = [
+    etiqueta.remetente.cep ? `CEP ${etiqueta.remetente.cep}` : '',
+    etiqueta.remetente.telefone,
+    etiqueta.remetente.doc,
+  ]
     .filter(Boolean)
     .join('   ·   ');
-  if (contatoRemetente) {
-    ctx.fillText(contatoRemetente, MARGEM, y + 36);
-    y += 36;
+  if (rodapeRemetente) {
+    escreverQuebrando(ctx, rodapeRemetente, MARGEM, y + 36, largura, 34, 1);
   }
 
   // --- conteúdo -------------------------------------------------------------
