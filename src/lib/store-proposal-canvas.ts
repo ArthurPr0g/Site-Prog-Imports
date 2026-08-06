@@ -9,10 +9,15 @@ import { BRAND } from '@/lib/brand';
 import { formatBRL } from '@/lib/format';
 import type { PropostaDaLoja } from '@/lib/store-proposal';
 
-/** 1080 × 1350 é o retrato 4:5 que WhatsApp e Instagram mostram inteiro, sem
- *  cortar as bordas nem exigir que o cliente abra em tela cheia. */
+/** Retrato 2:3, o formato de mensagem.
+ *
+ *  Era 4:5 e ficou baixo demais: com a foto inteira na peça — e não mais
+ *  cortada para preencher —, sobravam 470px de altura para o produto, e um
+ *  notebook quase quadrado aparecia pequeno no meio do cartão. A altura extra
+ *  vai toda para a foto. WhatsApp e Telegram mostram 2:3 sem cortar; é a peça
+ *  para mandar ao cliente, não post de feed. */
 export const LARGURA = 1080;
-export const ALTURA = 1350;
+export const ALTURA = 1620;
 
 const MARGEM = 72;
 const FUNDO = '#0f0f12';
@@ -77,20 +82,36 @@ function quebrar(ctx: CanvasRenderingContext2D, texto: string, largura: number, 
   return visiveis;
 }
 
-/** Desenha a foto preenchendo a área sem deformar: recorta o excesso do lado
- *  maior, como `object-fit: cover`. Esticar deixaria notebook com tela oval. */
+/** Desenha a foto INTEIRA dentro da área, centralizada e sem deformar.
+ *
+ *  Preencher cortando (`cover`) era o que decapitava o produto: foto quadrada
+ *  numa área larga perdia topo e base, e o notebook aparecia sem tela e sem
+ *  teclado. Aqui sobra espaço nas laterais quando a proporção não bate — e
+ *  sobra é melhor que faltar, ainda mais depois que o fundo é recortado e o
+ *  produto passa a flutuar no cartão.
+ *
+ *  A folga impede que o produto encoste na moldura arredondada. */
 function desenharFoto(
   ctx: CanvasRenderingContext2D,
-  img: HTMLImageElement,
+  fonteImg: CanvasImageSource & { width: number; height: number },
   x: number,
   y: number,
   w: number,
-  h: number
+  h: number,
+  folga = 26
 ): void {
-  const escala = Math.max(w / img.width, h / img.height);
-  const larguraFinal = img.width * escala;
-  const alturaFinal = img.height * escala;
-  ctx.drawImage(img, x + (w - larguraFinal) / 2, y + (h - alturaFinal) / 2, larguraFinal, alturaFinal);
+  const areaW = w - folga * 2;
+  const areaH = h - folga * 2;
+  const escala = Math.min(areaW / fonteImg.width, areaH / fonteImg.height);
+  const larguraFinal = fonteImg.width * escala;
+  const alturaFinal = fonteImg.height * escala;
+  ctx.drawImage(
+    fonteImg,
+    x + (w - larguraFinal) / 2,
+    y + (h - alturaFinal) / 2,
+    larguraFinal,
+    alturaFinal
+  );
 }
 
 /** Desenha a proposta inteira. */
@@ -98,7 +119,8 @@ export function desenharProposta(
   ctx: CanvasRenderingContext2D,
   p: PropostaDaLoja,
   logo: HTMLImageElement | null,
-  foto: HTMLImageElement | null
+  /** Já sem fundo, quando o recorte deu certo; a foto original quando não. */
+  foto: (CanvasImageSource & { width: number; height: number }) | null
 ): void {
   const largura = LARGURA - MARGEM * 2;
 
@@ -132,7 +154,7 @@ export function desenharProposta(
 
   // --- foto -----------------------------------------------------------------
   y += 54;
-  const alturaFoto = 430;
+  const alturaFoto = 640;
   ctx.save();
   caminhoArredondado(ctx, MARGEM, y, largura, alturaFoto, 28);
   ctx.fillStyle = CARTAO;
@@ -156,7 +178,7 @@ export function desenharProposta(
   ctx.stroke();
 
   // --- produto --------------------------------------------------------------
-  y += alturaFoto + 62;
+  y += alturaFoto + 54;
   if (p.categoria) {
     ctx.fillStyle = BRAND.accent;
     ctx.font = fonte(18, 800);
@@ -175,6 +197,8 @@ export function desenharProposta(
     ctx.fillStyle = CINZA;
     ctx.font = fonte(24);
     y += 4;
+    // Duas linhas cabem de novo com a peça mais alta. Mais que isso encostaria
+    // no cartão de valor quando o nome também ocupa duas.
     for (const linha of quebrar(ctx, p.specs, largura, 2)) {
       ctx.fillText(linha, MARGEM, y);
       y += 34;

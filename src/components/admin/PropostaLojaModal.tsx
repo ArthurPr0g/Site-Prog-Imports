@@ -2,6 +2,7 @@
 
 import { nomeDaProposta, type PropostaDaLoja } from '@/lib/store-proposal';
 import { desenharProposta, LARGURA, ALTURA } from '@/lib/store-proposal-canvas';
+import { recortarProduto } from '@/lib/image-cutout';
 import { PngPreviewModal, carregarImagem } from '@/components/admin/PngPreviewModal';
 
 export function PropostaLojaModal({
@@ -26,7 +27,10 @@ export function PropostaLojaModal({
           carregarImagem('/images/logo.png'),
           carregarImagem(proposta.fotoUrl),
         ]);
-        desenharProposta(ctx, proposta, logo, foto);
+        // O recorte devolve null quando o fundo não é liso — aí vale a foto
+        // original, que ainda entra inteira, sem corte.
+        const recorte = foto ? recortarProduto(foto) : null;
+        desenharProposta(ctx, proposta, logo, recorte ?? foto);
       }}
       onFechar={onFechar}
       aviso={
