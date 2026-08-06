@@ -1010,6 +1010,47 @@ plano são 17 cláusulas; sem, 15.
 **As metades de 50%** arredondam ao centavo com a primeira levando o a mais, para
 as duas somarem exatamente o total.
 
+### Assinatura do contratado (2026-08-06)
+
+O bloco CONTRATADO sai com a **assinatura impressa sobre a linha** quando há uma
+cadastrada. Sem cadastro, continua a linha em branco — nada muda para quem ainda
+não enviou.
+
+⚠️ **A imagem não vai para o repositório, e isso não é preciosismo.** O
+repositório é público, e imagem versionada fica no histórico para sempre, mesmo
+depois de removida. Com o arquivo em mãos, qualquer pessoa monta um documento
+que parece assinado pelo dono. Ela é enviada pela tela de Configurações e
+guardada no bucket **privado** `signatures` — o primeiro privado do projeto; os
+de imagem do site são públicos porque foto de produto existe para ser vista, e
+este existe para ser usado por uma pessoa só.
+
+**Sem policy de leitura pública.** Quem lê é o servidor, com a sessão do admin, na
+hora de montar o PDF; a imagem chega ao documento como data URI. O banco guarda o
+**caminho**, não a URL: em bucket privado não existe URL permanente, e a assinada
+expira. A prévia da tela usa URL assinada de dez minutos — permanente para este
+arquivo valeria tanto quanto o arquivo.
+
+**Só a altura da imagem é fixada** (42pt); a proporção original manda na largura.
+Assinatura esticada é a primeira coisa que denuncia documento montado.
+
+A tela pede **PNG com fundo transparente** e explica: JPG leva o retângulo branco
+junto e cria uma emenda visível sobre o papel. Não dá para exigir, então aceita
+qualquer imagem e avisa quando o formato não é o ideal.
+
+**Falha ao baixar a assinatura não impede o contrato de sair** — sem a imagem ele
+volta à linha assinável à mão. Um 500 na hora de mandar a proposta seria pior que
+um contrato assinado a caneta. No upload, a anterior só é apagada **depois** que a
+nova está gravada; na ordem inversa uma falha no meio deixaria o contrato sem
+assinatura nenhuma.
+
+Verificado em produção (2026-08-06) com um PNG sintético: upload gravou caminho e
+arquivo, o contrato saiu com o traço sobre a linha e o rótulo "Assinatura"
+embaixo, e a remoção limpou banco e bucket. O arquivo de teste foi removido — o
+espaço está vazio esperando a assinatura real.
+
+⚠️ **Pendente do dono:** enviar a assinatura em Configurações. Enquanto não
+enviar, o contrato sai com a linha em branco.
+
 Testado em `scratchpad/test-contrato.mjs` (28 asserções). Verificado em produção
 (2026-08-01): proposta de R$ 4.500 + R$ 149/mês gerou 5 páginas com contrato e 1
 sem; contrato trouxe "até 20 (vinte) dias" e R$ 2.250 + R$ 2.250 do orçamento;
