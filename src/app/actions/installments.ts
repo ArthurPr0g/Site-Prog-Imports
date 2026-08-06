@@ -26,11 +26,13 @@ function revalidar() {
   revalidatePath('/admin/vendas');
   revalidatePath('/admin/prestacao-servico');
   revalidatePath('/admin/financeiro');
+  revalidatePath('/admin/clientes', 'layout');
   revalidatePath('/admin');
 }
 
 export async function updateInstallmentAction(input: {
   id: string;
+  amount: number;
   status: InstallmentStatus;
   dueDate: string;
   notes: string;
@@ -40,6 +42,9 @@ export async function updateInstallmentAction(input: {
 
   if (!INSTALLMENT_STATUSES.includes(input.status)) return errResult('Status inválido.');
   if (!input.dueDate) return errResult('Informe a data de vencimento.');
+  if (!Number.isFinite(input.amount) || input.amount <= 0) {
+    return errResult('O valor da parcela precisa ser maior que zero.');
+  }
 
   const { data: parcela } = await supabase
     .from('payment_installments')
@@ -52,6 +57,7 @@ export async function updateInstallmentAction(input: {
   const { error } = await supabase
     .from('payment_installments')
     .update({
+      amount: Math.round(input.amount * 100) / 100,
       status: input.status,
       due_date: input.dueDate,
       notes: input.notes.trim(),
@@ -68,6 +74,40 @@ export async function updateInstallmentAction(input: {
     input.status === 'Recebida'
       ? 'Parcela recebida. O valor entrou na receita do Financeiro.'
       : 'Parcela atualizada.'
+  );
+}
+
+/** Apaga uma parcela do carnê.
+ *
+ *  Existe porque um carnê real muda depois de combinado: o cliente antecipa e
+ *  quita duas de uma vez, ou uma parcela foi combinada e desfeita. Sem isto a
+ *  única saída era cancelá-la — o que deixa a linha na tela para sempre.
+ *
+ *  A ressincronização é o que impede a linha da parcela de continuar no
+ *  Financeiro cobrando um dinheiro que ninguém mais espera. */
+export async function deleteInstallmentAction(id: string): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  const { data: parcela } = await supabase
+    .from('payment_installments')
+    .select('source_type, source_id, number, status')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (!parcela) return errResult('Parcela não encontrada.');
+
+  const { error } = await supabase.from('payment_installments').delete().eq('id', id);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível excluir a parcela.'));
+
+  await ressincronizar(parcela.source_type as SourceType, parcela.source_id);
+
+  revalidar();
+  const rotulo = parcela.number === 0 ? 'Entrada' : `Parcela ${parcela.number}`;
+  return okResult(
+    parcela.status === 'Recebida'
+      ? `${rotulo} excluída. O valor saiu da receita do Financeiro.`
+      : `${rotulo} excluída e removida do Financeiro.`
   );
 }
 

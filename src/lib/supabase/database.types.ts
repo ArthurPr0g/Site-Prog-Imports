@@ -505,6 +505,7 @@ export type Database = {
           installment_notes: string
           interest_pct: number
           is_import: boolean
+          name: string
           order_number: number
           origin: string
           payment_method: string
@@ -535,6 +536,7 @@ export type Database = {
           installment_notes?: string
           interest_pct?: number
           is_import?: boolean
+          name?: string
           order_number: number
           origin?: string
           payment_method?: string
@@ -565,6 +567,7 @@ export type Database = {
           installment_notes?: string
           interest_pct?: number
           is_import?: boolean
+          name?: string
           order_number?: number
           origin?: string
           payment_method?: string

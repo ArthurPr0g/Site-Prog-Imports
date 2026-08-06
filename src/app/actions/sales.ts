@@ -11,6 +11,8 @@ import { geraParcelas, gerarParcelas, MAX_JUROS_PCT } from '@/lib/installments';
 
 export type SaleFormInput = {
   id?: string;
+  /** Apelido opcional. Vazio faz a tela derivar o nome dos itens. */
+  name: string;
   customerId: string | null;
   /** Cliente do ERP. É o que faz a venda entrar no histórico dele. */
   erpCustomerId: string | null;
@@ -74,6 +76,7 @@ export async function saveSaleAction(input: SaleFormInput): Promise<ActionResult
   }
 
   const payload = {
+    name: input.name.trim(),
     customer_id: input.customerId,
     erp_customer_id: input.erpCustomerId,
     customer_name: nome,
@@ -95,6 +98,16 @@ export async function saveSaleAction(input: SaleFormInput): Promise<ActionResult
   };
 
   let orderId = input.id;
+
+  // Condições de antes, para decidir se o carnê precisa ser refeito. Lido agora
+  // porque o update abaixo já apaga esse estado.
+  const { data: anterior } = orderId
+    ? await supabase
+        .from('orders')
+        .select('total, installment_count, down_payment, interest_pct, first_due_date')
+        .eq('id', orderId)
+        .maybeSingle()
+    : { data: null };
 
   if (orderId) {
     const { error } = await supabase.from('orders').update(payload).eq('id', orderId);
@@ -128,18 +141,33 @@ export async function saveSaleAction(input: SaleFormInput): Promise<ActionResult
 
   // As parcelas vêm antes da sincronização: é delas que sai a receita no caixa
   // quando o pagamento é parcelado.
+  //
+  // Só refaz o carnê quando o total ou as condições mudaram. O dono edita valor
+  // e vencimento parcela a parcela, e às vezes apaga uma; regerar a cada
+  // salvamento da venda desfaria esse trabalho em silêncio, mesmo que ele só
+  // tivesse corrigido o nome do cliente.
   if (parcelado) {
-    await salvarParcelas(
-      'venda',
-      orderId,
-      gerarParcelas({
-        total: totais.total,
-        parcelas: input.installmentCount,
-        entrada: input.downPayment,
-        jurosPct: input.interestPct,
-        primeiroVencimento: input.firstDueDate,
-      })
-    );
+    const condicoesIguais =
+      !!anterior &&
+      Number(anterior.total) === totais.total &&
+      anterior.installment_count === input.installmentCount &&
+      Number(anterior.down_payment) === input.downPayment &&
+      Number(anterior.interest_pct) === input.interestPct &&
+      (anterior.first_due_date ?? '') === input.firstDueDate;
+
+    if (!condicoesIguais) {
+      await salvarParcelas(
+        'venda',
+        orderId,
+        gerarParcelas({
+          total: totais.total,
+          parcelas: input.installmentCount,
+          entrada: input.downPayment,
+          jurosPct: input.interestPct,
+          primeiroVencimento: input.firstDueDate,
+        })
+      );
+    }
   } else {
     await removerParcelas('venda', orderId);
   }

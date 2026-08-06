@@ -28,6 +28,10 @@ export function calcularAdimplencia(parcelas: Installment[], hojeISO: string): A
 export type CompraDoCliente = {
   id: string;
   orderNumber: number;
+  /** Como a venda se chama: o apelido do dono ou o nome derivado dos itens. */
+  nome: string;
+  /** Só quando o dono apelidou a venda — aí os itens viram subtítulo. */
+  apelidada: boolean;
   data: string;
   itens: string;
   origem: string;
@@ -92,6 +96,40 @@ export type ResumoFinanceiroDoCliente = {
 
 function arredondar(v: number): number {
   return Math.round((Number.isFinite(v) ? v : 0) * 100) / 100;
+}
+
+/** Uma parcela com o registro de onde ela veio.
+ *
+ *  A lista consolidada do cliente mistura carnês de vendas e de serviços, e uma
+ *  parcela solta não diz de onde saiu — nem quantas irmãs ela tem, que é o que
+ *  faz o rótulo "3/6" existir. */
+export type ParcelaComOrigem = {
+  parcela: Installment;
+  origem: string;
+  totalDoGrupo: number;
+};
+
+/** Todas as parcelas do cliente em ordem de vencimento, cada uma sabendo sua
+ *  origem. Em ordem de vencimento porque a pergunta que essa lista responde é
+ *  "o que vence a seguir", não "de qual venda veio". */
+export function parcelasComOrigem(historico: HistoricoDoCliente): ParcelaComOrigem[] {
+  const linhas: ParcelaComOrigem[] = [];
+
+  const acrescentar = (parcelas: Installment[], origem: string) => {
+    const totalDoGrupo = parcelas.filter((p) => p.number > 0).length;
+    for (const parcela of parcelas) linhas.push({ parcela, origem, totalDoGrupo });
+  };
+
+  for (const c of historico.compras) {
+    if (c.status === 'Cancelado') continue;
+    acrescentar(c.parcelas, c.nome ? `#${c.orderNumber} · ${c.nome}` : `Venda #${c.orderNumber}`);
+  }
+  for (const s of historico.servicos) {
+    if (s.status === 'Cancelada') continue;
+    acrescentar(s.parcelas, s.titulo);
+  }
+
+  return linhas.sort((a, b) => a.parcela.dueDate.localeCompare(b.parcela.dueDate));
 }
 
 /** Consolida o financeiro do cliente.

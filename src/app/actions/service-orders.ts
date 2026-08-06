@@ -132,6 +132,18 @@ export async function saveServiceOrderAction(input: ServiceOrderInput): Promise<
 
   let orderId = input.id;
 
+  // Condições de antes, para decidir se o carnê precisa ser refeito. Lido agora
+  // porque o update abaixo já apaga esse estado.
+  const { data: anterior } = orderId
+    ? await supabase
+        .from('service_orders')
+        .select(
+          'total_amount, discount_type, discount_value, installment_count, down_payment, interest_pct, first_due_date'
+        )
+        .eq('id', orderId)
+        .maybeSingle()
+    : { data: null };
+
   if (orderId) {
     const { error } = await supabase.from('service_orders').update(payload).eq('id', orderId);
     if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar a prestação.'));
@@ -158,18 +170,39 @@ export async function saveServiceOrderAction(input: ServiceOrderInput): Promise<
   );
   if (erroItens) return errResult(friendlyDbError(erroItens, 'A prestação foi salva, mas os serviços não.'));
 
+  // Só refaz o carnê quando o valor ou as condições mudaram: o dono ajusta
+  // parcelas uma a uma pela página do cliente, e regerar a cada salvamento
+  // desfaria esse trabalho em silêncio.
   if (parcelado) {
-    await salvarParcelas(
-      'servico',
-      orderId,
-      gerarParcelas({
-        total: trabalho,
-        parcelas: input.installmentCount,
-        entrada: input.downPayment,
-        jurosPct: input.interestPct,
-        primeiroVencimento: input.firstDueDate,
-      })
-    );
+    const trabalhoAnterior = anterior
+      ? aplicarDesconto(Number(anterior.total_amount), {
+          tipo: anterior.discount_type as Desconto['tipo'],
+          valor: Number(anterior.discount_value),
+          descricao: '',
+        })
+      : null;
+
+    const condicoesIguais =
+      !!anterior &&
+      trabalhoAnterior === trabalho &&
+      anterior.installment_count === input.installmentCount &&
+      Number(anterior.down_payment) === input.downPayment &&
+      Number(anterior.interest_pct) === input.interestPct &&
+      (anterior.first_due_date ?? '') === input.firstDueDate;
+
+    if (!condicoesIguais) {
+      await salvarParcelas(
+        'servico',
+        orderId,
+        gerarParcelas({
+          total: trabalho,
+          parcelas: input.installmentCount,
+          entrada: input.downPayment,
+          jurosPct: input.interestPct,
+          primeiroVencimento: input.firstDueDate,
+        })
+      );
+    }
   } else {
     await removerParcelas('servico', orderId);
   }

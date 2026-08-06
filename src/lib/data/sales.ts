@@ -1,5 +1,12 @@
 ﻿import { createClient } from '@/lib/supabase/server';
-import { lancamentosDaVenda, type Sale, type SaleItem, type SaleOrigin, type SaleStatus } from '@/lib/sales';
+import {
+  lancamentosDaVenda,
+  descricaoDaVenda,
+  type Sale,
+  type SaleItem,
+  type SaleOrigin,
+  type SaleStatus,
+} from '@/lib/sales';
 import { listInstallments, listInstallmentsBySource } from '@/lib/data/installments';
 import type { Installment } from '@/lib/installments';
 
@@ -16,6 +23,7 @@ type ItemRow = {
 type SaleRow = {
   id: string;
   order_number: number;
+  name: string;
   customer_id: string | null;
   erp_customer_id: string | null;
   customer_name: string;
@@ -41,6 +49,7 @@ function toSale(r: SaleRow, parcelas: Installment[] = []): Sale {
   return {
     id: r.id,
     orderNumber: r.order_number,
+    name: r.name ?? '',
     customerId: r.customer_id,
     erpCustomerId: r.erp_customer_id,
     customerName: r.customer_name,
@@ -103,14 +112,23 @@ export async function sincronizarFinanceiroDaVenda(orderId: string): Promise<voi
 
   const { data } = await supabase
     .from('orders')
-    .select('order_number, status, total, cost_total, created_at')
+    .select('order_number, name, status, total, cost_total, created_at, order_items(product_name, qty)')
     .eq('id', orderId)
     .maybeSingle();
 
   if (!data) return;
 
+  // O nome entra na descrição do caixa: um extrato de "Venda #1051, Venda
+  // #1052, Venda #1053" não diz nada sobre o que foi vendido.
+  const descricao = descricaoDaVenda({
+    orderNumber: data.order_number,
+    name: data.name ?? '',
+    items: (data.order_items ?? []).map((i) => ({ productName: i.product_name, qty: i.qty })),
+  });
+
   const alvos = lancamentosDaVenda({
     orderNumber: data.order_number,
+    descricao,
     status: data.status as SaleStatus,
     total: Number(data.total),
     costTotal: Number(data.cost_total),
@@ -129,7 +147,7 @@ export async function sincronizarFinanceiroDaVenda(orderId: string): Promise<voi
           .map((p) => ({
             chave: `receita:${p.number}`,
             kind: 'receita' as const,
-            description: `Venda #${data.order_number} — ${p.number === 0 ? 'entrada' : `parcela ${p.number}`}`,
+            description: `${descricao} (${p.number === 0 ? 'entrada' : `parcela ${p.number}`})`,
             amount: p.amount,
             entryDate: p.dueDate,
             // Só "Recebida" vira dinheiro no caixa. Pendente e atrasada seguem

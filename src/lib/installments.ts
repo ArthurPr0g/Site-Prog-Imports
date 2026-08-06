@@ -158,6 +158,29 @@ export function statusExibido(p: Installment, hojeISO: string): InstallmentStatu
   return p.status;
 }
 
+/** Quanto o carnê cobra ao todo. Canceladas ficam de fora: não são cobrança.
+ *
+ *  Serve para conferir o carnê contra o valor que o cliente deve. Depois que o
+ *  dono pôde editar valor e apagar parcela, a soma pode deixar de bater — e um
+ *  carnê que não fecha com a venda é justamente o tipo de erro que ninguém
+ *  percebe olhando linha a linha. */
+export function somaDoCarne(parcelas: Installment[]): number {
+  return arredondar(parcelas.filter((p) => p.status !== 'Cancelada').reduce((s, p) => s + p.amount, 0));
+}
+
+/** Diferença entre o que o carnê cobra e o que deveria cobrar. Zero significa
+ *  fechado.
+ *
+ *  A tolerância é de meio centavo, e não de um centavo: só descarta poeira de
+ *  ponto flutuante. Um centavo de diferença é diferença de verdade — o carnê
+ *  gerado já joga a sobra na última parcela justamente para fechar na casa do
+ *  centavo, então se sobrou um, alguém mexeu. */
+export function divergenciaDoCarne(parcelas: Installment[], esperado: number): number {
+  const alvo = Number.isFinite(esperado) ? esperado : 0;
+  const diferenca = somaDoCarne(parcelas) - alvo;
+  return Math.abs(diferenca) < 0.005 ? 0 : arredondar(diferenca);
+}
+
 export function rotuloDaParcela(p: Installment, totalParcelas: number): string {
   return p.number === 0 ? 'Entrada' : `${p.number}/${totalParcelas}`;
 }

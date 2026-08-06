@@ -25,7 +25,7 @@ import { SEM_DESCONTO, temDesconto, aplicarDesconto, rotuloDoDesconto, type Desc
 import { DescontoFields } from '@/components/admin/DescontoFields';
 import { ParcelamentoFields } from '@/components/admin/ParcelamentoFields';
 import { ParcelasList } from '@/components/admin/ParcelasList';
-import { geraParcelas, type Installment } from '@/lib/installments';
+import { geraParcelas, calcularParcelamento, type Installment } from '@/lib/installments';
 import { saveServiceOrderAction, deleteServiceOrderAction, type ServiceOrderInput } from '@/app/actions/service-orders';
 
 const inputClass =
@@ -550,7 +550,20 @@ export function ServiceOrdersTable({
 
             {parcelasDaEdicao.length > 0 && (
               <div className="mb-4">
-                <ParcelasList parcelas={parcelasDaEdicao} />
+                <ParcelasList
+                  parcelas={parcelasDaEdicao}
+                  // Com juros o carnê cobra mais que o trabalho; é essa soma que
+                  // ele tem que fechar, não o valor puro dos serviços.
+                  totalEsperado={
+                    calcularParcelamento({
+                      total: aplicarDesconto(totais.total, form.desconto),
+                      parcelas: form.installmentCount,
+                      entrada: form.downPayment,
+                      jurosPct: form.interestPct,
+                      primeiroVencimento: form.firstDueDate,
+                    }).totalComJuros
+                  }
+                />
               </div>
             )}
 

@@ -35,6 +35,8 @@ export type SaleItem = {
 export type Sale = {
   id: string;
   orderNumber: number;
+  /** Apelido dado pelo dono. Vazio significa "derive dos itens". */
+  name: string;
   /** Conta do site (`profiles`), quando a venda veio do checkout. */
   customerId: string | null;
   /** Cliente do ERP (`customers`). É por ele que a venda entra no histórico. */
@@ -63,6 +65,37 @@ export type Sale = {
 
 function arredondar(v: number): number {
   return Math.round((Number.isFinite(v) ? v : 0) * 100) / 100;
+}
+
+type VendaComNome = {
+  name?: string;
+  items: { productName: string; qty: number }[];
+};
+
+/** Como a venda se chama nas telas.
+ *
+ *  Ordem: o apelido que o dono deu; senão os produtos; senão nada — e aí quem
+ *  chama cai no número. Derivar dos itens é o que faz a maioria das vendas ter
+ *  nome útil sem ninguém digitar nada.
+ *
+ *  Com vários itens mostra o primeiro e conta o resto: a lista inteira estoura
+ *  qualquer coluna, e o primeiro item já é o que o dono lembra da venda. */
+export function nomeDaVenda(v: VendaComNome): string {
+  const apelido = (v.name ?? '').trim();
+  if (apelido) return apelido;
+
+  const itens = v.items.filter((i) => i.productName.trim());
+  if (itens.length === 0) return '';
+
+  const primeiro = itens[0].qty > 1 ? `${itens[0].qty}× ${itens[0].productName}` : itens[0].productName;
+  return itens.length === 1 ? primeiro : `${primeiro} +${itens.length - 1}`;
+}
+
+/** Nome com o número junto, para listas e para o Financeiro: o número continua
+ *  sendo a identidade da venda, o nome é o que a torna reconhecível. */
+export function etiquetaDaVenda(v: VendaComNome & { orderNumber: number }): string {
+  const nome = nomeDaVenda(v);
+  return nome ? `#${v.orderNumber} · ${nome}` : `Venda #${v.orderNumber}`;
 }
 
 export type TotaisDaVenda = {
@@ -121,6 +154,8 @@ export type LancamentoDaVenda = {
  *  linhas são `Previsto`, porque nem a entrada nem a saída aconteceram. */
 export function lancamentosDaVenda(venda: {
   orderNumber: number;
+  /** Já pronto: `descricaoDaVenda` decide entre apelido, itens e número. */
+  descricao?: string;
   status: SaleStatus;
   total: number;
   costTotal: number;
@@ -130,6 +165,7 @@ export function lancamentosDaVenda(venda: {
 
   const status = vendaFoiPaga(venda.status) ? 'Pago' : 'Previsto';
   const data = venda.createdAt.slice(0, 10);
+  const rotulo = venda.descricao || `Venda #${venda.orderNumber}`;
   const alvos: LancamentoDaVenda[] = [];
 
   if (venda.total > 0) {
@@ -137,7 +173,7 @@ export function lancamentosDaVenda(venda: {
       kind: 'receita',
       amount: arredondar(venda.total),
       status,
-      description: `Venda #${venda.orderNumber}`,
+      description: rotulo,
       entryDate: data,
     });
   }
@@ -147,12 +183,24 @@ export function lancamentosDaVenda(venda: {
       kind: 'despesa',
       amount: arredondar(venda.costTotal),
       status,
-      description: `Custo da venda #${venda.orderNumber}`,
+      description: `Custo da ${rotulo.replace(/^Venda /, 'venda ')}`,
       entryDate: data,
     });
   }
 
   return alvos;
+}
+
+/** Descrição da venda no Financeiro: número sempre, nome quando houver.
+ *
+ *  O número fica na frente porque é o que liga a linha do caixa à venda; o nome
+ *  vem depois para o extrato ser legível sem abrir a venda. Cortado porque a
+ *  coluna do Financeiro é estreita e um nome longo empurraria o valor para fora. */
+export function descricaoDaVenda(v: VendaComNome & { orderNumber: number }): string {
+  const nome = nomeDaVenda(v);
+  if (!nome) return `Venda #${v.orderNumber}`;
+  const curto = nome.length > 46 ? `${nome.slice(0, 45)}…` : nome;
+  return `Venda #${v.orderNumber} — ${curto}`;
 }
 
 export type SaleIndicators = {

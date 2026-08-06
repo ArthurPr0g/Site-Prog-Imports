@@ -2,21 +2,13 @@
 
 import { useState } from 'react';
 import { formatBRL, formatDateBR } from '@/lib/format';
-import { statusExibido, rotuloDaParcela, type Installment } from '@/lib/installments';
-import type { HistoricoDoCliente, ResumoFinanceiroDoCliente } from '@/lib/customer-history';
+import { statusExibido } from '@/lib/installments';
+import { parcelasComOrigem, type HistoricoDoCliente, type ResumoFinanceiroDoCliente } from '@/lib/customer-history';
 import { SeloAdimplencia } from '@/components/admin/SeloAdimplencia';
+import { ParcelasList, type OrigemDaParcela } from '@/components/admin/ParcelasList';
 
 const VERDE = '#4ade80';
 const VERMELHO = '#e05555';
-const AMARELO = '#d9a441';
-const CINZA = '#7a7a84';
-
-const COR_PARCELA: Record<string, string> = {
-  Pendente: AMARELO,
-  Recebida: VERDE,
-  Atrasada: VERMELHO,
-  Cancelada: CINZA,
-};
 
 const ABAS = ['Financeiro', 'Compras', 'Serviços', 'Orçamentos'] as const;
 type Aba = (typeof ABAS)[number];
@@ -92,7 +84,7 @@ export function ClienteHistorico({
       </div>
 
       <div className="rounded-[18px] border border-border bg-card p-6">
-        {aba === 'Financeiro' && <AbaFinanceiro resumo={resumo} historico={historico} hoje={hoje} />}
+        {aba === 'Financeiro' && <AbaFinanceiro resumo={resumo} historico={historico} />}
         {aba === 'Compras' && <AbaCompras historico={historico} hoje={hoje} />}
         {aba === 'Serviços' && <AbaServicos historico={historico} />}
         {aba === 'Orçamentos' && <AbaOrcamentos historico={historico} />}
@@ -120,23 +112,19 @@ function Vazio({ texto }: { texto: string }) {
 function AbaFinanceiro({
   resumo,
   historico,
-  hoje,
 }: {
   resumo: ResumoFinanceiroDoCliente;
   historico: HistoricoDoCliente;
-  hoje: string;
 }) {
-  /** Descobre de qual compra ou serviço cada parcela veio, para a lista dizer
-   *  o nome da venda como pedido — parcela solta não diz de onde saiu. */
-  const origemDaParcela = new Map<Installment, string>();
-  for (const c of historico.compras) {
-    for (const p of c.parcelas) origemDaParcela.set(p, `Venda #${c.orderNumber}`);
-  }
-  for (const s of historico.servicos) {
-    for (const p of s.parcelas) origemDaParcela.set(p, s.titulo);
-  }
+  // Cada parcela sabe de onde veio: a lista mistura carnês de vendas e de
+  // serviços, e sem a origem uma parcela solta não diz nada.
+  const linhas = parcelasComOrigem(historico);
+  const parcelas = linhas.map((l) => l.parcela);
 
-  const ordenadas = [...resumo.parcelas].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  const origens: Record<string, OrigemDaParcela> = {};
+  for (const l of linhas) {
+    if (l.parcela.id) origens[l.parcela.id] = { rotulo: l.origem, totalDoGrupo: l.totalDoGrupo };
+  }
 
   return (
     <div>
@@ -148,40 +136,15 @@ function AbaFinanceiro({
         </div>
       </div>
 
-      {ordenadas.length === 0 ? (
+      {parcelas.length === 0 ? (
         <Vazio texto="Nenhuma parcela. As compras deste cliente foram à vista ou ainda não têm parcelamento." />
       ) : (
         <>
-          <div className="grid grid-cols-[1.6fr_80px_110px_110px_110px] gap-2 border-b border-border pb-2 text-[10.5px] font-extrabold uppercase tracking-[.06em] text-fg-faded">
-            <div>Origem</div>
-            <div>Parcela</div>
-            <div className="text-right">Valor</div>
-            <div>Vencimento</div>
-            <div>Status</div>
+          <ParcelasList parcelas={parcelas} origens={origens} titulo="Carnê do cliente" />
+          <div className="mt-2.5 text-[11.5px] text-fg-faded">
+            Dar baixa, corrigir valor ou vencimento e excluir parcela já valem aqui: o Financeiro, o
+            total em aberto e a adimplência são refeitos na hora.
           </div>
-          {ordenadas.map((p, i) => {
-            const s = statusExibido(p, hoje);
-            const totalDoGrupo = ordenadas.filter((x) => origemDaParcela.get(x) === origemDaParcela.get(p) && x.number > 0).length;
-            return (
-              <div
-                key={p.id ?? i}
-                className="grid grid-cols-[1.6fr_80px_110px_110px_110px] items-center gap-2 border-b border-divider py-2 text-[12.5px] last:border-b-0"
-              >
-                <div className="min-w-0 truncate font-bold">{origemDaParcela.get(p) ?? '—'}</div>
-                <div className="text-fg-secondary">{rotuloDaParcela(p, totalDoGrupo)}</div>
-                <div className="text-right font-bold">{formatBRL(p.amount)}</div>
-                <div className="text-fg-secondary">{formatDateBR(p.dueDate + 'T12:00:00')}</div>
-                <div>
-                  <span
-                    className="inline-flex items-center rounded-full px-2 py-0.5 text-[10.5px] font-extrabold"
-                    style={{ background: `${COR_PARCELA[s]}1f`, color: COR_PARCELA[s] }}
-                  >
-                    {s}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
         </>
       )}
     </div>
@@ -195,7 +158,7 @@ function AbaCompras({ historico, hoje }: { historico: HistoricoDoCliente; hoje: 
     <div>
       <div className="grid grid-cols-[80px_1.6fr_110px_110px_130px] gap-2 border-b border-border pb-2 text-[10.5px] font-extrabold uppercase tracking-[.06em] text-fg-faded">
         <div>Venda</div>
-        <div>Itens</div>
+        <div>Nome</div>
         <div>Data</div>
         <div className="text-right">Total</div>
         <div>Status</div>
@@ -211,8 +174,11 @@ function AbaCompras({ historico, hoje }: { historico: HistoricoDoCliente; hoje: 
           >
             <div className="font-extrabold text-accent">#{c.orderNumber}</div>
             <div className="min-w-0">
-              <div className="truncate">{c.itens}</div>
-              <div className="text-[11px] text-fg-faded">
+              <div className="truncate font-bold">{c.nome || c.itens}</div>
+              <div className="truncate text-[11px] text-fg-faded">
+                {/* Os itens só aparecem quando o nome é apelido: se o nome já
+                    saiu deles, repetir a lista não acrescenta nada. */}
+                {c.apelidada ? `${c.itens} · ` : ''}
                 {c.origem}
                 {c.parcelas.length > 0 &&
                   ` · ${c.parcelas.filter((p) => p.number > 0).length}× · ${abertas.length} em aberto`}

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { listInstallmentsBySource } from '@/lib/data/installments';
+import { nomeDaVenda } from '@/lib/sales';
 import type { Installment } from '@/lib/installments';
 import type {
   HistoricoDoCliente,
@@ -31,7 +32,7 @@ export async function carregarHistoricoDoCliente(
   const [vendas, servicos, orcLoja, orcServicos, estoque] = await Promise.all([
     supabase
       .from('orders')
-      .select('id, order_number, created_at, origin, status, total, order_items(product_name, qty)')
+      .select('id, order_number, name, created_at, origin, status, total, order_items(product_name, qty)')
       .or(filtroVendas)
       .order('created_at', { ascending: false }),
     supabase
@@ -67,6 +68,11 @@ export async function carregarHistoricoDoCliente(
   const compras: CompraDoCliente[] = linhasVenda.map((v) => ({
     id: v.id,
     orderNumber: v.order_number,
+    nome: nomeDaVenda({
+      name: v.name ?? '',
+      items: (v.order_items ?? []).map((i) => ({ productName: i.product_name, qty: i.qty })),
+    }),
+    apelidada: !!(v.name ?? '').trim(),
     data: v.created_at,
     itens:
       (v.order_items ?? [])

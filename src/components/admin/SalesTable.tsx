@@ -7,13 +7,14 @@ import { formatBRL, parseNumeroBR, formatDateBR, formatNumeroInput } from '@/lib
 import {
   totalizarVenda,
   computeSaleIndicators,
+  nomeDaVenda,
   SALE_STATUSES,
   type Sale,
   type SaleItem,
   type SaleStatus,
 } from '@/lib/sales';
 import Link from 'next/link';
-import { geraParcelas, type Installment } from '@/lib/installments';
+import { geraParcelas, calcularParcelamento, type Installment } from '@/lib/installments';
 import { SeloAdimplencia } from '@/components/admin/SeloAdimplencia';
 import type { Adimplencia } from '@/lib/customer-history';
 import { ParcelamentoFields } from '@/components/admin/ParcelamentoFields';
@@ -47,6 +48,7 @@ function hojeISO(): string {
 
 function formVazio(): SaleFormInput {
   return {
+    name: '',
     customerId: null,
     erpCustomerId: null,
     customerName: '',
@@ -98,9 +100,14 @@ export function SalesTable({
     const termo = busca.trim().toLowerCase();
     if (!termo) return sales;
     return sales.filter((v) =>
-      [v.customerName, v.status, v.origin, String(v.orderNumber), ...v.items.map((i) => i.productName)].some((c) =>
-        c.toLowerCase().includes(termo)
-      )
+      [
+        v.customerName,
+        v.name,
+        v.status,
+        v.origin,
+        String(v.orderNumber),
+        ...v.items.map((i) => i.productName),
+      ].some((c) => c.toLowerCase().includes(termo))
     );
   }, [sales, busca]);
 
@@ -133,6 +140,7 @@ export function SalesTable({
   function editar(v: Sale) {
     setForm({
       id: v.id,
+      name: v.name,
       customerId: v.customerId,
       erpCustomerId: v.erpCustomerId,
       customerName: v.customerName,
@@ -245,7 +253,7 @@ export function SalesTable({
           <div className={`${COLUNAS} border-b border-border pb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded`}>
             <div>Venda</div>
             <div>Cliente</div>
-            <div>Itens</div>
+            <div>Nome</div>
             <div>Origem</div>
             <div className="text-right">Total</div>
             <div className="text-right">Custo</div>
@@ -295,8 +303,15 @@ export function SalesTable({
                     })()}
                   </div>
                 </div>
-                <div className="min-w-0 truncate text-fg-secondary">
-                  {v.items.map((i) => (i.qty > 1 ? `${i.qty}× ${i.productName}` : i.productName)).join(' + ') || '—'}
+                <div className="min-w-0">
+                  <div className="truncate font-bold text-fg-secondary">{nomeDaVenda(v) || '—'}</div>
+                  {/* A lista de itens só aparece quando o nome é apelido: se o
+                      nome saiu deles, repeti-los não acrescenta nada. */}
+                  {!!v.name.trim() && (
+                    <div className="truncate text-[11px] text-fg-faded">
+                      {v.items.map((i) => (i.qty > 1 ? `${i.qty}× ${i.productName}` : i.productName)).join(' + ')}
+                    </div>
+                  )}
                 </div>
                 <div className="text-[11.5px] text-fg-tertiary">{v.origin}</div>
                 <div className="text-right font-bold">{formatBRL(v.total)}</div>
@@ -346,6 +361,21 @@ export function SalesTable({
             <div className="mb-5 text-[15px] font-extrabold">{form.id ? 'Editar venda' : 'Nova venda'}</div>
 
             <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <div className="mb-1.5 text-[11px] text-fg-faded">Nome da venda</div>
+                <input
+                  value={form.name}
+                  onChange={(e) => set('name', e.target.value)}
+                  placeholder={nomeDaVenda({ items: form.items }) || 'Como você chama esta venda'}
+                  className={`w-full ${inputClass}`}
+                />
+                <div className="mt-1 text-[11px] text-fg-faded">
+                  Opcional. Vazio, a venda se chama pelos produtos —
+                  {' '}
+                  <strong>{nomeDaVenda({ items: form.items }) || 'sem itens ainda'}</strong>. Preencha
+                  quando o produto não identificar a venda.
+                </div>
+              </div>
               <div>
                 <div className="mb-1.5 text-[11px] text-fg-faded">Cliente do cadastro</div>
                 <select
@@ -548,7 +578,20 @@ export function SalesTable({
                 prévia do que vai ser criado. */}
             {parcelasDaEdicao.length > 0 && (
               <div className="mb-4">
-                <ParcelasList parcelas={parcelasDaEdicao} />
+                <ParcelasList
+                  parcelas={parcelasDaEdicao}
+                  // Com juros o carnê cobra mais que o total da venda; é essa
+                  // soma que ele tem que fechar, não o total puro.
+                  totalEsperado={
+                    calcularParcelamento({
+                      total: totais.total,
+                      parcelas: form.installmentCount,
+                      entrada: form.downPayment,
+                      jurosPct: form.interestPct,
+                      primeiroVencimento: form.firstDueDate,
+                    }).totalComJuros
+                  }
+                />
               </div>
             )}
 
