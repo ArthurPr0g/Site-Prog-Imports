@@ -38,6 +38,7 @@ type SaleRow = {
   cost_total: number;
   budget_id: string | null;
   created_at: string;
+  sale_date: string | null;
   installment_count: number;
   down_payment: number;
   interest_pct: number;
@@ -77,6 +78,9 @@ function toSale(r: SaleRow, parcelas: Installment[] = [], capas = new Map<string
     costTotal: Number(r.cost_total),
     budgetId: r.budget_id,
     createdAt: r.created_at,
+    // Vendas antigas, de antes da coluna, caem na data do cadastro — que é o
+    // que o sistema usava para elas.
+    saleDate: r.sale_date ?? r.created_at.slice(0, 10),
     installmentCount: r.installment_count,
     downPayment: Number(r.down_payment),
     interestPct: Number(r.interest_pct),
@@ -161,7 +165,9 @@ export async function sincronizarFinanceiroDaVenda(orderId: string): Promise<voi
 
   const { data } = await supabase
     .from('orders')
-    .select('order_number, name, status, total, cost_total, created_at, order_items(product_name, qty)')
+    .select(
+      'order_number, name, status, total, cost_total, created_at, sale_date, order_items(product_name, qty)'
+    )
     .eq('id', orderId)
     .maybeSingle();
 
@@ -181,7 +187,7 @@ export async function sincronizarFinanceiroDaVenda(orderId: string): Promise<voi
     status: data.status as SaleStatus,
     total: Number(data.total),
     costTotal: Number(data.cost_total),
-    createdAt: data.created_at,
+    saleDate: data.sale_date ?? data.created_at.slice(0, 10),
   });
 
   // Com PIX parcelado, as PARCELAS são a receita: uma linha por parcela, em vez

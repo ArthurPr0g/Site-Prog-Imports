@@ -32,7 +32,9 @@ export async function carregarHistoricoDoCliente(
   const [vendas, servicos, orcLoja, orcServicos, estoque] = await Promise.all([
     supabase
       .from('orders')
-      .select('id, order_number, name, created_at, origin, status, total, order_items(product_name, qty)')
+      .select(
+        'id, order_number, name, created_at, sale_date, origin, status, total, order_items(product_name, qty)'
+      )
       .or(filtroVendas)
       .order('created_at', { ascending: false }),
     supabase
@@ -73,7 +75,9 @@ export async function carregarHistoricoDoCliente(
       items: (v.order_items ?? []).map((i) => ({ productName: i.product_name, qty: i.qty })),
     }),
     apelidada: !!(v.name ?? '').trim(),
-    data: v.created_at,
+    // A data da venda, não a do cadastro — o histórico do cliente conta quando
+    // ele comprou.
+    data: v.sale_date ? `${v.sale_date}T12:00:00` : v.created_at,
     itens:
       (v.order_items ?? [])
         .map((i) => (i.qty > 1 ? `${i.qty}× ${i.product_name}` : i.product_name))

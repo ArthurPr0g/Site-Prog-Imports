@@ -55,7 +55,10 @@ export type Sale = {
   total: number;
   costTotal: number;
   budgetId: string | null;
+  /** Quando a venda foi cadastrada. Só auditoria — não manda no Financeiro. */
   createdAt: string;
+  /** Quando a venda aconteceu. É esta que vale no caixa e nas listagens. */
+  saleDate: string;
   items: SaleItem[];
   /** Condições do PIX parcelado. `installmentCount` 0 significa à vista. */
   installmentCount: number;
@@ -169,12 +172,15 @@ export function lancamentosDaVenda(venda: {
   status: SaleStatus;
   total: number;
   costTotal: number;
-  createdAt: string;
+  /** Dia em que a venda aconteceu. Numa venda retroativa é diferente do dia do
+   *  cadastro — e é o dia da venda que vale no caixa, senão a despesa cai num
+   *  mês que não teve venda nenhuma. */
+  saleDate: string;
 }): LancamentoDaVenda[] {
   if (venda.status === 'Cancelado') return [];
 
   const status = vendaFoiPaga(venda.status) ? 'Pago' : 'Previsto';
-  const data = venda.createdAt.slice(0, 10);
+  const data = venda.saleDate.slice(0, 10);
   const rotulo = venda.descricao || `Venda #${venda.orderNumber}`;
   const alvos: LancamentoDaVenda[] = [];
 

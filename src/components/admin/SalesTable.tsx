@@ -52,6 +52,7 @@ function hojeISO(): string {
 function formVazio(): SaleFormInput {
   return {
     name: '',
+    saleDate: hojeISO(),
     customerId: null,
     erpCustomerId: null,
     customerName: '',
@@ -154,7 +155,7 @@ export function SalesTable({
         remetente,
         destinatario: destinatarioDaVenda(v.customerName, v.shippingAddress, v.customer),
         pedido: `Pedido #${v.orderNumber}`,
-        data: formatDateBR(v.createdAt),
+        data: formatDateBR(v.saleDate + 'T12:00:00'),
         conteudo: v.items
           .map((i) => (i.qty > 1 ? `${i.qty}× ${i.productName}` : i.productName))
           .join(' + '),
@@ -166,6 +167,7 @@ export function SalesTable({
     setForm({
       id: v.id,
       name: v.name,
+      saleDate: v.saleDate,
       customerId: v.customerId,
       erpCustomerId: v.erpCustomerId,
       customerName: v.customerName,
@@ -316,7 +318,11 @@ export function SalesTable({
                     );
                   })()}
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-fg-faded">{formatDateBR(v.createdAt)}</span>
+                    {/* A data da venda, não a do cadastro: numa venda
+                        retroativa são meses diferentes. */}
+                    <span className="text-[11px] text-fg-faded">
+                      {formatDateBR(v.saleDate + 'T12:00:00')}
+                    </span>
                     {(() => {
                       const c = situacaoPorNome.get(v.customerName.trim().toLowerCase());
                       // Só chama atenção quando há algo em aberto: um selo verde
@@ -399,7 +405,7 @@ export function SalesTable({
             <div className="mb-5 text-[15px] font-extrabold">{form.id ? 'Editar venda' : 'Nova venda'}</div>
 
             <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="sm:col-span-2">
+              <div>
                 <div className="mb-1.5 text-[11px] text-fg-faded">Nome da venda</div>
                 <input
                   value={form.name}
@@ -410,8 +416,22 @@ export function SalesTable({
                 <div className="mt-1 text-[11px] text-fg-faded">
                   Opcional. Vazio, a venda se chama pelos produtos —
                   {' '}
-                  <strong>{nomeDaVenda({ items: form.items }) || 'sem itens ainda'}</strong>. Preencha
-                  quando o produto não identificar a venda.
+                  <strong>{nomeDaVenda({ items: form.items }) || 'sem itens ainda'}</strong>.
+                </div>
+              </div>
+              <div>
+                <div className="mb-1.5 text-[11px] text-fg-faded">Data da venda *</div>
+                <input
+                  type="date"
+                  value={form.saleDate}
+                  onChange={(e) => set('saleDate', e.target.value)}
+                  className={`w-full ${inputClass}`}
+                />
+                <div className="mt-1 text-[11px] text-fg-faded">
+                  {/* O motivo de o campo existir: sem ele, venda lançada hoje de
+                      algo vendido em maio jogava o custo no mês de hoje. */}
+                  É o dia em que a venda aconteceu, não o de hoje. <strong>Receita e custo entram no
+                  Financeiro nesta data</strong> — lançando venda antiga, corrija aqui.
                 </div>
               </div>
               <div>

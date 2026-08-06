@@ -14,6 +14,8 @@ export type SaleFormInput = {
   id?: string;
   /** Apelido opcional. Vazio faz a tela derivar o nome dos itens. */
   name: string;
+  /** Dia em que a venda aconteceu. É o que vale no Financeiro. */
+  saleDate: string;
   customerId: string | null;
   /** Cliente do ERP. É o que faz a venda entrar no histórico dele. */
   erpCustomerId: string | null;
@@ -49,6 +51,7 @@ export async function saveSaleAction(input: SaleFormInput): Promise<ActionResult
   const nome = input.customerName.trim();
   if (!nome) return errResult('Informe o nome do cliente.');
   if (!SALE_STATUSES.includes(input.status)) return errResult('Status inválido.');
+  if (!input.saleDate) return errResult('Informe a data da venda.');
 
   const itens = input.items.filter((i) => i.productName.trim());
   if (itens.length === 0) return errResult('Adicione ao menos um produto à venda.');
@@ -77,6 +80,7 @@ export async function saveSaleAction(input: SaleFormInput): Promise<ActionResult
 
   const payload = {
     name: input.name.trim(),
+    sale_date: input.saleDate,
     customer_id: input.customerId,
     erp_customer_id: input.erpCustomerId,
     customer_name: nome,

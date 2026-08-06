@@ -509,6 +509,7 @@ export type Database = {
           order_number: number
           origin: string
           payment_method: string
+          sale_date: string | null
           shipping: number
           status: string
           subtotal: number
@@ -540,6 +541,7 @@ export type Database = {
           order_number: number
           origin?: string
           payment_method?: string
+          sale_date?: string | null
           shipping?: number
           status?: string
           subtotal?: number
@@ -571,6 +573,7 @@ export type Database = {
           order_number?: number
           origin?: string
           payment_method?: string
+          sale_date?: string | null
           shipping?: number
           status?: string
           subtotal?: number

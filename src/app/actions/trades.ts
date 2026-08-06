@@ -184,6 +184,9 @@ export async function createTradeAction(input: TradeFormInput): Promise<ActionRe
       customer_name: principal.name,
       erp_customer_id: input.customerId,
       origin: 'Troca',
+      // A venda acontece no dia da negociação. Registrando uma troca antiga, é
+      // esse dia que vale no caixa, não o do cadastro.
+      sale_date: input.tradeDate,
       status: statusVenda,
       payment_method: input.paymentMethod.trim(),
       subtotal: total,
