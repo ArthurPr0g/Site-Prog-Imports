@@ -152,6 +152,77 @@ export async function saveSystemSettingsAction(input: SystemSettingsInput): Prom
   );
 }
 
+// Sem `export`: arquivo 'use server' só pode exportar função async, e uma
+// constante exportada aqui quebra o build inteiro do módulo.
+const SIGNATURE_BUCKET = 'signatures';
+const MAX_ASSINATURA_BYTES = 2 * 1024 * 1024;
+
+/** Guarda a assinatura digitalizada do contratado.
+ *
+ *  Vai para bucket privado e o banco guarda só o caminho: em bucket privado não
+ *  existe URL permanente, e a assinada expira. Quem lê o arquivo é o servidor,
+ *  na hora de montar o PDF.
+ *
+ *  Fundo transparente é o ideal (PNG), porque a assinatura entra por cima do
+ *  papel branco do contrato — um JPG traz o retângulo branco junto e cria uma
+ *  emenda visível. Não dá para exigir: aceita qualquer imagem e avisa. */
+export async function uploadSignatureAction(formData: FormData): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) return errResult('Selecione a imagem da assinatura.');
+  if (!file.type.startsWith('image/')) return errResult('O arquivo precisa ser uma imagem (PNG de preferência).');
+  if (file.size > MAX_ASSINATURA_BYTES) return errResult('A imagem deve ter no máximo 2MB.');
+
+  const { data: atual } = await supabase.from('site_settings').select('signature_path').maybeSingle();
+
+  const ext = file.name.includes('.') ? file.name.split('.').pop()?.toLowerCase() : 'png';
+  const path = `assinatura-${Date.now()}.${ext}`;
+
+  const { error: erroUpload } = await supabase.storage
+    .from(SIGNATURE_BUCKET)
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (erroUpload) return errResult('Não foi possível enviar a assinatura. Tente novamente.');
+
+  const { error } = await supabase.from('site_settings').update({ signature_path: path }).eq('id', true);
+  if (error) {
+    // Arquivo sem registro é lixo invisível no bucket: some com ele.
+    await supabase.storage.from(SIGNATURE_BUCKET).remove([path]);
+    return errResult(friendlyDbError(error, 'Não foi possível salvar a assinatura.'));
+  }
+
+  // A anterior sai depois de a nova estar gravada: na ordem inversa, uma falha
+  // no meio deixaria o contrato sem assinatura nenhuma.
+  if (atual?.signature_path && atual.signature_path !== path) {
+    await supabase.storage.from(SIGNATURE_BUCKET).remove([atual.signature_path]);
+  }
+
+  revalidatePath('/admin/configuracoes');
+  return okResult(
+    file.type === 'image/png'
+      ? 'Assinatura salva. Ela passa a sair nos contratos de serviço.'
+      : 'Assinatura salva. Como não é PNG, ela pode sair com um retângulo de fundo no contrato — se aparecer, envie um PNG com fundo transparente.'
+  );
+}
+
+export async function removeSignatureAction(): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  const { data: atual } = await supabase.from('site_settings').select('signature_path').maybeSingle();
+
+  const { error } = await supabase.from('site_settings').update({ signature_path: '' }).eq('id', true);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível remover a assinatura.'));
+
+  if (atual?.signature_path) {
+    await supabase.storage.from(SIGNATURE_BUCKET).remove([atual.signature_path]);
+  }
+
+  revalidatePath('/admin/configuracoes');
+  return okResult('Assinatura removida. Os contratos voltam a sair com linha em branco.');
+}
+
 /** Diferença a partir da qual vale avisar que a cotação salva está velha.
  *  Cinco centavos por dólar são R$ 50 num orçamento de US$ 1.000 — abaixo
  *  disso o aviso viraria ruído e o operador aprenderia a ignorá-lo. */

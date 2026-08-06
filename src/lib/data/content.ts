@@ -21,12 +21,25 @@ export async function listTestimonials() {
   return data ?? [];
 }
 
+/** URL temporária para a tela de Configurações mostrar a assinatura guardada.
+ *
+ *  Assinada e curta porque o bucket é privado: uma URL permanente para este
+ *  arquivo valeria tanto quanto o arquivo. Fica separada de `getSiteSettings`
+ *  para não gerar uma assinatura a cada leitura de parâmetro — inclusive nas
+ *  páginas públicas, que também leem essa tabela. */
+export async function getSignaturePreviewUrl(path: string): Promise<string> {
+  if (!path) return '';
+  const supabase = await createClient();
+  const { data } = await supabase.storage.from('signatures').createSignedUrl(path, 60 * 10);
+  return data?.signedUrl ?? '';
+}
+
 export async function getSiteSettings() {
   const supabase = await createClient();
   const { data } = await supabase
     .from('site_settings')
     .select(
-      'show_small_banners, usd_rate, usd_rate_spread, default_delivery_time, contractor_name, contractor_doc, contractor_role, contract_forum, sender_name, sender_doc, sender_phone, sender_cep, sender_address_line, sender_address_number, sender_complement, sender_district, sender_city, sender_state'
+      'show_small_banners, usd_rate, usd_rate_spread, default_delivery_time, contractor_name, contractor_doc, contractor_role, contract_forum, signature_path, sender_name, sender_doc, sender_phone, sender_cep, sender_address_line, sender_address_number, sender_complement, sender_district, sender_city, sender_state'
     )
     .maybeSingle();
   return {
@@ -41,6 +54,8 @@ export async function getSiteSettings() {
     contractorDoc: data?.contractor_doc ?? '',
     contractorRole: data?.contractor_role ?? '',
     contractForum: data?.contract_forum ?? '',
+    /** Caminho da assinatura no bucket privado. Vazio = sem assinatura. */
+    signaturePath: data?.signature_path ?? '',
     // Remetente da etiqueta de transporte.
     senderName: data?.sender_name ?? '',
     senderDoc: data?.sender_doc ?? '',

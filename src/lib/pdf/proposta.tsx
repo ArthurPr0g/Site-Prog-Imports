@@ -161,6 +161,15 @@ function estilos(accent: string) {
     blocoAssinatura: { marginBottom: 22 },
     papel: { fontSize: 9, fontWeight: 'bold', color: accent, marginBottom: 8 },
     campoAssinatura: { fontSize: 9, marginBottom: 9 },
+
+    blocoAssinado: { marginBottom: 9 },
+    /** Só a altura: a proporção original manda na largura, senão a assinatura
+     *  sai esticada — e assinatura deformada é a primeira coisa que denuncia
+     *  um documento montado. `marginBottom` negativo aproxima o traço da
+     *  linha, como quem assina em cima dela. */
+    assinaturaImagem: { height: 42, objectFit: 'contain', alignSelf: 'flex-start', marginBottom: -6 },
+    linhaAssinatura: { borderBottomWidth: 1, borderBottomColor: '#1a1a1f', width: 240 },
+    rotuloAssinado: { fontSize: 8, color: CINZA_CLARO, marginTop: 3 },
   });
 }
 
@@ -433,7 +442,21 @@ export function PropostaDocument(d: DadosDaProposta) {
               {!!d.contratado.documento && (
                 <Text style={s.campoAssinatura}>CPF/CNPJ: {d.contratado.documento}</Text>
               )}
-              <Text style={s.campoAssinatura}>Assinatura: _________________________________________________</Text>
+              {/* Com assinatura cadastrada ela entra impressa, sobre a linha —
+                  é o lado que já está assinado quando o contrato chega ao
+                  cliente. Sem ela, a linha em branco continua ali para assinar
+                  à mão, que era o comportamento anterior. */}
+              {d.contratado.assinatura ? (
+                <View style={s.blocoAssinado}>
+                  <Image src={d.contratado.assinatura} style={s.assinaturaImagem} />
+                  <View style={s.linhaAssinatura} />
+                  <Text style={s.rotuloAssinado}>Assinatura</Text>
+                </View>
+              ) : (
+                <Text style={s.campoAssinatura}>
+                  Assinatura: _________________________________________________
+                </Text>
+              )}
               <Text style={s.campoAssinatura}>Data: ______ / ______ / __________</Text>
             </View>
           </View>

@@ -4,7 +4,12 @@ import { useState, useTransition } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { parseNumeroBR } from '@/lib/format';
-import { saveSystemSettingsAction, fetchUsdRateAction } from '@/app/actions/settings';
+import {
+  saveSystemSettingsAction,
+  fetchUsdRateAction,
+  uploadSignatureAction,
+  removeSignatureAction,
+} from '@/app/actions/settings';
 
 const inputClass =
   'rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px] outline-none focus:border-accent';
@@ -45,6 +50,7 @@ export function SystemSettings({
   contractorRole,
   contractForum,
   remetente: remetenteInicial,
+  assinaturaUrl,
 }: {
   usdRate: number | null;
   usdRateSpread: number;
@@ -54,6 +60,8 @@ export function SystemSettings({
   contractorRole: string;
   contractForum: string;
   remetente: RemetenteForm;
+  /** URL assinada e temporária da assinatura guardada. Vazio = não há. */
+  assinaturaUrl: string;
 }) {
   const [cotacao, setCotacao] = useState(usdRate !== null ? String(usdRate) : '');
   const [taxa, setTaxa] = useState(String(usdRateSpread));
@@ -75,6 +83,20 @@ export function SystemSettings({
         setCotacao(String(result.rate));
         setOrigem(`Mercado R$ ${result.market?.toFixed(4)} em ${result.when} · ainda não salvo`);
       }
+    });
+  }
+
+  function enviarAssinatura(arquivo: File) {
+    startTransition(async () => {
+      const dados = new FormData();
+      dados.append('file', arquivo);
+      toast(await uploadSignatureAction(dados));
+    });
+  }
+
+  function removerAssinatura() {
+    startTransition(async () => {
+      toast(await removeSignatureAction());
     });
   }
 
@@ -212,6 +234,62 @@ export function SystemSettings({
               placeholder="Ex: Goiânia – GO"
               className={`w-full ${inputClass}`}
             />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-7 border-t border-divider pt-6">
+        <div className="mb-1 text-[15px] font-extrabold">Assinatura nos contratos</div>
+        <div className="mb-4 text-[12.5px] text-fg-tertiary">
+          Sai impressa no bloco do contratado, no PDF de proposta com contrato. Envie um{' '}
+          <strong>PNG com fundo transparente</strong> — assinatura em JPG leva o retângulo branco
+          junto e aparece uma emenda por cima do papel. Sem assinatura enviada, o contrato continua
+          saindo com a linha em branco para você assinar à mão.
+        </div>
+        <div className="mb-3 rounded-control border border-border bg-card-dark px-4 py-3 text-[12px] text-fg-faded">
+          O arquivo vai para um espaço <strong>privado</strong>, não para o código do projeto: o
+          repositório é público, e uma imagem versionada fica no histórico para sempre. Com a imagem
+          em mãos, qualquer pessoa monta um documento que parece assinado por você.
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          {assinaturaUrl ? (
+            <div className="rounded-control border border-border bg-white px-4 py-3">
+              {/* Fundo branco atrás da prévia: é sobre branco que ela vai ser
+                  impressa, e sobre o painel escuro um traço preto some. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={assinaturaUrl} alt="Assinatura cadastrada" className="h-[52px] w-auto object-contain" />
+            </div>
+          ) : (
+            <div className="rounded-control border border-dashed border-border-strong px-5 py-4 text-[12.5px] text-fg-faded">
+              Nenhuma assinatura enviada.
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <label className="cursor-pointer rounded-control border border-border-strong px-5 py-2.5 text-[13.5px] font-extrabold text-fg-secondary hover:border-accent hover:text-accent">
+              {assinaturaUrl ? 'Trocar imagem' : 'Enviar imagem'}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={pending}
+                onChange={(e) => {
+                  const arquivo = e.target.files?.[0];
+                  e.target.value = '';
+                  if (arquivo) enviarAssinatura(arquivo);
+                }}
+              />
+            </label>
+            {assinaturaUrl && (
+              <button
+                onClick={removerAssinatura}
+                disabled={pending}
+                className="rounded-control border border-border-strong px-5 py-2.5 text-[13.5px] font-extrabold text-fg-tertiary hover:border-error hover:text-error disabled:opacity-60"
+              >
+                Remover
+              </button>
+            )}
           </div>
         </div>
       </div>

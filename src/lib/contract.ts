@@ -15,6 +15,10 @@ export type DadosDoContratado = {
   documento: string;
   cargo: string;
   foro: string;
+  /** Assinatura digitalizada em data URI, quando cadastrada. Vem do bucket
+   *  privado e é resolvida na hora de gerar o PDF — o arquivo não pode viver
+   *  no repositório, que é público. */
+  assinatura?: string;
 };
 
 export type DadosDoContrato = {

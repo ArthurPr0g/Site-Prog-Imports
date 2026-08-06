@@ -1428,6 +1428,7 @@ export type Database = {
       site_settings: {
         Row: {
           contract_forum: string
+          signature_path: string
           sender_name: string
           sender_doc: string
           sender_phone: string
@@ -1454,6 +1455,7 @@ export type Database = {
           contractor_role?: string
           default_delivery_time?: string | null
           id?: boolean
+          signature_path?: string
           sender_name?: string
           sender_doc?: string
           sender_phone?: string
@@ -1475,6 +1477,7 @@ export type Database = {
           contractor_role?: string
           default_delivery_time?: string | null
           id?: boolean
+          signature_path?: string
           sender_name?: string
           sender_doc?: string
           sender_phone?: string

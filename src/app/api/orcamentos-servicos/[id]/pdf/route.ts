@@ -36,6 +36,33 @@ async function carregarLogo(): Promise<string | undefined> {
   }
 }
 
+/** Assinatura do contratado em data URI.
+ *
+ *  Baixada aqui, no servidor, porque o bucket é privado: o navegador não tem
+ *  como ler o arquivo, e é justamente esse o ponto — a assinatura só existe
+ *  dentro do PDF que a Prog gera.
+ *
+ *  Falha não impede o contrato de sair: sem a imagem ele volta a ter a linha em
+ *  branco, que é assinável à mão. Um 500 na hora de mandar a proposta, não. */
+async function carregarAssinatura(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  path: string
+): Promise<string | undefined> {
+  if (!path) return undefined;
+  try {
+    const { data, error } = await supabase.storage.from('signatures').download(path);
+    if (error || !data) {
+      console.error('[contrato] assinatura não carregou', error);
+      return undefined;
+    }
+    const bytes = Buffer.from(await data.arrayBuffer());
+    return `data:${data.type || 'image/png'};base64,${bytes.toString('base64')}`;
+  } catch (e) {
+    console.error('[contrato] assinatura não carregou', e);
+    return undefined;
+  }
+}
+
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin();
   if (!admin) return new Response('Não autorizado', { status: 403 });
@@ -110,6 +137,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
         documento: settings?.contractor_doc ?? '',
         cargo: settings?.contractor_role ?? '',
         foro: settings?.contract_forum ?? '',
+        assinatura: await carregarAssinatura(supabase, settings?.signature_path ?? ''),
       },
     })
   );
