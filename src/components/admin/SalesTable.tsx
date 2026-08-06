@@ -85,7 +85,7 @@ export function SalesTable({
 }) {
   const [busca, setBusca] = useState('');
   const [form, setForm] = useState<SaleFormInput | null>(null);
-  const [etiqueta, setEtiqueta] = useState<Etiqueta | null>(null);
+  const [etiqueta, setEtiqueta] = useState<{ dados: Etiqueta; clienteId: string | null } | null>(null);
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 
@@ -148,13 +148,16 @@ export function SalesTable({
    *  faltar é apontado na pré-visualização, em vez de sair em branco no papel. */
   function abrirEtiqueta(v: Sale) {
     setEtiqueta({
-      remetente,
-      destinatario: destinatarioDaVenda(v.customerName, v.shippingAddress, v.customer),
-      pedido: `Pedido #${v.orderNumber}`,
-      data: formatDateBR(v.createdAt),
-      conteudo: v.items
-        .map((i) => (i.qty > 1 ? `${i.qty}× ${i.productName}` : i.productName))
-        .join(' + '),
+      clienteId: v.erpCustomerId,
+      dados: {
+        remetente,
+        destinatario: destinatarioDaVenda(v.customerName, v.shippingAddress, v.customer),
+        pedido: `Pedido #${v.orderNumber}`,
+        data: formatDateBR(v.createdAt),
+        conteudo: v.items
+          .map((i) => (i.qty > 1 ? `${i.qty}× ${i.productName}` : i.productName))
+          .join(' + '),
+      },
     });
   }
 
@@ -692,7 +695,13 @@ export function SalesTable({
         </div>
       )}
 
-      {etiqueta && <EtiquetaModal etiqueta={etiqueta} onFechar={() => setEtiqueta(null)} />}
+      {etiqueta && (
+        <EtiquetaModal
+          etiqueta={etiqueta.dados}
+          clienteId={etiqueta.clienteId}
+          onFechar={() => setEtiqueta(null)}
+        />
+      )}
     </div>
   );
 }

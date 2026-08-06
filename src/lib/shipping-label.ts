@@ -170,23 +170,36 @@ export function destinatarioDaVenda(
   return { ...VAZIO, nome };
 }
 
+/** Uma pendência da etiqueta, já sabendo onde ela se resolve. */
+export type Pendencia = {
+  texto: string;
+  /** Tela que conserta este item. Mandar para a tela errada é pior que não
+   *  mandar para nenhuma: o dono procura o campo onde ele não está. */
+  onde: 'configuracoes' | 'cliente' | 'venda';
+};
+
 /** O que falta para a etiqueta poder ser impressa.
  *
  *  Lista em vez de booleano: "não dá para gerar" sem dizer o que falta obriga o
  *  dono a caçar o campo vazio em duas telas diferentes. */
-export function faltaParaEtiqueta(e: Etiqueta): string[] {
-  const problemas: string[] = [];
+export function faltaParaEtiqueta(e: Etiqueta): Pendencia[] {
+  const problemas: Pendencia[] = [];
 
   if (!e.remetente.nome || !e.remetente.logradouro || !e.remetente.cep) {
-    problemas.push('Preencha o endereço do remetente em Configurações.');
+    problemas.push({
+      texto: 'Preencha o endereço do remetente em Configurações.',
+      onde: 'configuracoes',
+    });
   }
   if (!e.destinatario.nome) {
-    problemas.push('A venda não tem o nome de quem compra.');
+    problemas.push({ texto: 'A venda não tem o nome de quem compra.', onde: 'venda' });
   }
   if (!e.destinatario.logradouro || !e.destinatario.cep) {
-    problemas.push(
-      'O destinatário está sem endereço. Vincule a venda a um cliente do cadastro e preencha o endereço dele.'
-    );
+    problemas.push({
+      texto:
+        'O destinatário está sem endereço. Preencha o endereço no cadastro do cliente e vincule a venda a ele.',
+      onde: 'cliente',
+    });
   }
 
   return problemas;

@@ -11,7 +11,29 @@ import { desenharEtiqueta, carregarLogo, LARGURA, ALTURA } from '@/lib/shipping-
  *  Ver antes existe porque etiqueta errada só aparece depois de impressa e
  *  colada: endereço truncado, remetente em branco, CEP incompleto. Aqui o erro
  *  custa um clique de fechar. */
-export function EtiquetaModal({ etiqueta, onFechar }: { etiqueta: Etiqueta; onFechar: () => void }) {
+/** Para onde cada pendência manda. O cadastro do cliente só tem endereço certo
+ *  quando a venda está vinculada a um; sem vínculo, a lista de clientes é o mais
+ *  próximo de útil. */
+function destinoDaPendencia(onde: string, clienteId: string | null): { href: string; texto: string } | null {
+  if (onde === 'configuracoes') return { href: '/admin/configuracoes', texto: 'Abrir Configurações' };
+  if (onde === 'cliente') {
+    return clienteId
+      ? { href: `/admin/clientes/${clienteId}`, texto: 'Abrir o cadastro do cliente' }
+      : { href: '/admin/clientes', texto: 'Abrir Clientes' };
+  }
+  return null;
+}
+
+export function EtiquetaModal({
+  etiqueta,
+  clienteId,
+  onFechar,
+}: {
+  etiqueta: Etiqueta;
+  /** Cliente do ERP vinculado à venda, quando existe. */
+  clienteId: string | null;
+  onFechar: () => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pronta, setPronta] = useState(false);
   const problemas = faltaParaEtiqueta(etiqueta);
@@ -84,17 +106,24 @@ export function EtiquetaModal({ etiqueta, onFechar }: { etiqueta: Etiqueta; onFe
         {problemas.length > 0 && (
           <div className="mb-4 rounded-control border border-warning/40 bg-warning/[0.07] px-4 py-3 text-[12.5px] text-fg-secondary">
             <strong>Falta preencher antes de imprimir:</strong>
-            <ul className="mt-1.5 list-disc pl-4">
-              {problemas.map((p) => (
-                <li key={p}>{p}</li>
-              ))}
+            <ul className="mt-1.5 flex list-disc flex-col gap-1.5 pl-4">
+              {problemas.map((p) => {
+                const destino = destinoDaPendencia(p.onde, clienteId);
+                return (
+                  <li key={p.texto}>
+                    {p.texto}
+                    {destino && (
+                      <Link
+                        href={destino.href}
+                        className="ml-1.5 whitespace-nowrap font-extrabold text-accent hover:underline"
+                      >
+                        {destino.texto}
+                      </Link>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
-            <Link
-              href="/admin/configuracoes"
-              className="mt-2 inline-block font-extrabold text-accent hover:underline"
-            >
-              Abrir Configurações
-            </Link>
           </div>
         )}
 
