@@ -190,6 +190,12 @@ export type ResumoDasParcelas = {
   aReceber: number;
   atrasado: number;
   cancelado: number;
+  /** Contagens, na mesma passada. Canceladas ficam fora do total: não são
+   *  cobrança, e contá-las faria "3 de 6 pagas" mentir sobre o tamanho da
+   *  dívida. */
+  qtdTotal: number;
+  qtdPagas: number;
+  qtdEmAberto: number;
   qtdAtrasadas: number;
   /** Próxima a vencer entre as pendentes. */
   proximoVencimento: string | null;
@@ -202,21 +208,34 @@ export function resumirParcelas(parcelas: Installment[], hojeISO: string): Resum
   let aReceber = 0;
   let atrasado = 0;
   let cancelado = 0;
+  let qtdTotal = 0;
+  let qtdPagas = 0;
+  let qtdEmAberto = 0;
   let qtdAtrasadas = 0;
   let proximo: string | null = null;
 
   for (const p of parcelas) {
     const s = statusExibido(p, hojeISO);
-    if (s === 'Recebida') recebido += p.amount;
-    else if (s === 'Cancelada') cancelado += p.amount;
-    else {
-      aReceber += p.amount;
-      if (s === 'Atrasada') {
-        atrasado += p.amount;
-        qtdAtrasadas++;
-      } else if (!proximo || p.dueDate < proximo) {
-        proximo = p.dueDate;
-      }
+    if (s === 'Cancelada') {
+      cancelado += p.amount;
+      continue;
+    }
+
+    qtdTotal++;
+
+    if (s === 'Recebida') {
+      recebido += p.amount;
+      qtdPagas++;
+      continue;
+    }
+
+    aReceber += p.amount;
+    qtdEmAberto++;
+    if (s === 'Atrasada') {
+      atrasado += p.amount;
+      qtdAtrasadas++;
+    } else if (!proximo || p.dueDate < proximo) {
+      proximo = p.dueDate;
     }
   }
 
@@ -225,6 +244,9 @@ export function resumirParcelas(parcelas: Installment[], hojeISO: string): Resum
     aReceber: arredondar(aReceber),
     atrasado: arredondar(atrasado),
     cancelado: arredondar(cancelado),
+    qtdTotal,
+    qtdPagas,
+    qtdEmAberto,
     qtdAtrasadas,
     proximoVencimento: proximo,
   };

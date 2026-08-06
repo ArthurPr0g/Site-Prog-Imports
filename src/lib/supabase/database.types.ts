@@ -1650,6 +1650,18 @@ export type Database = {
         Args: { p_key: string; p_window_seconds: number; p_limit: number }
         Returns: boolean
       }
+      my_installments: {
+        Args: never
+        Returns: {
+          id: string
+          source_type: string
+          number: number
+          amount: number
+          due_date: string
+          status: string
+          origem: string | null
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

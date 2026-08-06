@@ -2,17 +2,20 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { listCustomerOrders } from '@/lib/data/orders';
+import { listMyInstallments } from '@/lib/data/installments';
 import { createClient } from '@/lib/supabase/server';
 import { TIMELINE_STEPS } from '@/lib/constants';
+import { CarneResumo } from '@/components/account/CarneResumo';
 
 export default async function AccountSummaryPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/entrar?next=/conta');
 
   const supabase = await createClient();
-  const [orders, { count: favCount }] = await Promise.all([
+  const [orders, { count: favCount }, parcelas] = await Promise.all([
     listCustomerOrders(user.id),
     supabase.from('favorites').select('*', { count: 'exact', head: true }).eq('customer_id', user.id),
+    listMyInstallments(),
   ]);
 
   const delivered = orders.filter((o) => o.status === 'Entregue').length;
@@ -43,6 +46,10 @@ export default async function AccountSummaryPage() {
           <div className="font-display text-[28px] font-bold">{favCount ?? 0}</div>
         </div>
       </div>
+
+      {/* Antes do pedido em andamento: dívida vencida é o que o cliente mais
+          precisa ver ao abrir a conta, e é o que ele resolve mais rápido. */}
+      <CarneResumo parcelas={parcelas} />
 
       {activeOrder && (
         <div className="mb-6 rounded-[20px] border border-accent/30 bg-[linear-gradient(135deg,#181014,#111114_60%)] p-6.5">

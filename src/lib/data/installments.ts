@@ -59,6 +59,36 @@ export async function listInstallmentsBySource(
   return mapa;
 }
 
+/** Uma parcela do próprio cliente, já com o registro de onde ela veio. */
+export type MinhaParcela = Installment & { origem: string };
+
+/** O carnê do usuário logado, para a área da conta.
+ *
+ *  Vem de `my_installments()`, função `security definer` no banco:
+ *  `payment_installments` é admin-only e continua sendo. A função responde só o
+ *  que é do usuário da sessão, buscando o vínculo pelos dois lados — conta do
+ *  site e cadastro do ERP —, porque venda de PIX parcelado costuma nascer no
+ *  gerenciamento, ligada só ao segundo. */
+export async function listMyInstallments(): Promise<MinhaParcela[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('my_installments');
+
+  if (error) {
+    console.error('[conta] carnê do cliente não carregou', error);
+    return [];
+  }
+
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    number: r.number,
+    amount: Number(r.amount),
+    dueDate: r.due_date,
+    status: r.status as InstallmentStatus,
+    notes: '',
+    origem: r.origem ?? '',
+  }));
+}
+
 /** Regrava o carnê inteiro.
  *
  *  Preserva status, vencimento e observação das parcelas que já existem, casando
