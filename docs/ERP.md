@@ -895,6 +895,33 @@ linha separada faria o cliente somar duas vezes. Por isso a proposta diz
 São peças de uso diferente: o PDF vai para impressora e assinatura, esta imagem
 vai para o WhatsApp e fica ao lado das fotos do site.
 
+**A foto entra inteira e sem fundo (2026-08-06).** A primeira versão preenchia a
+área cortando o excedente (`cover`), e foto quadrada em área larga perdia topo e
+base — o notebook saía sem tela e sem teclado. Agora a foto é encaixada inteira,
+centralizada; sobra espaço nas laterais quando a proporção não bate, e sobra é
+melhor que faltar.
+
+O fundo é recortado por **preenchimento a partir da borda** (`lib/image-cutout.ts`),
+não por "toda cor parecida com o fundo": o preto do teclado é parecido com um
+fundo cinza-escuro, mas não está ligado à borda, então sobrevive. É essa
+diferença que separa recorte de destruição. A borda ganha rampa de
+transparência, senão o corte binário deixa degraus no contorno.
+
+Três guardas antes de confiar no recorte: os quatro cantos precisam concordar
+sobre a cor do fundo (foto de ambiente desiste), e o que sobra precisa ficar
+entre 4% e 97% da área. Falhando qualquer uma, vale a foto original — que também
+entra inteira. Recorte quebrado não chega ao cliente.
+
+O recorte resolve o enquadramento junto: sabendo onde o produto começa e termina,
+a peça encaixa a caixa exata dele, em vez da foto com as margens que ela trazia.
+Por isso a peça passou de 4:5 para **2:3** e a foto de 430 para 640px de altura —
+com a foto inteira, um notebook quase quadrado ficava pequeno no meio do cartão.
+
+⚠️ O recorte vale **só na proposta**, onde o desenho é nosso. As miniaturas das
+listagens e as fotos do site continuam com o fundo original: tirá-lo lá exigiria
+processar a imagem no upload (ou uma rota de imagem no servidor), não dá para
+fazer no navegador a cada carregamento de página.
+
 ### Foto do produto nas listagens (2026-08-06)
 
 Onde aparece nome de produto agora aparece a foto, com canto arredondado igual ao
@@ -916,6 +943,11 @@ storage do Supabase, que é outro domínio; sem `img.crossOrigin = 'anonymous'` 
 navegador marca o canvas como contaminado e `toDataURL` passa a lançar
 `SecurityError` — o desenho aparece na tela e **o download morre**. O storage
 responde com CORS aberto, então basta pedir.
+
+O recorte foi validado contra a imagem real do catálogo antes de subir: fundo
+(33,33,33) com divergência zero entre os cantos, caixa do produto 1175 × 966 de
+1400 × 1400, 46,7% de pixels opacos, 41 ms — preservando tela, teclado e base. Na
+peça final o produto ocupa 89% da altura da área, medido no canvas.
 
 Testado contra o código real (`scratchpad/test-proposta.ts`, 16 asserções):
 formas de pagamento, frete, desconto percentual e em valor, desconto maior que o
