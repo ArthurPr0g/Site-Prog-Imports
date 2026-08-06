@@ -108,7 +108,13 @@ export function ParcelasList({
   }
 
   function abrirEdicao(p: Installment) {
-    setEditando({ ...p, valorTexto: formatNumeroInput(p.amount) });
+    // Recebida sem data registrada (carnê antigo) abre com o vencimento, que é
+    // o que o Financeiro vinha usando — assim abrir e salvar não move nada.
+    setEditando({
+      ...p,
+      valorTexto: formatNumeroInput(p.amount),
+      paidAt: p.status === 'Recebida' ? (p.paidAt || p.dueDate) : (p.paidAt ?? null),
+    });
   }
 
   function salvarEdicao() {
@@ -120,6 +126,7 @@ export function ParcelasList({
         status: editando.status,
         dueDate: editando.dueDate,
         notes: editando.notes,
+        paidAt: editando.paidAt ?? '',
       });
       toast(result);
       if (result.ok) setEditando(null);
@@ -226,7 +233,16 @@ export function ParcelasList({
               {rotuloDaParcela(p, origem?.totalDoGrupo ?? totalParcelas)}
             </div>
             <div className="text-right font-bold">{formatBRL(p.amount)}</div>
-            <div className="text-fg-secondary">{formatDateBR(p.dueDate + 'T12:00:00')}</div>
+            <div className="text-fg-secondary">
+              {formatDateBR(p.dueDate + 'T12:00:00')}
+              {/* Pagamento fora do vencimento aparece na linha: é o que
+                  explica por que o valor entrou noutro mês do caixa. */}
+              {p.status === 'Recebida' && p.paidAt && p.paidAt !== p.dueDate && (
+                <div className="text-[10.5px]" style={{ color: VERDE }}>
+                  pago em {formatDateBR(p.paidAt + 'T12:00:00')}
+                </div>
+              )}
+            </div>
             <div>
               <span
                 className="inline-flex items-center rounded-full px-2 py-0.5 text-[10.5px] font-extrabold"
@@ -301,11 +317,20 @@ export function ParcelasList({
                   className={`w-full ${inputClass}`}
                 />
               </div>
-              <div className="sm:col-span-2">
+              <div>
                 <div className="mb-1.5 text-[11px] text-fg-faded">Status</div>
                 <select
                   value={editando.status}
-                  onChange={(e) => setEditando({ ...editando, status: e.target.value as InstallmentStatus })}
+                  onChange={(e) => {
+                    const status = e.target.value as InstallmentStatus;
+                    setEditando({
+                      ...editando,
+                      status,
+                      // Virou recebida sem data: assume hoje, que é quando o
+                      // dinheiro entrou na esmagadora maioria das baixas.
+                      paidAt: status === 'Recebida' ? (editando.paidAt || hojeISO()) : null,
+                    });
+                  }}
                   className={`w-full ${inputClass}`}
                 >
                   {INSTALLMENT_STATUSES.map((s) => (
@@ -313,6 +338,20 @@ export function ParcelasList({
                   ))}
                 </select>
               </div>
+              {/* Só faz sentido com a parcela recebida — é a data que manda no
+                  caixa, e é ela que coloca um pagamento atrasado no mês em que
+                  o dinheiro realmente entrou. */}
+              {editando.status === 'Recebida' && (
+                <div>
+                  <div className="mb-1.5 text-[11px] text-fg-faded">Recebida em</div>
+                  <input
+                    type="date"
+                    value={editando.paidAt ?? ''}
+                    onChange={(e) => setEditando({ ...editando, paidAt: e.target.value })}
+                    className={`w-full ${inputClass}`}
+                  />
+                </div>
+              )}
               <input
                 value={editando.notes}
                 onChange={(e) => setEditando({ ...editando, notes: e.target.value })}
@@ -324,7 +363,8 @@ export function ParcelasList({
             <div className="mb-5 text-[11.5px] text-fg-faded">
               &quot;Atrasada&quot; não é escolhido: aparece sozinho quando o vencimento passa e a parcela
               continua pendente. Mudar o valor aqui não muda o total da venda — se as duas coisas
-              tiverem que mudar, corrija a venda também.
+              tiverem que mudar, corrija a venda também. <strong>É a data de recebimento</strong>,
+              não a de vencimento, que decide em qual mês o valor entra no Financeiro.
             </div>
 
             <div className="flex justify-end gap-2.5">

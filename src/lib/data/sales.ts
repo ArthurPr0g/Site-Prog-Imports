@@ -9,7 +9,7 @@ import {
 } from '@/lib/sales';
 import { listInstallments, listInstallmentsBySource } from '@/lib/data/installments';
 import { listProductCovers } from '@/lib/data/product-covers';
-import type { Installment } from '@/lib/installments';
+import { dataDeCaixa, type Installment } from '@/lib/installments';
 
 type ItemRow = {
   id: string;
@@ -198,7 +198,10 @@ export async function sincronizarFinanceiroDaVenda(orderId: string): Promise<voi
             kind: 'receita' as const,
             description: `${descricao} (${p.number === 0 ? 'entrada' : `parcela ${p.number}`})`,
             amount: p.amount,
-            entryDate: p.dueDate,
+            // Recebida entra no dia em que o dinheiro entrou; pendente, no dia
+            // em que é esperado. Usar sempre o vencimento arquivava pagamento
+            // atrasado no mês errado — e o caixa do mês não se mexia com a baixa.
+            entryDate: dataDeCaixa(p),
             // Só "Recebida" vira dinheiro no caixa. Pendente e atrasada seguem
             // Previsto, que é a verdade: o valor ainda não entrou.
             status: p.status === 'Recebida' ? ('Pago' as const) : ('Previsto' as const),

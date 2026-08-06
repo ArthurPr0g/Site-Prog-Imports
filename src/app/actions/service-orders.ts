@@ -15,6 +15,7 @@ import {
   type ServicePaymentStatus,
 } from '@/lib/services';
 import { sincronizarFinanceiroDaPrestacao, removerFinanceiroDaPrestacao } from '@/lib/data/service-orders';
+import { revalidarDinheiro } from '@/lib/data/revalidate';
 import { DISCOUNT_TYPES, aplicarDesconto, type Desconto } from '@/lib/discount';
 import { salvarParcelas, removerParcelas } from '@/lib/data/installments';
 import { geraParcelas, gerarParcelas, MAX_JUROS_PCT } from '@/lib/installments';
@@ -49,10 +50,7 @@ async function adminClient() {
   return createClient();
 }
 
-function revalidar() {
-  revalidatePath('/admin/prestacao-servico');
-  revalidatePath('/admin/financeiro');
-}
+const revalidar = revalidarDinheiro;
 
 export async function saveServiceOrderAction(input: ServiceOrderInput): Promise<ActionResult> {
   const supabase = await adminClient();

@@ -10,6 +10,7 @@ type Row = {
   due_date: string;
   status: string;
   notes: string;
+  paid_at: string | null;
 };
 
 function toInstallment(r: Row): Installment {
@@ -20,6 +21,7 @@ function toInstallment(r: Row): Installment {
     dueDate: r.due_date,
     status: r.status as InstallmentStatus,
     notes: r.notes,
+    paidAt: r.paid_at,
   };
 }
 
@@ -85,6 +87,7 @@ export async function listMyInstallments(): Promise<MinhaParcela[]> {
     dueDate: r.due_date,
     status: r.status as InstallmentStatus,
     notes: '',
+    paidAt: r.paid_at ?? null,
     origem: r.origem ?? '',
   }));
 }
@@ -140,6 +143,7 @@ export async function salvarParcelas(
         due_date: p.dueDate,
         status: p.status,
         notes: p.notes,
+        paid_at: p.status === 'Recebida' ? (p.paidAt ?? p.dueDate) : null,
       });
     }
   }

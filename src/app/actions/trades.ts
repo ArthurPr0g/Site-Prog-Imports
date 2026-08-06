@@ -1,6 +1,5 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
@@ -14,6 +13,7 @@ import {
 import { geraParcelas, gerarParcelas, MAX_JUROS_PCT } from '@/lib/installments';
 import { salvarParcelas, removerParcelas } from '@/lib/data/installments';
 import { sincronizarFinanceiroDaVenda, removerFinanceiroDaVenda } from '@/lib/data/sales';
+import { revalidarDinheiro } from '@/lib/data/revalidate';
 
 export type TradeFormInput = {
   customerId: string | null;
@@ -35,12 +35,10 @@ async function adminClient() {
   return createClient();
 }
 
+/** A troca gera venda, mexe no estoque e no caixa — e o estoque muda o selo de
+ *  pronta entrega na vitrine. */
 function revalidar() {
-  revalidatePath('/admin/avaliacao-troca');
-  revalidatePath('/admin/estoque');
-  revalidatePath('/admin/vendas');
-  revalidatePath('/admin/financeiro');
-  revalidatePath('/');
+  revalidarDinheiro('/admin/avaliacao-troca', '/admin/estoque', '/');
 }
 
 /** Conclui a negociação: uma sequência com vários efeitos.

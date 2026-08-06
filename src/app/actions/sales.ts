@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { revalidarDinheiro } from '@/lib/data/revalidate';
 import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
 import { totalizarVenda, SALE_STATUSES, type SaleItem, type SaleStatus } from '@/lib/sales';
@@ -36,10 +37,9 @@ async function adminClient() {
   return createClient();
 }
 
+/** A venda mexe no caixa, no histórico do cliente, no painel e no estoque. */
 function revalidar() {
-  revalidatePath('/admin/vendas');
-  revalidatePath('/admin/financeiro');
-  revalidatePath('/admin/estoque');
+  revalidarDinheiro('/admin/estoque');
 }
 
 export async function saveSaleAction(input: SaleFormInput): Promise<ActionResult> {

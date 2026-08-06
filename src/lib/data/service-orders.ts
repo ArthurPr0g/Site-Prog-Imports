@@ -9,7 +9,7 @@ import {
 } from '@/lib/services';
 import type { Desconto } from '@/lib/discount';
 import { listInstallments, listInstallmentsBySource } from '@/lib/data/installments';
-import { OFFSET_PARCELA_PIX, type Installment } from '@/lib/installments';
+import { OFFSET_PARCELA_PIX, dataDeCaixa, type Installment } from '@/lib/installments';
 
 type ItemRow = {
   id: string;
@@ -173,7 +173,9 @@ export async function sincronizarFinanceiroDaPrestacao(orderId: string): Promise
               amount: p.amount,
               status: p.status === 'Recebida' ? ('Pago' as const) : ('Previsto' as const),
               description: `Serviço: ${data.title} — ${p.number === 0 ? 'entrada' : `parcela ${p.number}`}`,
-              entryDate: p.dueDate,
+              // Mesma regra da venda: recebida entra no dia do recebimento,
+              // pendente no dia do vencimento.
+              entryDate: dataDeCaixa(p),
             })),
         ]
       : alvos;

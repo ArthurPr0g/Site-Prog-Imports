@@ -1,9 +1,10 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { revalidarDinheiro } from '@/lib/data/revalidate';
 import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
+import { formatDateBR } from '@/lib/format';
 import { INSTALLMENT_STATUSES, gerarParcelas, type InstallmentStatus } from '@/lib/installments';
 import { aplicarDesconto, type Desconto } from '@/lib/discount';
 import { sincronizarFinanceiroDaVenda } from '@/lib/data/sales';
@@ -16,6 +17,27 @@ async function adminClient() {
   return createClient();
 }
 
+/** Data local, nunca UTC: `toISOString()` no fim da tarde já está no dia
+ *  seguinte, e um recebimento registrado com um dia a mais pode cair no mês
+ *  errado do caixa. */
+function hojeISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const MESES = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+];
+
+/** "agosto/2026" — a mensagem diz em qual mês o dinheiro entrou, que é
+ *  justamente o que confundia quando a baixa de uma parcela vencida não mexia
+ *  no mês corrente. */
+function mesPorExtenso(iso: string): string {
+  const [ano, mes] = iso.split('-');
+  return `${MESES[Number(mes) - 1]}/${ano}`;
+}
+
 /** Reflete a mudança no caixa. Marcar uma parcela como recebida sem isto
  *  deixaria o Financeiro dizendo que o dinheiro ainda não entrou. */
 async function ressincronizar(tipo: SourceType, sourceId: string): Promise<void> {
@@ -23,13 +45,7 @@ async function ressincronizar(tipo: SourceType, sourceId: string): Promise<void>
   else await sincronizarFinanceiroDaPrestacao(sourceId);
 }
 
-function revalidar() {
-  revalidatePath('/admin/vendas');
-  revalidatePath('/admin/prestacao-servico');
-  revalidatePath('/admin/financeiro');
-  revalidatePath('/admin/clientes', 'layout');
-  revalidatePath('/admin');
-}
+const revalidar = revalidarDinheiro;
 
 export async function updateInstallmentAction(input: {
   id: string;
@@ -37,6 +53,9 @@ export async function updateInstallmentAction(input: {
   status: InstallmentStatus;
   dueDate: string;
   notes: string;
+  /** Dia em que o dinheiro entrou. Só vale com status Recebida; vazio assume
+   *  hoje, que é o caso comum de quem está dando baixa agora. */
+  paidAt?: string;
 }): Promise<ActionResult> {
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
@@ -49,11 +68,17 @@ export async function updateInstallmentAction(input: {
 
   const { data: parcela } = await supabase
     .from('payment_installments')
-    .select('source_type, source_id')
+    .select('source_type, source_id, status, paid_at')
     .eq('id', input.id)
     .maybeSingle();
 
   if (!parcela) return errResult('Parcela não encontrada.');
+
+  // A data de recebimento acompanha o status: sai quando a parcela deixa de
+  // estar recebida, e é preservada quando ela já estava — reescrever para hoje
+  // a cada edição jogaria um recebimento antigo para o mês corrente.
+  const recebimento =
+    input.status === 'Recebida' ? input.paidAt || parcela.paid_at || hojeISO() : null;
 
   const { error } = await supabase
     .from('payment_installments')
@@ -62,6 +87,7 @@ export async function updateInstallmentAction(input: {
       status: input.status,
       due_date: input.dueDate,
       notes: input.notes.trim(),
+      paid_at: recebimento,
       updated_at: new Date().toISOString(),
     })
     .eq('id', input.id);
@@ -73,7 +99,7 @@ export async function updateInstallmentAction(input: {
   revalidar();
   return okResult(
     input.status === 'Recebida'
-      ? 'Parcela recebida. O valor entrou na receita do Financeiro.'
+      ? `Parcela atualizada. O valor entrou na receita do Financeiro em ${formatDateBR(`${recebimento}T12:00:00`)}.`
       : 'Parcela atualizada.'
   );
 }
@@ -218,10 +244,14 @@ export async function toggleInstallmentReceivedAction(id: string): Promise<Actio
   }
 
   const novo: InstallmentStatus = parcela.status === 'Recebida' ? 'Pendente' : 'Recebida';
+  // Baixa pelo botão é sempre "recebi agora". Data diferente se corrige pelo
+  // formulário — e é lá que o dono registra pagamento de ontem ou da semana
+  // passada.
+  const recebimento = novo === 'Recebida' ? hojeISO() : null;
 
   const { error } = await supabase
     .from('payment_installments')
-    .update({ status: novo, updated_at: new Date().toISOString() })
+    .update({ status: novo, paid_at: recebimento, updated_at: new Date().toISOString() })
     .eq('id', id);
 
   if (error) return errResult(friendlyDbError(error, 'Não foi possível atualizar a parcela.'));
@@ -232,7 +262,7 @@ export async function toggleInstallmentReceivedAction(id: string): Promise<Actio
   const rotulo = parcela.number === 0 ? 'Entrada' : `Parcela ${parcela.number}`;
   return okResult(
     novo === 'Recebida'
-      ? `${rotulo} recebida. O valor entrou na receita do Financeiro.`
+      ? `${rotulo} recebida hoje. O valor entrou na receita do Financeiro de ${mesPorExtenso(recebimento!)}.`
       : `${rotulo} voltou para pendente e saiu da receita.`
   );
 }

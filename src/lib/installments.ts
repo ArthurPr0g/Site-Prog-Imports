@@ -46,7 +46,22 @@ export type Installment = {
   dueDate: string;
   status: InstallmentStatus;
   notes: string;
+  /** Dia em que o dinheiro entrou. Null enquanto não foi recebida. */
+  paidAt?: string | null;
 };
+
+/** A data que vale no caixa.
+ *
+ *  Enquanto a parcela é previsão, vale o vencimento: é quando o dinheiro é
+ *  esperado. Depois de recebida, vale o dia em que entrou — que numa parcela
+ *  paga com atraso é outro mês.
+ *
+ *  Sem essa distinção, dar baixa numa parcela vencida não mexia no Financeiro do
+ *  mês: o valor ia para o mês do vencimento, que já tinha passado. Parecia falta
+ *  de sincronia entre as telas; era data errada no lançamento. */
+export function dataDeCaixa(p: Installment): string {
+  return p.status === 'Recebida' ? (p.paidAt || p.dueDate) : p.dueDate;
+}
 
 export type CondicoesParcelamento = {
   /** Valor total a parcelar, antes da entrada. */
@@ -135,6 +150,7 @@ export function gerarParcelas(c: CondicoesParcelamento): Installment[] {
       dueDate: c.primeiroVencimento,
       status: 'Pendente',
       notes: '',
+      paidAt: null,
     });
   }
 
@@ -145,6 +161,7 @@ export function gerarParcelas(c: CondicoesParcelamento): Installment[] {
       dueDate: somarMeses(c.primeiroVencimento, i),
       status: 'Pendente',
       notes: '',
+      paidAt: null,
     });
   }
 

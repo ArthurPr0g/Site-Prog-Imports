@@ -599,6 +599,7 @@ export type Database = {
           id: string
           notes: string
           number: number
+          paid_at: string | null
           source_id: string
           source_type: string
           status: string
@@ -611,6 +612,7 @@ export type Database = {
           id?: string
           notes?: string
           number: number
+          paid_at?: string | null
           source_id: string
           source_type: string
           status?: string
@@ -623,6 +625,7 @@ export type Database = {
           id?: string
           notes?: string
           number?: number
+          paid_at?: string | null
           source_id?: string
           source_type?: string
           status?: string
@@ -1692,6 +1695,7 @@ export type Database = {
           amount: number
           due_date: string
           status: string
+          paid_at: string | null
           origem: string | null
         }[]
       }
