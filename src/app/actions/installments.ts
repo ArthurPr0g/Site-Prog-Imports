@@ -4,10 +4,11 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
-import { INSTALLMENT_STATUSES, type InstallmentStatus } from '@/lib/installments';
+import { INSTALLMENT_STATUSES, gerarParcelas, type InstallmentStatus } from '@/lib/installments';
+import { aplicarDesconto, type Desconto } from '@/lib/discount';
 import { sincronizarFinanceiroDaVenda } from '@/lib/data/sales';
 import { sincronizarFinanceiroDaPrestacao } from '@/lib/data/service-orders';
-import type { SourceType } from '@/lib/data/installments';
+import { salvarParcelas, type SourceType } from '@/lib/data/installments';
 
 async function adminClient() {
   const admin = await requireAdmin();
@@ -75,6 +76,95 @@ export async function updateInstallmentAction(input: {
       ? 'Parcela recebida. O valor entrou na receita do Financeiro.'
       : 'Parcela atualizada.'
   );
+}
+
+/** Refaz o carnê a partir das condições gravadas na venda ou na prestação.
+ *
+ *  É a saída para quando os ajustes manuais deixaram o carnê sem fechar com o
+ *  valor devido. Precisa ser um botão explícito porque salvar a venda não faz
+ *  mais isso sozinho — justamente para não desfazer ajuste manual sem pedir.
+ *
+ *  O status de cada parcela sobrevive: valor e vencimento voltam ao calculado,
+ *  mas o que já foi recebido continua recebido. Zerar isso apagaria registro de
+ *  dinheiro que entrou. */
+export async function regenerateInstallmentsAction(input: {
+  tipo: SourceType;
+  sourceId: string;
+}): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  const condicoes =
+    input.tipo === 'venda'
+      ? await condicoesDaVenda(supabase, input.sourceId)
+      : await condicoesDaPrestacao(supabase, input.sourceId);
+
+  if (!condicoes) return errResult('Não foi possível ler as condições do parcelamento.');
+  if (!condicoes.primeiroVencimento || condicoes.parcelas < 1) {
+    return errResult('Esta venda não tem condições de parcelamento gravadas.');
+  }
+
+  await salvarParcelas(input.tipo, input.sourceId, gerarParcelas(condicoes), { redefinirDatas: true });
+  await ressincronizar(input.tipo, input.sourceId);
+
+  revalidar();
+  return okResult('Carnê refeito a partir das condições da venda. As baixas foram mantidas.');
+}
+
+type Condicoes = {
+  total: number;
+  parcelas: number;
+  entrada: number;
+  jurosPct: number;
+  primeiroVencimento: string;
+};
+
+async function condicoesDaVenda(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  id: string
+): Promise<Condicoes | null> {
+  const { data } = await supabase
+    .from('orders')
+    .select('total, installment_count, down_payment, interest_pct, first_due_date')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (!data) return null;
+  return {
+    total: Number(data.total),
+    parcelas: data.installment_count,
+    entrada: Number(data.down_payment),
+    jurosPct: Number(data.interest_pct),
+    primeiroVencimento: data.first_due_date ?? '',
+  };
+}
+
+/** O carnê do serviço é sobre o trabalho já com desconto, não sobre o preço
+ *  cheio — mesma conta que a action de prestação faz ao salvar. */
+async function condicoesDaPrestacao(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  id: string
+): Promise<Condicoes | null> {
+  const { data } = await supabase
+    .from('service_orders')
+    .select(
+      'total_amount, discount_type, discount_value, installment_count, down_payment, interest_pct, first_due_date'
+    )
+    .eq('id', id)
+    .maybeSingle();
+
+  if (!data) return null;
+  return {
+    total: aplicarDesconto(Number(data.total_amount), {
+      tipo: data.discount_type as Desconto['tipo'],
+      valor: Number(data.discount_value),
+      descricao: '',
+    }),
+    parcelas: data.installment_count,
+    entrada: Number(data.down_payment),
+    jurosPct: Number(data.interest_pct),
+    primeiroVencimento: data.first_due_date ?? '',
+  };
 }
 
 /** Apaga uma parcela do carnê.

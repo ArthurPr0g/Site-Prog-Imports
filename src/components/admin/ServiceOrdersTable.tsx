@@ -25,7 +25,7 @@ import { SEM_DESCONTO, temDesconto, aplicarDesconto, rotuloDoDesconto, type Desc
 import { DescontoFields } from '@/components/admin/DescontoFields';
 import { ParcelamentoFields } from '@/components/admin/ParcelamentoFields';
 import { ParcelasList } from '@/components/admin/ParcelasList';
-import { geraParcelas, calcularParcelamento, type Installment } from '@/lib/installments';
+import { geraParcelas, calcularParcelamento } from '@/lib/installments';
 import { saveServiceOrderAction, deleteServiceOrderAction, type ServiceOrderInput } from '@/app/actions/service-orders';
 
 const inputClass =
@@ -92,12 +92,15 @@ export function ServiceOrdersTable({
 }) {
   const [busca, setBusca] = useState('');
   const [form, setForm] = useState<ServiceOrderInput | null>(null);
-  /** Carnê já gravado, só existente na edição. */
-  const [parcelasDaEdicao, setParcelasDaEdicao] = useState<Installment[]>([]);
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 
   const ind = useMemo(() => computeServiceIndicators(orders), [orders]);
+
+  /** Carnê já gravado, lido da lista e não copiado para o estado: dar baixa ou
+   *  corrigir uma parcela revalida a página, e uma cópia local continuaria
+   *  mostrando o carnê de antes até fechar o formulário. */
+  const parcelasDaEdicao = form?.id ? (orders.find((o) => o.id === form.id)?.installments ?? []) : [];
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -121,10 +124,7 @@ export function ServiceOrdersTable({
     startTransition(async () => {
       const result = await saveServiceOrderAction(form);
       toast(result);
-      if (result.ok) {
-        setForm(null);
-        setParcelasDaEdicao([]);
-      }
+      if (result.ok) setForm(null);
     });
   }
 
@@ -155,7 +155,6 @@ export function ServiceOrdersTable({
       installmentNotes: o.installmentNotes,
       items: o.items.length ? o.items : [itemVazio()],
     });
-    setParcelasDaEdicao(o.installments);
   }
 
   const set = <K extends keyof ServiceOrderInput>(campo: K, valor: ServiceOrderInput[K]) =>
@@ -552,6 +551,7 @@ export function ServiceOrdersTable({
               <div className="mb-4">
                 <ParcelasList
                   parcelas={parcelasDaEdicao}
+                  origemDoCarne={form.id ? { tipo: 'servico', sourceId: form.id } : undefined}
                   // Com juros o carnê cobra mais que o trabalho; é essa soma que
                   // ele tem que fechar, não o valor puro dos serviços.
                   totalEsperado={

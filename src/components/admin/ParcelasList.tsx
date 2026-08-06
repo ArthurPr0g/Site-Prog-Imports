@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Check, Pencil, Trash2, Undo2 } from 'lucide-react';
+import { Check, Pencil, RotateCcw, Trash2, Undo2 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatBRL, formatDateBR, formatNumeroInput, parseNumeroBR } from '@/lib/format';
@@ -20,7 +20,9 @@ import {
   updateInstallmentAction,
   deleteInstallmentAction,
   toggleInstallmentReceivedAction,
+  regenerateInstallmentsAction,
 } from '@/app/actions/installments';
+import type { SourceType } from '@/lib/data/installments';
 
 const inputClass =
   'rounded-control border border-border-strong bg-input px-3 py-2 text-[13px] outline-none focus:border-accent';
@@ -62,12 +64,16 @@ export function ParcelasList({
   origens,
   totalEsperado,
   titulo,
+  origemDoCarne,
 }: {
   parcelas: Installment[];
   origens?: Record<string, OrigemDaParcela>;
   /** Quanto o carnê deveria somar, com juros. Sem isto a conferência não roda. */
   totalEsperado?: number;
   titulo?: string;
+  /** De onde refazer o carnê. Só quem tem uma origem única pode oferecer isso —
+   *  a lista consolidada do cliente mistura várias. */
+  origemDoCarne?: { tipo: SourceType; sourceId: string };
 }) {
   const [editando, setEditando] = useState<Edicao | null>(null);
   const [excluindo, setExcluindo] = useState<Installment | null>(null);
@@ -91,6 +97,13 @@ export function ParcelasList({
     if (!p.id) return;
     startTransition(async () => {
       toast(await toggleInstallmentReceivedAction(p.id!));
+    });
+  }
+
+  function refazer() {
+    if (!origemDoCarne) return;
+    startTransition(async () => {
+      toast(await regenerateInstallmentsAction(origemDoCarne));
     });
   }
 
@@ -164,8 +177,19 @@ export function ParcelasList({
         >
           <strong>O carnê não fecha com o valor devido.</strong> As parcelas somam{' '}
           {formatBRL(somaDoCarne(parcelas))} e deveriam somar {formatBRL(totalEsperado ?? 0)} —{' '}
-          {divergencia > 0 ? 'sobram' : 'faltam'} {formatBRL(Math.abs(divergencia))}. Ajuste alguma
-          parcela, ou salve a venda de novo para o carnê ser refeito do zero.
+          {divergencia > 0 ? 'sobram' : 'faltam'} {formatBRL(Math.abs(divergencia))}. Isso é normal
+          logo depois de um ajuste manual; corrija alguma parcela
+          {origemDoCarne ? ' ou refaça o carnê pelas condições da venda.' : '.'}
+          {origemDoCarne && (
+            <button
+              onClick={refazer}
+              disabled={pending}
+              className="ml-2 inline-flex items-center gap-1.5 rounded-control border px-2.5 py-1 text-[11.5px] font-extrabold disabled:opacity-60"
+              style={{ borderColor: `${AMARELO}88` }}
+            >
+              <RotateCcw size={11} /> {pending ? 'Refazendo…' : 'Refazer carnê'}
+            </button>
+          )}
         </div>
       )}
 

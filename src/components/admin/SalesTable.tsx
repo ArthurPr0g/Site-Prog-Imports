@@ -14,7 +14,7 @@ import {
   type SaleStatus,
 } from '@/lib/sales';
 import Link from 'next/link';
-import { geraParcelas, calcularParcelamento, type Installment } from '@/lib/installments';
+import { geraParcelas, calcularParcelamento } from '@/lib/installments';
 import { SeloAdimplencia } from '@/components/admin/SeloAdimplencia';
 import type { Adimplencia } from '@/lib/customer-history';
 import { ParcelamentoFields } from '@/components/admin/ParcelamentoFields';
@@ -80,13 +80,16 @@ export function SalesTable({
 }) {
   const [busca, setBusca] = useState('');
   const [form, setForm] = useState<SaleFormInput | null>(null);
-  /** Carnê já gravado da venda em edição. Só existe depois de salvar — no
-   *  formulário de uma venda nova o que aparece é a prévia do cálculo. */
-  const [parcelasDaEdicao, setParcelasDaEdicao] = useState<Installment[]>([]);
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 
   const ind = useMemo(() => computeSaleIndicators(sales), [sales]);
+
+  /** Carnê já gravado da venda em edição, lido da lista e não copiado para o
+   *  estado: dar baixa ou corrigir uma parcela revalida a página, e uma cópia
+   *  local continuaria mostrando o carnê de antes até fechar o formulário.
+   *  Numa venda nova não existe carnê — o que aparece é a prévia do cálculo. */
+  const parcelasDaEdicao = form?.id ? (sales.find((v) => v.id === form.id)?.installments ?? []) : [];
 
   /** Casa a venda com o cliente pelo nome: `orders.customer_name` é texto livre
    *  e nem toda venda tem vínculo. Nome exato é o suficiente aqui — errar só
@@ -123,10 +126,7 @@ export function SalesTable({
     startTransition(async () => {
       const result = await saveSaleAction(form);
       toast(result);
-      if (result.ok) {
-        setForm(null);
-        setParcelasDaEdicao([]);
-      }
+      if (result.ok) setForm(null);
     });
   }
 
@@ -155,7 +155,6 @@ export function SalesTable({
       installmentNotes: v.installmentNotes,
       items: v.items.length ? v.items : [itemVazio()],
     });
-    setParcelasDaEdicao(v.installments);
   }
 
   const set = <K extends keyof SaleFormInput>(campo: K, valor: SaleFormInput[K]) =>
@@ -580,6 +579,7 @@ export function SalesTable({
               <div className="mb-4">
                 <ParcelasList
                   parcelas={parcelasDaEdicao}
+                  origemDoCarne={form.id ? { tipo: 'venda', sourceId: form.id } : undefined}
                   // Com juros o carnê cobra mais que o total da venda; é essa
                   // soma que ele tem que fechar, não o total puro.
                   totalEsperado={

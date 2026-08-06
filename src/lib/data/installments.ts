@@ -65,11 +65,17 @@ export async function listInstallmentsBySource(
  *  pelo NÚMERO: o dono edita datas e dá baixas uma a uma, e recriar do zero
  *  apagaria esse trabalho a cada salvamento da venda. Só o VALOR é reescrito,
  *  porque ele vem do cálculo — se o total da venda mudou, a parcela tem que
- *  mudar junto. */
+ *  mudar junto.
+ *
+ *  `redefinirDatas` é o "refazer o carnê" pedido de propósito pelo dono: aí os
+ *  vencimentos também voltam ao calculado. O status continua preservado mesmo
+ *  nesse caso — perder o registro de quais parcelas já foram pagas seria
+ *  destruir histórico de dinheiro recebido para consertar um cálculo. */
 export async function salvarParcelas(
   tipo: SourceType,
   sourceId: string,
-  parcelas: Installment[]
+  parcelas: Installment[],
+  opcoes?: { redefinirDatas?: boolean }
 ): Promise<void> {
   const supabase = await createClient();
 
@@ -89,7 +95,11 @@ export async function salvarParcelas(
     if (existente) {
       await supabase
         .from('payment_installments')
-        .update({ amount: p.amount, updated_at: agora })
+        .update({
+          amount: p.amount,
+          ...(opcoes?.redefinirDatas ? { due_date: p.dueDate } : {}),
+          updated_at: agora,
+        })
         .eq('id', existente.id);
     } else {
       await supabase.from('payment_installments').insert({
