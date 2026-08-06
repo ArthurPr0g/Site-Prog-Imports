@@ -17,6 +17,19 @@ export type SystemSettingsInput = {
   contractorDoc: string;
   contractorRole: string;
   contractForum: string;
+  /** Remetente impresso na etiqueta de transporte. Mesmo motivo dos dados de
+   *  contrato para estar no banco: endereço com documento não vai para código
+   *  versionado num repositório público. */
+  senderName: string;
+  senderDoc: string;
+  senderPhone: string;
+  senderCep: string;
+  senderAddressLine: string;
+  senderAddressNumber: string;
+  senderComplement: string;
+  senderDistrict: string;
+  senderCity: string;
+  senderState: string;
 };
 
 async function adminClient() {
@@ -107,6 +120,16 @@ export async function saveSystemSettingsAction(input: SystemSettingsInput): Prom
       contractor_doc: input.contractorDoc.trim(),
       contractor_role: input.contractorRole.trim(),
       contract_forum: input.contractForum.trim(),
+      sender_name: input.senderName.trim(),
+      sender_doc: input.senderDoc.trim(),
+      sender_phone: input.senderPhone.trim(),
+      sender_cep: input.senderCep.trim(),
+      sender_address_line: input.senderAddressLine.trim(),
+      sender_address_number: input.senderAddressNumber.trim(),
+      sender_complement: input.senderComplement.trim(),
+      sender_district: input.senderDistrict.trim(),
+      sender_city: input.senderCity.trim(),
+      sender_state: input.senderState.trim().toUpperCase(),
     })
     .eq('id', true);
 
@@ -119,6 +142,8 @@ export async function saveSystemSettingsAction(input: SystemSettingsInput): Prom
 
   revalidatePath('/admin/configuracoes');
   revalidatePath('/admin/orcamentos-loja');
+  // A etiqueta de transporte lê o remetente daqui.
+  revalidatePath('/admin/vendas');
 
   return okResult(
     recalculados > 0

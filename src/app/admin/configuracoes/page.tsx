@@ -23,6 +23,18 @@ export default async function AdminConfiguracoesPage() {
           contractorDoc={settings.contractorDoc}
           contractorRole={settings.contractorRole}
           contractForum={settings.contractForum}
+          remetente={{
+            senderName: settings.senderName,
+            senderDoc: settings.senderDoc,
+            senderPhone: settings.senderPhone,
+            senderCep: settings.senderCep,
+            senderAddressLine: settings.senderAddressLine,
+            senderAddressNumber: settings.senderAddressNumber,
+            senderComplement: settings.senderComplement,
+            senderDistrict: settings.senderDistrict,
+            senderCity: settings.senderCity,
+            senderState: settings.senderState,
+          }}
         />
         <div className="grid grid-cols-1 items-start gap-3.5 md:grid-cols-2">
           <CoverImageCatalogGroup title="Categorias" items={categories} placeholder="Nova categoria…" />

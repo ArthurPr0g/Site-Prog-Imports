@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useState, useMemo, useTransition } from 'react';
-import { Pencil, Trash2, Plus, X, Search } from 'lucide-react';
+import { Pencil, Trash2, Plus, X, Search, Tag as TagIcon } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { formatBRL, parseNumeroBR, formatDateBR, formatNumeroInput } from '@/lib/format';
 import {
@@ -19,6 +19,8 @@ import { SeloAdimplencia } from '@/components/admin/SeloAdimplencia';
 import type { Adimplencia } from '@/lib/customer-history';
 import { ParcelamentoFields } from '@/components/admin/ParcelamentoFields';
 import { ParcelasList } from '@/components/admin/ParcelasList';
+import { EtiquetaModal } from '@/components/admin/EtiquetaModal';
+import { destinatarioDaVenda, type EnderecoDaEtiqueta, type Etiqueta } from '@/lib/shipping-label';
 import { saveSaleAction, deleteSaleAction, type SaleFormInput } from '@/app/actions/sales';
 
 const inputClass =
@@ -70,6 +72,7 @@ export function SalesTable({
   products,
   stockItems,
   clientes,
+  remetente,
 }: {
   sales: Sale[];
   products: { id: string; name: string; price: number }[];
@@ -77,9 +80,12 @@ export function SalesTable({
   stockItems: { id: string; name: string; paidAmount: number; saleAmount: number }[];
   /** Situação financeira por nome, para o selo aparecer na linha da venda. */
   clientes: { id: string; name: string; adimplencia: Adimplencia; parcelasAtrasadas: number }[];
+  /** Remetente da etiqueta, vindo de Configurações. */
+  remetente: EnderecoDaEtiqueta;
 }) {
   const [busca, setBusca] = useState('');
   const [form, setForm] = useState<SaleFormInput | null>(null);
+  const [etiqueta, setEtiqueta] = useState<Etiqueta | null>(null);
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 
@@ -134,6 +140,21 @@ export function SalesTable({
     if (!window.confirm(`Excluir a venda #${v.orderNumber} de ${v.customerName}? Os lançamentos no Financeiro saem junto.`)) return;
     startTransition(async () => {
       toast(await deleteSaleAction(v.id));
+    });
+  }
+
+  /** Monta a etiqueta da venda. Tudo automático: remetente das Configurações,
+   *  destinatário do endereço da compra ou do cadastro do cliente. O que
+   *  faltar é apontado na pré-visualização, em vez de sair em branco no papel. */
+  function abrirEtiqueta(v: Sale) {
+    setEtiqueta({
+      remetente,
+      destinatario: destinatarioDaVenda(v.customerName, v.shippingAddress, v.customer),
+      pedido: `Pedido #${v.orderNumber}`,
+      data: formatDateBR(v.createdAt),
+      conteudo: v.items
+        .map((i) => (i.qty > 1 ? `${i.qty}× ${i.productName}` : i.productName))
+        .join(' + '),
     });
   }
 
@@ -329,6 +350,14 @@ export function SalesTable({
                   </span>
                 </div>
                 <div className="flex justify-end gap-1.5">
+                  <button
+                    onClick={() => abrirEtiqueta(v)}
+                    title="Gerar etiqueta de transporte"
+                    aria-label={`Gerar etiqueta de transporte da venda ${v.orderNumber}`}
+                    className="grid h-7 w-7 place-items-center rounded-full border border-border-strong text-fg-tertiary hover:border-accent hover:text-accent"
+                  >
+                    <TagIcon size={12} />
+                  </button>
                   <button
                     onClick={() => editar(v)}
                     disabled={pending}
@@ -662,6 +691,8 @@ export function SalesTable({
           </div>
         </div>
       )}
+
+      {etiqueta && <EtiquetaModal etiqueta={etiqueta} onFechar={() => setEtiqueta(null)} />}
     </div>
   );
 }

@@ -1428,6 +1428,16 @@ export type Database = {
       site_settings: {
         Row: {
           contract_forum: string
+          sender_name: string
+          sender_doc: string
+          sender_phone: string
+          sender_cep: string
+          sender_address_line: string
+          sender_address_number: string
+          sender_complement: string
+          sender_district: string
+          sender_city: string
+          sender_state: string
           contractor_doc: string
           contractor_name: string
           contractor_role: string
@@ -1444,6 +1454,16 @@ export type Database = {
           contractor_role?: string
           default_delivery_time?: string | null
           id?: boolean
+          sender_name?: string
+          sender_doc?: string
+          sender_phone?: string
+          sender_cep?: string
+          sender_address_line?: string
+          sender_address_number?: string
+          sender_complement?: string
+          sender_district?: string
+          sender_city?: string
+          sender_state?: string
           show_small_banners?: boolean
           usd_rate?: number | null
           usd_rate_spread?: number
@@ -1455,6 +1475,16 @@ export type Database = {
           contractor_role?: string
           default_delivery_time?: string | null
           id?: boolean
+          sender_name?: string
+          sender_doc?: string
+          sender_phone?: string
+          sender_cep?: string
+          sender_address_line?: string
+          sender_address_number?: string
+          sender_complement?: string
+          sender_district?: string
+          sender_city?: string
+          sender_state?: string
           show_small_banners?: boolean
           usd_rate?: number | null
           usd_rate_spread?: number

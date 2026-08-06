@@ -42,7 +42,20 @@ type SaleRow = {
   interest_pct: number;
   first_due_date: string | null;
   installment_notes: string;
+  address_snapshot: Record<string, string | null> | null;
   order_items: ItemRow[] | null;
+  erp_customer: {
+    name: string;
+    doc: string;
+    phone: string;
+    cep: string;
+    address_line: string;
+    address_number: string;
+    complement: string;
+    district: string;
+    city: string;
+    state: string;
+  } | null;
 };
 
 function toSale(r: SaleRow, parcelas: Installment[] = []): Sale {
@@ -69,6 +82,29 @@ function toSale(r: SaleRow, parcelas: Installment[] = []): Sale {
     firstDueDate: r.first_due_date,
     installmentNotes: r.installment_notes,
     installments: parcelas,
+    shippingAddress: r.address_snapshot
+      ? {
+          rua: r.address_snapshot.rua,
+          complemento: r.address_snapshot.complemento,
+          bairro: r.address_snapshot.bairro,
+          cidade: r.address_snapshot.cidade,
+          cep: r.address_snapshot.cep,
+        }
+      : null,
+    customer: r.erp_customer
+      ? {
+          name: r.erp_customer.name,
+          doc: r.erp_customer.doc,
+          phone: r.erp_customer.phone,
+          cep: r.erp_customer.cep,
+          addressLine: r.erp_customer.address_line,
+          addressNumber: r.erp_customer.address_number,
+          complement: r.erp_customer.complement,
+          district: r.erp_customer.district,
+          city: r.erp_customer.city,
+          state: r.erp_customer.state,
+        }
+      : null,
     items: (r.order_items ?? []).map(
       (i): SaleItem => ({
         id: i.id,
@@ -85,10 +121,18 @@ function toSale(r: SaleRow, parcelas: Installment[] = []): Sale {
 
 export async function listSales(): Promise<Sale[]> {
   const supabase = await createClient();
-  const { data } = await supabase
+  // O cadastro do cliente vem junto por causa da etiqueta de transporte: é dele
+  // que saem documento, telefone e o endereço das vendas lançadas à mão. A
+  // chave é nomeada porque `orders` aponta para dois cadastros diferentes
+  // (`customer_id` para profiles, `erp_customer_id` para customers).
+  const { data, error } = await supabase
     .from('orders')
-    .select('*, order_items(*)')
+    .select(
+      '*, order_items(*), erp_customer:customers!orders_erp_customer_id_fkey(name, doc, phone, cep, address_line, address_number, complement, district, city, state)'
+    )
     .order('created_at', { ascending: false });
+
+  if (error) console.error('[vendas] listagem falhou', error);
 
   const linhas = (data ?? []) as unknown as SaleRow[];
   // Uma consulta só para o carnê de todas as vendas, em vez de uma por linha.

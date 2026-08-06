@@ -9,6 +9,33 @@ import { saveSystemSettingsAction, fetchUsdRateAction } from '@/app/actions/sett
 const inputClass =
   'rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px] outline-none focus:border-accent';
 
+export type RemetenteForm = {
+  senderName: string;
+  senderDoc: string;
+  senderPhone: string;
+  senderCep: string;
+  senderAddressLine: string;
+  senderAddressNumber: string;
+  senderComplement: string;
+  senderDistrict: string;
+  senderCity: string;
+  senderState: string;
+};
+
+/** Campos do remetente, na ordem em que se escreve um envelope. */
+const CAMPOS_REMETENTE: { chave: keyof RemetenteForm; rotulo: string; dica: string; largo?: boolean }[] = [
+  { chave: 'senderName', rotulo: 'Nome / razão social', dica: 'Quem envia', largo: true },
+  { chave: 'senderDoc', rotulo: 'CPF / CNPJ', dica: '000.000.000-00' },
+  { chave: 'senderPhone', rotulo: 'Telefone', dica: '(62) 90000-0000' },
+  { chave: 'senderCep', rotulo: 'CEP', dica: '74000-000' },
+  { chave: 'senderAddressLine', rotulo: 'Rua / avenida', dica: 'Rua T-38', largo: true },
+  { chave: 'senderAddressNumber', rotulo: 'Número', dica: '1200' },
+  { chave: 'senderComplement', rotulo: 'Complemento', dica: 'Sala 4' },
+  { chave: 'senderDistrict', rotulo: 'Bairro', dica: 'Setor Bueno' },
+  { chave: 'senderCity', rotulo: 'Cidade', dica: 'Goiânia' },
+  { chave: 'senderState', rotulo: 'UF', dica: 'GO' },
+];
+
 export function SystemSettings({
   usdRate,
   usdRateSpread,
@@ -17,6 +44,7 @@ export function SystemSettings({
   contractorDoc,
   contractorRole,
   contractForum,
+  remetente: remetenteInicial,
 }: {
   usdRate: number | null;
   usdRateSpread: number;
@@ -25,6 +53,7 @@ export function SystemSettings({
   contractorDoc: string;
   contractorRole: string;
   contractForum: string;
+  remetente: RemetenteForm;
 }) {
   const [cotacao, setCotacao] = useState(usdRate !== null ? String(usdRate) : '');
   const [taxa, setTaxa] = useState(String(usdRateSpread));
@@ -33,6 +62,7 @@ export function SystemSettings({
   const [documento, setDocumento] = useState(contractorDoc);
   const [cargo, setCargo] = useState(contractorRole);
   const [foro, setForo] = useState(contractForum);
+  const [remetente, setRemetente] = useState<RemetenteForm>(remetenteInicial);
   const [origem, setOrigem] = useState('');
   const [pending, startTransition] = useTransition();
   const toast = useToast();
@@ -58,6 +88,7 @@ export function SystemSettings({
         contractorDoc: documento,
         contractorRole: cargo,
         contractForum: foro,
+        ...remetente,
       });
       toast(result);
       if (result.ok) setOrigem('');
@@ -182,6 +213,30 @@ export function SystemSettings({
               className={`w-full ${inputClass}`}
             />
           </div>
+        </div>
+      </div>
+
+      <div className="mt-7 border-t border-divider pt-6">
+        <div className="mb-1 text-[15px] font-extrabold">Endereço do remetente</div>
+        <div className="mb-4 text-[12.5px] text-fg-tertiary">
+          É o que sai como remetente na <strong>etiqueta de transporte</strong> gerada em Vendas. Sem nome,
+          rua e CEP a etiqueta não pode ser impressa — encomenda sem remetente não tem para onde voltar.
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {CAMPOS_REMETENTE.map((c) => (
+            <div key={c.chave} className={c.largo ? 'sm:col-span-2' : undefined}>
+              <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+                {c.rotulo}
+              </div>
+              <input
+                value={remetente[c.chave]}
+                onChange={(e) => setRemetente((r) => ({ ...r, [c.chave]: e.target.value }))}
+                placeholder={c.dica}
+                className={`w-full ${inputClass}`}
+              />
+            </div>
+          ))}
         </div>
       </div>
 

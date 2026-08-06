@@ -1,6 +1,7 @@
 // Regras de Vendas (M4). Puro, sem dependência de servidor.
 
 import type { Installment } from '@/lib/installments';
+import type { EnderecoDaVenda, ClienteDaVenda } from '@/lib/shipping-label';
 
 export const SALE_ORIGINS = ['Site', 'Manual', 'Orçamento', 'Troca'] as const;
 export type SaleOrigin = (typeof SALE_ORIGINS)[number];
@@ -61,6 +62,12 @@ export type Sale = {
   installmentNotes: string;
   /** O carnê. Vazio quando a venda não é parcelada. */
   installments: Installment[];
+  /** Endereço escolhido no checkout, congelado na hora da compra. Null nas
+   *  vendas lançadas à mão — nelas o endereço vem do cadastro do cliente. */
+  shippingAddress: EnderecoDaVenda | null;
+  /** Cadastro do cliente do ERP. É de onde saem documento, telefone e o
+   *  endereço das vendas manuais na etiqueta de transporte. */
+  customer: ClienteDaVenda | null;
 };
 
 function arredondar(v: number): number {

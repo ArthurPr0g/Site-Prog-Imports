@@ -26,7 +26,7 @@ export async function getSiteSettings() {
   const { data } = await supabase
     .from('site_settings')
     .select(
-      'show_small_banners, usd_rate, usd_rate_spread, default_delivery_time, contractor_name, contractor_doc, contractor_role, contract_forum'
+      'show_small_banners, usd_rate, usd_rate_spread, default_delivery_time, contractor_name, contractor_doc, contractor_role, contract_forum, sender_name, sender_doc, sender_phone, sender_cep, sender_address_line, sender_address_number, sender_complement, sender_district, sender_city, sender_state'
     )
     .maybeSingle();
   return {
@@ -41,5 +41,16 @@ export async function getSiteSettings() {
     contractorDoc: data?.contractor_doc ?? '',
     contractorRole: data?.contractor_role ?? '',
     contractForum: data?.contract_forum ?? '',
+    // Remetente da etiqueta de transporte.
+    senderName: data?.sender_name ?? '',
+    senderDoc: data?.sender_doc ?? '',
+    senderPhone: data?.sender_phone ?? '',
+    senderCep: data?.sender_cep ?? '',
+    senderAddressLine: data?.sender_address_line ?? '',
+    senderAddressNumber: data?.sender_address_number ?? '',
+    senderComplement: data?.sender_complement ?? '',
+    senderDistrict: data?.sender_district ?? '',
+    senderCity: data?.sender_city ?? '',
+    senderState: data?.sender_state ?? '',
   };
 }
