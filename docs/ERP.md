@@ -542,6 +542,13 @@ mesmo dinheiro. Cancelados ficam fora de tudo: não são compra nem dívida.
 A venda manual agora também escolhe o cliente do cadastro, e a venda gerada de
 orçamento já nasce vinculada.
 
+**A aba Financeiro do cliente não é só leitura (2026-08-05).** É o mesmo carnê
+das telas de Venda e Prestação: dá baixa, desfaz baixa, corrige valor e
+vencimento, cancela e exclui — com a **origem de cada parcela** na frente, porque
+a lista mistura vendas e serviços. Em ordem de vencimento, que a pergunta dessa
+tela é "o que vence a seguir", não "de qual venda veio". Toda alteração
+ressincroniza o Financeiro, o total em aberto e a adimplência.
+
 Testado em `scratchpad/test-cliente.mjs` (31 asserções). Verificado em produção
 (2026-08-05): cliente com 3 parcelas (1 recebida, 1 vencida, 1 a vencer) apareceu
 como **Inadimplente (1)** na lista e no detalhe; os cartões deram R$ 29.697
@@ -595,8 +602,32 @@ em maio já nasce com as vencidas marcadas como atrasadas.
 total. Cada uma entra como `Previsto` e **só vira `Pago` quando o dono marca
 Recebida** — e aí o valor entra na receita, no fluxo de caixa e nos indicadores.
 Parcela cancelada sai do caixa. O carnê casa por número ao regravar, então editar
-a venda não apaga baixas nem vencimentos já ajustados; só o valor é reescrito,
-porque vem do cálculo.
+a venda não apaga baixas nem vencimentos já ajustados.
+
+**Edição manual do carnê (2026-08-05).** O dono edita **valor** e vencimento,
+cancela e **exclui** parcela a parcela — pela venda, pela prestação ou pela
+página do cliente, que é a mesma lista. Isso obrigou a mudar duas regras:
+
+* **Salvar a venda não refaz mais o carnê**, a não ser que o total ou as
+  condições (parcelas, entrada, juros, primeiro vencimento) tenham mudado. Antes
+  ele era regerado a todo salvamento, o que desfaria ajuste manual em silêncio
+  mesmo numa correção de nome do cliente.
+* **Quando refazer é o que se quer, existe botão.** O aviso de carnê fora do
+  valor traz "Refazer carnê", que recalcula valor e vencimento pelas condições
+  gravadas e **preserva o status de cada parcela** — perder o registro do que já
+  foi pago para consertar um cálculo seria destruir histórico de dinheiro
+  recebido.
+
+**Carnê que não fecha se anuncia.** O bloco de parcelas soma o carnê e compara
+com o devido (total **mais juros**, não o total puro), avisando quanto sobra ou
+falta. Mesma regra do lucro de venda sem custo: número agregado que pode estar
+errado tem que dizer isso na tela. A tolerância é de meio centavo, só para
+descartar poeira de ponto flutuante — o carnê gerado já fecha no centavo, então
+um centavo sobrando é sinal de que alguém mexeu.
+
+**Excluir parcela não redistribui o valor** nas outras, e a confirmação diz isso.
+Redistribuir seria adivinhar: pode ser antecipação (o valor já entrou noutra
+parcela) ou renegociação (a dívida diminuiu), e as duas dão contas diferentes.
 
 **Serviços:** o padrão continua **50% na contratação e 50% na entrega**, e a tela
 lembra isso quando não há parcelamento. O carnê cobre só o **trabalho, já com
@@ -609,6 +640,15 @@ parcela 1 do PIX e a mensalidade 1 colidiriam ao casar alvo com existente, e uma
 sobrescreveria a outra. Quem manda no status também difere: a mensalidade é
 baixada direto no Financeiro e a sincronização preserva o que estiver lá; a
 parcela de PIX tem status vindo do carnê e sobrescreve.
+
+A edição do carnê foi testada contra o **código real**, não contra cópia das
+funções (`scratchpad/test-nome-e-carne.ts`, 34 asserções, roda com `npx tsx` na
+raiz do projeto): nome, etiqueta, descrição no caixa, soma do carnê, divergência
+com e sem juros, arredondamento da última parcela e origem das parcelas.
+Verificado em produção (2026-08-05) na venda #1050: baixa, edição de valor e
+vencimento e exclusão atualizaram cartões, carnê e Financeiro na hora; **salvar a
+venda em seguida não desfez nada**; "Refazer carnê" devolveu as 8 parcelas de
+R$ 406,25 mantendo a baixa; e a venda foi restaurada ao estado original ao final.
 
 Testado em `scratchpad/test-parcelas.mjs` (47 asserções). Verificado em produção
 (2026-08-05): venda de R$ 3.000 com entrada de R$ 600, 6× e 10% deu financiado
@@ -655,6 +695,20 @@ ficaria em Previsto depois de o cliente pagar.
 **Vender item de estoque dá baixa nele**, e cancelar devolve para `Disponível`.
 Sem isso o mesmo notebook continuaria como pronta entrega no site depois de
 vendido, e o selo mentiria para o visitante.
+
+**Toda venda tem nome (2026-08-05).** "Venda #1051" não identifica nada em lista
+nenhuma. O nome é o **apelido** que o dono digitar e, quando ele não digita nada,
+**sai dos próprios itens** ("iPhone 15 Pro +2"): zero digitação no caso comum,
+controle quando o produto não basta — duas vendas do mesmo modelo para clientes
+diferentes, por exemplo. Com vários itens mostra o primeiro e conta o resto, que
+a lista inteira estoura qualquer coluna.
+
+O nome aparece na tela de Vendas, no histórico do cliente, na busca e na
+**descrição do Financeiro**, inclusive parcela a parcela — um extrato de "Venda
+#1051, Venda #1052, Venda #1053" não dizia nada sobre o que foi vendido. A lista
+de itens só aparece junto quando o nome é apelido; se o nome saiu deles, repetir
+não acrescenta. O **número continua na frente** em tudo que é caixa: é ele que
+liga a linha à venda.
 
 **⚠️ Vendas sem custo inflam o lucro.** Venda do site nasce sem custo — o produto
 é por encomenda e o custo só se conhece na compra. A tela conta quantas estão
@@ -851,6 +905,9 @@ removido junto com a origem.
    mostram ✓ em recusa.
 10. **Orçamento de Loja não tem PDF** — só o de Serviços. Ver "Em aberto sobre
     desconto".
+11. **`window.confirm` nas telas antigas.** Existe `ui/ConfirmDialog.tsx`, usado
+    na exclusão de parcela: diz o que a exclusão leva junto, foca no Cancelar e
+    segue o tema. As outras telas ainda usam a caixa do navegador.
 
 ---
 
@@ -903,4 +960,14 @@ removido junto com a origem.
 - **Número agregado que pode estar errado precisa dizer isso na tela.** O lucro
   das vendas soma faturamento menos custo; com vendas sem custo lançado ele fica
   perto do faturamento e a margem beira 100%. A tela conta quantas estão assim e
-  avisa. Número errado com aparência de certo é pior que número ausente.
+  avisa. Número errado com aparência de certo é pior que número ausente. Mesma
+  regra no carnê: se a soma das parcelas deixa de bater com o valor devido, o
+  bloco diz quanto sobra ou falta.
+- **Ajuste manual do dono não pode ser desfeito por rotina automática.** O carnê
+  só é regerado quando o total ou as condições mudam, e refazer de propósito é um
+  botão. Recalcular "para garantir" apaga trabalho sem avisar — e o dono só
+  descobre quando o número já está errado há dias.
+- **Formulário não copia para o estado o que a action revalida.** O carnê no
+  modal de venda era uma cópia feita ao abrir: dar baixa atualizava banco e
+  cartões, mas a lista continuava mostrando o estado anterior. Ler direto da prop
+  já revalidada é menos estado e não diverge do banco.
