@@ -92,8 +92,10 @@ export function CarneResumo({ parcelas }: { parcelas: MinhaParcela[] }) {
 
       {emAberto.length > 0 ? (
         <div className="rounded-[14px] border border-border bg-card-dark p-4">
+          {/* Com parcela vencida, anunciar o "próximo vencimento" soa como se
+              estivesse tudo em dia — o que já venceu é o que importa agora. */}
           <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
-            {resumo.proximoVencimento
+            {resumo.qtdAtrasadas === 0 && resumo.proximoVencimento
               ? `Próximo vencimento em ${formatDateBR(resumo.proximoVencimento + 'T12:00:00')}`
               : 'Parcelas em aberto'}
           </div>
