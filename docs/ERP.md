@@ -470,10 +470,20 @@ Diferença zero (produtos cobriram tudo) ou paga à vista já nasce quitada.
 carnê é calculado sobre a **diferença**, não sobre o preço do produto — o resto
 já foi pago em mercadoria.
 
-**Excluir a negociação** reverte a venda e devolve o principal ao estoque, mas os
-**itens recebidos permanecem**: a essa altura são unidades independentes, que
-podem já ter sido vendidas ou reservadas. Apagá-las destruiria estoque real por
-causa de um registro administrativo.
+**Excluir a negociação** reverte a venda, devolve o principal ao estoque e
+**apaga os itens recebidos**: se a negociação não aconteceu, aqueles produtos
+nunca entraram na loja, e deixá-los inventariaria mercadoria inexistente.
+
+A regra tem uma trava. Se algum item recebido já seguiu adiante — vendido,
+reservado, em transporte, ou dentro de alguma venda — a exclusão inteira é
+recusada, dizendo qual item e em que estado ele está. Apagá-lo furaria o
+histórico de uma venda real por causa de um acerto administrativo, e apagar só
+os livres deixaria a negociação meio revertida, que é pior que não reverter.
+
+**Produto recebido não vai para o site.** Ele entra em `stock_items` sem
+`product_id`, e `ready_stock_counts()` filtra `product_id is not null` — então
+não aparece na vitrine nem conta como pronta entrega. Publicar é decisão do
+dono, ligando o item a um produto pela tela de Estoque.
 
 Testado em `scratchpad/test-trocas.mjs` (32 asserções). Verificado em produção
 (2026-08-05): principal de R$ 3.000 (custo R$ 2.000) com iPhone recebido por
@@ -481,8 +491,12 @@ R$ 1.200 deu diferença de R$ 1.800 e lucro total de R$ 1.400; o carnê saiu **s
 os R$ 1.800**, não sobre os R$ 3.000; ao concluir, o principal virou `Vendido`, o
 iPhone entrou como estoque `Disponível` com custo R$ 1.200, nasceu a venda #1051
 e o caixa recebeu 3 parcelas de R$ 600 mais a despesa de R$ 2.000; excluir
-devolveu o principal a `Disponível`, apagou venda e parcelas, e **o iPhone
-permaneceu no estoque**. Dados de teste removidos ao final.
+devolveu o principal a `Disponível` e apagou venda e parcelas.
+
+A nova regra de exclusão foi testada em produção logo depois: com o item
+recebido marcado `Reservado`, a exclusão foi recusada nomeando o item e o
+estado; com ele `Disponível`, a negociação saiu, o principal voltou a
+`Disponível` e o recebido deixou o estoque. Dados de teste removidos ao final.
 
 ### ⚠️ Bug encontrado no teste e corrigido
 
