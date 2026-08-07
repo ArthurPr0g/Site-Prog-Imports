@@ -682,6 +682,20 @@ um centavo sobrando é sinal de que alguém mexeu.
 Redistribuir seria adivinhar: pode ser antecipação (o valor já entrou noutra
 parcela) ou renegociação (a dívida diminuiu), e as duas dão contas diferentes.
 
+**A conversão de orçamento em prestação também parcela (2026-08-07).** Era o
+último lugar onde a forma de pagamento era **texto livre** ("Ex: PIX, 3x no
+cartão"): o que se digitava ali virava etiqueta e nada mais — não gerava carnê,
+não mudava o Financeiro, e a prestação nascia com receita única mesmo quando o
+combinado era parcelado. Para parcelar, o dono convertia e depois reabria a
+prestação para refazer as condições. Agora o pop-up usa o mesmo
+`ParcelamentoFields` das outras telas, com as mesmas validações, e a conversão
+grava as condições, gera o carnê e sincroniza o caixa de uma vez.
+
+Verificado em produção (2026-08-07): orçamento de R$ 3.000 convertido em 3× com
+entrada de R$ 600 e 10% de juros gerou entrada + 3 × R$ 880 (R$ 3.240), quatro
+linhas no Financeiro na faixa 1000+, **sem a linha de receita única**, e o carnê
+apareceu na página do cliente. Dados de teste removidos.
+
 **Serviços:** o padrão continua **50% na contratação e 50% na entrega**, e a tela
 lembra isso quando não há parcelamento. O carnê cobre só o **trabalho, já com
 desconto** — parcelar o preço cheio cobraria um valor que ninguém combinou. A
