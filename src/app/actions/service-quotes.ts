@@ -14,7 +14,9 @@ import {
   type ServiceQuoteStatus,
 } from '@/lib/services';
 import { sincronizarFinanceiroDaPrestacao } from '@/lib/data/service-orders';
-import { DISCOUNT_TYPES, type Desconto } from '@/lib/discount';
+import { salvarParcelas } from '@/lib/data/installments';
+import { geraParcelas, gerarParcelas, MAX_JUROS_PCT } from '@/lib/installments';
+import { DISCOUNT_TYPES, aplicarDesconto, type Desconto } from '@/lib/discount';
 
 export type ServiceQuoteInput = {
   id?: string;
@@ -40,6 +42,13 @@ export type ConversaoInput = {
   startDate: string;
   /** Primeira mensalidade. Vazio cai na data de início da execução. */
   planStartDate: string;
+  /** Condições do PIX parcelado, iguais às de Vendas e Prestação. Ignoradas
+   *  nas outras formas de pagamento. */
+  installmentCount: number;
+  downPayment: number;
+  interestPct: number;
+  firstDueDate: string;
+  installmentNotes: string;
 };
 
 async function adminClient() {
@@ -194,6 +203,19 @@ export async function convertServiceQuoteAction(input: ConversaoInput): Promise<
 
   if (!q) return errResult('Não foi possível ler o orçamento.');
 
+  // As mesmas validações de Vendas e Prestação: a conta é a mesma, e uma tela
+  // que aceita o que a outra recusa gera carnê impossível de conferir.
+  const parcelado = geraParcelas(input.paymentMethod);
+  if (parcelado) {
+    if (!input.firstDueDate) return errResult('Informe a data da primeira parcela.');
+    if (!Number.isInteger(input.installmentCount) || input.installmentCount < 1) {
+      return errResult('Informe a quantidade de parcelas.');
+    }
+    if (!Number.isFinite(input.interestPct) || input.interestPct < 0 || input.interestPct > MAX_JUROS_PCT) {
+      return errResult(`A taxa de juros precisa ficar entre 0% e ${MAX_JUROS_PCT}%.`);
+    }
+  }
+
   if (q.status === 'Convertido em Prestação') {
     return errResult('Este orçamento já foi convertido em prestação.');
   }
@@ -221,6 +243,19 @@ export async function convertServiceQuoteAction(input: ConversaoInput): Promise<
 
   const temPlano = Number(q.monthly_amount) > 0 && (q.plan_months ?? 0) > 0;
 
+  // O carnê cobre o TRABALHO já com desconto — nunca a mensalidade, que tem
+  // ciclo próprio e vira parcela por conta dela. Mesma regra da tela de
+  // Prestação.
+  const trabalho = aplicarDesconto(Number(q.total_amount), {
+    tipo: q.discount_type as Desconto['tipo'],
+    valor: Number(q.discount_value),
+    descricao: '',
+  });
+
+  if (parcelado && input.downPayment > trabalho) {
+    return errResult('A entrada não pode ser maior que o valor dos serviços.');
+  }
+
   const { data: order, error: erroOrder } = await supabase
     .from('service_orders')
     .insert({
@@ -242,6 +277,13 @@ export async function convertServiceQuoteAction(input: ConversaoInput): Promise<
       discount_note: q.discount_note,
       plan_months: temPlano ? q.plan_months : null,
       plan_start_date: temPlano ? input.planStartDate || input.startDate : null,
+      // Condições do carnê. Zeradas fora do PIX Parcelado, como na tela de
+      // Prestação: condição esquecida continuaria gerando parcelas depois.
+      installment_count: parcelado ? input.installmentCount : 0,
+      down_payment: parcelado ? input.downPayment : 0,
+      interest_pct: parcelado ? input.interestPct : 0,
+      first_due_date: parcelado ? input.firstDueDate : null,
+      installment_notes: parcelado ? input.installmentNotes.trim() : '',
       lead_time_days: prazoDias,
       start_date: input.startDate,
       due_date: calcularEntrega(input.startDate, prazoDias),
@@ -271,6 +313,22 @@ export async function convertServiceQuoteAction(input: ConversaoInput): Promise<
     return errResult('A prestação foi criada, mas os serviços não vieram junto. Ajuste na tela de Prestação.');
   }
 
+  // O carnê vem antes da sincronização: com PIX parcelado é dele que sai a
+  // receita do trabalho no caixa, no lugar da linha única.
+  if (parcelado) {
+    await salvarParcelas(
+      'servico',
+      order.id,
+      gerarParcelas({
+        total: trabalho,
+        parcelas: input.installmentCount,
+        entrada: input.downPayment,
+        jurosPct: input.interestPct,
+        primeiroVencimento: input.firstDueDate,
+      })
+    );
+  }
+
   await sincronizarFinanceiroDaPrestacao(order.id);
 
   const { error: erroStatus } = await supabase
@@ -283,5 +341,9 @@ export async function convertServiceQuoteAction(input: ConversaoInput): Promise<
   }
 
   revalidar();
-  return okResult('Prestação criada e orçamento marcado como convertido.');
+  return okResult(
+    parcelado
+      ? `Prestação criada com carnê de ${input.installmentCount}× no PIX. As parcelas já estão no Financeiro como previstas.`
+      : 'Prestação criada e orçamento marcado como convertido.'
+  );
 }

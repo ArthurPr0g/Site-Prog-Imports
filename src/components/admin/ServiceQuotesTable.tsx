@@ -23,6 +23,8 @@ import {
 } from '@/lib/services';
 import { SEM_DESCONTO, temDesconto, aplicarDesconto, rotuloDoDesconto, type Desconto } from '@/lib/discount';
 import { DescontoFields } from '@/components/admin/DescontoFields';
+import { ParcelamentoFields, type CondicoesForm } from '@/components/admin/ParcelamentoFields';
+import { geraParcelas } from '@/lib/installments';
 import {
   saveServiceQuoteAction,
   deleteServiceQuoteAction,
@@ -90,12 +92,14 @@ export function ServiceQuotesTable({
 }) {
   const [busca, setBusca] = useState('');
   const [form, setForm] = useState<ServiceQuoteInput | null>(null);
-  const [conversao, setConversao] = useState<{
-    quote: ServiceQuote;
-    paymentMethod: string;
-    startDate: string;
-    planStartDate: string;
-  } | null>(null);
+  const [conversao, setConversao] = useState<
+    | ({
+        quote: ServiceQuote;
+        startDate: string;
+        planStartDate: string;
+      } & CondicoesForm)
+    | null
+  >(null);
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 
@@ -122,6 +126,12 @@ export function ServiceQuotesTable({
 
   const temPlanoNaConversao = !!conversao && conversao.quote.monthlyAmount > 0 && !!conversao.quote.planMonths;
 
+  /** O que o carnê parcela: o trabalho já com desconto, nunca a mensalidade. */
+  const trabalhoDaConversao = conversao
+    ? aplicarDesconto(conversao.quote.totalAmount, conversao.quote.desconto)
+    : 0;
+  const conversaoParcelada = !!conversao && geraParcelas(conversao.paymentMethod);
+
   function salvar() {
     if (!form) return;
     startTransition(async () => {
@@ -146,6 +156,11 @@ export function ServiceQuotesTable({
         paymentMethod: conversao.paymentMethod,
         startDate: conversao.startDate,
         planStartDate: conversao.planStartDate,
+        installmentCount: conversao.installmentCount,
+        downPayment: conversao.downPayment,
+        interestPct: conversao.interestPct,
+        firstDueDate: conversao.firstDueDate,
+        installmentNotes: conversao.installmentNotes,
       });
       toast(result);
       if (result.ok) setConversao(null);
@@ -335,7 +350,19 @@ export function ServiceQuotesTable({
                 </a>
                 {convertivel && (
                   <button
-                    onClick={() => setConversao({ quote: q, paymentMethod: '', startDate: hojeISO(), planStartDate: hojeISO() })}
+                    onClick={() =>
+                      setConversao({
+                        quote: q,
+                        paymentMethod: '',
+                        startDate: hojeISO(),
+                        planStartDate: hojeISO(),
+                        installmentCount: 6,
+                        downPayment: 0,
+                        interestPct: 0,
+                        firstDueDate: hojeISO(),
+                        installmentNotes: '',
+                      })
+                    }
                     disabled={pending}
                     title="Gerar prestação"
                     aria-label={`Gerar prestação de ${q.title}`}
@@ -644,15 +671,6 @@ export function ServiceQuotesTable({
                   className={`w-full ${inputClass}`}
                 />
               </div>
-              <div>
-                <div className="mb-1.5 text-[11px] text-fg-faded">Forma de pagamento</div>
-                <input
-                  value={conversao.paymentMethod}
-                  onChange={(e) => setConversao({ ...conversao, paymentMethod: e.target.value })}
-                  placeholder="Ex: PIX, 3x no cartão"
-                  className={`w-full ${inputClass}`}
-                />
-              </div>
               {temPlanoNaConversao && (
                 <div className="sm:col-span-2">
                   <div className="mb-1.5 text-[11px] text-fg-faded">Primeira mensalidade</div>
@@ -666,15 +684,41 @@ export function ServiceQuotesTable({
               )}
             </div>
 
+            {/* O mesmo seletor de Vendas e Prestação, com PIX Parcelado: era o
+                único lugar onde a forma de pagamento era texto livre, e o que
+                se digitava ali não gerava carnê nenhum. */}
+            <ParcelamentoFields
+              condicoes={{
+                paymentMethod: conversao.paymentMethod,
+                installmentCount: conversao.installmentCount,
+                downPayment: conversao.downPayment,
+                interestPct: conversao.interestPct,
+                firstDueDate: conversao.firstDueDate,
+                installmentNotes: conversao.installmentNotes,
+              }}
+              // Só o trabalho entra no carnê: a mensalidade do plano tem ciclo
+              // próprio e já vira parcela por conta dela.
+              total={trabalhoDaConversao}
+              onChange={(patch) => setConversao((c) => (c ? { ...c, ...patch } : c))}
+            />
+
             <div className="mb-5 rounded-control border border-border bg-card-dark px-4 py-3 text-[12px] text-fg-tertiary">
               A prestação nasce <strong>Em andamento</strong> com pagamento <strong>Previsto</strong> — aprovar
               é acordo, não recebimento. O Financeiro recebe
               {conversao.quote.totalAmount > 0 && (
-                <>
-                  {' '}uma receita de{' '}
-                  <strong className="text-accent">{formatBRL(conversao.quote.totalAmount)}</strong>
-                  {entregaPrevista ? ` prevista para ${formatDateBR(entregaPrevista + 'T12:00:00')}` : ''}
-                </>
+                conversaoParcelada ? (
+                  <>
+                    {' '}o trabalho de{' '}
+                    <strong className="text-accent">{formatBRL(trabalhoDaConversao)}</strong> dividido
+                    no carnê acima, uma linha por parcela
+                  </>
+                ) : (
+                  <>
+                    {' '}uma receita de{' '}
+                    <strong className="text-accent">{formatBRL(conversao.quote.totalAmount)}</strong>
+                    {entregaPrevista ? ` prevista para ${formatDateBR(entregaPrevista + 'T12:00:00')}` : ''}
+                  </>
+                )
               )}
               {conversao.quote.totalAmount > 0 && temPlanoNaConversao && ' e'}
               {temPlanoNaConversao && (
