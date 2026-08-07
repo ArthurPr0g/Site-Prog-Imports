@@ -344,6 +344,34 @@ prestação manteve as duas pagas** — a preservação funciona. Encurtar de 12
 meses removeu as parcelas 7–12 e manteve as pagas; cancelar removeu as 6. Dados
 de teste removidos ao final.
 
+### A mensalidade é dívida em todo lugar (2026-08-06)
+
+O plano estava certo no Financeiro (uma linha por mês) e **pela metade** no
+resto. No histórico do cliente contava no "total comprado" e aparecia na aba
+Serviços, mas ficava fora do carnê, do "em aberto", do "atrasado" e da
+adimplência — um contrato de 12 × R$ 149 não aparecia como nada devido. Na conta
+do cliente não aparecia: o farol lê `my_installments()`, que só olhava
+`payment_installments`, e a mensalidade não mora lá.
+
+**Onde ela mora não mudou.** O plano continua nascendo direto no Financeiro e é
+lá que o dono baixa mês a mês — mudar isso mexeria num fluxo que ele não pediu
+para mudar. O que mudou é que ela passou a ser **lida de volta como dívida**:
+`mensalidadeComoParcela` converte num lugar só, e a partir dali resumo,
+adimplência e farol enxergam a mesma dívida sem duplicar regra. A função do banco
+ganhou a segunda metade, pelo mesmo corte que já separava as duas coisas na
+coluna `installment_number` (abaixo de `OFFSET_PARCELA_PIX` é mensalidade, acima
+é carnê).
+
+Na página do cliente elas ficam em **bloco próprio**, separado do carnê — carnê é
+parcelamento com fim, mensalidade é assinatura enquanto o plano durar — e agora
+podem ser baixadas ali, sem atravessar para o Financeiro e caçar a linha do mês.
+A adimplência passou a contar mensalidade vencida, inclusive nos selos de Vendas
+e Orçamentos, que diziam "Adimplente" para quem estava com hospedagem atrasada.
+
+Verificado em produção (2026-08-06): o cliente com plano de 12 × R$ 149 saiu de
+"R$ 2.050 em aberto, 5 parcelas" para **"R$ 3.838, 17 parcelas"**; a baixa pela
+página do cliente moveu R$ 149 para "já pago" e voltou ao desfazer.
+
 ### Em aberto sobre planos
 
 - **Aviso de contrato perto do fim** (pedido do dono, 2026-08-01, ainda não
