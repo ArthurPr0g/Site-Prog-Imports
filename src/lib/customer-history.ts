@@ -54,6 +54,41 @@ export type ServicoDoCliente = {
   parcelas: Installment[];
 };
 
+/** Uma mensalidade do plano de hospedagem.
+ *
+ *  Ela não vive em `payment_installments`: o plano é gerado direto no
+ *  Financeiro, uma linha por mês, e é lá que o dono dá baixa. Mas para o
+ *  cliente ela é dívida igual às outras — e ficava fora do "em aberto", do
+ *  "atrasado" e da adimplência, que é como um contrato de 12 × R$ 149 não
+ *  aparecia como nada devido. */
+export type MensalidadeDoCliente = {
+  /** Id do lançamento no Financeiro — é ele que se dá baixa. */
+  id: string;
+  servico: string;
+  numero: number;
+  totalDeMeses: number;
+  valor: number;
+  vencimento: string;
+  paga: boolean;
+};
+
+/** A mensalidade vista como parcela, para as contas que perguntam "o que o
+ *  cliente deve". Converter aqui, num lugar só, é o que faz o carnê, o resumo e
+ *  a adimplência enxergarem a mesma dívida sem duplicar regra. */
+export function mensalidadeComoParcela(m: MensalidadeDoCliente): Installment {
+  return {
+    id: m.id,
+    number: m.numero,
+    amount: m.valor,
+    dueDate: m.vencimento,
+    status: m.paga ? 'Recebida' : 'Pendente',
+    notes: '',
+    // A baixa da mensalidade é só uma troca de status no Financeiro; não há
+    // registro de em que dia entrou. O vencimento é o melhor que se tem.
+    paidAt: m.paga ? m.vencimento : null,
+  };
+}
+
 export type OrcamentoDoCliente = {
   id: string;
   tipo: 'Loja' | 'Serviços';
@@ -75,6 +110,8 @@ export type HistoricoDoCliente = {
   servicos: ServicoDoCliente[];
   orcamentos: OrcamentoDoCliente[];
   emTransporte: ItemEmTransporte[];
+  /** Mensalidades dos planos de hospedagem, vindas do Financeiro. */
+  mensalidades: MensalidadeDoCliente[];
 };
 
 export type ResumoFinanceiroDoCliente = {
@@ -166,12 +203,16 @@ export function resumirFinanceiroDoCliente(
 
     if (s.parcelas.length > 0) {
       parcelas.push(...s.parcelas);
-      // A mensalidade do plano não vira parcela do carnê: ela é cobrada mês a
-      // mês e seu recebimento vive no Financeiro, não aqui.
     } else if (s.pagamento === 'Recebido') {
       totalPago += s.total;
     }
   }
+
+  // As mensalidades do plano entram como parcelas daqui para baixo. Elas são
+  // cobradas mês a mês e baixadas no Financeiro, mas para o cliente são dívida
+  // igual — deixá-las de fora fazia um contrato de 12 × R$ 149 não aparecer
+  // como nada devido, nem contar na adimplência.
+  parcelas.push(...historico.mensalidades.map(mensalidadeComoParcela));
 
   let emAberto = 0;
   let atrasado = 0;

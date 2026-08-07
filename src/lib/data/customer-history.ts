@@ -1,13 +1,15 @@
 import { createClient } from '@/lib/supabase/server';
 import { listInstallmentsBySource } from '@/lib/data/installments';
 import { nomeDaVenda } from '@/lib/sales';
-import type { Installment } from '@/lib/installments';
-import type {
-  HistoricoDoCliente,
-  CompraDoCliente,
-  ServicoDoCliente,
-  OrcamentoDoCliente,
-  ItemEmTransporte,
+import { OFFSET_PARCELA_PIX, type Installment } from '@/lib/installments';
+import {
+  mensalidadeComoParcela,
+  type HistoricoDoCliente,
+  type CompraDoCliente,
+  type ServicoDoCliente,
+  type OrcamentoDoCliente,
+  type ItemEmTransporte,
+  type MensalidadeDoCliente,
 } from '@/lib/customer-history';
 
 /** Status de estoque que significam "ainda a caminho ou reservado para ele". */
@@ -133,7 +135,57 @@ export async function carregarHistoricoDoCliente(
     entrada: i.entry_date,
   }));
 
-  return { compras, servicos: servicosDoCliente, orcamentos, emTransporte };
+  const mensalidades = await carregarMensalidades(linhasServico);
+
+  return { compras, servicos: servicosDoCliente, orcamentos, emTransporte, mensalidades };
+}
+
+/** Mensalidades do plano, lidas do Financeiro.
+ *
+ *  Elas não existem em `payment_installments`: o plano nasce direto como
+ *  lançamento, um por mês, e é lá que o dono baixa. Aqui elas são lidas de
+ *  volta para o cliente ver o que deve — sem isso, um contrato de 12 meses não
+ *  aparecia como dívida em lugar nenhum do histórico.
+ *
+ *  O corte por `OFFSET_PARCELA_PIX` separa as duas coisas que dividem a mesma
+ *  coluna: abaixo dele são mensalidades do plano; acima, o carnê do PIX
+ *  parcelado, que já vem por outro caminho. */
+async function carregarMensalidades(
+  servicos: { id: string; title: string; plan_months: number | null; status: string }[]
+): Promise<(MensalidadeDoCliente & { servicoId: string })[]> {
+  const ativos = servicos.filter((s) => s.status !== 'Cancelada');
+  if (ativos.length === 0) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('finance_entries')
+    .select('id, reference_id, installment_number, amount, entry_date, status')
+    .eq('source', 'servico')
+    .in('reference_id', ativos.map((s) => s.id))
+    .not('installment_number', 'is', null)
+    .lt('installment_number', OFFSET_PARCELA_PIX)
+    .order('entry_date');
+
+  if (error) {
+    console.error('[cliente] mensalidades não carregaram', error);
+    return [];
+  }
+
+  const porId = new Map(ativos.map((s) => [s.id, s]));
+
+  return (data ?? []).map((f) => {
+    const servico = porId.get(f.reference_id ?? '');
+    return {
+      id: f.id,
+      servicoId: f.reference_id ?? '',
+      servico: servico?.title ?? 'Plano',
+      numero: f.installment_number ?? 0,
+      totalDeMeses: servico?.plan_months ?? 0,
+      valor: Number(f.amount),
+      vencimento: f.entry_date,
+      paga: f.status === 'Pago',
+    };
+  });
 }
 
 /** Parcelas em aberto de todos os clientes de uma vez, para as listagens
@@ -143,7 +195,10 @@ export async function carregarParcelasPorCliente(): Promise<Map<string, Installm
 
   const [vendas, servicos] = await Promise.all([
     supabase.from('orders').select('id, erp_customer_id, customer_id, status').not('status', 'eq', 'Cancelado'),
-    supabase.from('service_orders').select('id, customer_id, status').not('status', 'eq', 'Cancelada'),
+    supabase
+      .from('service_orders')
+      .select('id, customer_id, status, title, plan_months')
+      .not('status', 'eq', 'Cancelada'),
   ]);
 
   const { data: perfis } = await supabase.from('customers').select('id, profile_id');
@@ -177,6 +232,22 @@ export async function carregarParcelasPorCliente(): Promise<Map<string, Installm
 
   for (const [vendaId, clienteId] of clienteDaVenda) acrescentar(clienteId, pv.get(vendaId) ?? []);
   for (const [servicoId, clienteId] of clienteDoServico) acrescentar(clienteId, ps.get(servicoId) ?? []);
+
+  // As mensalidades do plano contam na adimplência como qualquer outra dívida —
+  // senão o selo diria "Adimplente" para quem está com hospedagem vencida.
+  const mensalidades = await carregarMensalidades(
+    (servicos.data ?? []).map((s) => ({
+      id: s.id,
+      title: s.title,
+      plan_months: s.plan_months,
+      status: s.status,
+    }))
+  );
+
+  for (const m of mensalidades) {
+    const clienteId = clienteDoServico.get(m.servicoId);
+    if (clienteId) acrescentar(clienteId, [mensalidadeComoParcela(m)]);
+  }
 
   return porCliente;
 }

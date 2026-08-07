@@ -159,6 +159,47 @@ export async function saveFinanceEntryAction(input: FinanceFormInput): Promise<A
   return okResult(input.kind === 'receita' ? 'Receita lançada.' : 'Despesa lançada.');
 }
 
+/** Baixa da mensalidade do plano, do jeito que ela existe: uma troca de status
+ *  no próprio lançamento.
+ *
+ *  Diferente da parcela de carnê, que tem registro próprio, a mensalidade nasce
+ *  direto no Financeiro — então aqui não há para onde escrever de volta. O que
+ *  esta action acrescenta é poder dar a baixa DA PÁGINA DO CLIENTE, sem
+ *  atravessar para o Financeiro e procurar a linha do mês. */
+export async function togglePlanMonthPaidAction(id: string): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  const { data: linha } = await supabase
+    .from('finance_entries')
+    .select('source, status, description, installment_number')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (!linha) return errResult('Lançamento não encontrado.');
+  if (linha.source !== 'servico' || linha.installment_number === null) {
+    return errResult('Este lançamento não é uma mensalidade de plano.');
+  }
+  if (linha.installment_number >= OFFSET_PARCELA_PIX) {
+    return errResult('Esta é uma parcela do carnê — dê baixa nela pelo próprio carnê.');
+  }
+
+  const novo = linha.status === 'Pago' ? 'Previsto' : 'Pago';
+  const { error } = await supabase
+    .from('finance_entries')
+    .update({ status: novo, updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível atualizar a mensalidade.'));
+
+  revalidarDinheiro();
+  return okResult(
+    novo === 'Pago'
+      ? 'Mensalidade recebida. Entrou na receita do Financeiro.'
+      : 'Mensalidade voltou para prevista e saiu da receita.'
+  );
+}
+
 export async function deleteFinanceEntryAction(id: string): Promise<ActionResult> {
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');

@@ -6,6 +6,7 @@ import { statusExibido } from '@/lib/installments';
 import { parcelasComOrigem, type HistoricoDoCliente, type ResumoFinanceiroDoCliente } from '@/lib/customer-history';
 import { SeloAdimplencia } from '@/components/admin/SeloAdimplencia';
 import { ParcelasList, type OrigemDaParcela } from '@/components/admin/ParcelasList';
+import { MensalidadesList } from '@/components/admin/MensalidadesList';
 
 const VERDE = '#4ade80';
 const VERMELHO = '#e05555';
@@ -136,11 +137,12 @@ function AbaFinanceiro({
         </div>
       </div>
 
-      {parcelas.length === 0 ? (
+      {parcelas.length === 0 && historico.mensalidades.length === 0 ? (
         <Vazio texto="Nenhuma parcela. As compras deste cliente foram à vista ou ainda não têm parcelamento." />
       ) : (
         <>
           <ParcelasList parcelas={parcelas} origens={origens} titulo="Carnê do cliente" />
+          <MensalidadesList mensalidades={historico.mensalidades} />
           <div className="mt-2.5 text-[11.5px] text-fg-faded">
             Dar baixa, corrigir valor ou vencimento e excluir parcela já valem aqui: o Financeiro, o
             total em aberto e a adimplência são refeitos na hora.
