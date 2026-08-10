@@ -9,6 +9,7 @@ import {
   type ProductFormInput,
 } from '@/app/actions/admin';
 import { CATEGORY_OPTIONS } from '@/lib/constants';
+import { comprimirImagem } from '@/lib/image-compress';
 import { formatBRL } from '@/lib/format';
 import {
   CPU_SUGGESTIONS,
@@ -267,24 +268,42 @@ export function ProductModal({
 
     const productId = form.id;
     startUpload(async () => {
-      for (const file of toUpload) {
-        if (!file.type.startsWith('image/')) {
+      for (const original of toUpload) {
+        if (!original.type.startsWith('image/')) {
           setImageError('Um dos arquivos não é uma imagem válida.');
           continue;
         }
+
+        // Reduz antes de enviar: foto de celular sai com vários megabytes e
+        // nada disso chega ao cliente — a vitrine mostra a imagem em algumas
+        // centenas de pixels. Também é o que mantém o envio longe do limite que
+        // derrubava a tela.
+        const file = await comprimirImagem(original);
+
         if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
-          setImageError(`"${file.name}" excede ${MAX_IMAGE_MB}MB e não foi enviada.`);
+          setImageError(`"${original.name}" continua acima de ${MAX_IMAGE_MB}MB depois de reduzida e não foi enviada.`);
           continue;
         }
+
         const fd = new FormData();
         fd.set('file', file);
-        const result = await uploadProductImageAction(productId, fd);
-        if (!result.ok) {
-          setImageError(result.message);
-          continue;
-        }
-        if (result.image) {
-          setImages((imgs) => [...imgs, result.image!]);
+
+        // O try existe porque falha aqui não é só "não subiu": erro solto em
+        // action derruba a tela inteira no error boundary do admin, e o dono
+        // perde o formulário aberto por causa de uma foto.
+        try {
+          const result = await uploadProductImageAction(productId, fd);
+          if (!result.ok) {
+            setImageError(result.message);
+            continue;
+          }
+          if (result.image) {
+            setImages((imgs) => [...imgs, result.image!]);
+          }
+        } catch {
+          setImageError(
+            `Não foi possível enviar "${original.name}". Tente de novo — se repetir, envie uma foto menor.`
+          );
         }
       }
     });

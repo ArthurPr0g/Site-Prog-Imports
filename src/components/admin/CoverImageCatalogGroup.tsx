@@ -13,6 +13,7 @@ import {
 } from '@/app/actions/admin';
 import { useToast } from '@/components/ui/Toast';
 import { useDragReorder } from '@/lib/useDragReorder';
+import { comprimirImagem } from '@/lib/image-compress';
 
 type Item = { id: string; name: string; image_url: string | null; active?: boolean };
 
@@ -118,14 +119,20 @@ function CoverImageRow({
   }
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const original = e.target.files?.[0];
     e.target.value = '';
-    if (!file) return;
-    const formData = new FormData();
-    formData.set('file', file);
+    if (!original) return;
     startTransition(async () => {
-      const result = await uploadCategoryImageAction(item.id, formData);
-      if (!result.ok) toast(result.message);
+      // Mesma redução do upload de produto: capa também vinha do celular e
+      // estourava o limite de corpo da action, derrubando a tela.
+      const formData = new FormData();
+      formData.set('file', await comprimirImagem(original));
+      try {
+        const result = await uploadCategoryImageAction(item.id, formData);
+        if (!result.ok) toast(result);
+      } catch {
+        toast({ ok: false, message: 'Não foi possível enviar a capa. Tente uma imagem menor.' });
+      }
     });
   }
 
