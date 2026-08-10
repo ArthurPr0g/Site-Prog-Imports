@@ -1261,6 +1261,14 @@ removido junto com a origem.
   recebido. E a exclusão do registro de origem tira os lançamentos **antes** de
   apagar a si mesmo — a tela do Financeiro recusa excluir linha gerada, então a
   ordem inversa as deixa órfãs e sem remoção possível pela interface.
+- **Server action tem limite de corpo de 1 MB por padrão.** Foto de celular
+  passa disso com folga, e o estouro **não** vira erro tratado: a action é
+  recusada antes de rodar, o erro sobe solto e o error boundary troca a tela
+  inteira — sem mensagem, porque não foi o código que falhou. Ficou em 6 MB
+  (`next.config.ts`), acima da regra da própria aplicação, para a recusa vir
+  explicada. Todo upload reduz a imagem no navegador antes de enviar
+  (`lib/image-compress.ts`, 1800px em WebP) e chama a action dentro de
+  `try/catch`, porque erro solto ali leva junto o formulário aberto.
 - **Subconsulta dentro de policy respeita a RLS da tabela consultada.** Uma
   policy que precisa olhar tabelas com RLS própria simplesmente não vê nada, e a
   tela fica vazia sem erro. Quando a resposta depende de cruzar tabelas
