@@ -59,7 +59,20 @@ export function Gallery({ images, badge }: { images: GalleryImage[]; badge?: str
             className="absolute inset-0 transition-transform duration-200 ease-out"
             style={{ transform: `scale(${zoom ? 1.8 : 1})`, transformOrigin: `${pos.x}% ${pos.y}%` }}
           >
-            <Image src={active.url} alt={active.label} fill sizes="(min-width: 1024px) 560px, 100vw" className="object-cover" priority />
+            {/* `sizes` pede quase o dobro da caixa de propósito: esta imagem
+                tem zoom de 1,8× no hover, e pedir os 560px do layout fazia o
+                zoom ampliar um arquivo pequeno — borrado justamente na hora em
+                que o cliente aproxima para decidir. `quality` acima do padrão
+                pelo mesmo motivo: é a foto que vende. */}
+            <Image
+              src={active.url}
+              alt={active.label}
+              fill
+              sizes="(min-width: 1024px) 1080px, 100vw"
+              quality={90}
+              className="object-cover"
+              priority
+            />
           </div>
         ) : (
           <div

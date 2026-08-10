@@ -51,6 +51,8 @@ export type ProductModalData = {
   rating?: string;
   reviewCount?: string;
   highlights?: string[];
+  /** Ficha técnica da página do produto, em pares campo/valor. */
+  specs?: { k: string; v: string }[];
   gpu?: string;
   cpu?: string;
   ram?: string;
@@ -77,6 +79,22 @@ function Field({ label, className, children }: { label: string; className?: stri
 const MAX_IMAGES = 8;
 const MAX_IMAGE_MB = 5;
 const MAX_HIGHLIGHTS = 8;
+const MAX_SPECS = 20;
+
+/** Campos que quase toda ficha daquela categoria tem, já na ordem em que se
+ *  lê. Serve como ponto de partida — o dono apaga o que não serve e acrescenta
+ *  o que faltar. Sem isto, a ficha começa em branco e o cadastro vira uma
+ *  página em branco na frente de quem está com pressa. */
+function modeloDeSpecs(categoria: string): { k: string; v: string }[] {
+  const campos = /notebook|gamer|macbook/i.test(categoria)
+    ? ['Processador', 'Placa de vídeo', 'Memória', 'Armazenamento', 'Tela', 'Sistema', 'Garantia']
+    : /iphone|celular|smartphone/i.test(categoria)
+      ? ['Tela', 'Processador', 'Armazenamento', 'Câmera', 'Bateria', 'Garantia']
+      : /ipad|tablet/i.test(categoria)
+        ? ['Tela', 'Processador', 'Armazenamento', 'Conectividade', 'Garantia']
+        : ['Modelo', 'Especificação principal', 'Conectividade', 'Garantia'];
+  return campos.map((k) => ({ k, v: '' }));
+}
 // Sem pré-preenchimento: deixado vazio, o site deriva os destaques da própria
 // descrição do produto. Antes este campo nascia com quatro textos
 // institucionais, e como quase ninguém edita, os 21 produtos ativos exibiam a
@@ -128,6 +146,7 @@ export function ProductModal({
   );
   const [images, setImages] = useState<ProductImageData[]>(initial?.images ?? []);
   const [highlights, setHighlights] = useState<string[]>(initial?.highlights ?? DEFAULT_HIGHLIGHTS);
+  const [specs, setSpecs] = useState<{ k: string; v: string }[]>(initial?.specs ?? []);
   const [pending, startTransition] = useTransition();
   const [uploading, startUpload] = useTransition();
   const [error, setError] = useState('');
@@ -217,6 +236,7 @@ export function ProductModal({
       rating,
       reviewCount,
       highlights,
+      specs,
       gpu: visibleSpecFields.includes('gpu') ? (form.gpu ?? '').trim() : '',
       cpu: visibleSpecFields.includes('cpu') ? (form.cpu ?? '').trim() : '',
       ram: visibleSpecFields.includes('ram') ? form.ram ?? '' : '',
@@ -240,6 +260,10 @@ export function ProductModal({
       }
       onClose();
     });
+  }
+
+  function atualizarSpec(indice: number, patch: Partial<{ k: string; v: string }>) {
+    setSpecs((lista) => lista.map((s, i) => (i === indice ? { ...s, ...patch } : s)));
   }
 
   function handlePickFiles() {
@@ -503,7 +527,67 @@ export function ProductModal({
               rows={6}
               className={`resize-y ${inputClass}`}
             />
+            <div className="mt-1 text-[11px] text-fg-faded">
+              Texto corrido, para convencer. A ficha técnica vai no campo abaixo — misturar as duas
+              deixa a aba de Especificações vazia na página do produto.
+            </div>
           </Field>
+
+          <div className="sm:col-span-2">
+            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+              Especificações (aparecem na aba &quot;Especificações&quot; da página do produto)
+            </div>
+            {specs.length === 0 && (
+              <div className="mb-2 text-[13px] text-fg-tertiary">
+                Nenhuma ainda — a aba do produto fica vazia sem isto.
+              </div>
+            )}
+            <div className="flex flex-col gap-2">
+              {specs.map((s, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    value={s.k}
+                    onChange={(e) => atualizarSpec(i, { k: e.target.value })}
+                    placeholder="Campo (ex: Processador)"
+                    className={`w-[38%] ${inputClass}`}
+                  />
+                  <input
+                    value={s.v}
+                    onChange={(e) => atualizarSpec(i, { v: e.target.value })}
+                    placeholder="Valor (ex: Intel Core Ultra 9 275HX)"
+                    className={`flex-1 ${inputClass}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setSpecs((lista) => lista.filter((_, x) => x !== i))}
+                    aria-label={`Remover especificação ${i + 1}`}
+                    className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-control border border-border-strong text-fg-tertiary hover:border-error hover:text-error"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setSpecs((lista) => [...lista, { k: '', v: '' }])}
+                disabled={specs.length >= MAX_SPECS}
+                className="rounded-control border border-dashed border-border-hover px-4 py-2.5 text-[13px] font-bold text-fg-tertiary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                + Adicionar especificação
+              </button>
+              {specs.length === 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSpecs(modeloDeSpecs(form.category))}
+                  className="rounded-control border border-border-strong px-4 py-2.5 text-[13px] font-bold text-fg-tertiary transition-colors hover:border-accent hover:text-accent"
+                >
+                  Usar modelo de {form.category.toLowerCase()}
+                </button>
+              )}
+            </div>
+          </div>
 
           <div className="sm:col-span-2">
             {images.length > 0 && (

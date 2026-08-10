@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
         pathname: '/storage/v1/object/public/**',
       },
     ],
+    // 75 é o padrão e serve para miniatura e capa; 90 é para a foto grande do
+    // produto, que tem zoom e é onde o cliente decide a compra. O Next só
+    // aceita os valores declarados aqui.
+    qualities: [75, 90],
   },
   experimental: {
     serverActions: {

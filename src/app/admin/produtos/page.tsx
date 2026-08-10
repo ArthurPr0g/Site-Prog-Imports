@@ -23,6 +23,7 @@ export default async function AdminProductsPage() {
     rating: Number(p.rating),
     reviewCount: p.review_count,
     highlights: p.highlights ?? [],
+    specs: (p.product_specs ?? []).map((s) => ({ k: s.k, v: s.v })),
     gpu: p.gpu ?? '',
     cpu: p.cpu ?? '',
     ram: p.ram ?? '',

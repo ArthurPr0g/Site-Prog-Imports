@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import Image from 'next/image';
 import { GripVertical } from 'lucide-react';
 import { formatBRL } from '@/lib/format';
@@ -8,7 +8,33 @@ import { toggleProductActiveAction, deleteProductAction, reorderProductsAction }
 import { ProductModal, type ProductModalData } from './ProductModal';
 import { ProductImportButton } from './ProductImportButton';
 import { useToast } from '@/components/ui/Toast';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useDragReorder } from '@/lib/useDragReorder';
+
+function FiltroCategoria({
+  rotulo,
+  quantidade,
+  ativo,
+  onClick,
+}: {
+  rotulo: string;
+  quantidade: number;
+  ativo: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-control border px-3.5 py-2 text-[12.5px] font-bold transition-colors ${
+        ativo
+          ? 'border-accent bg-[rgb(var(--brand-accent-rgb)/.1)] text-accent'
+          : 'border-border-strong text-fg-secondary hover:border-accent hover:text-accent'
+      }`}
+    >
+      {rotulo} <span className="text-[11px] opacity-70">({quantidade})</span>
+    </button>
+  );
+}
 
 type Row = {
   id: string;
@@ -28,6 +54,7 @@ type Row = {
   rating: number;
   reviewCount: number;
   highlights: string[];
+  specs: { k: string; v: string }[];
   gpu: string;
   cpu: string;
   ram: string;
@@ -43,10 +70,28 @@ export function ProductsTable({ products: productsProp, collections }: { product
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ProductModalData | null>(null);
   const [modalKey, setModalKey] = useState(0);
+  const [categoria, setCategoria] = useState('');
+  const [excluindo, setExcluindo] = useState<Row | null>(null);
   const [, startTransition] = useTransition();
   const toast = useToast();
 
-  const { items: products, rowRef, handlePointerDown } = useDragReorder(productsProp, (orderedIds) => {
+  /** Categorias que existem de fato nos produtos, em ordem alfabética, com a
+   *  contagem. Sai da lista carregada, e não de uma constante: categoria nova
+   *  aparece no filtro sozinha, e categoria que ficou sem produto some. */
+  const categorias = useMemo(() => {
+    const contagem = new Map<string, number>();
+    for (const p of productsProp) {
+      if (p.category) contagem.set(p.category, (contagem.get(p.category) ?? 0) + 1);
+    }
+    return [...contagem.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [productsProp]);
+
+  const visiveis = useMemo(
+    () => (categoria ? productsProp.filter((p) => p.category === categoria) : productsProp),
+    [productsProp, categoria]
+  );
+
+  const { items: products, rowRef, handlePointerDown } = useDragReorder(visiveis, (orderedIds) => {
     startTransition(async () => {
       const result = await reorderProductsAction(orderedIds);
       if (!result.ok) toast(result.message);
@@ -60,11 +105,13 @@ export function ProductsTable({ products: productsProp, collections }: { product
     });
   }
 
-  function removeProduct(p: Row) {
-    if (!window.confirm(`Excluir "${p.name}"? Essa ação não pode ser desfeita.`)) return;
+  function confirmarExclusao() {
+    if (!excluindo) return;
+    const alvo = excluindo;
     startTransition(async () => {
-      const result = await deleteProductAction(p.id);
-      if (!result.ok) toast(result.message);
+      const result = await deleteProductAction(alvo.id);
+      toast(result);
+      if (result.ok) setExcluindo(null);
     });
   }
 
@@ -90,6 +137,7 @@ export function ProductsTable({ products: productsProp, collections }: { product
       rating: String(p.rating),
       reviewCount: String(p.reviewCount),
       highlights: p.highlights,
+      specs: p.specs,
       gpu: p.gpu,
       cpu: p.cpu,
       ram: p.ram,
@@ -118,6 +166,9 @@ export function ProductsTable({ products: productsProp, collections }: { product
       rating: String(origin.rating),
       reviewCount: String(origin.reviewCount),
       highlights: origin.highlights,
+      // A variação começa com a ficha da origem: é o mesmo aparelho, muda a
+      // configuração — que já vai no nome.
+      specs: origin.specs,
       gpu: origin.gpu,
       cpu: origin.cpu,
       ram: origin.ram,
@@ -143,9 +194,12 @@ export function ProductsTable({ products: productsProp, collections }: { product
     if (origin) openVariant(origin);
   }
 
+  /** Chamada também pelo modal, ao excluir uma variação da lista de dentro.
+   *  Procura na lista completa, e não na filtrada: a variação pode ser de outra
+   *  categoria que o filtro está escondendo. */
   function handleDeleteProduct(id: string) {
-    const p = products.find((x) => x.id === id);
-    if (p) removeProduct(p);
+    const p = productsProp.find((x) => x.id === id);
+    if (p) setExcluindo(p);
   }
 
   return (
@@ -159,6 +213,30 @@ export function ProductsTable({ products: productsProp, collections }: { product
           + Novo produto
         </button>
       </div>
+
+      {/* Filtro por categoria. Sai dos próprios produtos, então categoria nova
+          aparece aqui sozinha e categoria sem produto some — uma lista fixa
+          envelheceria em silêncio. */}
+      {categorias.length > 1 && (
+        <div className="mb-3.5 flex flex-wrap gap-2">
+          <FiltroCategoria
+            rotulo="Todas"
+            quantidade={productsProp.length}
+            ativo={categoria === ''}
+            onClick={() => setCategoria('')}
+          />
+          {categorias.map(([nome, quantidade]) => (
+            <FiltroCategoria
+              key={nome}
+              rotulo={nome}
+              quantidade={quantidade}
+              ativo={categoria === nome}
+              onClick={() => setCategoria(categoria === nome ? '' : nome)}
+            />
+          ))}
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-[18px] border border-border bg-card p-6">
         <div className="min-w-[970px]">
           <div className="grid grid-cols-[22px_52px_1.8fr_110px_1fr_.8fr_110px_80px_90px_130px] gap-3 border-b border-border pb-2.5 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
@@ -224,7 +302,8 @@ export function ProductsTable({ products: productsProp, collections }: { product
                     Editar
                   </button>
                   <button
-                    onClick={() => removeProduct(p)}
+                    onClick={() => setExcluindo(p)}
+                    aria-label={`Excluir ${p.name}`}
                     className="rounded-[9px] border border-border-hover px-2.5 py-1.5 text-xs text-fg-tertiary hover:border-error hover:text-error"
                   >
                     ✕
@@ -254,6 +333,29 @@ export function ProductsTable({ products: productsProp, collections }: { product
         onEditProduct={handleEditProduct}
         onCreateVariant={handleCreateVariant}
         onDeleteProduct={handleDeleteProduct}
+      />
+
+      <ConfirmDialog
+        aberto={!!excluindo}
+        titulo={excluindo?.variantOf ? 'Excluir esta variação?' : 'Excluir este produto?'}
+        descricao={
+          excluindo?.variantOf
+            ? 'A variação é um produto próprio: saem com ela as fotos, a ficha técnica e o histórico de catálogo dela. O produto de origem e as outras variações não mudam.'
+            : 'Saem com ele as fotos, a ficha técnica e os vínculos com coleções. Se houver variações, elas continuam existindo como produtos independentes.'
+        }
+        detalhe={
+          excluindo && (
+            <>
+              <strong>{excluindo.name}</strong>
+              <div className="mt-1 text-fg-tertiary">
+                {excluindo.sku} · {excluindo.category || 'sem categoria'} ·{' '}
+                {excluindo.images.length} foto(s)
+              </div>
+            </>
+          )
+        }
+        onConfirmar={confirmarExclusao}
+        onCancelar={() => setExcluindo(null)}
       />
     </div>
   );

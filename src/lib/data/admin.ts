@@ -75,12 +75,13 @@ export async function listAdminProducts() {
   const { data } = await supabase
     .from('products')
     .select(
-      '*, brands(name), categories(name), product_collections(collections(name)), product_images(id, label, url, position)'
+      '*, brands(name), categories(name), product_collections(collections(name)), product_images(id, label, url, position), product_specs(k, v, position)'
     )
     .order('position');
   return (data ?? []).map((p) => ({
     ...p,
     product_images: (p.product_images ?? []).sort((a, b) => a.position - b.position),
+    product_specs: (p.product_specs ?? []).sort((a, b) => a.position - b.position),
   }));
 }
 

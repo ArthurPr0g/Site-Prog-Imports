@@ -34,6 +34,8 @@ function generateSku(name: string): string {
   return `${prefix}-${suffix}`;
 }
 
+const MAX_PRODUCT_SPECS = 20;
+
 export type ProductFormInput = {
   id?: string;
   baseName: string;
@@ -47,6 +49,10 @@ export type ProductFormInput = {
   rating: number;
   reviewCount: number;
   highlights: string[];
+  /** Ficha técnica da página do produto: "Processador" → "Intel Core Ultra 9".
+   *  Separada da descrição porque são coisas diferentes — a descrição vende, a
+   *  ficha responde. Vive em `product_specs`, uma linha por item. */
+  specs: { k: string; v: string }[];
   gpu: string;
   cpu: string;
   ram: string;
@@ -167,6 +173,38 @@ export async function saveProductAction(input: ProductFormInput): Promise<Action
       .eq('product_id', input.variantOf);
     if (originImages?.length) {
       await supabase.from('product_images').insert(originImages.map((img) => ({ ...img, product_id: productId })));
+    }
+  }
+
+  // Ficha técnica: regravada por inteiro a cada salvamento. São poucas linhas
+  // e casá-las uma a uma exigiria rastrear o que a tela removeu — complexidade
+  // que não paga neste volume.
+  if (productId) {
+    let specs = input.specs
+      .map((s, i) => ({ k: s.k.trim(), v: s.v.trim(), position: i }))
+      .filter((s) => s.k && s.v)
+      .slice(0, MAX_PRODUCT_SPECS);
+
+    // Variação nova sem ficha própria herda a da origem, como já acontece com
+    // as fotos: é o mesmo aparelho, e redigitar dez linhas para trocar a cor
+    // seria trabalho inventado.
+    if (specs.length === 0 && isNew && input.variantOf) {
+      const { data: origem } = await supabase
+        .from('product_specs')
+        .select('k, v, position')
+        .eq('product_id', input.variantOf)
+        .order('position');
+      specs = origem ?? [];
+    }
+
+    const { error: erroLimpeza } = await supabase.from('product_specs').delete().eq('product_id', productId);
+    if (erroLimpeza) return errResult('Produto salvo, mas não foi possível atualizar a ficha técnica.');
+
+    if (specs.length > 0) {
+      const { error: erroSpecs } = await supabase
+        .from('product_specs')
+        .insert(specs.map((s) => ({ ...s, product_id: productId })));
+      if (erroSpecs) return errResult('Produto salvo, mas a ficha técnica não foi gravada.');
     }
   }
 

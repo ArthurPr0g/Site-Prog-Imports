@@ -6,15 +6,21 @@
 // barato e — o que motivou este arquivo — mantém o arquivo bem abaixo do limite
 // de corpo das server actions, que derrubava a tela inteira quando estourado.
 
-/** Lado maior depois da redução. 1800px cobre o zoom da página de produto com
- *  folga; acima disso é peso que ninguém enxerga. */
-const LADO_MAXIMO = 1800;
+/** Lado maior depois da redução.
+ *
+ *  2560px porque a foto do produto É a vitrine: ela aparece grande na página,
+ *  ampliada no zoom e em tela de alta densidade, onde cada ponto do layout vale
+ *  dois ou três pixels reais. Reduzir mais que isso economizava banda às custas
+ *  do único lugar onde o cliente decide a compra. */
+const LADO_MAXIMO = 2560;
 
 /** Abaixo disto não vale reprocessar: reencodar uma imagem já pequena só
  *  adiciona perda de qualidade sem ganho de tamanho. */
-const TAMANHO_ACEITAVEL = 900 * 1024;
+const TAMANHO_ACEITAVEL = 1200 * 1024;
 
-const QUALIDADE = 0.85;
+/** Alta o bastante para não deixar marca visível em foto de produto — fundo
+ *  liso e borda de metal são justamente onde a compressão aparece. */
+const QUALIDADE = 0.94;
 
 function carregar(file: File): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
@@ -61,6 +67,10 @@ export async function comprimirImagem(file: File): Promise<File> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return file;
 
+  // O padrão do canvas já é bilinear; pedir alta qualidade explicitamente é o
+  // que evita serrilhado ao reduzir foto grande de uma vez só.
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
   const blob = (await paraBlob(canvas, 'image/webp')) ?? (await paraBlob(canvas, 'image/jpeg'));
