@@ -1186,6 +1186,40 @@ O M6 já resolveu o equivalente do lado dos serviços e serve de molde:
 forma — um lançamento por registro de origem, sincronizado a cada salvamento e
 removido junto com a origem.
 
+## Catálogo — regras confirmadas
+
+**Descrição e ficha técnica são campos separados (2026-08-07).** A aba
+"Especificações" da página do produto lê `product_specs`, e não existia tela
+para preencher: só o produto semeado tinha ficha, todo produto novo nascia com a
+aba vazia, e o dono passou a enfiar as specs dentro da Descrição para compensar.
+Agora o cadastro tem os dois — descrição corrida para convencer, ficha em pares
+campo/valor para responder. A ficha é regravada por inteiro a cada salvamento:
+são poucas linhas, e casar uma a uma exigiria rastrear o que a tela removeu.
+
+Com a ficha vazia, um botão oferece o **modelo da categoria** (notebook vem com
+Processador/Placa de vídeo/Memória/Armazenamento/Tela/Sistema/Garantia). Sem
+isso o cadastro começa em página em branco na frente de quem está com pressa.
+**Variação nova herda a ficha da origem**, como já fazia com as fotos.
+
+**Filtro de categoria na lista de Produtos.** Sai dos próprios produtos, com
+contagem: categoria nova aparece sozinha e categoria sem produto some — lista
+fixa envelheceria em silêncio.
+
+**Excluir produto e excluir variação usam o `ConfirmDialog`**, com textos
+diferentes: a variação é um produto próprio, então o de origem e as irmãs não
+mudam — e a confirmação diz isso, além de nome, SKU e quantas fotos vão junto.
+
+**⚠️ Foto do produto é a vitrine, e o gargalo não estava no upload.** A imagem
+principal pedia **560px** ao `next/image` e tem **zoom de 1,8×** no hover: o zoom
+ampliava um arquivo pequeno e borrava justamente quando o cliente aproxima para
+decidir. Passou a pedir 1080px com `quality={90}` (declarada em
+`images.qualities`, que o Next exige). No upload, o limite de redução subiu para
+**2560px** e a qualidade para **0,94** — tela de alta densidade gasta dois ou
+três pixels reais por ponto do layout. Verificado em produção: a imagem chega em
+1080px/q90 numa caixa de 649px, quase 1:1 no zoom.
+
+---
+
 ## Em aberto
 
 ### Módulos que faltam
