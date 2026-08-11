@@ -92,8 +92,11 @@ export function Header({
           >
             {menuOpen ? '✕' : '☰'}
           </button>
-          <Link href="/" className="flex flex-shrink-0 items-center gap-2.5">
-            <Logo height={51} />
+          {/* Logo menor no celular: em 51px ela sozinha comia 146 dos 375
+              disponíveis, e o que vinha depois era empurrado para fora da tela.
+              O `!` é necessário porque o componente fixa a altura inline. */}
+          <Link href="/" className="flex min-w-0 flex-shrink items-center gap-2.5">
+            <Logo height={51} className="!h-[36px] sm:!h-[51px]" />
           </Link>
           <nav className="hidden gap-5 text-sm font-semibold text-fg-secondary lg:flex">
             {NAV_LINKS.map((l) => (
@@ -106,11 +109,19 @@ export function Header({
             {renderSearch('desktop')}
           </div>
           <div className="ml-auto flex flex-shrink-0 items-center gap-2 md:ml-0">
-            {user?.role === 'admin' && <WorkspaceSwitcher active="loja" />}
+            {/* O alternador de área e o nome da conta saem do celular e vão
+                para o menu: juntos ocupavam 245px de uma tela de 375, e o
+                cabeçalho inteiro vazava para fora — invisível até alguém dar
+                uma pinça para fora e ver o layout desalinhado. */}
+            {user?.role === 'admin' && (
+              <div className="hidden sm:block">
+                <WorkspaceSwitcher active="loja" />
+              </div>
+            )}
             <Link
               href={user ? '/conta' : '/entrar'}
               title={user ? user.name : 'Entrar'}
-              className="grid h-9 flex-shrink-0 place-items-center whitespace-nowrap rounded-full border border-border-strong px-3.5 text-[13px] font-bold hover:border-accent hover:text-accent sm:h-10 sm:px-4"
+              className="hidden h-9 flex-shrink-0 place-items-center whitespace-nowrap rounded-full border border-border-strong px-3.5 text-[13px] font-bold hover:border-accent hover:text-accent sm:grid sm:h-10 sm:px-4"
             >
               {user ? user.name.split(' ')[0] : 'Entrar'}
             </Link>
@@ -155,6 +166,25 @@ export function Header({
                 {l.label}
               </Link>
             ))}
+
+            {/* O que saiu do cabeçalho por falta de espaço reaparece aqui —
+                sumir do celular sem ter para onde ir seria tirar a função. */}
+            <Link
+              href={user ? '/conta' : '/entrar'}
+              onClick={() => setMenuOpen(false)}
+              className="rounded-xl px-3 py-2.5 text-sm font-semibold text-fg-secondary hover:bg-card hover:text-accent sm:hidden"
+            >
+              {user ? `Minha conta (${user.name.split(' ')[0]})` : 'Entrar'}
+            </Link>
+            {user?.role === 'admin' && (
+              <Link
+                href="/admin"
+                onClick={() => setMenuOpen(false)}
+                className="rounded-xl px-3 py-2.5 text-sm font-extrabold text-accent hover:bg-card sm:hidden"
+              >
+                Ir para o Gerenciamento
+              </Link>
+            )}
           </nav>
         )}
       </div>
