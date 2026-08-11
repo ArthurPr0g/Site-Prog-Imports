@@ -40,7 +40,10 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   applicationName: BRAND.name,
-  alternates: { canonical: '/' },
+  // Sem canonical padrão de propósito: como ele é herdado, um `canonical: '/'`
+  // aqui fazia `/entrar` e `/conta` declararem-se cópias da home — dizendo ao
+  // Google que aquelas URLs são a página inicial. Cada página pública declara o
+  // seu; as páginas fora do índice não declaram nenhum, que é o certo.
   openGraph: {
     type: 'website',
     locale: 'pt_BR',
