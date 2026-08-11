@@ -161,15 +161,26 @@ export function AnimatedHeroBanners() {
           ›
         </button>
 
-        <div className="absolute bottom-3 left-1/2 z-2 flex -translate-x-1/2 gap-2 sm:bottom-4">
+        {/* O ponto continua pequeno, mas a área de toque não: o botão ganha
+            altura e espaçamento invisíveis em volta. Um alvo de 7 × 6px é
+            impossível de acertar com o dedo, e trocar de banner no celular
+            virava tentativa e erro. */}
+        <div className="absolute bottom-1 left-1/2 z-2 flex -translate-x-1/2 sm:bottom-2">
           {DESKTOP_SLIDES.map((_, i) => (
             <button
               key={i}
               onClick={() => goTo(i)}
               aria-label={`Ir para o banner ${i + 1}`}
-              className="h-1.5 rounded-full transition-all"
-              style={{ width: i === active ? 22 : 7, background: i === active ? 'var(--color-accent)' : 'rgba(245,245,243,.35)' }}
-            />
+              className="group grid h-10 w-7 place-items-center"
+            >
+              <span
+                className="block h-1.5 rounded-full transition-all"
+                style={{
+                  width: i === active ? 22 : 7,
+                  background: i === active ? 'var(--color-accent)' : 'rgba(245,245,243,.35)',
+                }}
+              />
+            </button>
           ))}
         </div>
       </div>

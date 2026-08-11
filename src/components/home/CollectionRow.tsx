@@ -54,7 +54,8 @@ export function CollectionRow({
         {collectionId && (
           <Link
             href={`/colecao/${collectionId}`}
-            className="flex-shrink-0 text-[13px] font-bold text-accent hover:underline"
+            // `-my-2 py-2`: cresce a área de toque sem empurrar o layout.
+            className="-my-2 flex-shrink-0 py-2 text-[13px] font-bold text-accent hover:underline"
           >
             Ver mais →
           </Link>

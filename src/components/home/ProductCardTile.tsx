@@ -41,7 +41,10 @@ export function ProductCardTile({ p, className }: { p: ProductCard; className?: 
             e.preventDefault();
             toggleFavorite(p.id);
           }}
-          className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full border border-border-hover bg-page/70 text-xs backdrop-blur-sm hover:border-accent hover:scale-110 sm:right-3 sm:top-3 sm:h-9 sm:w-9 sm:text-[15px]"
+          aria-label={isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+          // 36px no celular: com 28 o coração ficava menor que a polpa do dedo
+          // e o toque caía no cartão, abrindo o produto sem querer.
+          className="absolute right-1.5 top-1.5 grid h-9 w-9 place-items-center rounded-full border border-border-hover bg-page/70 text-sm backdrop-blur-sm hover:border-accent hover:scale-110 sm:right-3 sm:top-3 sm:text-[15px]"
           style={{ color: isFav ? 'var(--color-accent)' : '#a8a8b0' }}
         >
           {isFav ? '♥' : '♡'}
