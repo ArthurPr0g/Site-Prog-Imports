@@ -1,5 +1,9 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { formatBRL } from '@/lib/format';
+import { descricaoCurta } from '@/lib/seo';
+import { JsonLd, productSchema, breadcrumbSchema } from '@/components/seo/JsonLd';
 import { getProductBySku, listActiveProducts } from '@/lib/data/catalog';
 import { getCurrentUser } from '@/lib/auth';
 import { PromoBar } from '@/components/layout/PromoBar';
@@ -12,6 +16,64 @@ import { ProductTabs } from '@/components/product/ProductTabs';
 import { RelatedProducts } from '@/components/product/RelatedProducts';
 import { StarRating } from '@/components/ui/Price';
 import { ReadyToShipBadge } from '@/components/ui/ReadyToShipBadge';
+
+/** Título e descrição vêm do próprio produto.
+ *
+ *  Antes toda página herdava o título da loja: os 22 produtos apareciam na busca
+ *  com o mesmo texto, competindo entre si e sem dizer o que eram. */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ sku: string }>;
+}): Promise<Metadata> {
+  const { sku } = await params;
+  const product = await getProductBySku(sku);
+
+  if (!product) {
+    return { title: 'Produto não encontrado', robots: { index: false, follow: true } };
+  }
+
+  const preco = Number(product.promo_price ?? product.price);
+  const caminho = `/produto/${product.sku}`;
+  // A descrição sai do texto do produto; sem ele, é montada com o que existe de
+  // fato no cadastro — nunca com adjetivo inventado.
+  const descricao = descricaoCurta(
+    product.description ||
+      [
+        product.name,
+        product.categories?.name,
+        product.brands?.name,
+        preco > 0 ? `por ${formatBRL(preco)}` : '',
+        'importado dos EUA com garantia Prog Imports.',
+      ]
+        .filter(Boolean)
+        .join(' · ')
+  );
+
+  const foto = (product.product_images ?? [])
+    .slice()
+    .sort((a, b) => a.position - b.position)
+    .find((i) => i.url)?.url;
+
+  return {
+    title: product.name,
+    description: descricao,
+    alternates: { canonical: caminho },
+    openGraph: {
+      type: 'website',
+      title: product.name,
+      description: descricao,
+      url: caminho,
+      images: foto ? [{ url: foto, alt: product.name }] : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: product.name,
+      description: descricao,
+      images: foto ? [foto] : undefined,
+    },
+  };
+}
 
 export default async function ProductPage({ params }: { params: Promise<{ sku: string }> }) {
   const { sku } = await params;
@@ -40,19 +102,49 @@ export default async function ProductPage({ params }: { params: Promise<{ sku: s
   // consulta nova só para saber se há unidade em mãos.
   const readyToShip = product.siblings.some((s) => s.id === product.id && s.readyToShip);
 
+  const precoAtual = Number(product.promo_price ?? product.price);
+
   return (
     <div className="min-h-screen bg-page">
+      {/* A ficha do produto para o buscador: preço, disponibilidade, condição e
+          especificações. É o que habilita o resultado rico na busca e o que os
+          mecanismos de resposta leem em vez de adivinhar pelo texto. */}
+      <JsonLd
+        schema={productSchema({
+          sku: product.sku,
+          nome: product.name,
+          descricao: product.description || product.name,
+          imagens: (product.images ?? []).map((i) => i.url).filter(Boolean) as string[],
+          marca: product.brand ?? '',
+          categoria: product.category ?? '',
+          preco: precoAtual,
+          disponivel: readyToShip,
+          estado: product.condition ?? '',
+          specs: (product.specs ?? []).map((s) => ({ k: s.k, v: s.v })),
+        })}
+      />
+      <JsonLd
+        schema={breadcrumbSchema([
+          { nome: 'Home', caminho: '/' },
+          ...(product.category
+            ? [{ nome: product.category, caminho: `/?categoria=${encodeURIComponent(product.category)}` }]
+            : []),
+          { nome: product.name, caminho: `/produto/${product.sku}` },
+        ])}
+      />
+
       <PromoBar />
       <Header searchIndex={searchIndex} user={user} />
 
-      <div className="mx-auto max-w-[1280px] px-6 pt-6 text-[13px] text-fg-tertiary">
+      <nav aria-label="Você está em" className="mx-auto max-w-[1280px] px-6 pt-6 text-[13px] text-fg-tertiary">
         <Link href="/" className="text-fg-tertiary">Home</Link> /{' '}
         <Link href={`/?categoria=${encodeURIComponent(product.category)}#colecoes`} className="text-fg-tertiary">
           {product.category}
         </Link>{' '}
         / <span className="text-fg">{product.name}</span>
-      </div>
+      </nav>
 
+      <main>
       <section className="mx-auto grid max-w-[1280px] grid-cols-1 items-start gap-8 px-6 pt-6 md:grid-cols-[1.1fr_.9fr] md:gap-12">
         <Gallery images={product.images} badge={isExclusive ? 'EXCLUSIVO EUA' : undefined} />
 
@@ -99,6 +191,7 @@ export default async function ProductPage({ params }: { params: Promise<{ sku: s
 
       <ProductTabs description={product.description} specs={product.specs} reviews={product.reviews} />
       <RelatedProducts products={product.related} />
+      </main>
 
       <Footer />
       <CartDrawer />

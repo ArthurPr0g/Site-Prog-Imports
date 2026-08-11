@@ -1,7 +1,19 @@
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { AccountHeader } from '@/components/account/AccountHeader';
 import { AccountSidebar } from '@/components/account/AccountSidebar';
+
+/** Área logada não vai para o índice.
+ *
+ *  O `robots.txt` já pede para não rastrear, mas isso não basta: uma URL
+ *  bloqueada lá pode ser indexada mesmo assim se alguém a linkar de fora, e aí
+ *  aparece na busca sem título nem descrição, porque o robô não pôde ler a
+ *  página. O `noindex` é o que efetivamente a mantém fora. */
+export const metadata: Metadata = {
+  title: 'Minha conta',
+  robots: { index: false, follow: false },
+};
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();

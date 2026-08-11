@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Logo } from '@/components/ui/Logo';
 import { INSTAGRAM_HANDLE, WHATSAPP_NUMBER } from '@/lib/constants';
 
@@ -34,12 +35,23 @@ export function Footer() {
         </div>
         <div>
           <div className="mb-4 text-[13px] font-extrabold uppercase tracking-[.1em]">Institucional</div>
+          {/* Estes cinco links apontavam para `href="#"`: não levavam a lugar
+              nenhum, e para o buscador eram links internos desperdiçados. Os
+              que têm destino real no site passam a apontar para ele; os que
+              dependem de página que ainda não existe (trocas, privacidade)
+              viram conversa no WhatsApp, que é onde a loja de fato responde. */}
           <div className="flex flex-col gap-2.5 text-sm text-fg-secondary">
-            <a href="#" className="footer-link">Sobre nós</a>
-            <a href="#" className="footer-link">Como funciona a importação</a>
-            <a href="#" className="footer-link">Garantia</a>
-            <a href="#" className="footer-link">Trocas e devoluções</a>
-            <a href="#" className="footer-link">Política de privacidade</a>
+            <Link href="/#sobre" className="footer-link">Sobre nós</Link>
+            <Link href="/#servicos" className="footer-link">Serviços técnicos</Link>
+            <Link href="/produtos" className="footer-link">Todos os produtos</Link>
+            <a
+              href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent('Olá! Tenho uma dúvida sobre garantia e trocas.')}`}
+              target="_blank"
+              rel="noreferrer"
+              className="footer-link"
+            >
+              Garantia e trocas
+            </a>
           </div>
         </div>
         <div>

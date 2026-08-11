@@ -1,4 +1,8 @@
+import type { Metadata } from 'next';
 import { listActiveProducts, listCategories, listTopCollections, listFeedCollections } from '@/lib/data/catalog';
+import { BRAND } from '@/lib/brand';
+import { SITE_DESCRIPTION } from '@/lib/seo';
+import { JsonLd, itemListSchema } from '@/components/seo/JsonLd';
 import { listBanners, listServices, listTestimonials, getSiteSettings } from '@/lib/data/content';
 import { getCurrentUser } from '@/lib/auth';
 import { PromoBar } from '@/components/layout/PromoBar';
@@ -15,6 +19,15 @@ import { Institutional } from '@/components/home/Institutional';
 import { Services } from '@/components/home/Services';
 import { Testimonials } from '@/components/home/Testimonials';
 import { Newsletter } from '@/components/home/Newsletter';
+
+/** A home muda de conteúdo com `?categoria=`, mas continua sendo a mesma
+ *  página: o canonical fixo em `/` impede que cada filtro vire uma URL
+ *  concorrente disputando o mesmo lugar na busca. */
+export const metadata: Metadata = {
+  title: `${BRAND.name} — ${BRAND.tagline}`,
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: '/' },
+};
 
 export default async function HomePage({
   searchParams,
@@ -86,8 +99,22 @@ export default async function HomePage({
 
   return (
     <div className="min-h-screen overflow-x-clip bg-page">
+      {/* A vitrine em ordem, para o buscador entender que esta é uma página de
+          listagem e quais produtos ela apresenta. */}
+      <JsonLd schema={itemListSchema(productsForFilter.slice(0, 30).map((p) => ({ sku: p.sku, nome: p.name })))} />
+
       <PromoBar />
       <Header searchIndex={searchIndex} user={user} />
+
+      <main>
+      {/* A home não tinha H1 nenhum — só H2 soltos. O banner é uma arte
+          animada e não comporta um título de verdade sem mudar o desenho,
+          então o H1 existe para leitor de tela e para o buscador, dizendo em
+          uma linha o que a loja é. */}
+      <h1 className="sr-only">
+        {BRAND.name} — {BRAND.tagline}: MacBooks, iPhones, iPads e notebooks gamer importados dos
+        Estados Unidos
+      </h1>
       <AnimatedHeroBanners />
       {settings.showSmallBanners && <HeroCarousel slides={heroSlides} />}
       <BrandsMarquee />
@@ -105,6 +132,7 @@ export default async function HomePage({
       <Services services={services} />
       <Testimonials testimonials={testimonials} />
       <Newsletter />
+      </main>
       <Footer />
       <CartDrawer />
     </div>

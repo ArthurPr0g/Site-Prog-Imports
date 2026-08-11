@@ -9,8 +9,11 @@ const DIFFS = [
 ];
 
 export function Institutional() {
+  // O `id="sobre"` existe para o rodapé poder apontar para cá: "Sobre nós"
+  // levava a `href="#"`, que não vai a lugar nenhum e ainda queima link interno
+  // — o buscador segue e volta para a mesma página.
   return (
-    <section className="mx-auto max-w-[1280px] px-6 pt-22">
+    <section id="sobre" className="mx-auto max-w-[1280px] px-6 pt-22">
       <div className="rounded-[28px] border border-border bg-[linear-gradient(145deg,#111114,#0d0d11)] p-8 md:p-14">
         <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-[1fr_1.4fr] md:gap-14">
           <div>
