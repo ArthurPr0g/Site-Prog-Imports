@@ -22,7 +22,9 @@ export function ProductCardTile({ p, className }: { p: ProductCard; className?: 
       className={`relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:-translate-y-1.5 hover:border-border-hover hover:shadow-[0_24px_48px_rgba(0,0,0,.45)] sm:rounded-[22px] ${className ?? ''}`}
     >
       <GlowBorder />
-      <Link href={href} className="relative block h-[130px] sm:h-[210px]">
+      {/* Quadrado, como a foto que o dono sobe: caixa deitada obrigaria a
+          cortar, e o produto apareceria diferente do publicado na página. */}
+      <Link href={href} className="relative block aspect-square">
         <PlaceholderImage label={p.image} src={p.imageUrl} className="h-full" textClassName="hidden sm:block text-xs" sizes="(min-width: 640px) 280px, 50vw" />
         {/* Promoção e pronta entrega empilham no mesmo canto: um produto pode
             ter os dois, e sobrepor esconderia informação de venda. */}

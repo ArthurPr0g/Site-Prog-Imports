@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import Image from 'next/image';
 import {
   saveProductAction,
@@ -152,7 +152,38 @@ export function ProductModal({
   const [error, setError] = useState('');
   const [imageError, setImageError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imagensForaDoPadrao, setImagensForaDoPadrao] = useState<string[]>([]);
   const toast = useToast();
+
+  // Mede as fotos já publicadas para avisar quais fogem do quadrado. O aviso
+  // existe porque a loja passou a mostrar a imagem inteira: foto deitada não é
+  // mais cortada, ela ganha faixa nas laterais — e é melhor descobrir isso aqui
+  // do que na página do produto.
+  useEffect(() => {
+    let cancelado = false;
+    const urls = images.filter((i) => i.url);
+
+    Promise.all(
+      urls.map(
+        (img) =>
+          new Promise<string | null>((resolve) => {
+            const el = document.createElement('img');
+            el.onload = () => {
+              const proporcao = el.naturalWidth / el.naturalHeight;
+              resolve(Math.abs(proporcao - 1) > 0.02 ? img.id : null);
+            };
+            el.onerror = () => resolve(null);
+            el.src = img.url as string;
+          })
+      )
+    ).then((ids) => {
+      if (!cancelado) setImagensForaDoPadrao(ids.filter((id): id is string => !!id));
+    });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [images]);
 
   if (!open) return null;
 
@@ -624,6 +655,17 @@ export function ProductModal({
                     : `Clique para enviar fotos (${images.length}/${MAX_IMAGES})`}
             </button>
             {imageError && <div className="mt-2 text-[13px] font-semibold text-error">{imageError}</div>}
+            <div className="mt-2 text-[11.5px] text-fg-faded">
+              Padrão da loja: <strong>2560 × 2560, quadrada</strong>. A loja mostra a foto inteira,
+              sem cortar, no computador e no celular — então o que você enviar é o que o cliente vê.
+              Fotos maiores são reduzidas para 2560 no envio; até 8 por produto.
+            </div>
+            {imagensForaDoPadrao.length > 0 && (
+              <div className="mt-2 text-[12px] text-warning">
+                {imagensForaDoPadrao.length} foto(s) não são quadradas e vão aparecer com faixa nas
+                laterais. Não quebra nada — só não fica no padrão.
+              </div>
+            )}
           </div>
 
           <div className="sm:col-span-2">

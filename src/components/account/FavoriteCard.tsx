@@ -37,7 +37,7 @@ export function FavoriteCard({
       className="relative overflow-hidden rounded-[20px] border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-border-hover"
     >
       <GlowBorder />
-      <div className="relative h-37.5">
+      <div className="relative aspect-square">
         <PlaceholderImage label={image} src={imageUrl} className="h-full" sizes="240px" />
         <button
           disabled={pending}

@@ -47,12 +47,17 @@ export function Gallery({ images, badge }: { images: GalleryImage[]; badge?: str
 
   return (
     <div>
+      {/* Quadrada no celular E no computador. Antes o desktop usava uma caixa
+          deitada de 460px e preenchia cortando: a foto quadrada que o dono sobe
+          perdia topo e base só no desktop, e o mesmo produto aparecia
+          enquadrado de dois jeitos. Quadrado nos dois lugares é o que faz o
+          publicado ser igual ao enviado. */}
       <div
         onMouseMove={onMove}
         onMouseLeave={() => setZoom(false)}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
-        className="stripe-placeholder relative aspect-square cursor-zoom-in touch-pan-y overflow-hidden rounded-3xl border border-border-strong sm:aspect-auto sm:h-[460px]"
+        className="stripe-placeholder relative aspect-square cursor-zoom-in touch-pan-y overflow-hidden rounded-3xl border border-border-strong"
       >
         {active.url ? (
           <div
@@ -70,7 +75,10 @@ export function Gallery({ images, badge }: { images: GalleryImage[]; badge?: str
               fill
               sizes="(min-width: 1024px) 1080px, 100vw"
               quality={90}
-              className="object-cover"
+              // `contain` protege as fotos antigas, que não são quadradas: elas
+              // aparecem inteiras com faixa nas laterais em vez de cortadas.
+              // Para a foto quadrada do padrão, dá no mesmo que preencher.
+              className="object-contain"
               priority
             />
           </div>
@@ -100,7 +108,7 @@ export function Gallery({ images, badge }: { images: GalleryImage[]; badge?: str
             style={{ borderColor: i === idx ? 'var(--color-accent)' : '#26262b' }}
           >
             {img.url ? (
-              <Image src={img.url} alt={img.label} fill sizes="90px" className="object-cover" />
+              <Image src={img.url} alt={img.label} fill sizes="90px" className="object-contain" />
             ) : (
               <span className="font-mono text-[10px] text-fg-faded">foto {i + 1}</span>
             )}
