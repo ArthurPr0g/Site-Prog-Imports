@@ -1209,6 +1209,22 @@ fixa envelheceria em silêncio.
 diferentes: a variação é um produto próprio, então o de origem e as irmãs não
 mudam — e a confirmação diz isso, além de nome, SKU e quantas fotos vão junto.
 
+**⚠️ Padrão de foto: 2560 × 2560, quadrada — e a loja mostra exatamente isso
+(2026-08-07).** A galeria era quadrada no celular e usava caixa deitada de 460px
+no desktop, preenchendo cortando: a mesma foto aparecia inteira num lugar e
+decapitada no outro. Os cartões do catálogo, dos relacionados e dos favoritos
+faziam o mesmo com altura fixa.
+
+Agora todas essas caixas são **quadradas** e a imagem entra **inteira**
+(`object-contain`) em vez de preencher cortando. Para a foto quadrada do padrão
+os dois modos dão no mesmo resultado; a diferença aparece nas fotos antigas, que
+passam a ser exibidas completas com faixa lateral em vez de perderem as bordas
+em silêncio. O cadastro escreve o padrão e avisa quantas fotos do produto fogem
+do quadrado — medidas no navegador, 2% de tolerância, aviso e não bloqueio.
+
+Verificado em produção: caixa de 651 × 651 no desktop e 327 × 327 no celular,
+com a imagem ocupando a caixa inteira nos dois.
+
 **⚠️ Foto do produto é a vitrine, e o gargalo não estava no upload.** A imagem
 principal pedia **560px** ao `next/image` e tem **zoom de 1,8×** no hover: o zoom
 ampliava um arquivo pequeno e borrava justamente quando o cliente aproxima para
