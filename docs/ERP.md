@@ -1274,6 +1274,59 @@ três pixels reais por ponto do layout. Verificado em produção: a imagem chega
 
 ---
 
+## SEO — regras confirmadas (2026-08-07)
+
+O site não dizia ao Google o que era cada página: sem `robots.txt` (404), sem
+`sitemap.xml` (404), sem canonical, sem Open Graph, sem dados estruturados, e com
+**uma** metadata para o site inteiro — os 22 produtos apareciam na busca com o
+mesmo título e a mesma descrição, competindo entre si.
+
+**Endereço público em `lib/seo.ts`**, de `NEXT_PUBLIC_SITE_URL` com a Prog como
+padrão — mesma regra do `lib/brand.ts`: loja nova é configuração, não fork.
+
+**O sitemap é gerado por requisição** (`force-dynamic`), não no build: produto
+novo entra pelo painel sem deploy, e um sitemap de build envelheceria no dia
+seguinte. `lastModified` sai de `created_at` porque `products` e `collections`
+não têm `updated_at` — data conservadora, que nunca afirma mudança que não
+houve.
+
+**⚠️ Canonical não pode ter padrão no layout raiz.** Ele é herdado por toda
+página que não declara o seu, e um `canonical: '/'` na raiz fazia `/entrar`,
+`/cadastro`, `/conta` e `/admin` declararem-se cópias da home. Cada página
+pública declara o seu; página fora do índice não declara nenhum. Isso só
+apareceu lendo o HTML servido — no código a herança é invisível.
+
+**`robots.txt` e `noindex` resolvem problemas diferentes** e por isso as áreas
+logadas têm os dois: o `robots.txt` evita a visita, o `noindex` evita o índice
+caso a URL chegue por link externo. Página bloqueada só no robots pode ser
+indexada sem ser lida, e aparece na busca sem título nem descrição.
+
+**⚠️ Nenhum `aggregateRating` no schema.** O catálogo tem nota 4.9 gravada e
+zero avaliações reais; publicar isso como média de clientes é o que a política
+de avaliações do Google trata como enganoso. O mesmo vale para CNPJ, endereço e
+horário no `Organization`: fora enquanto o dono não informar — dado inventado
+que o Google cruza com outras fontes derruba a confiança em tudo que o site
+declara.
+
+**Dados estruturados:** `OnlineStore` + `WebSite` na raiz, `Product` +
+`BreadcrumbList` no produto, `ItemList` nas listagens. O `Product` leva a ficha
+técnica como `additionalProperty` — é dela que os mecanismos de resposta tiram
+"quanto de RAM tem" sem interpretar o texto da página.
+
+**A home não tinha H1**, só H2 soltos. O banner é uma arte animada e não comporta
+título sem mudar o desenho, então o H1 é `sr-only`: existe para leitor de tela e
+para o buscador, dizendo em uma linha o que a loja é.
+
+Validado em produção (2026-08-07): 33 URLs no sitemap sem `/admin` nem `/conta`,
+canonical correto em todas as rotas, JSON-LD válido em todas (`Product` com
+preço, disponibilidade, condição e 18 propriedades), zero links internos
+quebrados e zero `href="#"`.
+
+⚠️ **Pendente do dono:** arte 1200 × 630 para compartilhamento (hoje usa a logo)
+e, se quiser aparecer em busca local, CNPJ e endereço para o `Organization`.
+
+---
+
 ## Convenções deste projeto
 
 - **Migrations** ficam em `supabase/migrations/`, aplicadas via MCP. O ledger do
