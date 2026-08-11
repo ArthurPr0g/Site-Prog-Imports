@@ -1311,6 +1311,16 @@ três pixels reais por ponto do layout. Verificado em produção: a imagem chega
   recebido. E a exclusão do registro de origem tira os lançamentos **antes** de
   apagar a si mesmo — a tela do Financeiro recusa excluir linha gerada, então a
   ordem inversa as deixa órfãs e sem remoção possível pela interface.
+- **Layout que "cabe" pode estar vazando.** O cabeçalho terminava em x=576 numa
+  tela de 375 e ninguém via: nada rolava de lado, o excedente era só cortado. O
+  sintoma apareceu quando o dono deu uma pinça para fora no celular. Medir
+  `scrollWidth > clientWidth` **não basta** — é preciso comparar
+  `getBoundingClientRect().right` de cada elemento com a largura da tela e
+  ignorar o que está dentro de carrossel ou marquee, que transbordam de
+  propósito. Testar em **320px**, a largura real mais apertada.
+- **Alvo de toque abaixo de ~36px é aposta.** Os pontos do banner tinham 7 × 6px.
+  A saída é crescer a área do botão sem crescer o desenho: o ponto continua
+  pequeno dentro de um botão de 28 × 40.
 - **Server action tem limite de corpo de 1 MB por padrão.** Foto de celular
   passa disso com folga, e o estouro **não** vira erro tratado: a action é
   recusada antes de rodar, o erro sobe solto e o error boundary troca a tela
