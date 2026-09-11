@@ -58,12 +58,10 @@ não exige rebuild — basta redeploy.
 
 O projeto Supabase já está criado e as migrations (`supabase/migrations/*.sql`) já foram aplicadas nele diretamente via MCP — não é necessário rodar `supabase db push` a menos que você aponte para um novo projeto.
 
-### Contas de demonstração
+### Contas
 
-| Papel | E-mail | Senha |
-|---|---|---|
-| Cliente | rafael.m@gmail.com | demo1234 |
-| Admin | admin@progimports.com | admin1234 |
+Contas e senhas são gerenciadas no painel da Supabase (Authentication → Users).
+Não registre credenciais neste arquivo: o repositório é público.
 
 ## Estrutura
 
