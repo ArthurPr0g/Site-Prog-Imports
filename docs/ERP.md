@@ -1084,16 +1084,15 @@ repositório é público**: CPF em arquivo versionado fica exposto para sempre,
 inclusive no histórico do git. `lib/contract.ts` não contém nenhum dado pessoal —
 e não pode passar a conter.
 
-**Um contrato, não dois.** Os dois `.docx` do dono ("com domínio" e "sem
-domínio") são idênticos exceto por **uma linha** da Cláusula 2. A caixa "Cliente
-já possui domínio" move `Domínio` da lista de inclusos para a de não inclusos e
-troca o parágrafo da cláusula de domínio. Verificado: aparece em exatamente uma
-das duas listas, nunca nas duas nem em nenhuma.
+**Um contrato, montado por serviço** (desde 2026-09-11 — ver "Contrato modular"
+abaixo). Os dois `.docx` originais do dono ("com domínio" e "sem domínio") eram
+idênticos exceto por uma linha; a caixa "Cliente já possui domínio" continua
+movendo o registro do domínio entre inclusos e não inclusos, e agora só aparece
+quando o orçamento tem serviço de site.
 
-**Anexar o contrato é escolha por orçamento** (decisão do dono). O modelo é de
-site institucional e não faz sentido numa mentoria ou num dashboard. A caixa se
-sugere sozinha quando algum item tem "site" no nome, mas nunca desmarca o que o
-dono marcou.
+**Anexar o contrato é escolha por orçamento** (decisão do dono). Como o contrato
+passou a cobrir todo tipo de serviço, escolher qualquer serviço do catálogo
+marca a caixa — nunca desmarca o que o dono desmarcou depois.
 
 **Os valores vêm do orçamento, não do modelo** — R$ 1.000, R$ 149 e 12 meses do
 `.docx` são substituídos pelo que está na proposta, e o prazo da Cláusula 3
@@ -1102,10 +1101,9 @@ PDF, é o erro mais caro que este documento pode conter. Os totais são
 **recalculados dos itens** na hora de gerar, em vez de lidos das colunas, para o
 contrato não poder contradizer a lista logo acima dele.
 
-**As cláusulas são numeradas pela ordem final**, nunca escritas à mão: Plano de
-Hospedagem e Prazo Mínimo somem quando não há mensalidade, e com número fixo o
-contrato pularia da 9 para a 11 — erro que só aparece depois de assinado. Com
-plano são 17 cláusulas; sem, 15.
+**As cláusulas são numeradas pela ordem final**, nunca escritas à mão: cada tipo
+de serviço acrescenta ou tira cláusulas, e com número fixo o contrato pularia da
+9 para a 11 — erro que só aparece depois de assinado.
 
 **As metades de 50%** arredondam ao centavo com a primeira levando o a mais, para
 as duas somarem exatamente o total.
@@ -1157,11 +1155,82 @@ sem; contrato trouxe "até 20 (vinte) dias" e R$ 2.250 + R$ 2.250 do orçamento;
 marcar "cliente possui domínio" moveu o item entre as listas; a última cláusula
 foi a 17 (FORO) com o foro de Parâmetros. Orçamento de teste removido ao final.
 
+### Contrato modular (2026-09-11)
+
+`lib/contract.ts` monta o contrato em duas camadas. As **cláusulas gerais**
+entram sempre (objeto, materiais do contratante, atraso, vigência e rescisão,
+arrependimento, propriedade intelectual, confidencialidade, LGPD, obrigações,
+limitação de responsabilidade, comunicações e assinatura, disposições gerais,
+foro). Cada **tipo de serviço** do orçamento acrescenta as suas:
+
+| Tipo | Cláusulas próprias |
+|---|---|
+| Site | escopo com inclusos/não inclusos, domínio, revisões e aceite, garantia, cessão dos direitos |
+| Sistema | escopo e homologação, integrações de terceiros, dados do cliente, **licença de uso** (não cessão) |
+| Power BI | licenças Microsoft por conta do cliente, exatidão das fontes, atualização automática, entrega do .pbix |
+| Mentoria | encontros online, validade, remarcação, obrigação de meio, gravação, material didático |
+| Hospedagem | itens do plano, disponibilidade sem garantia de 100%, conteúdo e Marco Civil |
+
+**O tipo sai da categoria do serviço no catálogo** (`classificarServico`), lida
+na hora de gerar o PDF — não copiada para o item, para corrigir a categoria
+corrigir as propostas. Sem categoria que diga algo, decide o nome do item; sem
+encaixe, o item fica só com as gerais. A ordem dos padrões importa: "Hospedagem
+Site Mensal" é hospedagem, "Mentoria - Power BI" é mentoria. A categoria é campo
+livre em Serviços internos: nomear como Site, Sistema, Power BI, Mentoria ou
+Hospedagem (ou variações que contenham essas palavras) é o que liga as cláusulas.
+
+**Decisões do dono (2026-09-11), não redecidir sem falar com ele:**
+
+- **Multa de atraso de 2%**, juros de 1% ao mês e IPCA, para todos os clientes. O
+  modelo original tinha 10%, que o CDC (art. 52, § 1º) anula para consumidor — e
+  pessoa física e pequena empresa costumam ser tratadas como consumidoras.
+- **Sistema é licenciado, não cedido** (Lei 9.609/98): licença permanente, não
+  exclusiva e intransferível; o código-base continua da Prog e pode ser vendido a
+  outros clientes. O que for feito só para um cliente não é oferecido a terceiros.
+- **Mentoria:** remarcação com 24 h de antecedência, falta sem aviso conta como
+  encontro, encontros valem por 90 dias.
+- **Reajuste anual pelo IPCA** aparece como cláusula própria em planos acima de
+  12 meses; em qualquer plano, a continuação por prazo indeterminado depois do
+  fim já prevê o reajuste.
+
+**Mudanças jurídicas sobre o modelo original, feitas na mesma revisão** (os
+números estão em `REGRAS_DO_CONTRATO`):
+
+- **Sinal na desistência:** o modelo dizia que a entrada não seria devolvida.
+  Retenção integral tende a ser reduzida em juízo (CC art. 413, CDC art. 51, IV);
+  o contrato agora retém do sinal o proporcional ao executado mais as despesas.
+- **Cancelamento antecipado do plano:** "multa proporcional" sem número vira
+  disputa de interpretação a favor do cliente (CDC art. 47). Agora é 20% das
+  mensalidades restantes.
+- **Suspensão por atraso** exige aviso com 5 dias de antecedência.
+- **Direito de arrependimento de 7 dias** (CDC art. 49) — venda por WhatsApp é
+  contratação fora do estabelecimento.
+- **Garantia de 90 dias** contra defeitos (CDC art. 26, II), com aceite tácito
+  em 5 dias úteis depois da entrega.
+- **Foro de Goiânia com ressalva do domicílio do consumidor** (CDC art. 101, I):
+  sem a ressalva, o juiz pode declarar a eleição abusiva de ofício.
+- **Qualificação completa** do contratante (documento, endereço, e-mail e
+  WhatsApp); o que falta sai como lacuna, e a tela de orçamento avisa antes.
+- **Duas testemunhas** no bloco de assinaturas: contrato assinado por elas é
+  título executivo extrajudicial (CPC art. 784, III) — a cobrança vai direto à
+  execução. Assinatura eletrônica com verificação de integridade dispensa as
+  testemunhas (§ 4º).
+- **LGPD:** com site, sistema, dashboards ou hospedagem, a Prog é operadora e o
+  cliente é controlador; só com mentoria, vale a versão curta.
+- **Limitação de responsabilidade** trocou a exoneração ampla (nula para
+  consumidor, CDC art. 51, I) por hipóteses específicas, com teto no valor pago
+  apenas nas relações que não são de consumo.
+
+Testado em `scratchpad/test-contrato.ts` da sessão (75 asserções: classificação,
+exemplo Site + Hospedagem + Power BI + Mentoria, só mentoria, sistema 24 meses,
+site sem plano, só hospedagem, qualificação e geração dos PDFs).
+
+⚠️ **O texto não passou por advogado.** Foi escrito com base na legislação citada,
+mas deve ser revisado por um profissional antes de valer como modelo definitivo.
+
 ### Em aberto sobre o PDF
 
-- **Só existe o contrato de site institucional.** Orçamento de mentoria ou
-  dashboard sai sem contrato. Contratos por tipo de serviço exigiriam um cadastro
-  de modelos, ainda não discutido.
+- **Revisão por advogado** do contrato modular (ver acima).
 - **A proposta não tem validade** (decisão do dono para o orçamento), então o PDF
   também não traz prazo para o cliente responder.
 

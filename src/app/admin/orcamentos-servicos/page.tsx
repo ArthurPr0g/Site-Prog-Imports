@@ -20,7 +20,12 @@ export default async function AdminOrcamentosServicosPage() {
       <ServiceQuotesTable
         quotes={quotes}
         services={services}
-        customers={customers.map((c) => ({ id: c.id, name: c.name }))}
+        customers={customers.map((c) => ({
+          id: c.id,
+          name: c.name,
+          doc: c.doc,
+          temEndereco: !!c.addressLine.trim(),
+        }))}
       />
     </div>
   );

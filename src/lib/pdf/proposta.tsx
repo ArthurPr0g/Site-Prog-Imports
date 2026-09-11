@@ -12,7 +12,16 @@
 import { Document, Page, Text, View, Image, StyleSheet } from '@react-pdf/renderer';
 import { formatBRL, formatDateBR } from '@/lib/format';
 import { formatPrazo, type ServiceOrderItem } from '@/lib/services';
-import { montarClausulas, metadesDoPagamento, TITULO_CONTRATO, type DadosDoContratado } from '@/lib/contract';
+import {
+  montarClausulas,
+  metadesDoPagamento,
+  tituloDoContrato,
+  qualificacaoDasPartes,
+  classificarServico,
+  type DadosDoContratado,
+  type DadosDoContratante,
+  type ServicoDoContrato,
+} from '@/lib/contract';
 import { temDesconto, valorDoDesconto, aplicarDesconto, rotuloDoDesconto, type Desconto } from '@/lib/discount';
 
 export type DadosDaProposta = {
@@ -20,8 +29,10 @@ export type DadosDaProposta = {
   criadoEm: string;
   titulo: string;
   observacoes: string;
-  cliente: { nome: string; documento: string; email: string; telefone: string; cidade: string };
-  itens: ServiceOrderItem[];
+  /** `endereco` só vai para a qualificação do contrato; a proposta mostra a cidade. */
+  cliente: { nome: string; documento: string; email: string; telefone: string; cidade: string; endereco: string };
+  /** `categoria` é a do serviço do catálogo e decide as cláusulas de cada item. */
+  itens: (ServiceOrderItem & { categoria?: string | null })[];
   totalUnico: number;
   totalMensal: number;
   mesesPlano: number | null;
@@ -136,7 +147,11 @@ function estilos(accent: string) {
 
     rodape: {
       position: 'absolute',
-      bottom: 22,
+      // Ancorado pelo TOPO, na altura exata do A4 (841,89pt) menos a margem de
+      // 22pt e a altura do rodapé. Com `bottom: 22` o react-pdf errava a conta:
+      // o rodapé sumia das primeiras páginas e aparecia no alto das seguintes —
+      // conferido no PDF gerado.
+      top: 800,
       left: 44,
       right: 44,
       flexDirection: 'row',
@@ -157,8 +172,10 @@ function estilos(accent: string) {
     textoItem: { flex: 1, fontSize: 9 },
     rotuloLista: { fontSize: 9, fontWeight: 'bold', marginTop: 5, marginBottom: 3 },
 
-    assinaturas: { marginTop: 26 },
-    blocoAssinatura: { marginBottom: 22 },
+    assinaturas: { marginTop: 18 },
+    blocoAssinatura: { marginBottom: 18 },
+    testemunhas: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
+    testemunha: { width: '47%' },
     papel: { fontSize: 9, fontWeight: 'bold', color: accent, marginBottom: 8 },
     campoAssinatura: { fontSize: 9, marginBottom: 9 },
 
@@ -201,10 +218,27 @@ export function PropostaDocument(d: DadosDaProposta) {
   const { primeira, segunda } = metadesDoPagamento(trabalho);
   const valorContrato = trabalho + d.totalMensal * meses;
 
+  // Cada item leva as cláusulas do seu tipo de serviço: é o que impede um
+  // orçamento de mentoria de sair com cláusula de domínio.
+  const servicosDoContrato: ServicoDoContrato[] = d.itens.map((i) => ({
+    nome: i.name,
+    modulo: classificarServico({ categoria: i.categoria, nome: i.name }),
+    cobranca: i.billingType,
+  }));
+
+  const contratante: DadosDoContratante = {
+    nome: d.cliente.nome,
+    documento: d.cliente.documento,
+    endereco: d.cliente.endereco,
+    email: d.cliente.email,
+    telefone: d.cliente.telefone,
+  };
+
   const clausulas = d.incluirContrato
     ? montarClausulas({
-        contratante: d.cliente.nome,
-        documentoContratante: d.cliente.documento,
+        numeroProposta: d.numero,
+        contratante,
+        servicos: servicosDoContrato,
         valorDesenvolvimento: trabalho,
         valorMensal: d.totalMensal,
         mesesPlano: d.mesesPlano,
@@ -213,6 +247,8 @@ export function PropostaDocument(d: DadosDaProposta) {
         contratado: d.contratado,
       })
     : [];
+
+  const partes = qualificacaoDasPartes({ contratante, contratado: d.contratado });
 
   // Cabeçalho e rodapé se repetem nas duas páginas e não têm estado nenhum.
   // São funções que devolvem elementos, chamadas com `{topo()}`, em vez de
@@ -252,6 +288,10 @@ export function PropostaDocument(d: DadosDaProposta) {
   return (
     <Document title={`Proposta ${d.numero} — ${d.titulo}`} author={d.marca.nome}>
       <Page size="A4" style={s.pagina}>
+        {/* O rodapé `fixed` vem PRIMEIRO na página: no fim dela, o react-pdf
+            só o repetia a partir da página onde ele caía no fluxo, e as
+            anteriores saíam sem numeração. */}
+        {rodape()}
         {topo()}
 
         <Text style={s.tituloProposta}>{d.titulo}</Text>
@@ -312,7 +352,10 @@ export function PropostaDocument(d: DadosDaProposta) {
                     Desconto ({rotuloDoDesconto(d.desconto)})
                     {d.desconto.descricao ? ` — ${d.desconto.descricao}` : ''}
                   </Text>
-                  <Text style={{ ...s.valorTotal, color: d.marca.accent }}>−{formatBRL(descontoBrl)}</Text>
+                  {/* Hífen comum, não o sinal de menos (U+2212): a Helvetica
+                      embutida no PDF não tem esse glifo e o descartava, e o
+                      desconto saía como se fosse acréscimo. */}
+                  <Text style={{ ...s.valorTotal, color: d.marca.accent }}>-{formatBRL(descontoBrl)}</Text>
                 </View>
                 <View style={s.linhaTotal}>
                   <Text style={s.rotuloTotal}>Investimento inicial</Text>
@@ -373,37 +416,44 @@ export function PropostaDocument(d: DadosDaProposta) {
           </View>
         )}
 
-        {rodape()}
       </Page>
 
       {d.incluirContrato && (
         <Page size="A4" style={s.pagina}>
+          {rodape()}
           {topo()}
 
-          <Text style={s.contratoTitulo}>{TITULO_CONTRATO}</Text>
+          <Text style={s.contratoTitulo}>{tituloDoContrato(servicosDoContrato)}</Text>
 
           <View style={s.partes}>
             <Text style={s.paragrafo}>
-              CONTRATANTE: {d.cliente.nome || '_________________________________________________'}
-              {d.cliente.documento ? ` — CPF/CNPJ: ${d.cliente.documento}` : ''}
+              <Text style={{ fontWeight: 'bold' }}>CONTRATANTE: </Text>
+              {partes.contratante}
             </Text>
             <Text style={s.paragrafo}>
-              CONTRATADO: {d.contratado.nome}
-              {d.contratado.cargo ? `, ${d.contratado.cargo}` : ''}
-              {d.contratado.documento ? ` — CPF/CNPJ: ${d.contratado.documento}` : ''}
+              <Text style={{ fontWeight: 'bold' }}>CONTRATADO: </Text>
+              {partes.contratado}
             </Text>
             <Text style={{ ...s.paragrafo, marginTop: 5 }}>
-              As partes acima identificadas firmam o presente Contrato de Prestação de Serviços, mediante as
-              cláusulas abaixo.
+              As partes acima identificadas firmam o presente Contrato de Prestação de Serviços, que se regerá pelas
+              cláusulas seguintes.
             </Text>
           </View>
 
+          {/* A cláusula pode quebrar entre páginas: com o contrato modular algumas
+              passam de meia página, e `wrap={false}` nelas deixava vãos enormes.
+              Só o título e o primeiro parágrafo andam juntos, para o título
+              nunca ficar sozinho no pé da página — `minPresenceAhead` no título
+              não bastou, conferido no PDF gerado. */}
           {clausulas.map((c) => (
-            <View key={c.numero} style={s.clausula} wrap={false}>
-              <Text style={s.clausulaTitulo}>
-                CLÁUSULA {c.numero} – {c.titulo}
-              </Text>
-              {c.paragrafos?.map((p, i) => (
+            <View key={c.numero} style={s.clausula}>
+              <View wrap={false}>
+                <Text style={s.clausulaTitulo}>
+                  CLÁUSULA {c.numero} – {c.titulo}
+                </Text>
+                {!!c.paragrafos?.length && <Text style={s.paragrafo}>{c.paragrafos[0]}</Text>}
+              </View>
+              {c.paragrafos?.slice(1).map((p, i) => (
                 <Text key={i} style={s.paragrafo}>{p}</Text>
               ))}
               {c.itens?.map((it, i) => (
@@ -419,11 +469,22 @@ export function PropostaDocument(d: DadosDaProposta) {
                   <Text style={s.textoItem}>{it}</Text>
                 </View>
               ))}
-              {!!c.fecho && <Text style={{ ...s.paragrafo, marginTop: 4 }}>{c.fecho}</Text>}
+              {c.fecho?.map((p, i) => (
+                <Text key={i} style={{ ...s.paragrafo, marginTop: i === 0 ? 4 : 0 }}>
+                  {p}
+                </Text>
+              ))}
             </View>
           ))}
 
           <View style={s.assinaturas} wrap={false}>
+            <Text style={s.paragrafo}>
+              E, por estarem de acordo, as partes assinam este contrato juntamente com 2 (duas) testemunhas.
+            </Text>
+            <Text style={{ ...s.campoAssinatura, marginTop: 6, marginBottom: 16 }}>
+              Local e data: ______________________________, ______ / ______ / __________
+            </Text>
+
             <View style={s.blocoAssinatura}>
               <Text style={s.papel}>CONTRATANTE</Text>
               <Text style={s.campoAssinatura}>
@@ -433,7 +494,6 @@ export function PropostaDocument(d: DadosDaProposta) {
                 CPF/CNPJ: {d.cliente.documento || '________________________________'}
               </Text>
               <Text style={s.campoAssinatura}>Assinatura: _________________________________________________</Text>
-              <Text style={s.campoAssinatura}>Data: ______ / ______ / __________</Text>
             </View>
 
             <View style={s.blocoAssinatura}>
@@ -457,11 +517,23 @@ export function PropostaDocument(d: DadosDaProposta) {
                   Assinatura: _________________________________________________
                 </Text>
               )}
-              <Text style={s.campoAssinatura}>Data: ______ / ______ / __________</Text>
+            </View>
+
+            {/* Duas testemunhas fazem do contrato assinado à mão um título
+                executivo extrajudicial (CPC, art. 784, III): a cobrança vai
+                direto para a execução, sem precisar provar a dívida antes. */}
+            <View style={s.testemunhas}>
+              {[1, 2].map((n) => (
+                <View key={n} style={s.testemunha}>
+                  <Text style={s.papel}>TESTEMUNHA {n}</Text>
+                  <Text style={s.campoAssinatura}>Nome: ______________________________</Text>
+                  <Text style={s.campoAssinatura}>CPF: _______________________________</Text>
+                  <Text style={s.campoAssinatura}>Assinatura: ________________________</Text>
+                </View>
+              ))}
             </View>
           </View>
 
-          {rodape()}
         </Page>
       )}
     </Document>

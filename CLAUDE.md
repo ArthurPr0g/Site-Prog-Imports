@@ -12,7 +12,7 @@ vive inteiro online; a pasta local é só uma cópia de trabalho.
 | **Domínios** | `prog-imports.com`, `www.prog-imports.com` |
 | **Supabase** | projeto `prog-imports`, ref `oduimaztcoxbvtlsjjcy`, região `sa-east-1` |
 | **Pasta local** | `C:\Apps\1 - Dev\Prog Soluções\Prog Imports\site-prog-imports` |
-| **Admin do site** | login `progimports01@gmail.com` (e-mail + Google). É a antiga conta demo `admin@progimports.com` com o login trocado; o campo `profiles.email` ainda mostra o valor antigo. |
+| **Admin do site** | login `progimports01@gmail.com`, **só pelo Google** (senha removida em 2026-09-11; se precisar de senha, use "Send password recovery" no painel da Supabase). É a antiga conta demo `admin@progimports.com` com o login trocado; o campo `profiles.email` ainda mostra o valor antigo. |
 
 ## Leia antes de mexer
 

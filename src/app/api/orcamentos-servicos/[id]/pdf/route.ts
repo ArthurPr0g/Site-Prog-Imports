@@ -6,6 +6,7 @@ import { requireAdmin } from '@/lib/auth';
 import { BRAND } from '@/lib/brand';
 import { totalizarItens, type BillingType, type ServiceOrderItem } from '@/lib/services';
 import { PropostaDocument } from '@/lib/pdf/proposta';
+import { montarEndereco } from '@/lib/contract';
 import type { Desconto } from '@/lib/discount';
 
 // react-pdf precisa do runtime Node: usa APIs de arquivo e fontes que o edge
@@ -72,7 +73,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
   const { data: q } = await supabase
     .from('service_quotes')
-    .select('*, customers(name, doc, email, phone, city), service_quote_items(*)')
+    .select(
+      '*, customers(name, doc, email, phone, city, state, cep, address_line, address_number, complement, district), service_quote_items(*, internal_services(category))'
+    )
     .eq('id', id)
     .maybeSingle();
 
@@ -80,7 +83,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
   const { data: settings } = await supabase.from('site_settings').select('*').maybeSingle();
 
-  const itens: ServiceOrderItem[] = (q.service_quote_items ?? [])
+  const itens: (ServiceOrderItem & { categoria: string | null })[] = (q.service_quote_items ?? [])
     .slice()
     .sort((a, b) => a.position - b.position)
     .map((i) => ({
@@ -91,6 +94,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       amount: Number(i.amount),
       billingType: i.billing_type as BillingType,
       leadTimeDays: i.lead_time_days,
+      // A categoria é lida do catálogo na hora, não copiada para o item: quem
+      // corrige a categoria de um serviço corrige o contrato das propostas dele.
+      categoria: i.internal_services?.category ?? null,
     }));
 
   // Recalcula em vez de ler as colunas: garante que o PDF nunca contradiga os
@@ -113,6 +119,15 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
         email: cliente?.email ?? '',
         telefone: cliente?.phone ?? '',
         cidade: cliente?.city ?? '',
+        endereco: montarEndereco({
+          logradouro: cliente?.address_line,
+          numero: cliente?.address_number,
+          complemento: cliente?.complement,
+          bairro: cliente?.district,
+          cidade: cliente?.city,
+          uf: cliente?.state,
+          cep: cliente?.cep,
+        }),
       },
       itens,
       totalUnico: totais.total,

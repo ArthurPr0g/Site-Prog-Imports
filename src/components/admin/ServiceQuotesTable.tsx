@@ -31,6 +31,7 @@ import {
   convertServiceQuoteAction,
   type ServiceQuoteInput,
 } from '@/app/actions/service-quotes';
+import { classificarServico, modulosPresentes, NOME_DO_MODULO, type ModuloContrato } from '@/lib/contract';
 
 const inputClass =
   'rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px] outline-none focus:border-accent';
@@ -74,11 +75,19 @@ function formVazio(): ServiceQuoteInput {
   };
 }
 
-/** O contrato do dono é de site institucional. Sugere anexá-lo quando algum
- *  serviço do orçamento parece ser de site — o dono confirma na caixa. Palpite
- *  em cima do nome é o suficiente: errar aqui só custa um clique. */
-function pareceSite(itens: ServiceOrderItem[]): boolean {
-  return itens.some((i) => /site|website|institucional|landing/i.test(i.name));
+/** Tipos de serviço do orçamento, pelo mesmo classificador que monta o contrato
+ *  no PDF — a tela não pode anunciar cláusulas que o documento não traz. */
+function modulosDoOrcamento(itens: ServiceOrderItem[], services: InternalService[]): ModuloContrato[] {
+  return modulosPresentes(
+    itens
+      .filter((i) => i.name.trim())
+      .map((i) => ({
+        modulo: classificarServico({
+          categoria: services.find((s) => s.id === i.internalServiceId)?.category,
+          nome: i.name,
+        }),
+      }))
+  );
 }
 
 export function ServiceQuotesTable({
@@ -88,7 +97,8 @@ export function ServiceQuotesTable({
 }: {
   quotes: ServiceQuote[];
   services: InternalService[];
-  customers: { id: string; name: string }[];
+  /** `doc` e `temEndereco` só alimentam o aviso de contrato com lacunas. */
+  customers: { id: string; name: string; doc: string; temEndereco: boolean }[];
 }) {
   const [busca, setBusca] = useState('');
   const [form, setForm] = useState<ServiceQuoteInput | null>(null);
@@ -119,6 +129,11 @@ export function ServiceQuotesTable({
   // não poder divergir do que vai para o banco.
   const totais = useMemo(() => totalizarItens(form?.items ?? []), [form]);
   const ativos = services.filter((s) => s.active);
+  const modulosDoContrato = useMemo(() => modulosDoOrcamento(form?.items ?? [], services), [form, services]);
+  const clienteDoForm = customers.find((c) => c.id === form?.customerId);
+  const faltasNoCadastro = clienteDoForm
+    ? [!clienteDoForm.doc && 'CPF/CNPJ', !clienteDoForm.temEndereco && 'endereço'].filter(Boolean).join(' e ')
+    : '';
 
   const entregaPrevista = conversao
     ? calcularEntrega(conversao.startDate, conversao.quote.leadTimeDays)
@@ -214,9 +229,9 @@ export function ServiceQuotesTable({
             }
           : it
       );
-      // Sugere o contrato ao escolher um serviço de site, mas nunca desmarca o
-      // que o dono já marcou de propósito.
-      return { ...f, items, includeContract: f.includeContract || pareceSite(items) };
+      // O contrato agora cobre todo tipo de serviço do catálogo, então escolher
+      // um serviço sugere anexá-lo. Nunca desmarca: só marca.
+      return { ...f, items, includeContract: true };
     });
   }
 
@@ -588,15 +603,43 @@ export function ServiceQuotesTable({
                   className="mt-0.5 h-4 w-4 accent-accent"
                 />
                 <span>
-                  Anexar o contrato de site institucional
+                  Anexar o contrato de prestação de serviços
                   <span className="block text-[11px] text-fg-faded">
-                    A proposta fica na primeira página e o contrato nas seguintes, para o cliente assinar. Os valores,
-                    o prazo e a duração do plano vêm deste orçamento.
+                    A proposta fica na primeira página e o contrato nas seguintes, para o cliente assinar. As cláusulas
+                    se ajustam aos serviços deste orçamento, e os valores, o prazo e a duração do plano vêm dele.
                   </span>
                 </span>
               </label>
 
-              {form.includeContract && (
+              {form.includeContract && modulosDoContrato.some((m) => m !== 'outro') && (
+                <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-divider pt-3 text-[11px] text-fg-faded">
+                  <span className="mr-0.5">Cláusulas específicas de</span>
+                  {modulosDoContrato
+                    .filter((m) => m !== 'outro')
+                    .map((m) => (
+                      <span
+                        key={m}
+                        className="rounded-full bg-[rgb(var(--brand-accent-rgb)/.12)] px-2 py-0.5 font-bold text-accent"
+                      >
+                        {NOME_DO_MODULO[m]}
+                      </span>
+                    ))}
+                </div>
+              )}
+
+              {/* Contrato com lacuna ainda vale, mas qualificação incompleta é a
+                  primeira coisa que a outra parte contesta numa cobrança. */}
+              {form.includeContract && clienteDoForm && faltasNoCadastro && (
+                <div className="mt-3 border-t border-divider pt-3 text-[11.5px] text-fg-secondary">
+                  O cadastro de <strong>{clienteDoForm.name}</strong> está sem {faltasNoCadastro}: o contrato sai com
+                  esses campos em branco para preencher à mão.{' '}
+                  <Link href={`/admin/clientes/${clienteDoForm.id}`} target="_blank" className="font-bold text-accent">
+                    Completar cadastro
+                  </Link>
+                </div>
+              )}
+
+              {form.includeContract && modulosDoContrato.includes('site') && (
                 <label className="mt-3 flex cursor-pointer items-start gap-2.5 border-t border-divider pt-3 text-[13.5px]">
                   <input
                     type="checkbox"
