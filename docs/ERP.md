@@ -1168,7 +1168,7 @@ foro). Cada **tipo de serviço** do orçamento acrescenta as suas:
 | Site | escopo com inclusos/não inclusos, domínio, revisões e aceite, garantia, cessão dos direitos |
 | Sistema | escopo e homologação, integrações de terceiros, dados do cliente, **licença de uso** (não cessão) |
 | Power BI | licenças Microsoft por conta do cliente, exatidão das fontes, atualização automática, entrega do .pbix |
-| Mentoria | encontros online, validade, remarcação, obrigação de meio, gravação, material didático |
+| Mentoria | encontros online, validade, remarcação, obrigação de meio, certificado de conclusão, gravação, material didático |
 | Hospedagem | itens do plano, disponibilidade sem garantia de 100%, conteúdo e Marco Civil |
 
 **O tipo sai da categoria do serviço no catálogo** (`classificarServico`), lida
@@ -1188,7 +1188,10 @@ Hospedagem (ou variações que contenham essas palavras) é o que liga as cláus
   exclusiva e intransferível; o código-base continua da Prog e pode ser vendido a
   outros clientes. O que for feito só para um cliente não é oferecido a terceiros.
 - **Mentoria:** remarcação com 24 h de antecedência, falta sem aviso conta como
-  encontro, encontros valem por 90 dias.
+  encontro, encontros valem por 90 dias. **O dono emite certificado de
+  conclusão** (o CNPJ dele permite), então o contrato promete o certificado em
+  vez de negá-lo — com a ressalva de que atesta participação e não é diploma nem
+  registro em conselho.
 - **Reajuste anual pelo IPCA** aparece como cláusula própria em planos acima de
   12 meses; em qualquer plano, a continuação por prazo indeterminado depois do
   fim já prevê o reajuste.

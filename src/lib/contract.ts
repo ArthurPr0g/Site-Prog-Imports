@@ -379,7 +379,8 @@ export function montarClausulas(d: DadosDoContrato): ClausulaNumerada[] {
         `Os encontros devem ser utilizados em até ${dias(R.mentoriaValidadeDias)} contados da assinatura deste contrato. Encontros não utilizados nesse prazo por iniciativa do CONTRATANTE perdem a validade, sem direito a reembolso.`,
         `A remarcação de encontro deve ser solicitada com antecedência mínima de ${R.mentoriaAntecedenciaHoras} (${porExtenso(R.mentoriaAntecedenciaHoras)}) horas. A ausência do CONTRATANTE sem aviso nesse prazo será considerada encontro realizado.`,
         'Encontros desmarcados pelo CONTRATADO serão remarcados sem custo e não contam para o prazo de utilização.',
-        'A mentoria é obrigação de meio: o CONTRATADO compromete-se a transmitir o conhecimento com dedicação e técnica, mas não garante resultados específicos, aprovação em processos seletivos, colocação profissional ou certificação.',
+        'A mentoria é obrigação de meio: o CONTRATADO compromete-se a transmitir o conhecimento com dedicação e técnica, mas não garante resultados específicos, aprovação em processos seletivos ou colocação profissional.',
+        'Cumpridos os encontros contratados, o CONTRATADO emitirá certificado de conclusão em nome do CONTRATANTE, com o conteúdo e a carga horária realizados. O certificado atesta a participação na mentoria e não constitui diploma, título acadêmico ou registro em conselho profissional.',
         'Os encontros só poderão ser gravados com a concordância de ambas as partes, e as gravações serão de uso pessoal do CONTRATANTE.',
       ],
     });
