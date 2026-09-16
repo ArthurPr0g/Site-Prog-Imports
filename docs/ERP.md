@@ -1158,18 +1158,35 @@ foi a 17 (FORO) com o foro de Parâmetros. Orçamento de teste removido ao final
 ### Contrato modular (2026-09-11)
 
 `lib/contract.ts` monta o contrato em duas camadas. As **cláusulas gerais**
-entram sempre (objeto, materiais do contratante, atraso, vigência e rescisão,
-arrependimento, propriedade intelectual, confidencialidade, LGPD, obrigações,
-limitação de responsabilidade, comunicações e assinatura, disposições gerais,
+entram sempre (objeto, prazo, materiais do contratante, aceite e garantia,
+valor, atraso, vigência e rescisão, arrependimento, propriedade intelectual,
+confidencialidade, LGPD, limitação de responsabilidade, disposições finais e
 foro). Cada **tipo de serviço** do orçamento acrescenta as suas:
 
 | Tipo | Cláusulas próprias |
 |---|---|
-| Site | escopo com inclusos/não inclusos, domínio, revisões e aceite, garantia, cessão dos direitos |
+| Site | escopo com inclusos/não inclusos e domínio na mesma cláusula, cessão dos direitos |
 | Sistema | escopo e homologação, integrações de terceiros, dados do cliente, **licença de uso** (não cessão) |
 | Power BI | licenças Microsoft por conta do cliente, exatidão das fontes, atualização automática, entrega do .pbix |
 | Mentoria | encontros online, validade, remarcação, obrigação de meio, certificado de conclusão, gravação, material didático |
-| Hospedagem | itens do plano, disponibilidade sem garantia de 100%, conteúdo e Marco Civil |
+| Hospedagem | dentro da cláusula PLANO MENSAL: o que inclui, disponibilidade sem garantia de 100%, conteúdo e Marco Civil |
+
+**Enxugado em 2026-09-16.** O contrato tinha cláusulas que repetiam outras, e
+repetir obrigação em outras palavras abre brecha de interpretação em vez de
+fechar. Saíram: "obrigações das partes" (só repetia escopo, prazo, aceite e
+pagamento), "hospedagem e manutenção" (virou parágrafo do plano mensal),
+"domínio" (foi para o escopo do site), "garantia" (juntou-se ao aceite) e
+"comunicações e assinatura" + "disposições gerais" (viraram disposições
+finais). "Orçamento à parte", que aparecia em quatro cláusulas, ficou só no
+objeto. O exemplo Site + Hospedagem + Power BI + Mentoria caiu de 23 para 18
+cláusulas e de 8 para 7 páginas, sem perder conteúdo jurídico — o teste guarda
+o limite de 20 cláusulas.
+
+**Cláusulas específicas de um cliente** (`clausulasExtras`) entram antes do
+foro e prevalecem sobre o padrão. É o lugar de compromisso combinado fora do
+modelo — como a integração do banco de dados aos dashboards prometida ao
+cliente da proposta D538A806. ⚠️ **Ainda não há campo na tela**: hoje só o
+código passa essas cláusulas; a proposta desse cliente foi gerada por script.
 
 **O tipo sai da categoria do serviço no catálogo** (`classificarServico`), lida
 na hora de gerar o PDF — não copiada para o item, para corrigir a categoria

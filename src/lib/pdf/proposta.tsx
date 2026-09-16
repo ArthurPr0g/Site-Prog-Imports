@@ -18,6 +18,7 @@ import {
   tituloDoContrato,
   qualificacaoDasPartes,
   classificarServico,
+  type ClausulaContrato,
   type DadosDoContratado,
   type DadosDoContratante,
   type ServicoDoContrato,
@@ -39,6 +40,8 @@ export type DadosDaProposta = {
   prazoDias: number;
   incluirContrato: boolean;
   clientePossuiDominio: boolean;
+  /** Cláusulas combinadas só com este cliente; entram antes do foro. */
+  clausulasExtras?: ClausulaContrato[];
   desconto: Desconto;
   marca: { nome: string; tagline: string; accent: string; logo?: string };
   contratado: DadosDoContratado;
@@ -245,6 +248,7 @@ export function PropostaDocument(d: DadosDaProposta) {
         prazoDias: d.prazoDias,
         clientePossuiDominio: d.clientePossuiDominio,
         contratado: d.contratado,
+        clausulasExtras: d.clausulasExtras,
       })
     : [];
 

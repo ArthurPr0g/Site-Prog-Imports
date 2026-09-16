@@ -71,6 +71,10 @@ export type DadosDoContrato = {
   prazoDias: number;
   clientePossuiDominio: boolean;
   contratado: DadosDoContratado;
+  /** Cláusulas combinadas só com este cliente, entram antes do foro. Compromisso
+   *  fora do padrão (uma integração prometida, um serviço extra sem custo) que
+   *  não está escrito no contrato vira discussão depois. */
+  clausulasExtras?: ClausulaContrato[];
 };
 
 export type ClausulaContrato = {
@@ -299,61 +303,43 @@ export function montarClausulas(d: DadosDoContrato): ClausulaNumerada[] {
 
   // ── Cláusulas de cada tipo de serviço ─────────────────────────────────────
   if (site) {
-    incluir(
-      {
-        titulo: 'ESCOPO DO SITE',
-        paragrafos: ['O desenvolvimento do site inclui:'],
-        itens: [
-          ...(d.clientePossuiDominio ? [] : ['Registro do domínio']),
-          'Desenvolvimento do site institucional',
-          'Layout responsivo',
-          'Publicação do site',
-          'Configuração de domínio',
-          'Configuração do certificado SSL',
-          'Otimizações para desempenho',
-          'Configuração da hospedagem',
-        ],
-        rotuloSegundaLista: 'Não estão inclusos:',
-        segundaLista: [
-          ...(d.clientePossuiDominio ? ['Registro do domínio'] : []),
-          ...(hospedagem ? [] : ['Custo mensal da hospedagem, quando não contratado o plano mensal']),
-          'Sistemas personalizados',
-          'Área de membros',
-          'Loja virtual',
-          'Blog (salvo contratação)',
-          'Integrações não previstas na proposta',
-          'Criação de identidade visual',
-          'Redação dos textos e produção de fotos ou vídeos',
-          'Elaboração de política de privacidade e termos de uso',
-        ],
-        fecho: ['Qualquer funcionalidade adicional será objeto de orçamento específico.'],
-      },
-      {
-        titulo: 'DOMÍNIO',
-        paragrafos: [
-          'O domínio do site será sempre de propriedade do CONTRATANTE e registrado em seu nome.',
-          d.clientePossuiDominio
-            ? 'O CONTRATANTE já possui domínio registrado; o CONTRATADO realizará apenas a configuração e o apontamento técnico necessários para a publicação do site.'
-            : 'O CONTRATADO realizará o registro do domínio em nome do CONTRATANTE, mediante sua autorização, e as taxas de renovação junto ao órgão de registro são de responsabilidade do CONTRATANTE.',
-          'Durante a vigência do contrato, o CONTRATADO poderá administrar tecnicamente as configurações do domínio, sem que isso implique transferência de propriedade.',
-        ],
-      }
-    );
+    incluir({
+      titulo: 'ESCOPO DO SITE E DOMÍNIO',
+      paragrafos: ['O desenvolvimento do site inclui:'],
+      itens: [
+        ...(d.clientePossuiDominio ? [] : ['Registro do domínio']),
+        'Desenvolvimento do site institucional, com layout responsivo',
+        'Publicação do site, com configuração de domínio, hospedagem e certificado SSL',
+        'Otimizações para desempenho',
+      ],
+      rotuloSegundaLista: 'Não estão inclusos:',
+      segundaLista: [
+        ...(d.clientePossuiDominio ? ['Registro do domínio'] : []),
+        ...(hospedagem ? [] : ['Custo mensal da hospedagem']),
+        'Sistemas personalizados, loja virtual, área de membros e blog',
+        'Integrações não previstas na proposta',
+        'Criação de identidade visual, redação de textos e produção de fotos ou vídeos',
+        'Política de privacidade e termos de uso',
+      ],
+      fecho: [
+        d.clientePossuiDominio
+          ? 'O domínio é e permanece de propriedade do CONTRATANTE, que já o possui registrado; o CONTRATADO realiza apenas a configuração e o apontamento técnico necessários à publicação.'
+          : 'O domínio será registrado em nome do CONTRATANTE e permanece de sua propriedade, correndo por conta dele as taxas de renovação junto ao órgão de registro.',
+        'Durante a vigência do contrato, o CONTRATADO poderá administrar tecnicamente as configurações do domínio, sem que isso implique transferência de propriedade.',
+      ],
+    });
   }
 
   if (sistema) {
     incluir({
       titulo: 'DO SISTEMA',
       paragrafos: [
-        'O desenvolvimento do sistema compreende as funcionalidades descritas na proposta. Funcionalidades, integrações, relatórios ou regras de negócio não descritos ali não integram o escopo e serão orçados à parte.',
-        'Antes da entrega definitiva, o sistema será disponibilizado ao CONTRATANTE para homologação, conforme a cláusula de REVISÕES E ACEITE.',
-        'Integrações com serviços de terceiros (APIs, meios de pagamento, emissores de nota fiscal, entre outros), quando contratadas, dependem da disponibilidade desses serviços, e eventuais taxas cobradas por eles são de responsabilidade do CONTRATANTE.',
+        'O desenvolvimento do sistema compreende as funcionalidades descritas na proposta; funcionalidades, integrações, relatórios ou regras de negócio não descritos ali não integram o escopo.',
+        'Integrações com serviços de terceiros (APIs, meios de pagamento, emissores de nota fiscal, entre outros) dependem da disponibilidade desses serviços, e eventuais taxas cobradas por eles são de responsabilidade do CONTRATANTE.',
         'Os dados inseridos no sistema pertencem ao CONTRATANTE.',
         ...(hospedagem
           ? []
-          : [
-              'O funcionamento do sistema depende de hospedagem. Não contratado o plano mensal, a infraestrutura necessária será fornecida pelo CONTRATANTE ou objeto de orçamento específico.',
-            ]),
+          : ['O funcionamento do sistema depende de hospedagem, que será fornecida pelo CONTRATANTE ou orçada à parte.']),
       ],
     });
   }
@@ -363,10 +349,9 @@ export function montarClausulas(d: DadosDoContrato): ClausulaNumerada[] {
       titulo: 'DOS DASHBOARDS (POWER BI)',
       paragrafos: [
         'O desenvolvimento compreende a modelagem dos dados, as medidas, os indicadores e as páginas descritos na proposta.',
-        'As licenças da Microsoft necessárias para publicar, compartilhar e atualizar os relatórios (como Power BI Pro, Premium ou Fabric) não estão incluídas e são contratadas e pagas pelo CONTRATANTE, em seu nome.',
+        'As licenças da Microsoft necessárias para publicar, compartilhar e atualizar os relatórios (como Power BI Pro, Premium ou Fabric) não estão incluídas e são contratadas e pagas pelo CONTRATANTE, de quem também dependem o gateway e as credenciais da atualização automática dos dados.',
         'O CONTRATANTE fornecerá acesso às fontes de dados e responde pela exatidão, integridade e licitude dos dados nelas contidos. Os dashboards refletem essas fontes, e erros de origem não constituem defeito do serviço.',
-        'A atualização automática dos dados depende de licença, gateway e credenciais do CONTRATANTE. Mudanças posteriores na estrutura das fontes que exijam refazer consultas ou modelos serão orçadas à parte.',
-        'Na entrega, os arquivos do projeto (.pbix) serão disponibilizados ao CONTRATANTE e, havendo acesso, os relatórios serão publicados no ambiente (workspace) dele.',
+        'Na entrega, os arquivos do projeto (.pbix) serão disponibilizados ao CONTRATANTE e, havendo acesso, os relatórios serão publicados no ambiente (workspace) dele. Mudanças posteriores na estrutura das fontes que exijam refazer consultas ou modelos serão orçadas à parte.',
       ],
     });
   }
@@ -376,11 +361,10 @@ export function montarClausulas(d: DadosDoContrato): ClausulaNumerada[] {
       titulo: 'DA MENTORIA',
       paragrafos: [
         'A mentoria será realizada de forma online, em encontros agendados entre as partes, com o conteúdo, a carga horária e o número de encontros descritos na proposta.',
-        `Os encontros devem ser utilizados em até ${dias(R.mentoriaValidadeDias)} contados da assinatura deste contrato. Encontros não utilizados nesse prazo por iniciativa do CONTRATANTE perdem a validade, sem direito a reembolso.`,
-        `A remarcação de encontro deve ser solicitada com antecedência mínima de ${R.mentoriaAntecedenciaHoras} (${porExtenso(R.mentoriaAntecedenciaHoras)}) horas. A ausência do CONTRATANTE sem aviso nesse prazo será considerada encontro realizado.`,
-        'Encontros desmarcados pelo CONTRATADO serão remarcados sem custo e não contam para o prazo de utilização.',
+        `Os encontros devem ser utilizados em até ${dias(R.mentoriaValidadeDias)} contados da assinatura; os não utilizados nesse prazo por iniciativa do CONTRATANTE perdem a validade, sem direito a reembolso.`,
+        `A remarcação deve ser solicitada com antecedência mínima de ${R.mentoriaAntecedenciaHoras} (${porExtenso(R.mentoriaAntecedenciaHoras)}) horas, e a ausência sem esse aviso será considerada encontro realizado. Encontros desmarcados pelo CONTRATADO são remarcados sem custo e não contam para o prazo de utilização.`,
         'A mentoria é obrigação de meio: o CONTRATADO compromete-se a transmitir o conhecimento com dedicação e técnica, mas não garante resultados específicos, aprovação em processos seletivos ou colocação profissional.',
-        'Cumpridos os encontros contratados, o CONTRATADO emitirá certificado de conclusão em nome do CONTRATANTE, com o conteúdo e a carga horária realizados. O certificado atesta a participação na mentoria e não constitui diploma, título acadêmico ou registro em conselho profissional.',
+        'Cumpridos os encontros contratados, o CONTRATADO emitirá certificado de conclusão em nome do CONTRATANTE, com o conteúdo e a carga horária realizados, que atesta a participação e não constitui diploma, título acadêmico ou registro em conselho profissional.',
         'Os encontros só poderão ser gravados com a concordância de ambas as partes, e as gravações serão de uso pessoal do CONTRATANTE.',
       ],
     });
@@ -391,29 +375,17 @@ export function montarClausulas(d: DadosDoContrato): ClausulaNumerada[] {
     incluir({
       titulo: 'PLANO MENSAL',
       paragrafos: [
-        `O plano mensal compreende ${nomesMensais.length ? juntar(nomesMensais) : 'os serviços mensais da proposta'}, no valor de ${formatBRL(d.valorMensal)} por mês, pelo prazo de ${meses(mesesPlano)}.`,
-        'A cobrança do plano inicia na data acordada entre as partes, e as mensalidades vencem no mesmo dia de cada mês.',
+        `O plano mensal compreende ${nomesMensais.length ? juntar(nomesMensais) : 'os serviços mensais da proposta'}, no valor de ${formatBRL(d.valorMensal)} por mês, pelo prazo de ${meses(mesesPlano)}, cobrado a partir da data acordada entre as partes e vencendo no mesmo dia de cada mês.`,
         `Encerrado esse prazo, o plano prossegue por prazo indeterminado, nas mesmas condições e com reajuste anual pelo IPCA/IBGE, podendo ser cancelado por qualquer das partes com aviso prévio de ${dias(R.avisoPrevioCancelamentoDias)}.`,
-        'O plano não inclui novas páginas, novas funcionalidades, mudanças de layout ou qualquer desenvolvimento adicional. Solicitações que ultrapassem pequenas correções serão previamente orçadas.',
-      ],
-    });
-  }
-
-  if (hospedagem) {
-    incluir({
-      titulo: 'HOSPEDAGEM E MANUTENÇÃO',
-      paragrafos: ['Durante a vigência do plano, a hospedagem inclui:'],
-      itens: [
-        'Hospedagem',
-        'Certificado SSL',
-        'Backups periódicos',
-        'Monitoramento',
-        'Atualizações de segurança',
-        'Suporte via WhatsApp em horário comercial',
-      ],
-      fecho: [
-        'O CONTRATADO empregará os meios técnicos adequados para manter o serviço disponível, sem garantia de funcionamento ininterrupto, já que a infraestrutura depende de provedores de terceiros. Manutenções programadas serão, sempre que possível, avisadas com antecedência.',
-        'O CONTRATANTE é responsável pelo conteúdo publicado e não poderá hospedar material ilícito ou que viole direitos de terceiros. O CONTRATADO removerá conteúdo mediante ordem judicial, nos termos da Lei nº 12.965/2014 (Marco Civil da Internet).',
+        // A hospedagem não tem cláusula própria: sem plano não há o que manter no
+        // ar, e separá-la repetia vigência, valor e cancelamento.
+        ...(hospedagem
+          ? [
+              'A hospedagem inclui servidor, certificado SSL, backups periódicos, monitoramento, atualizações de segurança e suporte via WhatsApp em horário comercial. O CONTRATADO empregará os meios técnicos adequados para manter o serviço disponível, sem garantia de funcionamento ininterrupto, já que a infraestrutura depende de provedores de terceiros.',
+              'O CONTRATANTE responde pelo conteúdo publicado e não poderá hospedar material ilícito ou que viole direitos de terceiros; o CONTRATADO removerá conteúdo mediante ordem judicial, nos termos da Lei nº 12.965/2014 (Marco Civil da Internet).',
+            ]
+          : []),
+        'O plano não inclui novas páginas, novas funcionalidades, mudanças de layout ou qualquer desenvolvimento adicional; solicitações que ultrapassem pequenas correções serão previamente orçadas.',
       ],
     });
   }
@@ -423,10 +395,7 @@ export function montarClausulas(d: DadosDoContrato): ClausulaNumerada[] {
     incluir({
       titulo: 'PRAZO DE EXECUÇÃO',
       paragrafos: [
-        `O prazo para conclusão dos serviços de entrega única é de ${prazoPorExtenso(d.prazoDias)}, contados a partir da confirmação do pagamento do sinal e do recebimento de todo o material e dos acessos necessários.`,
-        ...(unicos.length > 1
-          ? ['Os serviços são executados em sequência, e o prazo acima corresponde à soma dos prazos individuais indicados na proposta.']
-          : []),
+        `O prazo para conclusão dos serviços de entrega única é de ${prazoPorExtenso(d.prazoDias)}, contados da confirmação do pagamento do sinal e do recebimento de todo o material e dos acessos necessários${unicos.length > 1 ? ', correspondendo à soma dos prazos individuais da proposta, já que os serviços são executados em sequência' : ''}.`,
         'Atrasos do CONTRATANTE no envio de informações, materiais, acessos ou aprovações prorrogam o prazo automaticamente pelo mesmo período.',
       ],
     });
@@ -434,46 +403,32 @@ export function montarClausulas(d: DadosDoContrato): ClausulaNumerada[] {
 
   incluir({
     titulo: 'MATERIAIS E ACESSOS DO CONTRATANTE',
-    paragrafos: ['Compete ao CONTRATANTE fornecer, em tempo hábil:'],
+    paragrafos: [
+      'Compete ao CONTRATANTE fornecer, em tempo hábil, as informações e os acessos necessários à execução, em especial:',
+    ],
     itens: [
-      'Dados cadastrais e informações necessárias à execução dos serviços',
       ...(site
         ? ['Logotipo, fotografias e textos institucionais', 'Contatos, endereço e redes sociais a serem exibidos no site']
         : []),
       ...(sistema ? ['Regras de negócio, processos e dados para cadastro ou importação no sistema'] : []),
       ...(powerbi ? ['Acesso às fontes de dados e as credenciais necessárias'] : []),
       ...(mentoria ? ['Computador, conexão à internet e os softwares indicados para os encontros'] : []),
+      ...(site || sistema || powerbi || mentoria ? [] : ['Dados cadastrais e informações necessárias à execução dos serviços']),
     ],
     fecho: [
-      'O CONTRATANTE declara possuir os direitos de uso de todo o material que fornecer (textos, imagens, marcas e dados) e responde por ele perante terceiros, nos termos da Lei nº 9.610/1998.',
-      'O CONTRATADO não responde por atrasos decorrentes da falta desse material.',
+      'O CONTRATANTE declara possuir os direitos de uso do material que fornecer (textos, imagens, marcas e dados) e responde por ele perante terceiros, nos termos da Lei nº 9.610/1998; o CONTRATADO não responde por atrasos decorrentes da falta desse material.',
     ],
   });
 
   if (entregaveis) {
-    incluir(
-      {
-        titulo: 'REVISÕES E ACEITE',
-        paragrafos: [
-          `Durante o desenvolvimento, o CONTRATANTE terá direito a até ${R.rodadasDeRevisao} (${porExtensoFeminino(R.rodadasDeRevisao)}) rodadas de revisão por serviço, cada uma podendo reunir todas as alterações desejadas. Alterações além dessas rodadas serão previamente orçadas.`,
-          `Concluído cada serviço, o CONTRATADO comunicará a entrega para validação, e o CONTRATANTE terá ${diasUteis(R.aceiteDiasUteis)} para aprová-la ou apontar, por escrito, os ajustes necessários dentro do escopo contratado.`,
-          'Decorrido esse prazo sem manifestação, ou passando o CONTRATANTE a utilizar o serviço entregue, a entrega será considerada aceita.',
-        ],
-      },
-      {
-        titulo: 'GARANTIA',
-        paragrafos: [
-          `O CONTRATADO corrigirá, sem custo, defeitos de funcionamento dos serviços entregues que se manifestarem em até ${dias(R.garantiaDias)} contados do aceite, nos termos do art. 26, II, do Código de Defesa do Consumidor.`,
-          'A garantia não cobre:',
-        ],
-        itens: [
-          'alterações feitas pelo CONTRATANTE ou por terceiros',
-          'mudanças em plataformas, navegadores, APIs ou serviços de terceiros posteriores à entrega',
-          'uso em desacordo com as orientações do CONTRATADO',
-          'novas funcionalidades ou mudanças de escopo',
-        ],
-      }
-    );
+    incluir({
+      titulo: 'ACEITE E GARANTIA',
+      paragrafos: [
+        `O CONTRATANTE terá direito a até ${R.rodadasDeRevisao} (${porExtensoFeminino(R.rodadasDeRevisao)}) rodadas de revisão por serviço, cada uma podendo reunir todas as alterações desejadas; alterações além delas serão previamente orçadas.`,
+        `Concluído cada serviço, o CONTRATADO comunicará a entrega para validação, e o CONTRATANTE terá ${diasUteis(R.aceiteDiasUteis)} para aprová-la ou apontar, por escrito, os ajustes necessários dentro do escopo contratado. Sem manifestação nesse prazo, ou passando o CONTRATANTE a utilizar o serviço, a entrega será considerada aceita.`,
+        `O CONTRATADO corrigirá sem custo os defeitos de funcionamento que se manifestarem em até ${dias(R.garantiaDias)} contados do aceite, nos termos do art. 26, II, do Código de Defesa do Consumidor. A garantia não cobre alterações feitas pelo CONTRATANTE ou por terceiros, uso em desacordo com as orientações do CONTRATADO nem mudanças posteriores em plataformas, navegadores, APIs ou serviços de terceiros.`,
+      ],
+    });
   }
 
   // ── Dinheiro ──────────────────────────────────────────────────────────────
@@ -488,8 +443,7 @@ export function montarClausulas(d: DadosDoContrato): ClausulaNumerada[] {
         `50% (cinquenta por cento), equivalente a ${formatBRL(segunda)}, na conclusão dos serviços, antes da publicação ou entrega definitiva`,
       ],
       fecho: [
-        'O pagamento poderá ser realizado à vista ou parcelado; no parcelamento podem incidir juros ou taxas da instituição financeira ou da plataforma de pagamento utilizada.',
-        'A execução tem início após a confirmação do pagamento do sinal, e a publicação ou entrega definitiva ocorre após a confirmação do pagamento integral.',
+        'O pagamento poderá ser à vista ou parcelado, podendo incidir juros ou taxas da instituição financeira ou da plataforma utilizada. A execução tem início após a confirmação do sinal, e a publicação ou entrega definitiva ocorre após a confirmação do pagamento integral.',
         'Desistindo o CONTRATANTE após o início da execução, fora da hipótese de arrependimento prevista neste contrato, o CONTRATADO poderá reter do sinal o valor correspondente aos serviços já executados e às despesas comprovadamente realizadas, restituindo o saldo, se houver.',
       ],
     });
@@ -514,8 +468,7 @@ export function montarClausulas(d: DadosDoContrato): ClausulaNumerada[] {
     ],
     fecho: temPlano
       ? [
-          `Nas mensalidades, haverá tolerância de ${dias(R.toleranciaMensalidadeDias)} antes da incidência desses encargos. Persistindo o atraso por mais de ${dias(R.suspensaoAposDias)}, os serviços do plano poderão ser suspensos, mediante aviso ao CONTRATANTE com antecedência mínima de ${dias(R.avisoSuspensaoDias)}.`,
-          `Após ${dias(R.rescisaoAposDias)} de atraso, o contrato poderá ser rescindido${hospedagem ? ' e o conteúdo removido da hospedagem, observado o prazo de disponibilização dos arquivos' : ''}.`,
+          `Nas mensalidades há tolerância de ${dias(R.toleranciaMensalidadeDias)} antes desses encargos. Persistindo o atraso por mais de ${dias(R.suspensaoAposDias)}, os serviços do plano poderão ser suspensos mediante aviso prévio de ${dias(R.avisoSuspensaoDias)} e, após ${dias(R.rescisaoAposDias)}, o contrato poderá ser rescindido${hospedagem ? ' e o conteúdo removido da hospedagem' : ''}.`,
         ]
       : undefined,
   });
@@ -529,7 +482,6 @@ export function montarClausulas(d: DadosDoContrato): ClausulaNumerada[] {
     ...(sistema
       ? [`os dados do CONTRATANTE são exportados em formato aberto (como planilha), mediante solicitação feita em até ${dias(R.arquivosDisponiveisDias)}`]
       : []),
-    ...(powerbi ? ['os arquivos dos dashboards já entregues permanecem com o CONTRATANTE'] : []),
     ...(temPlano ? ['os serviços do plano mensal são encerrados'] : []),
   ];
 
@@ -539,11 +491,10 @@ export function montarClausulas(d: DadosDoContrato): ClausulaNumerada[] {
       `Este contrato vigora desde a assinatura até a conclusão dos serviços de entrega única${temPlano ? ' e o término do plano mensal' : ''}.`,
       ...(temPlano
         ? [
-            `O plano mensal tem permanência mínima de ${meses(mesesPlano)}. O cancelamento antes desse prazo, por iniciativa do CONTRATANTE e sem culpa do CONTRATADO, obriga ao pagamento de multa de ${pct(R.multaCancelamentoPlanoPct)} sobre o valor das mensalidades restantes.`,
+            `O plano tem permanência mínima de ${meses(mesesPlano)}; o cancelamento antes desse prazo, por iniciativa do CONTRATANTE e sem culpa do CONTRATADO, obriga ao pagamento de multa de ${pct(R.multaCancelamentoPlanoPct)} sobre as mensalidades restantes.`,
           ]
         : []),
-      `Qualquer das partes poderá rescindir este contrato se a outra descumprir suas obrigações e não sanar a falta em ${dias(R.prazoParaSanarDias)} contados de notificação.`,
-      'Na rescisão, são devidos os valores dos serviços já executados e das mensalidades vencidas até a data do encerramento.',
+      `Qualquer das partes poderá rescindir este contrato se a outra descumprir suas obrigações e não sanar a falta em ${dias(R.prazoParaSanarDias)} contados de notificação, sendo devidos os valores dos serviços já executados e das mensalidades vencidas até o encerramento.`,
     ],
     ...(aoEncerrar.length
       ? { rotuloSegundaLista: 'Encerrado o contrato e quitados os valores devidos:', segundaLista: aoEncerrar }
@@ -600,11 +551,9 @@ export function montarClausulas(d: DadosDoContrato): ClausulaNumerada[] {
     titulo: 'PROTEÇÃO DE DADOS PESSOAIS',
     paragrafos: trataDadosDeTerceiros
       ? [
-          'As partes observarão a Lei nº 13.709/2018 (Lei Geral de Proteção de Dados Pessoais — LGPD).',
-          'Quanto aos dados pessoais tratados nos serviços objeto deste contrato, o CONTRATANTE é o controlador e o CONTRATADO atua como operador, tratando-os apenas conforme as instruções do CONTRATANTE e para a execução deste contrato.',
+          'As partes observarão a Lei nº 13.709/2018 (LGPD). Quanto aos dados pessoais tratados nos serviços objeto deste contrato, o CONTRATANTE é o controlador e o CONTRATADO atua como operador, tratando-os apenas conforme as instruções do CONTRATANTE e para a execução deste contrato.',
           'O CONTRATADO adotará medidas técnicas e administrativas aptas a proteger esses dados de acessos não autorizados e de situações acidentais ou ilícitas, e comunicará ao CONTRATANTE, em prazo razoável, incidente de segurança que possa acarretar risco ou dano relevante aos titulares.',
-          'Compete ao CONTRATANTE assegurar a base legal para o tratamento dos dados que fornecer ou coletar e manter política de privacidade adequada em seus canais.',
-          'Encerrado o contrato, o CONTRATADO eliminará ou devolverá os dados pessoais tratados, ressalvada a guarda exigida por lei.',
+          'Compete ao CONTRATANTE assegurar a base legal do tratamento e manter política de privacidade adequada em seus canais. Encerrado o contrato, o CONTRATADO eliminará ou devolverá os dados pessoais tratados, ressalvada a guarda exigida por lei.',
         ]
       : [
           'Os dados pessoais do CONTRATANTE serão tratados pelo CONTRATADO apenas para a execução deste contrato e o cumprimento de obrigações legais, nos termos da Lei nº 13.709/2018 (LGPD).',
@@ -612,25 +561,10 @@ export function montarClausulas(d: DadosDoContrato): ClausulaNumerada[] {
   });
 
   // ── Responsabilidades ─────────────────────────────────────────────────────
-  incluir({
-    titulo: 'OBRIGAÇÕES DAS PARTES',
-    paragrafos: ['São obrigações do CONTRATADO:'],
-    itens: [
-      'executar os serviços com diligência técnica e conforme o escopo contratado',
-      'informar o CONTRATANTE sobre o andamento dos serviços e qualquer fato que possa afetar os prazos',
-      ...(hospedagem ? ['manter a hospedagem, os backups e o certificado SSL durante a vigência do plano'] : []),
-      ...(temPlano ? ['prestar suporte via WhatsApp em horário comercial durante a vigência do plano'] : []),
-    ],
-    rotuloSegundaLista: 'São obrigações do CONTRATANTE:',
-    segundaLista: [
-      'fornecer as informações, materiais e acessos necessários',
-      'responder às solicitações de aprovação nos prazos previstos',
-      'efetuar os pagamentos nas datas acordadas',
-      ...(powerbi ? ['manter ativas as licenças necessárias ao uso dos dashboards'] : []),
-      ...(mentoria ? ['comparecer aos encontros agendados ou remarcá-los no prazo previsto'] : []),
-    ],
-  });
-
+  // Não existe cláusula de "obrigações das partes": ela só repetia, em lista, o
+  // que o escopo, o prazo, o aceite, o pagamento e as cláusulas de cada serviço
+  // já obrigam. Repetir obrigação em outras palavras abre brecha de
+  // interpretação em vez de fechar.
   incluir({
     titulo: 'LIMITAÇÃO DE RESPONSABILIDADE',
     paragrafos: ['O CONTRATADO não responde por danos decorrentes de:'],
@@ -638,9 +572,8 @@ export function montarClausulas(d: DadosDoContrato): ClausulaNumerada[] {
       'caso fortuito ou força maior, nos termos do art. 393 do Código Civil',
       `falhas ou indisponibilidade de serviços de terceiros, como provedores de internet${site || hospedagem ? ', provedores de hospedagem, registradores de domínio' : ''}, plataformas e APIs`,
       'ataques cibernéticos ou eventos imprevisíveis, desde que adotadas as medidas de segurança adequadas',
-      'conteúdo, dados ou materiais fornecidos pelo CONTRATANTE',
+      `conteúdo, dados ou materiais fornecidos pelo CONTRATANTE${powerbi ? ', inclusive decisões tomadas com base nos dados apresentados nos dashboards' : ''}`,
       'alterações realizadas pelo CONTRATANTE ou por terceiros sem participação do CONTRATADO',
-      ...(powerbi ? ['decisões tomadas pelo CONTRATANTE com base nos dados apresentados nos dashboards'] : []),
     ],
     fecho: [
       'Nas relações que não sejam de consumo, a responsabilidade do CONTRATADO por perdas e danos fica limitada ao valor total efetivamente pago pelo CONTRATANTE neste contrato.',
@@ -650,29 +583,25 @@ export function montarClausulas(d: DadosDoContrato): ClausulaNumerada[] {
   // ── Forma ─────────────────────────────────────────────────────────────────
   incluir(
     {
-      titulo: 'COMUNICAÇÕES E ASSINATURA',
+      titulo: 'DISPOSIÇÕES FINAIS',
       paragrafos: [
         'As comunicações, aprovações e notificações relativas a este contrato serão válidas quando feitas por escrito, pelo e-mail ou WhatsApp informados na qualificação das partes, que se obrigam a mantê-los atualizados.',
-        'Este contrato pode ser assinado de forma manuscrita ou eletrônica. A assinatura eletrônica tem plena validade jurídica, nos termos do art. 10, § 2º, da Medida Provisória nº 2.200-2/2001 e da Lei nº 14.063/2020.',
-        'Assinado pelas partes e por 2 (duas) testemunhas, ou eletronicamente com verificação de integridade por provedor de assinatura, este contrato constitui título executivo extrajudicial, nos termos do art. 784, III e § 4º, do Código de Processo Civil.',
+        'O contrato pode ser assinado de forma manuscrita ou eletrônica, tendo a assinatura eletrônica plena validade jurídica (art. 10, § 2º, da Medida Provisória nº 2.200-2/2001 e Lei nº 14.063/2020). Assinado pelas partes e por 2 (duas) testemunhas, ou eletronicamente com verificação de integridade por provedor de assinatura, constitui título executivo extrajudicial (art. 784, III e § 4º, do Código de Processo Civil).',
+        'A tolerância quanto ao descumprimento de qualquer cláusula não implica renúncia ou novação, e a nulidade de uma cláusula não prejudica as demais. Este contrato não gera vínculo empregatício, societário ou de representação, só pode ser alterado por termo aditivo assinado pelas partes e não pode ser cedido a terceiros sem concordância escrita da outra parte.',
       ],
     },
-    {
-      titulo: 'DISPOSIÇÕES GERAIS',
-      paragrafos: [
-        'A tolerância de uma parte quanto ao descumprimento de qualquer cláusula não implica renúncia ou novação.',
-        'A nulidade de uma cláusula não prejudica as demais.',
-        'Este contrato não gera vínculo empregatício, societário ou de representação entre as partes.',
-        'Alterações deste contrato só terão validade por termo aditivo assinado pelas partes, e seus direitos e obrigações não poderão ser cedidos a terceiros sem concordância escrita da outra parte.',
-      ],
-    },
-    {
-      titulo: 'FORO',
-      paragrafos: [
-        `Fica eleito o foro da comarca de ${d.contratado.foro || '_______________'} para dirimir as controvérsias decorrentes deste contrato, ressalvado ao CONTRATANTE, quando consumidor, o direito de propor ação no foro de seu domicílio, nos termos do art. 101, I, do Código de Defesa do Consumidor.`,
-      ],
-    }
   );
+
+  // As específicas entram por último, antes do foro: assim prevalecem sobre o
+  // padrão e o leitor as encontra sempre no mesmo lugar.
+  incluir(...(d.clausulasExtras ?? []));
+
+  incluir({
+    titulo: 'FORO',
+    paragrafos: [
+      `Fica eleito o foro da comarca de ${d.contratado.foro || '_______________'} para dirimir as controvérsias decorrentes deste contrato, ressalvado ao CONTRATANTE, quando consumidor, o direito de propor ação no foro de seu domicílio, nos termos do art. 101, I, do Código de Defesa do Consumidor.`,
+    ],
+  });
 
   // Numera pela ordem final, depois de as condicionais entrarem ou não.
   return clausulas.map((c, i) => ({ ...c, numero: i + 1 }));
