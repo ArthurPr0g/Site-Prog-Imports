@@ -177,8 +177,6 @@ function estilos(accent: string) {
 
     assinaturas: { marginTop: 18 },
     blocoAssinatura: { marginBottom: 18 },
-    testemunhas: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-    testemunha: { width: '47%' },
     papel: { fontSize: 9, fontWeight: 'bold', color: accent, marginBottom: 8 },
     campoAssinatura: { fontSize: 9, marginBottom: 9 },
 
@@ -482,9 +480,7 @@ export function PropostaDocument(d: DadosDaProposta) {
           ))}
 
           <View style={s.assinaturas} wrap={false}>
-            <Text style={s.paragrafo}>
-              E, por estarem de acordo, as partes assinam este contrato juntamente com 2 (duas) testemunhas.
-            </Text>
+            <Text style={s.paragrafo}>E, por estarem de acordo, as partes assinam este contrato.</Text>
             <Text style={{ ...s.campoAssinatura, marginTop: 6, marginBottom: 16 }}>
               Local e data: ______________________________, ______ / ______ / __________
             </Text>
@@ -521,20 +517,6 @@ export function PropostaDocument(d: DadosDaProposta) {
                   Assinatura: _________________________________________________
                 </Text>
               )}
-            </View>
-
-            {/* Duas testemunhas fazem do contrato assinado à mão um título
-                executivo extrajudicial (CPC, art. 784, III): a cobrança vai
-                direto para a execução, sem precisar provar a dívida antes. */}
-            <View style={s.testemunhas}>
-              {[1, 2].map((n) => (
-                <View key={n} style={s.testemunha}>
-                  <Text style={s.papel}>TESTEMUNHA {n}</Text>
-                  <Text style={s.campoAssinatura}>Nome: ______________________________</Text>
-                  <Text style={s.campoAssinatura}>CPF: _______________________________</Text>
-                  <Text style={s.campoAssinatura}>Assinatura: ________________________</Text>
-                </View>
-              ))}
             </View>
           </View>
 

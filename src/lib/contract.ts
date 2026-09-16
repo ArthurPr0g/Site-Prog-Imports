@@ -586,7 +586,11 @@ export function montarClausulas(d: DadosDoContrato): ClausulaNumerada[] {
       titulo: 'DISPOSIÇÕES FINAIS',
       paragrafos: [
         'As comunicações, aprovações e notificações relativas a este contrato serão válidas quando feitas por escrito, pelo e-mail ou WhatsApp informados na qualificação das partes, que se obrigam a mantê-los atualizados.',
-        'O contrato pode ser assinado de forma manuscrita ou eletrônica, tendo a assinatura eletrônica plena validade jurídica (art. 10, § 2º, da Medida Provisória nº 2.200-2/2001 e Lei nº 14.063/2020). Assinado pelas partes e por 2 (duas) testemunhas, ou eletronicamente com verificação de integridade por provedor de assinatura, constitui título executivo extrajudicial (art. 784, III e § 4º, do Código de Processo Civil).',
+        // Sem testemunhas (decisão do dono, 2026-09-16): ele assina pelo gov.br,
+        // e o § 4º do art. 784 dispensa testemunhas quando a assinatura
+        // eletrônica tem verificação de integridade. O texto passa a dizer isso,
+        // em vez de só omitir as linhas.
+        'O contrato pode ser assinado de forma manuscrita ou eletrônica, tendo a assinatura eletrônica plena validade jurídica (art. 10, § 2º, da Medida Provisória nº 2.200-2/2001 e Lei nº 14.063/2020). Assinado eletronicamente com verificação de integridade por provedor de assinatura, constitui título executivo extrajudicial, independentemente de testemunhas, nos termos do art. 784, § 4º, do Código de Processo Civil.',
         'A tolerância quanto ao descumprimento de qualquer cláusula não implica renúncia ou novação, e a nulidade de uma cláusula não prejudica as demais. Este contrato não gera vínculo empregatício, societário ou de representação, só pode ser alterado por termo aditivo assinado pelas partes e não pode ser cedido a terceiros sem concordância escrita da outra parte.',
       ],
     },
