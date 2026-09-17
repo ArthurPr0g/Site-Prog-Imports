@@ -13,7 +13,12 @@
 param(
   [Parameter(Mandatory = $true)][string]$Entrada,
   [Parameter(Mandatory = $true)][string]$Saida,
-  [ValidateSet('escuro', 'branco', 'transparente')][string]$Fundo = 'escuro',
+  # 'cartao' é a cor exata do cartão do site (#111114): imagem de fabricante com
+  # fundo transparente composta sobre ela some na página, sem retângulo visível.
+  [ValidateSet('escuro', 'branco', 'transparente', 'cartao', 'preto')][string]$Fundo = 'escuro',
+  # PNG guarda transparência; JPEG é o que cabe no limite de 5 MB do site quando
+  # a imagem é um render grande sobre fundo opaco.
+  [ValidateSet('png', 'jpg')][string]$Formato = 'png',
   [int]$Lado = 2560,
   # 0.04 = 4% de respiro de cada lado. Produto colado na borda fica claustrofóbico
   # no zoom; margem demais faz o produto sumir na vitrine.
@@ -29,6 +34,8 @@ New-Item -ItemType Directory -Force $Saida | Out-Null
 
 $corDeFundo = switch ($Fundo) {
   'escuro' { [System.Drawing.Color]::FromArgb(255, 33, 33, 33) }
+  'cartao' { [System.Drawing.Color]::FromArgb(255, 17, 17, 20) }
+  'preto' { [System.Drawing.Color]::FromArgb(255, 0, 0, 0) }
   'branco' { [System.Drawing.Color]::FromArgb(255, 255, 255, 255) }
   'transparente' { [System.Drawing.Color]::Transparent }
 }
@@ -64,12 +71,12 @@ foreach ($arquivo in $arquivos) {
 
   # Canal alfa só quando ele serve para alguma coisa: com fundo opaco, o PNG de
   # 32 bits sai com o dobro do tamanho sem nenhum ganho visível.
-  $formato = if ($Fundo -eq 'transparente') {
+  $formatoPixel = if ($Fundo -eq 'transparente') {
     [System.Drawing.Imaging.PixelFormat]::Format32bppArgb
   } else {
     [System.Drawing.Imaging.PixelFormat]::Format24bppRgb
   }
-  $tela = New-Object System.Drawing.Bitmap($Lado, $Lado, $formato)
+  $tela = New-Object System.Drawing.Bitmap($Lado, $Lado, $formatoPixel)
   $g = [System.Drawing.Graphics]::FromImage($tela)
   $g.Clear($corDeFundo)
   $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
@@ -81,8 +88,15 @@ foreach ($arquivo in $arquivos) {
   $y = [int][Math]::Round(($Lado - $altura) / 2)
   $g.DrawImage($origem, $x, $y, $largura, $altura)
 
-  $destino = Join-Path $Saida "$indice.png"
-  $tela.Save($destino, [System.Drawing.Imaging.ImageFormat]::Png)
+  $destino = Join-Path $Saida "$indice.$Formato"
+  if ($Formato -eq 'jpg') {
+    $codec = [System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object { $_.MimeType -eq 'image/jpeg' }
+    $parametros = New-Object System.Drawing.Imaging.EncoderParameters(1)
+    $parametros.Param[0] = New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality, 94L)
+    $tela.Save($destino, $codec, $parametros)
+  } else {
+    $tela.Save($destino, [System.Drawing.Imaging.ImageFormat]::Png)
+  }
 
   $g.Dispose(); $tela.Dispose(); $origem.Dispose()
 

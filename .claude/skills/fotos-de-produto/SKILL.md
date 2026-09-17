@@ -78,6 +78,30 @@ imagem clareia o produto junto: o resultado publicado deixa de parecer a foto
 que o fabricante fez, e o dono percebe na hora. Mantenha o fundo original e
 deixe a moldura do site fazer a separação.
 
+**A "sombra branca" (2026-09-17).** Os quatro produtos Lenovo foram ao ar com
+uma elipse branca flutuando embaixo do aparelho. A causa não estava na origem: o
+PNG da Lenovo traz a sombra de contato certinha, em **preto com alfa baixo**
+(A≈35). A elipse branca era a saída daquela tentativa de levantar o preto, que
+ficou na pasta `final/` e foi o que subiu. Composto direto pelo
+`padronizar-fotos.ps1`, o mesmo pixel dá `#0f0f11` — sombra de verdade sobre o
+cartão.
+
+Duas regras que vêm disso:
+
+- **Nada de pós-processamento entre a origem e o composite.** A única coisa que
+  acontece com a imagem do fabricante é redimensionar e centralizar.
+- **Confira a sombra antes de subir**, porque no log não aparece: pegue um pixel
+  da sombra na imagem pronta e veja se continua escuro.
+
+  ```powershell
+  Add-Type -AssemblyName System.Drawing
+  $i = [System.Drawing.Bitmap]::new(".\final\1.jpg"); $i.GetPixel(2074, 1792); $i.Dispose()
+  ```
+
+  Sombra correta fica perto de `#111114`. Se voltar claro (200+), a imagem passou
+  por processamento que não devia e a pasta de saída está contaminada — regere
+  a partir das originais em vez de tentar consertar o arquivo pronto.
+
 O site reduz o lado maior para 2560 e converte para WebP no navegador durante o
 upload (`lib/image-compress.ts`), então entregar em 2560 PNG é exatamente o que
 ele espera: nada é jogado fora e a transparência não vira fundo preto.
