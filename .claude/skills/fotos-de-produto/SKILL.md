@@ -65,11 +65,18 @@ Sem isso, daqui a seis meses ninguém sabe se aquela imagem podia ser usada.
 
 | Item | Valor |
 |---|---|
-| Quantidade | 4 a 6 imagens por produto |
+| Quantidade | 4 a 6 imagens por produto (o site aceita no máximo 8) |
 | Dimensão | 2560 × 2560 (quadrado) |
-| Fundo | `#212121` (cinza-escuro do site) |
-| Formato de entrega | PNG |
+| Fundo | o que a fonte oficial entregar — **não repinte** (ver abaixo) |
+| Formato de entrega | PNG ou JPEG, até 5 MB por arquivo |
 | Margem | ~4% de respiro nas bordas |
+
+**Sobre o fundo, aprendido na prática (2026-09-17):** a tentação é uniformizar
+tudo no cinza do site. Não faça. Fundo de foto de notebook preto não se troca
+por recorte — o recorte come o chassi ou deixa halo —, e "levantar o preto" da
+imagem clareia o produto junto: o resultado publicado deixa de parecer a foto
+que o fabricante fez, e o dono percebe na hora. Mantenha o fundo original e
+deixe a moldura do site fazer a separação.
 
 O site reduz o lado maior para 2560 e converte para WebP no navegador durante o
 upload (`lib/image-compress.ts`), então entregar em 2560 PNG é exatamente o que
@@ -125,16 +132,43 @@ cria um retângulo branco no meio da imagem. Ou use `-Fundo branco` para o
 conjunto inteiro daquele produto, ou remova o fundo antes. Nunca misture os dois
 estilos no mesmo produto.
 
-## Subindo no admin
+## Atalho que economiza muito trabalho
 
-As imagens vão em **Produtos → editar o produto → área de imagens**, que grava no
-bucket `product-images` e cria as linhas em `product_images`. A **primeira imagem
-é a capa** — ela aparece na vitrine, nas listagens e no ERP.
+Alguns CDNs de fabricante aceitam o tamanho na própria URL e devolvem a imagem
+já quadrada. O da ASUS é assim:
 
-O upload precisa de sessão de admin no navegador, então normalmente é o dono quem
-arrasta os arquivos; deixe a pasta `prontas/` organizada e diga quais são, na
-ordem. Depois abra a página pública do produto e passe o cursor sobre a foto: se
-o zoom mostra o detalhe nítido, o conjunto está aprovado.
+```
+https://dlcdnwebimgs.asus.com/gain/<GUID>/w2560/h2560
+```
+
+A altura manda no resultado: `h2560` devolve 2560×2560 pronto, sem recorte nem
+moldura. Vale testar o mesmo padrão em outras marcas antes de partir para o
+processamento manual — a galeria oficial costuma servir a imagem em `w1000`, e é
+só trocar o número.
+
+## Subindo
+
+Com a chave secreta do Supabase em `.env.local` (`SUPABASE_SECRET_KEY`), o
+upload é automático:
+
+```powershell
+node scripts\subir-fotos.mjs <SKU> <pasta-com-as-fotos> [--substituir]
+```
+
+O script faz o que o admin faria: grava no bucket `product-images` sob a pasta
+do produto, cria as linhas em `product_images` com o nome do produto como rótulo
+e a posição em sequência — a **primeira imagem é a capa**, que aparece na
+vitrine, nas listagens e no ERP. Ele também apaga as linhas de placeholder (sem
+url) e respeita os limites do site: 8 imagens por produto, 5 MB cada.
+
+`--substituir` troca o conjunto inteiro, apagando as fotos anteriores do banco
+**e** do bucket — sem isso o storage acumula arquivo órfão a cada tentativa.
+
+Sem a chave, deixe a pasta numerada na ordem e peça ao dono para arrastar em
+**Produtos → editar → área de imagens**.
+
+Depois, abra a página pública do produto e passe o cursor sobre a foto: se o
+zoom mostra o detalhe nítido e a imagem aparece limpa, o conjunto está aprovado.
 
 ## Entregando o resultado
 
