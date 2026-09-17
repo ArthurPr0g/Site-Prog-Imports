@@ -57,7 +57,12 @@ export function Gallery({ images, badge }: { images: GalleryImage[]; badge?: str
         onMouseLeave={() => setZoom(false)}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
-        className="stripe-placeholder relative aspect-square cursor-zoom-in touch-pan-y overflow-hidden rounded-3xl border border-border-strong"
+        // As listras são o desenho do "sem foto". Com foto real elas apareciam
+        // por baixo e em volta da imagem, e a foto publicada não parecia a
+        // mesma que o dono enviou — o fundo do cartão deixa a foto falar.
+        className={`relative aspect-square cursor-zoom-in touch-pan-y overflow-hidden rounded-3xl border border-border-strong ${
+          active.url ? 'bg-card' : 'stripe-placeholder'
+        }`}
       >
         {active.url ? (
           <div
@@ -104,7 +109,9 @@ export function Gallery({ images, badge }: { images: GalleryImage[]; badge?: str
           <button
             key={i}
             onClick={() => setIdx(i)}
-            className="stripe-placeholder relative grid h-19 place-items-center overflow-hidden rounded-2xl border p-0 transition-all hover:border-accent"
+            className={`relative grid h-19 place-items-center overflow-hidden rounded-2xl border p-0 transition-all hover:border-accent ${
+              img.url ? 'bg-card' : 'stripe-placeholder'
+            }`}
             style={{ borderColor: i === idx ? 'var(--color-accent)' : '#26262b' }}
           >
             {img.url ? (
