@@ -29,6 +29,23 @@ podem ser carcaças completamente diferentes — é aí que o erro nasce.
 "parecida" é pior que entregar o produto sem foto: a loja vende importado, e o
 cliente compara com o que achou no Google antes de pagar.
 
+### As armadilhas que já apareceram
+
+Todas do mesmo lote (2026-09-17), e nenhuma se vê sem olhar de perto:
+
+- **Mesma família, telas diferentes.** ROG Strix G16 (G614) e G18 (G814) são o
+  mesmo desenho; o que separa é o **teclado numérico**, que só o G18 tem. A página
+  da série serve os dois misturados.
+- **Mesmo nome comercial, chassi de outro ano.** "Predator Helios Neo 16S AI" é
+  PHN16S-71 (Ultra 9 275HX, 2025) e PHN16S-72 (Ultra 9 386H, 2026). A página de
+  família mostra sempre o do ano corrente — vá pela PDP do part number.
+- **Mesma ficha, carcaça diferente.** TUF Gaming F15 (FX507) e TUF **Dash** F15
+  (FX517) existem os dois com i5-12500H + RTX 3050. Só o nome do produto separa,
+  e se a descrição não disser, tem que perguntar.
+- **Acessório que não vem na caixa.** Metade da galeria do Galaxy Book2 360 tem a
+  S Pen na foto, e a caneta é vendida separada. Foto com acessório que o cliente
+  não vai receber gera reclamação igual a foto do modelo errado.
+
 ## De onde as imagens podem vir
 
 Republicar foto de terceiro numa loja é uso comercial de obra alheia. A ordem de
@@ -152,9 +169,28 @@ ordem em que as fotos vão aparecer. Opções de `-Fundo`: `escuro` (#212121,
 padrão), `branco` ou `transparente`.
 
 **Fundo branco na origem:** compor uma foto de fundo branco sobre a tela escura
-cria um retângulo branco no meio da imagem. Ou use `-Fundo branco` para o
-conjunto inteiro daquele produto, ou remova o fundo antes. Nunca misture os dois
-estilos no mesmo produto.
+cria um retângulo branco no meio da imagem. Use o `recortar-enquadrar.ps1`, que
+recorta o claro ligado à borda e reenquadra sobre a cor do cartão:
+
+```powershell
+powershell -File .claude\skills\fotos-de-produto\scripts\recortar-enquadrar.ps1 -Entrada ".\selecionadas" -Saida ".\final"
+```
+
+Três coisas que ele resolve e que o log mostra:
+
+- **Selo de canto.** Depois do recorte, só a maior ilha de pixels sobrevive — o
+  "Copilot+PC" que a Samsung carimba na galeria sai sozinho. Se a foto tiver duas
+  peças de verdade (aparelho + caneta), passe `-FracaoMinimaDaIlha 1.1` para
+  desligar.
+- **Origem pequena.** Reenquadrar não amplia além de `-EscalaMaxima` (1,5×). Se o
+  produto ocupa um canto da foto original, ele fica menor no quadrado, com o fundo
+  do cartão em volta, e o log avisa a porcentagem. Isso é melhor que o serrilhado
+  que o zoom da página revelaria.
+- **Foto de perfil e de portas.** É uma tira de 100px de altura de propósito; a
+  guarda de recorte destrutivo mede área, não altura, justamente para não
+  reprovar essas.
+
+Nunca misture fundo branco e fundo escuro no mesmo produto.
 
 ## Atalho que economiza muito trabalho
 

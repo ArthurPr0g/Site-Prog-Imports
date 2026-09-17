@@ -18,6 +18,62 @@ domínio do próprio fabricante — há muito agregador que se disfarça de ofic
 | Logitech | `logitech.com/pressroom` |
 | Intel / AMD / NVIDIA | Salas de imprensa próprias, úteis para peças e placas |
 
+## Endereço direto da galeria, por CDN
+
+Vale mais que a busca: a página do produto é renderizada no navegador e não
+entrega nada por HTTP, mas o CDN aceita o tamanho na URL. O caminho é sempre o
+mesmo: pegar os identificadores no HTML da página e montar a URL grande.
+
+**ASUS / ROG** — `dlcdnwebimgs.asus.com`. A galeria de verdade está na página
+`/gallery/`, não na página da série: `rog.asus.com/<pais>/laptops/<linha>/<produto>/gallery/`
+vem com os GUIDs já no HTML servido (dá para pegar com `Invoke-WebRequest`).
+
+```
+https://dlcdnwebimgs.asus.com/gain/<GUID>/w2560/h2560
+```
+
+A página da **série** traz GUID de banner de marketing e de produtos que nem são
+o seu (fonte, gabinete, teclado). A `/gallery/` traz só o aparelho.
+
+**Acer / Predator** — Scene7 em `images.acer.com`. A página de família mostra o
+modelo do ano corrente; para um modelo antigo, use a **PDP por part number**
+(`acer.com/us-en/.../pdp/NH.XXXXX.001`), que é onde os nomes do Scene7 do modelo
+certo aparecem.
+
+```
+https://images.acer.com/is/image/acer/<nome>?wid=2560&hei=2560&fit=constrain&fmt=png-alpha
+```
+
+`req=props` **não** serve para descobrir o tamanho nativo aqui: devolve o tamanho
+do preset padrão (400px) e o Scene7 amplia calado quando você pede maior.
+
+**Dell / Alienware** — Scene7 em `i.dell.com`. O HTML da página SPD traz a
+galeria inteira com o tamanho nativo já na query (`wid`/`hei`/`size`); é só
+reduzir proporcionalmente para 2560. Mantém `fmt=png-alpha`.
+
+```
+i.dell.com/is/image/DellContent/.../alienware-notebooks/<slug>/media-gallery/<arquivo>.psd?fmt=png-alpha&wid=W&hei=H&size=W,H&scl=1&qlt=100,1&resMode=sharp2&chrss=full
+```
+
+Pede `Referer: https://www.dell.com/` e responde **503 em pedido rápido em
+sequência** — uma pausa de ~1s entre imagens e 3 ou 4 tentativas resolve. Tamanho
+fora da proporção nativa também dá 503.
+
+**Samsung** — Scene7 em `images.samsung.com`, caminho `p6pim/<pais>/<modelo>/gallery/`.
+O identificador termina em número; o `-thumb-<n>` da página é 330px e a versão
+grande costuma ser **`<n-1>` sem o `thumb`**. Varrer uma faixa de dez números
+acha o ensaio inteiro.
+
+```
+https://images.samsung.com/is/image/samsung/p6pim/<pais>/<modelo>/gallery/<id>?wid=3000&fit=constrain&fmt=png-alpha
+```
+
+`fit=constrain` é o que revela o teto nativo: sem ele o Scene7 amplia; com ele,
+pedir 3000 e receber 1600 significa que 1600 é tudo que existe. Produto
+descontinuado não tem mais página na região de origem — procure o **mesmo part
+number em outra região** (`/ca/business/`, `/hk_en/business/`), que costuma
+continuar no ar.
+
 ## Como reconhecer que a imagem serve
 
 - **Resolução**: lado maior a partir de 1600px; press kit costuma entregar
