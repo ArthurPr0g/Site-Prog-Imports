@@ -34,12 +34,19 @@ const APPLE_A = ['Apple A14 Bionic', 'Apple A15 Bionic', 'Apple A16 Bionic', 'Ap
 // Notebook com Windows sobre ARM: o Galaxy Book Edge do catálogo é Snapdragon.
 const SNAPDRAGON = ['Snapdragon X Plus', 'Snapdragon X Elite'];
 
+// Série Z da AMD: chip de handheld, não de notebook. Entrou por causa do
+// ROG Xbox Ally X, e é o mesmo caso dos chips da Apple — sem ele na lista,
+// quem cadastra escolhe um Ryzen qualquer e o processador errado vai para a
+// ficha e para o filtro.
+const AMD_HANDHELD = ['AMD Ryzen Z1', 'AMD Ryzen Z1 Extreme', 'AMD Ryzen AI Z2', 'AMD Ryzen AI Z2 Extreme'];
+
 export const CPU_SUGGESTIONS: string[] = [
   ...APPLE_M,
   ...APPLE_A,
   ...INTEL_GENERATIONS.flatMap((gen) => INTEL_TIERS.map((tier) => `Intel Core ${tier} (${gen} Geração)`)),
   ...INTEL_CORE_ULTRA,
   ...AMD_SERIES.flatMap((series) => AMD_TIERS.map((tier) => `AMD ${tier} (Série ${series})`)),
+  ...AMD_HANDHELD,
   ...SNAPDRAGON,
 ];
 
@@ -49,6 +56,10 @@ export const COLOR_SUGGESTIONS = [
   'Preto',
   'Branco',
   'Prata',
+  // Quase todo notebook gamer cinza do catálogo (Eclipse Gray da ASUS, Steel
+  // Gray da Acer) não é "Cinza Espacial", que é nome de acabamento da Apple.
+  'Cinza',
+  'Grafite',
   'Cinza Espacial',
   'Dourado',
   'Azul',
