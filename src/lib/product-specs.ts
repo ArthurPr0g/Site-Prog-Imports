@@ -1,6 +1,8 @@
-export const RAM_OPTIONS = ['4GB', '8GB', '16GB', '32GB', '64GB'];
+// 24GB e 48GB existem nas configurações de memória unificada da Apple, que não
+// seguem a escala de potências de dois dos notebooks com Windows.
+export const RAM_OPTIONS = ['4GB', '8GB', '16GB', '24GB', '32GB', '48GB', '64GB'];
 
-export const STORAGE_OPTIONS = ['256GB', '512GB', '1TB', '2TB', '4TB'];
+export const STORAGE_OPTIONS = ['128GB', '256GB', '512GB', '1TB', '2TB', '4TB'];
 
 export const SCREEN_TYPE_OPTIONS = ['VA', 'IPS', 'OLED', 'Mini-LED', 'TN', 'Retina'];
 
@@ -18,10 +20,27 @@ const INTEL_CORE_ULTRA = [
 const AMD_TIERS = ['Ryzen 3', 'Ryzen 5', 'Ryzen 7', 'Ryzen 9'];
 const AMD_SERIES = ['3000', '4000', '5000', '6000', '7000', '8000', '9000'];
 
+// Sem os chips da Apple na lista, quem cadastrava um MacBook escolhia um Intel
+// qualquer — e o processador errado ia parar no nome do produto, na ficha e no
+// filtro da vitrine. Os M vêm primeiro porque MacBook e iPad são o que a loja
+// mais cadastra da marca; os A servem aos iPad de entrada.
+const APPLE_M = ['M1', 'M2', 'M3', 'M4', 'M5'].flatMap((geracao) => [
+  `Apple ${geracao}`,
+  `Apple ${geracao} Pro`,
+  `Apple ${geracao} Max`,
+]);
+const APPLE_A = ['Apple A14 Bionic', 'Apple A15 Bionic', 'Apple A16 Bionic', 'Apple A17 Pro', 'Apple A18', 'Apple A18 Pro', 'Apple A19', 'Apple A19 Pro'];
+
+// Notebook com Windows sobre ARM: o Galaxy Book Edge do catálogo é Snapdragon.
+const SNAPDRAGON = ['Snapdragon X Plus', 'Snapdragon X Elite'];
+
 export const CPU_SUGGESTIONS: string[] = [
+  ...APPLE_M,
+  ...APPLE_A,
   ...INTEL_GENERATIONS.flatMap((gen) => INTEL_TIERS.map((tier) => `Intel Core ${tier} (${gen} Geração)`)),
   ...INTEL_CORE_ULTRA,
   ...AMD_SERIES.flatMap((series) => AMD_TIERS.map((tier) => `AMD ${tier} (Série ${series})`)),
+  ...SNAPDRAGON,
 ];
 
 export const CONDITION_OPTIONS = ['Novo', 'Seminovo', 'Open Box'];
@@ -41,6 +60,9 @@ export const COLOR_SUGGESTIONS = [
   'Titânio Azul',
   'Titânio Branco',
   'Titânio Preto',
+  'Preto Espacial',
+  'Laranja Cósmico',
+  'Azul Profundo',
 ];
 
 // Specs técnicas mostradas no cadastro do produto variam por categoria — um
