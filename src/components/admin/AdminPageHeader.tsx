@@ -1,14 +1,18 @@
 import type { ReactNode } from 'react';
-import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher';
+import { WorkspaceSwitcher, type AreaDeTrabalho } from '@/components/layout/WorkspaceSwitcher';
 
 export function AdminPageHeader({
   title,
   subtitle,
   action,
+  // O Estúdio mora sob /admin mas é outra área de trabalho: o seletor precisa
+  // acender "Estúdio", não "Gerenciamento".
+  area = 'admin',
 }: {
   title: string;
   subtitle: string;
   action?: ReactNode;
+  area?: AreaDeTrabalho;
 }) {
   return (
     <div className="mb-7 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -18,7 +22,7 @@ export function AdminPageHeader({
       </div>
       <div className="flex flex-wrap items-center gap-3">
         {action}
-        <WorkspaceSwitcher active="admin" />
+        <WorkspaceSwitcher active={area} />
         <div className="flex items-center gap-2.5 rounded-full border border-border bg-card py-1.75 pl-2 pr-4">
           <div className="grid h-7.5 w-7.5 flex-shrink-0 place-items-center rounded-full border border-accent/40 bg-accent/15 text-xs font-extrabold text-accent">
             P

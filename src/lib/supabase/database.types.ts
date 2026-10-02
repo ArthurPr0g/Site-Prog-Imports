@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -57,6 +57,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      assistant_rate_limits: {
+        Row: {
+          count: number
+          key: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          key: string
+          window_start?: string
+        }
+        Update: {
+          count?: number
+          key?: string
+          window_start?: string
+        }
+        Relationships: []
       }
       banners: {
         Row: {
@@ -485,6 +503,13 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "order_items_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_items"
+            referencedColumns: ["id"]
+          },
         ]
       }
       orders: {
@@ -515,9 +540,9 @@ export type Database = {
           subtotal: number
           timeline_stage: number
           total: number
-          trade_id: string | null
           tracking_code: string | null
           tracking_url: string | null
+          trade_id: string | null
           updated_at: string
         }
         Insert: {
@@ -547,9 +572,9 @@ export type Database = {
           subtotal?: number
           timeline_stage?: number
           total?: number
-          trade_id?: string | null
           tracking_code?: string | null
           tracking_url?: string | null
+          trade_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -579,17 +604,38 @@ export type Database = {
           subtotal?: number
           timeline_stage?: number
           total?: number
-          trade_id?: string | null
           tracking_code?: string | null
           tracking_url?: string | null
+          trade_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "store_quotes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_erp_customer_id_fkey"
+            columns: ["erp_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_trade_id_fkey"
+            columns: ["trade_id"]
+            isOneToOne: false
+            referencedRelation: "trades"
             referencedColumns: ["id"]
           },
         ]
@@ -764,7 +810,6 @@ export type Database = {
         Row: {
           active: boolean
           base_name: string | null
-          exclusive_us: boolean
           brand_id: string | null
           category_id: string | null
           color: string
@@ -772,6 +817,7 @@ export type Database = {
           cpu: string
           created_at: string
           description: string
+          exclusive_us: boolean
           gpu: string
           highlights: string[]
           id: string
@@ -791,7 +837,6 @@ export type Database = {
         Insert: {
           active?: boolean
           base_name?: string | null
-          exclusive_us?: boolean
           brand_id?: string | null
           category_id?: string | null
           color?: string
@@ -799,6 +844,7 @@ export type Database = {
           cpu?: string
           created_at?: string
           description?: string
+          exclusive_us?: boolean
           gpu?: string
           highlights?: string[]
           id?: string
@@ -818,7 +864,6 @@ export type Database = {
         Update: {
           active?: boolean
           base_name?: string | null
-          exclusive_us?: boolean
           brand_id?: string | null
           category_id?: string | null
           color?: string
@@ -826,6 +871,7 @@ export type Database = {
           cpu?: string
           created_at?: string
           description?: string
+          exclusive_us?: boolean
           gpu?: string
           highlights?: string[]
           id?: string
@@ -928,243 +974,6 @@ export type Database = {
           },
         ]
       }
-      services: {
-        Row: {
-          description: string
-          glyph: string
-          id: string
-          name: string
-          position: number
-          price_label: string
-        }
-        Insert: {
-          description?: string
-          glyph?: string
-          id?: string
-          name: string
-          position?: number
-          price_label?: string
-        }
-        Update: {
-          description?: string
-          glyph?: string
-          id?: string
-          name?: string
-          position?: number
-          price_label?: string
-        }
-        Relationships: []
-      }
-      store_quotes: {
-        Row: {
-          category: string | null
-          discount_note: string
-          discount_type: string
-          discount_value: number
-          created_at: string
-          customer_id: string | null
-          delivery_time: string | null
-          grabr_fee_brl: number
-          grabr_fee_usd: number
-          id: string
-          margin_pct: number
-          name: string
-          notes: string | null
-          payment_method: string | null
-          processing_brl: number
-          processing_usd: number
-          product_id: string | null
-          product_link: string | null
-          product_value_brl: number
-          product_value_usd: number
-          profit_brl: number
-          sale_price_brl: number
-          shipping_brl: number
-          shipping_usd: number
-          specs: string | null
-          status: string
-          tax_brl: number
-          tax_usd: number
-          total_brl: number
-          total_usd: number
-          traveler_fee_brl: number
-          traveler_fee_usd: number
-          updated_at: string
-          usd_rate: number
-        }
-        Insert: {
-          category?: string | null
-          discount_note?: string
-          discount_type?: string
-          discount_value?: number
-          created_at?: string
-          customer_id?: string | null
-          delivery_time?: string | null
-          grabr_fee_brl?: number
-          grabr_fee_usd?: number
-          id?: string
-          margin_pct?: number
-          name: string
-          notes?: string | null
-          payment_method?: string | null
-          processing_brl?: number
-          processing_usd?: number
-          product_id?: string | null
-          product_link?: string | null
-          product_value_brl?: number
-          product_value_usd?: number
-          profit_brl?: number
-          sale_price_brl?: number
-          shipping_brl?: number
-          shipping_usd?: number
-          specs?: string | null
-          status?: string
-          tax_brl?: number
-          tax_usd?: number
-          total_brl?: number
-          total_usd?: number
-          traveler_fee_brl?: number
-          traveler_fee_usd?: number
-          updated_at?: string
-          usd_rate: number
-        }
-        Update: {
-          category?: string | null
-          discount_note?: string
-          discount_type?: string
-          discount_value?: number
-          created_at?: string
-          customer_id?: string | null
-          delivery_time?: string | null
-          grabr_fee_brl?: number
-          grabr_fee_usd?: number
-          id?: string
-          margin_pct?: number
-          name?: string
-          notes?: string | null
-          payment_method?: string | null
-          processing_brl?: number
-          processing_usd?: number
-          product_id?: string | null
-          product_link?: string | null
-          product_value_brl?: number
-          product_value_usd?: number
-          profit_brl?: number
-          sale_price_brl?: number
-          shipping_brl?: number
-          shipping_usd?: number
-          specs?: string | null
-          status?: string
-          tax_brl?: number
-          tax_usd?: number
-          total_brl?: number
-          total_usd?: number
-          traveler_fee_brl?: number
-          traveler_fee_usd?: number
-          updated_at?: string
-          usd_rate?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "store_quotes_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "store_quotes_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      stock_items: {
-        Row: {
-          budget_id: string | null
-          category: string | null
-          created_at: string
-          entry_date: string | null
-          id: string
-          name: string
-          notes: string | null
-          origin: string
-          paid_amount: number
-          photo_url: string | null
-          product_id: string | null
-          product_link: string | null
-          purchase_date: string | null
-          reserved_customer_id: string | null
-          sale_amount: number
-          specs: string | null
-          status: string
-          trade_item_id: string | null
-          updated_at: string
-          usd_rate: number | null
-        }
-        Insert: {
-          budget_id?: string | null
-          category?: string | null
-          created_at?: string
-          entry_date?: string | null
-          id?: string
-          name: string
-          notes?: string | null
-          origin?: string
-          paid_amount?: number
-          photo_url?: string | null
-          product_id?: string | null
-          product_link?: string | null
-          purchase_date?: string | null
-          reserved_customer_id?: string | null
-          sale_amount?: number
-          specs?: string | null
-          status?: string
-          trade_item_id?: string | null
-          updated_at?: string
-          usd_rate?: number | null
-        }
-        Update: {
-          budget_id?: string | null
-          category?: string | null
-          created_at?: string
-          entry_date?: string | null
-          id?: string
-          name?: string
-          notes?: string | null
-          origin?: string
-          paid_amount?: number
-          photo_url?: string | null
-          product_id?: string | null
-          product_link?: string | null
-          purchase_date?: string | null
-          reserved_customer_id?: string | null
-          sale_amount?: number
-          specs?: string | null
-          status?: string
-          trade_item_id?: string | null
-          updated_at?: string
-          usd_rate?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "stock_items_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_items_reserved_customer_id_fkey"
-            columns: ["reserved_customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       service_order_items: {
         Row: {
           amount: number
@@ -1212,122 +1021,6 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "service_orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      service_quote_items: {
-        Row: {
-          amount: number
-          billing_type: string
-          description: string
-          id: string
-          internal_service_id: string | null
-          lead_time_days: number
-          name: string
-          position: number
-          quote_id: string
-        }
-        Insert: {
-          amount?: number
-          billing_type?: string
-          description?: string
-          id?: string
-          internal_service_id?: string | null
-          lead_time_days?: number
-          name: string
-          position?: number
-          quote_id: string
-        }
-        Update: {
-          amount?: number
-          billing_type?: string
-          description?: string
-          id?: string
-          internal_service_id?: string | null
-          lead_time_days?: number
-          name?: string
-          position?: number
-          quote_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "service_quote_items_internal_service_id_fkey"
-            columns: ["internal_service_id"]
-            isOneToOne: false
-            referencedRelation: "internal_services"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "service_quote_items_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "service_quotes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      service_quotes: {
-        Row: {
-          client_has_domain: boolean
-          created_at: string
-          discount_note: string
-          discount_type: string
-          discount_value: number
-          customer_id: string | null
-          id: string
-          include_contract: boolean
-          lead_time_days: number
-          monthly_amount: number
-          notes: string
-          plan_months: number | null
-          status: string
-          title: string
-          total_amount: number
-          updated_at: string
-        }
-        Insert: {
-          client_has_domain?: boolean
-          created_at?: string
-          discount_note?: string
-          discount_type?: string
-          discount_value?: number
-          customer_id?: string | null
-          id?: string
-          include_contract?: boolean
-          lead_time_days?: number
-          monthly_amount?: number
-          notes?: string
-          plan_months?: number | null
-          status?: string
-          title: string
-          total_amount?: number
-          updated_at?: string
-        }
-        Update: {
-          client_has_domain?: boolean
-          created_at?: string
-          discount_note?: string
-          discount_type?: string
-          discount_value?: number
-          customer_id?: string | null
-          id?: string
-          include_contract?: boolean
-          lead_time_days?: number
-          monthly_amount?: number
-          notes?: string
-          plan_months?: number | null
-          status?: string
-          title?: string
-          total_amount?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "service_quotes_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
         ]
@@ -1431,26 +1124,169 @@ export type Database = {
           },
         ]
       }
+      service_quote_items: {
+        Row: {
+          amount: number
+          billing_type: string
+          description: string
+          id: string
+          internal_service_id: string | null
+          lead_time_days: number
+          name: string
+          position: number
+          quote_id: string
+        }
+        Insert: {
+          amount?: number
+          billing_type?: string
+          description?: string
+          id?: string
+          internal_service_id?: string | null
+          lead_time_days?: number
+          name: string
+          position?: number
+          quote_id: string
+        }
+        Update: {
+          amount?: number
+          billing_type?: string
+          description?: string
+          id?: string
+          internal_service_id?: string | null
+          lead_time_days?: number
+          name?: string
+          position?: number
+          quote_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_quote_items_internal_service_id_fkey"
+            columns: ["internal_service_id"]
+            isOneToOne: false
+            referencedRelation: "internal_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "service_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_quotes: {
+        Row: {
+          client_has_domain: boolean
+          created_at: string
+          customer_id: string | null
+          discount_note: string
+          discount_type: string
+          discount_value: number
+          id: string
+          include_contract: boolean
+          lead_time_days: number
+          monthly_amount: number
+          notes: string
+          plan_months: number | null
+          status: string
+          title: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          client_has_domain?: boolean
+          created_at?: string
+          customer_id?: string | null
+          discount_note?: string
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          include_contract?: boolean
+          lead_time_days?: number
+          monthly_amount?: number
+          notes?: string
+          plan_months?: number | null
+          status?: string
+          title: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          client_has_domain?: boolean
+          created_at?: string
+          customer_id?: string | null
+          discount_note?: string
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          include_contract?: boolean
+          lead_time_days?: number
+          monthly_amount?: number
+          notes?: string
+          plan_months?: number | null
+          status?: string
+          title?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_quotes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          description: string
+          glyph: string
+          id: string
+          name: string
+          position: number
+          price_label: string
+        }
+        Insert: {
+          description?: string
+          glyph?: string
+          id?: string
+          name: string
+          position?: number
+          price_label?: string
+        }
+        Update: {
+          description?: string
+          glyph?: string
+          id?: string
+          name?: string
+          position?: number
+          price_label?: string
+        }
+        Relationships: []
+      }
       site_settings: {
         Row: {
           contract_forum: string
-          signature_path: string
-          sender_name: string
-          sender_doc: string
-          sender_phone: string
-          sender_cep: string
-          sender_address_line: string
-          sender_address_number: string
-          sender_complement: string
-          sender_district: string
-          sender_city: string
-          sender_state: string
           contractor_doc: string
           contractor_name: string
           contractor_role: string
           default_delivery_time: string | null
           id: boolean
+          sender_address_line: string
+          sender_address_number: string
+          sender_cep: string
+          sender_city: string
+          sender_complement: string
+          sender_district: string
+          sender_doc: string
+          sender_name: string
+          sender_phone: string
+          sender_state: string
           show_small_banners: boolean
+          signature_path: string
           usd_rate: number | null
           usd_rate_spread: number
         }
@@ -1461,18 +1297,18 @@ export type Database = {
           contractor_role?: string
           default_delivery_time?: string | null
           id?: boolean
-          signature_path?: string
-          sender_name?: string
-          sender_doc?: string
-          sender_phone?: string
-          sender_cep?: string
           sender_address_line?: string
           sender_address_number?: string
+          sender_cep?: string
+          sender_city?: string
           sender_complement?: string
           sender_district?: string
-          sender_city?: string
+          sender_doc?: string
+          sender_name?: string
+          sender_phone?: string
           sender_state?: string
           show_small_banners?: boolean
+          signature_path?: string
           usd_rate?: number | null
           usd_rate_spread?: number
         }
@@ -1483,20 +1319,314 @@ export type Database = {
           contractor_role?: string
           default_delivery_time?: string | null
           id?: boolean
-          signature_path?: string
-          sender_name?: string
-          sender_doc?: string
-          sender_phone?: string
-          sender_cep?: string
           sender_address_line?: string
           sender_address_number?: string
+          sender_cep?: string
+          sender_city?: string
           sender_complement?: string
           sender_district?: string
-          sender_city?: string
+          sender_doc?: string
+          sender_name?: string
+          sender_phone?: string
           sender_state?: string
           show_small_banners?: boolean
+          signature_path?: string
           usd_rate?: number | null
           usd_rate_spread?: number
+        }
+        Relationships: []
+      }
+      stock_items: {
+        Row: {
+          budget_id: string | null
+          category: string | null
+          created_at: string
+          entry_date: string | null
+          id: string
+          name: string
+          notes: string | null
+          origin: string
+          paid_amount: number
+          photo_url: string | null
+          product_id: string | null
+          product_link: string | null
+          purchase_date: string | null
+          reserved_customer_id: string | null
+          sale_amount: number
+          specs: string | null
+          status: string
+          trade_item_id: string | null
+          updated_at: string
+          usd_rate: number | null
+        }
+        Insert: {
+          budget_id?: string | null
+          category?: string | null
+          created_at?: string
+          entry_date?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          origin?: string
+          paid_amount?: number
+          photo_url?: string | null
+          product_id?: string | null
+          product_link?: string | null
+          purchase_date?: string | null
+          reserved_customer_id?: string | null
+          sale_amount?: number
+          specs?: string | null
+          status?: string
+          trade_item_id?: string | null
+          updated_at?: string
+          usd_rate?: number | null
+        }
+        Update: {
+          budget_id?: string | null
+          category?: string | null
+          created_at?: string
+          entry_date?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          origin?: string
+          paid_amount?: number
+          photo_url?: string | null
+          product_id?: string | null
+          product_link?: string | null
+          purchase_date?: string | null
+          reserved_customer_id?: string | null
+          sale_amount?: number
+          specs?: string | null
+          status?: string
+          trade_item_id?: string | null
+          updated_at?: string
+          usd_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_items_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "store_quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_items_reserved_customer_id_fkey"
+            columns: ["reserved_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_quotes: {
+        Row: {
+          category: string | null
+          created_at: string
+          customer_id: string | null
+          delivery_time: string | null
+          discount_note: string
+          discount_type: string
+          discount_value: number
+          grabr_fee_brl: number
+          grabr_fee_usd: number
+          id: string
+          margin_pct: number
+          name: string
+          notes: string | null
+          payment_method: string | null
+          processing_brl: number
+          processing_usd: number
+          product_id: string | null
+          product_link: string | null
+          product_value_brl: number
+          product_value_usd: number
+          profit_brl: number
+          sale_price_brl: number
+          shipping_brl: number
+          shipping_usd: number
+          specs: string | null
+          status: string
+          tax_brl: number
+          tax_usd: number
+          total_brl: number
+          total_usd: number
+          traveler_fee_brl: number
+          traveler_fee_usd: number
+          updated_at: string
+          usd_rate: number
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          customer_id?: string | null
+          delivery_time?: string | null
+          discount_note?: string
+          discount_type?: string
+          discount_value?: number
+          grabr_fee_brl?: number
+          grabr_fee_usd?: number
+          id?: string
+          margin_pct?: number
+          name: string
+          notes?: string | null
+          payment_method?: string | null
+          processing_brl?: number
+          processing_usd?: number
+          product_id?: string | null
+          product_link?: string | null
+          product_value_brl?: number
+          product_value_usd?: number
+          profit_brl?: number
+          sale_price_brl?: number
+          shipping_brl?: number
+          shipping_usd?: number
+          specs?: string | null
+          status?: string
+          tax_brl?: number
+          tax_usd?: number
+          total_brl?: number
+          total_usd?: number
+          traveler_fee_brl?: number
+          traveler_fee_usd?: number
+          updated_at?: string
+          usd_rate: number
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          customer_id?: string | null
+          delivery_time?: string | null
+          discount_note?: string
+          discount_type?: string
+          discount_value?: number
+          grabr_fee_brl?: number
+          grabr_fee_usd?: number
+          id?: string
+          margin_pct?: number
+          name?: string
+          notes?: string | null
+          payment_method?: string | null
+          processing_brl?: number
+          processing_usd?: number
+          product_id?: string | null
+          product_link?: string | null
+          product_value_brl?: number
+          product_value_usd?: number
+          profit_brl?: number
+          sale_price_brl?: number
+          shipping_brl?: number
+          shipping_usd?: number
+          specs?: string | null
+          status?: string
+          tax_brl?: number
+          tax_usd?: number
+          total_brl?: number
+          total_usd?: number
+          traveler_fee_brl?: number
+          traveler_fee_usd?: number
+          updated_at?: string
+          usd_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_quotes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_quotes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      studio_pieces: {
+        Row: {
+          conteudo: Json
+          created_at: string
+          formato: string
+          id: string
+          legenda: string
+          modelo: string
+          position: number
+          product_id: string | null
+          status: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          conteudo?: Json
+          created_at?: string
+          formato: string
+          id?: string
+          legenda?: string
+          modelo: string
+          position?: number
+          product_id?: string | null
+          status?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          conteudo?: Json
+          created_at?: string
+          formato?: string
+          id?: string
+          legenda?: string
+          modelo?: string
+          position?: number
+          product_id?: string | null
+          status?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_pieces_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      testimonials: {
+        Row: {
+          bought: string
+          created_at: string
+          id: string
+          name: string
+          position: number
+          text: string
+        }
+        Insert: {
+          bought?: string
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          text: string
+        }
+        Update: {
+          bought?: string
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          text?: string
         }
         Relationships: []
       }
@@ -1544,6 +1674,13 @@ export type Database = {
           trade_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "trade_items_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "trade_items_trade_id_fkey"
             columns: ["trade_id"]
@@ -1647,59 +1784,35 @@ export type Database = {
           },
         ]
       }
-      testimonials: {
-        Row: {
-          bought: string
-          created_at: string
-          id: string
-          name: string
-          position: number
-          text: string
-        }
-        Insert: {
-          bought?: string
-          created_at?: string
-          id?: string
-          name: string
-          position?: number
-          text: string
-        }
-        Update: {
-          bought?: string
-          created_at?: string
-          id?: string
-          name?: string
-          position?: number
-          text?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      is_admin: { Args: never; Returns: boolean }
-      next_order_number: { Args: never; Returns: number }
-      ready_stock_counts: {
-        Args: never
-        Returns: { product_id: string; qty: number }[]
-      }
       check_assistant_rate_limit: {
-        Args: { p_key: string; p_window_seconds: number; p_limit: number }
+        Args: { p_key: string; p_limit: number; p_window_seconds: number }
         Returns: boolean
       }
+      is_admin: { Args: never; Returns: boolean }
       my_installments: {
         Args: never
         Returns: {
-          id: string
-          source_type: string
-          number: number
           amount: number
           due_date: string
+          id: string
+          number: number
+          origem: string
+          paid_at: string
+          source_type: string
           status: string
-          paid_at: string | null
-          origem: string | null
+        }[]
+      }
+      next_order_number: { Args: never; Returns: number }
+      ready_stock_counts: {
+        Args: never
+        Returns: {
+          product_id: string
+          qty: number
         }[]
       }
     }
@@ -1720,12 +1833,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1749,11 +1862,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1774,11 +1887,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1799,11 +1912,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1816,11 +1929,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

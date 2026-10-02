@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Manrope, JetBrains_Mono } from "next/font/google";
+import { Space_Grotesk, Manrope, JetBrains_Mono, Archivo } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
 import { CartProvider } from "@/lib/cart-context";
@@ -23,7 +23,22 @@ const manrope = Manrope({
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
   subsets: ["latin"],
-  weight: ["400", "500"],
+  // 700 entra por causa do Estúdio: o playbook pede mono pesada em CTA de
+  // story ("QUERO") e a fonte precisa estar carregada antes do canvas desenhar.
+  weight: ["400", "500", "700"],
+});
+
+// Tipografia do playbook do Instagram. Vive no layout raiz, e não só no
+// Estúdio, porque o canvas só desenha com a fonte que o documento já carregou —
+// `document.fonts.load` não baixa o que a página não declarou.
+// Sem lista de pesos de propósito: com `axes` declarado, o Next carrega a
+// variável inteira, e é dela que vêm o 900 dos números gigantes e o eixo de
+// largura que dá o "Archivo Expanded 115%" dos títulos. Declarar pesos fixos
+// junto com `axes` é erro de build.
+const archivo = Archivo({
+  variable: "--font-archivo",
+  subsets: ["latin"],
+  axes: ["wdth"],
 });
 
 export const metadata: Metadata = {
@@ -83,7 +98,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${spaceGrotesk.variable} ${manrope.variable} ${jetbrainsMono.variable}`}
+      className={`${spaceGrotesk.variable} ${manrope.variable} ${jetbrainsMono.variable} ${archivo.variable}`}
       style={brandCssVars}
     >
       <body className="min-h-screen bg-page text-fg font-body antialiased">

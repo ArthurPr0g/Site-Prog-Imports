@@ -23,6 +23,7 @@ import {
   FileSpreadsheet,
   ArrowLeftRight,
   HandPlatter,
+  Images,
   Settings,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
@@ -76,6 +77,13 @@ const NAV: NavGroup[] = [
       { href: '/admin/avaliacao-troca', label: 'Avaliação de Troca', Icon: ArrowLeftRight },
       { href: '/admin/prestacao-servico', label: 'Prestação de Serviço', Icon: HandPlatter },
     ],
+  },
+  // O Estúdio aparece aqui e no seletor de área. No seletor porque é outro
+  // modo de trabalho; aqui porque quem está no Gerenciamento precisa de um
+  // caminho para ele sem voltar ao topo da tela.
+  {
+    group: 'Estúdio',
+    items: [{ href: '/admin/estudio', label: 'Peças de Instagram', Icon: Images }],
   },
   {
     group: 'Sistema',
