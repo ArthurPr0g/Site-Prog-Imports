@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { modelosPorSecao, DIMENSOES } from '@/lib/estudio/modelos';
@@ -52,15 +53,16 @@ export default async function EstudioPage() {
               <div>SITUAÇÃO</div>
             </div>
             {pecas.map((p) => (
-              <div
+              <Link
                 key={p.id}
-                className="grid grid-cols-[1.6fr_1fr_140px_150px] items-center gap-3 border-b border-divider py-3.5 text-[13px]"
+                href={`/admin/estudio/${p.id}`}
+                className="grid grid-cols-[1.6fr_1fr_140px_150px] items-center gap-3 border-b border-divider py-3.5 text-[13px] hover:text-accent"
               >
                 <div className="truncate font-bold">{p.titulo}</div>
                 <div className="font-mono text-fg-secondary">{p.modelo.toUpperCase()}</div>
                 <div className="text-fg-secondary">{p.formato}</div>
                 <div className="text-fg-secondary">{p.status}</div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
@@ -75,9 +77,10 @@ export default async function EstudioPage() {
             {modelos.map((m) => {
               const d = DIMENSOES[m.formato];
               return (
-                <div
+                <Link
                   key={m.codigo}
-                  className="flex flex-col gap-2.5 rounded-[18px] border border-border bg-card p-5"
+                  href={`/admin/estudio/nova?modelo=${m.codigo}`}
+                  className="flex flex-col gap-2.5 rounded-[18px] border border-border bg-card p-5 transition-colors hover:border-accent"
                 >
                   <div className="flex items-baseline justify-between gap-3">
                     <div className="font-display text-[15px] font-bold">{m.nome}</div>
@@ -99,7 +102,7 @@ export default async function EstudioPage() {
                       </>
                     )}
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
