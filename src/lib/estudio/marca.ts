@@ -464,9 +464,17 @@ export function produto(
   ctx: Ctx,
   img: HTMLImageElement,
   caixa: { x: number; y: number; largura: number; altura: number },
-  opcoes: { rotacao?: number; sombra?: string; desfoque?: number } = {}
+  opcoes: {
+    rotacao?: number;
+    sombra?: string;
+    desfoque?: number;
+    /** Fração da base a esconder, 0 a 1. É o `clip-path: inset(0 0 26% 0)` do
+     *  playbook: corta a parte de baixo do render para o aparelho nascer de
+     *  dentro do degradê do rodapé em vez de flutuar sobre ele. */
+    recorteInferior?: number;
+  } = {}
 ): void {
-  const { rotacao = 0, sombra = 'rgba(0,0,0,.55)', desfoque = 50 } = opcoes;
+  const { rotacao = 0, sombra = 'rgba(0,0,0,.55)', desfoque = 50, recorteInferior = 0 } = opcoes;
   const escala = Math.min(caixa.largura / img.width, caixa.altura / img.height);
   const l = img.width * escala;
   const a = img.height * escala;
@@ -476,9 +484,40 @@ export function produto(
   ctx.save();
   ctx.translate(cx, cy);
   if (rotacao) ctx.rotate((rotacao * Math.PI) / 180);
+  if (recorteInferior > 0) {
+    ctx.beginPath();
+    ctx.rect(-l / 2, -a / 2, l, a * (1 - recorteInferior));
+    ctx.clip();
+  }
   ctx.shadowColor = sombra;
   ctx.shadowBlur = desfoque;
   ctx.shadowOffsetY = desfoque;
   ctx.drawImage(img, -l / 2, -a / 2, l, a);
   ctx.restore();
+}
+
+/** Linha fina de separação, o traço que divide título de ficha técnica. */
+export function regua(ctx: Ctx, x: number, y: number, largura: number, cor: string, espessura = 2): void {
+  ctx.fillStyle = cor;
+  ctx.fillRect(x, y, largura, espessura);
+}
+
+/** Texto em mono com várias linhas, a ficha técnica do rodapé. */
+export function specs(
+  ctx: Ctx,
+  texto: string,
+  x: number,
+  y: number,
+  tamanho = 26,
+  cor: string = COR.prata
+): number {
+  const linhas = texto.split('\n').filter(Boolean);
+  ctx.font = fonteMono(tamanho);
+  const soltar = espacamento(ctx, `${(0.08 * tamanho).toFixed(2)}px`);
+  ctx.fillStyle = cor;
+  ctx.textBaseline = 'alphabetic';
+  const entrelinha = tamanho * 1.6;
+  linhas.forEach((linha, i) => ctx.fillText(linha.toUpperCase(), x, y + tamanho + i * entrelinha));
+  soltar();
+  return linhas.length * entrelinha;
 }
