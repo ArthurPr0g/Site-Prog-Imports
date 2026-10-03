@@ -91,18 +91,31 @@ export async function gravarPeca(
 
   gravador.start();
 
+  // A grade de quadros é a do formato, não a do monitor. Pedir um quadro a
+  // cada repintura parece generoso e é o contrário: num monitor de 165Hz saem
+  // 820 quadros em 5 segundos, a mesma taxa de bits se divide por todos eles e
+  // cada quadro fica pior — num vídeo que o Instagram vai reconverter para 30
+  // de qualquer jeito. 60 na grade, e a sobra do monitor vira folga para o
+  // desenho terminar.
+  const intervalo = 1000 / fps;
   const inicio = performance.now();
+  let proximo = 0;
   let quadros = 0;
   let somaMs = 0;
   let agora = 0;
   while (agora < duracao) {
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
     const antes = performance.now();
     agora = antes - inicio;
+    if (agora < proximo) continue;
     await desenharQuadro(Math.min(agora, duracao));
     pedirQuadro();
     quadros++;
     somaMs += performance.now() - antes;
-    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    // Avança a grade para depois de agora: se um quadro atrasou muito, repor a
+    // grade quadro a quadro faria o desenho correr atrás do prejuízo pelo resto
+    // da gravação.
+    proximo = Math.max(proximo + intervalo, agora + intervalo * 0.5);
   }
 
   // Um quadro final no estado de repouso: sem ele o Ãºltimo frame pode pegar a
