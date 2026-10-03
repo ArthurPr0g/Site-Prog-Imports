@@ -46,15 +46,18 @@ function parcelamento(valor: number): string {
 export function tituloDaArte(p: ProdutoDoEstudio): string {
   const base = (p.base_name || p.name)
     .split('—')[0]
-    // Corta na primeira emenda de ficha técnica. Vários cadastros antigos
-    // escrevem o nome como "ROG Strix SCAR 18 - Core Ultra 9 275HX + RTX 5090";
-    // pegar as seis primeiras palavras dali entrega "SCAR 18 - Core", que é
-    // metade de uma spec e não é nome de nada.
+    // O parêntese sai primeiro. Cortar na emenda antes dele deixava
+    // "Nitro V15 (Ryzen 5 7535HS" — o parêntese abria e a ficha técnica dentro
+    // dele tinha o "+" que servia de corte.
+    .replace(/\s*\([^)]*\)?\s*/g, ' ')
+    // Depois corta na primeira emenda de ficha técnica. Vários cadastros
+    // antigos escrevem o nome como "ROG Strix SCAR 18 - Core Ultra 9 275HX +
+    // RTX 5090"; pegar as seis primeiras palavras dali entrega "SCAR 18 -
+    // Core", que é metade de uma spec e não é nome de nada.
     .split(/\s[-+–]\s/)[0]
     .trim();
   const semPrefixo = base
     .replace(/^(notebook|notebook gamer|smartphone|tablet)\s+/i, '')
-    .replace(/\s*\(.*?\)\s*/g, ' ')
     // A marca sai do título porque ela já está na linha de cima, e repetir
     // "Alienware Area-51" gasta duas das seis palavras dizendo a mesma coisa
     // duas vezes. O que o cliente procura é o modelo.

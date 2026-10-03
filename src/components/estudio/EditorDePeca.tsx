@@ -113,8 +113,13 @@ export function EditorDePeca({
     setProdutoId(p?.id ?? null);
     if (!p) return;
     const sugestoes = sugestoesDoProduto(p);
-    setConteudo((atual) => aplicarSugestoes(atual, sugestoes, sugestoesRef.current));
+    // As sugestões anteriores são capturadas AQUI, e não lidas dentro do
+    // atualizador: o atualizador roda depois, e nessa hora a referência já
+    // carrega as sugestões novas — a comparação viraria produto novo contra
+    // ele mesmo, e nada seria atualizado.
+    const anteriores = sugestoesRef.current;
     sugestoesRef.current = sugestoes;
+    setConteudo((atual) => aplicarSugestoes(atual, sugestoes, anteriores));
   }
 
   function nomeDoArquivo() {
