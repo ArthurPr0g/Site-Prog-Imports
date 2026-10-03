@@ -28,11 +28,22 @@ elemento é o que faz uma animação parecer montada por três pessoas.
 
 | Elemento | Duração |
 |---|---|
-| Micro (rótulo, preço) | 240 ms |
-| Entrada de título | 420 ms |
-| Produto (zoom 1.14 → 1) | 900 ms |
-| Stagger entre linhas | 80 ms |
+| Micro (rótulo, preço) | 380 ms |
+| Entrada de título | 560 ms |
+| Produto (zoom 1.08 → 1) | 1100 ms |
+| Régua e barras | 520 ms |
+| Stagger entre linhas | 90 ms |
 | Brilho no ouro | 1 por peça |
+
+Os valores do playbook eram 240/420/900 e saíram curtos na prática: 240ms para
+um elemento que percorre 60px dá um corte seco no fim — o elemento não entra,
+ele aparece. O playbook pede entrada rápida com **assentamento lento**, e
+assentamento precisa de tempo para existir.
+
+**Nenhuma marca do roteiro coincide com outra e nenhum vão passa de 300ms.** A
+primeira versão tinha três elementos entrando entre 300 e 420ms e depois meio
+segundo de nada: a peça chegava em blocos, com buracos no meio, que é o que faz
+a animação parecer um slideshow apressado.
 
 **O brilho no ouro é um por peça.** Dois já viram enfeite, e o ouro é justamente
 o elemento que o playbook mais racionou — no máximo dois elementos dourados por
@@ -72,6 +83,39 @@ Na peça gráfica gerada pelo Estúdio:
 **O produto não gira e não flutua em loop.** A flutuação existe no playbook
 apenas em peça de catálogo sem texto; em peça de venda ela distrai do preço.
 
+## O que mantém a peça viva depois do roteiro
+
+O roteiro termina por volta de 2,1s. Numa peça de 5s, os outros 2,9s são onde
+mora a diferença entre vídeo e PNG com introdução:
+
+- **A câmera.** Empurrão lento e contínuo, 3,5% de escala e 14px de subida ao
+  longo da peça inteira, só nas camadas de imagem. Vai na curva da peça, e não
+  linear, por um motivo que só aparece no fim: na curva o movimento desacelera
+  até parar no último quadro. **Movimento cortado no meio do caminho faz o
+  clipe parecer inacabado; movimento que para antes do corte faz o clipe
+  parecer terminado.**
+- **Tipografia não anda com a câmera.** Texto que escorrega parece defeito de
+  layout, e a margem de 72px é lei — ela não pode virar 68 no meio do vídeo. O
+  produto empurrando com o fundo parado ainda dá paralaxe de graça.
+- **O halo respira**: 3,4s por ciclo, 9% de variação. Mais rápido vira pulso de
+  notificação, mais forte vira luz de balada.
+- **Rastro.** Quando um elemento percorre mais de 5px num quadro, duas cópias
+  fracas atrás dele (18% e 10% da opacidade) fazem o deslocamento parecer
+  deslocamento. Sem isso o elemento se teletransporta de posição em posição — é
+  o mesmo motivo pelo qual uma câmera de verdade tem obturador.
+
+## A varredura de brilho é recortada pelo elemento
+
+Degradê claro em `lighter` sobre o retângulo do preço acende **o retângulo**,
+não o preço: sobre fundo escuro aparece uma barra clara atravessando a peça. O
+jeito certo é pintar o elemento numa camada à parte, recortar o degradê com
+`source-in` e compor com `lighter` — aí o que acende é o algarismo, e o preço
+parece feito de metal.
+
+Degradê na diagonal, não vertical: luz batendo de cima é o que dá plano ao
+metal. E a varredura entra e sai com `sin(π·p)`, porque reflexo que aparece do
+nada na borda do elemento entrega o truque.
+
 ## Capa de Reels
 
 A capa é 1080×1920, mas o grid do perfil corta para 4:5 — o essencial precisa
@@ -96,6 +140,35 @@ MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')
 
 Se não suportar, a saída é sequência de PNG numerada, que entra em qualquer
 editor sem perda.
+
+### As três armadilhas da gravação por canvas
+
+Todas já custaram um vídeo engasgado, e nenhuma aparece olhando o código:
+
+1. **`captureStream(fps)` amostra no relógio dele.** Quando o desenho do quadro
+   não terminou, ele repete a amostra anterior e o arquivo enche de quadros
+   gêmeos — o movimento engasga em cima deles. Use `captureStream(0)` com
+   `track.requestFrame()` depois de cada desenho: aí nenhum quadro é repetido e
+   nenhum é perdido.
+2. **Pedir um quadro a cada repintura entrega a taxa do monitor.** Num monitor
+   de 165Hz saem 820 quadros em 5 segundos e um arquivo de 15MB, com a mesma
+   taxa de bits dividida por três vezes mais quadros — cada quadro fica pior,
+   num vídeo que o Instagram vai reconverter para 30 de qualquer jeito. Trave na
+   grade do formato (60) e deixe a sobra do monitor virar folga para o desenho.
+3. **Todo custo de primeira vez cai no primeiro quadro que precisa dele.** A
+   medição mostrava 85ms parados em 0,16s, no meio da entrada do produto, e
+   54ms em 2,10s, exatamente quando a varredura acende e aloca a camada da
+   máscara. Desenhe uma vez cada trecho do roteiro **antes** de criar o
+   gravador. Pela mesma razão, nada de `await document.fonts.ready` por quadro:
+   eram 300 esperas pelo mesmo resultado numa gravação de 5 segundos.
+
+### Como conferir que ficou fluido
+
+Olhar o vídeo não serve — 10% de quadros repetidos passa despercebido numa
+olhada e aparece no feed. Toque o arquivo com `requestVideoFrameCallback`
+contando `mediaTime`: o que interessa é **quadros repetidos igual a zero**, a
+taxa mediana perto do alvo e onde estão os maiores vãos. Vão no começo é folga
+do codificador e ninguém vê; vão no meio da entrada do produto é engasgo.
 
 Quando o material é vídeo filmado — e não peça gerada —, o Estúdio não edita. O
 que ele entrega é a **ficha de motion**: a estrutura acima com os tempos
