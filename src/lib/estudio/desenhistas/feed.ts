@@ -232,26 +232,28 @@ export const desenhar3C: Desenhista = ({ ctx, largura, altura, conteudo, imagens
 export const desenhar3D: Desenhista = ({ ctx, largura, altura, conteudo, imagens }) => {
   preencher(ctx, COR.marfim, largura, altura);
 
-  const marca = campo(conteudo, 'etiqueta', 'Quem compra, confia');
+  const marca = campo(conteudo, 'chamada', 'Quem compra, confia');
   rotulo(ctx, marca, MARGEM, MARGEM + 24, 24, COR.bronze);
   rotulo(ctx, '★★★★★', largura - MARGEM, MARGEM + 24, 26, COR.bronze, 'right');
 
-  // Retângulo escuro atrás do produto: é dele que o aparelho "sai".
+  // Retângulo escuro atrás do produto: é dele que o aparelho "sai". Precisa
+  // sobrar borda visível nos quatro lados, senão o produto deixa de sair da
+  // moldura e passa a ser só uma foto por cima de um retângulo.
   ctx.fillStyle = '#111113';
-  ctx.fillRect(MARGEM, 300, 620, 500);
+  ctx.fillRect(MARGEM, 260, 600, 470);
 
   if (imagens.produto) {
-    produto(ctx, imagens.produto, { x: 10, y: 90, largura: 820, altura: 820 }, {
+    produto(ctx, imagens.produto, { x: 30, y: 180, largura: 680, altura: 500 }, {
       rotacao: -4,
       sombra: 'rgba(0,0,0,.35)',
       desfoque: 40,
     });
   }
 
-  // Cartão da nota.
-  const cartaoX = 640;
-  const cartaoY = 520;
-  const cartaoL = 368;
+  // Cartão da nota, encostado na quina de baixo do retângulo.
+  const cartaoX = 620;
+  const cartaoY = 560;
+  const cartaoL = 388;
   ctx.fillStyle = COR.onix;
   ctx.shadowColor = 'rgba(0,0,0,.25)';
   ctx.shadowBlur = 40;

@@ -44,7 +44,14 @@ function parcelamento(valor: number): string {
  *  RAM 1TB SSD" tem 14 palavras; o playbook aceita 6. O que fica é o modelo —
  *  é por ele que o cliente procura. */
 export function tituloDaArte(p: ProdutoDoEstudio): string {
-  const base = (p.base_name || p.name).split('—')[0].trim();
+  const base = (p.base_name || p.name)
+    .split('—')[0]
+    // Corta na primeira emenda de ficha técnica. Vários cadastros antigos
+    // escrevem o nome como "ROG Strix SCAR 18 - Core Ultra 9 275HX + RTX 5090";
+    // pegar as seis primeiras palavras dali entrega "SCAR 18 - Core", que é
+    // metade de uma spec e não é nome de nada.
+    .split(/\s[-+–]\s/)[0]
+    .trim();
   const semPrefixo = base
     .replace(/^(notebook|notebook gamer|smartphone|tablet)\s+/i, '')
     .replace(/\s*\(.*?\)\s*/g, ' ')

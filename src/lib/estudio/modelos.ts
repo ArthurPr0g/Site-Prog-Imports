@@ -133,7 +133,11 @@ export const MODELOS: Modelo[] = [
     descricao: 'Depoimento de cliente com o produto saindo da moldura e a nota do site.',
     campos: [
       ...CAMPOS_DE_PRODUTO,
-      { chave: 'etiqueta', rotulo: 'Rótulo do topo', tipo: 'rotulo', ajuda: 'QUEM COMPRA, CONFIA.' },
+      // Chave própria em vez de `etiqueta`: aqui o rótulo do topo é a promessa
+      // de confiança, não a condição do produto. Com a chave compartilhada o
+      // preenchimento automático trocava "Quem compra, confia" por "Pronta
+      // entrega", que é verdade mas não é o que esta peça está dizendo.
+      { chave: 'chamada', rotulo: 'Rótulo do topo', tipo: 'rotulo', ajuda: 'Quem compra, confia.' },
       { chave: 'nota', rotulo: 'Nota', tipo: 'texto', ajuda: 'Ex.: 4,9' },
       { chave: 'avaliacoes', rotulo: 'Quantidade de avaliações', tipo: 'texto', ajuda: 'Ex.: 23 avaliações no site.' },
       { chave: 'depoimento', rotulo: 'Depoimento', tipo: 'textoLongo', obrigatorio: true, ajuda: 'Frase do cliente, entre aspas.' },
