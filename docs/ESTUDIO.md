@@ -66,15 +66,23 @@ os 340 de baixo. Fora dessa faixa o texto existe no arquivo e some na tela.
 
 ## O que falta
 
-- **Peças animadas.** O 5A é animado no playbook, e a seção 07 define tempos
-  (240 ms no micro, 420 no título, 900 no produto, 80 de stagger) e a curva
-  `cubic-bezier(.2,.7,.1,1)`. Antes de prometer MP4, confirmar
-  `MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')` — o Instagram não
-  aceita WebM.
+- **Geração de texto por assunto.** É a metade do pedido original que ainda não
+  existe: escolher um assunto e a peça vir escrita. O `ANTHROPIC_API_KEY` já
+  está no projeto para o assistente de compras, e o mesmo caminho serve para
+  propor título, specs e legenda no tom do playbook. Hoje o preenchimento
+  automático vem do cadastro do produto, que resolve peça de venda e não
+  resolve peça de conteúdo (3D, 4A, 5B, 5C).
+- **Animar os modelos restantes.** São animados o 3A, o 3C e o 5A — os que o
+  playbook marca. Os outros exportam só PNG. A infraestrutura já serve a todos:
+  o desenhista é o mesmo para a arte parada e para o vídeo, basta marcar
+  `animado` no catálogo e passar o animador nos elementos.
 - **O LUT da marca em `.cube`**, para o dono aplicar em CapCut ou Premiere e as
   fotos próprias passarem a conviver com os renders.
-- **Slide 5 do 4A com três produtos distintos.** Hoje repete o mesmo aparelho em
-  três ângulos, porque só há um campo de produto.
-- **Geração de texto por assunto.** O `ANTHROPIC_API_KEY` já existe no projeto
-  para o assistente de compras; o mesmo caminho serve para propor título,
-  specs e legenda no tom do playbook.
+
+## O que já saiu daqui
+
+- **Peças animadas em MP4**, com os tempos da seção 07 corrigidos na prática
+  (380 no micro, 560 no título, 1100 no produto, 90 de stagger). O que a
+  gravação por canvas cobra está na skill `motion-design`, e não é pouco.
+- **Slide 5 do 4A com três produtos distintos**, via os campos `produtoA` e
+  `produtoB`.
