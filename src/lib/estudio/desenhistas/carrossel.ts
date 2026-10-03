@@ -184,13 +184,16 @@ function cartaoComparativo(
   ctx.restore();
 }
 
-/** Desenha o produto repetido em ângulos diferentes — o slide de fechamento do
- *  4A mostra "a prateleira", e repetir o mesmo aparelho girado lê melhor que
- *  um só no meio da arte. */
-function vitrine(ctx: Ctx, img: Figura, largura: number): void {
-  produto(ctx, img, { x: -140, y: 90, largura: 620, altura: 460 }, { rotacao: -16, desfoque: 40 });
-  produto(ctx, img, { x: largura - 480, y: 70, largura: 620, altura: 460 }, { rotacao: 14, desfoque: 40 });
-  produto(ctx, img, { x: 130, y: 170, largura: 820, altura: 600 }, { rotacao: -3, desfoque: 50 });
+/** A prateleira do slide de fechamento do 4A.
+ *
+ *  Três máquinas diferentes quando o dono escolher três; caindo para o mesmo
+ *  aparelho girado quando só houver um. Prateleira com três vezes o mesmo
+ *  notebook não é prateleira — e a pergunta do slide é justamente "qual
+ *  máquina você quer". */
+function vitrine(ctx: Ctx, principal: Figura, segunda: Figura | null, terceira: Figura | null, largura: number): void {
+  produto(ctx, segunda ?? principal, { x: -140, y: 90, largura: 620, altura: 460 }, { rotacao: -16, desfoque: 40 });
+  produto(ctx, terceira ?? principal, { x: largura - 480, y: 70, largura: 620, altura: 460 }, { rotacao: 14, desfoque: 40 });
+  produto(ctx, principal, { x: 130, y: 170, largura: 820, altura: 600 }, { rotacao: -3, desfoque: 50 });
 }
 
 /** Lê "rótulo; valor" ou "rótulo; a; b; c" por linha. */
@@ -311,7 +314,7 @@ export const desenhar4A: Desenhista = ({ ctx, largura, altura, conteudo, imagens
     brilho(ctx, 540, 480, 640, 'ouro', 0.34);
     if (p) {
       sombraDeContato(ctx, 540, 790, 760, 80, 0.8);
-      vitrine(ctx, p, largura);
+      vitrine(ctx, p, imagens.produtoA ?? null, imagens.produtoB ?? null, largura);
     }
     rodapeEsfumado(ctx, COR.onix, largura, altura, 560, 0.4);
 

@@ -189,6 +189,10 @@ export const MODELOS: Modelo[] = [
       { chave: 'slide4Titulo', rotulo: 'Título do slide 4', tipo: 'texto', slide: 4 },
       { chave: 'fechamentoTitulo', rotulo: 'Título do fechamento', tipo: 'texto', slide: 5 },
       { chave: 'fechamentoApoio', rotulo: 'Apoio do fechamento', tipo: 'texto', slide: 5 },
+      // O slide de fechamento mostra a prateleira, e prateleira com três vezes
+      // o mesmo aparelho não é prateleira. Dois produtos a mais só para ele.
+      { chave: 'produtoA', rotulo: 'Segunda máquina da vitrine', tipo: 'produto', slide: 5, ajuda: 'Só aparece no slide de fechamento.' },
+      { chave: 'produtoB', rotulo: 'Terceira máquina da vitrine', tipo: 'produto', slide: 5 },
     ],
   },
   {

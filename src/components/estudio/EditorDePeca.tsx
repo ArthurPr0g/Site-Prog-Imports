@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/Toast';
 import { DIMENSOES, type Modelo, type Campo } from '@/lib/estudio/modelos';
 import { carregarImagens, desenharPeca } from '@/lib/estudio/desenhistas';
 import type { Imagens } from '@/lib/estudio/desenhistas/tipos';
-import { preencherComProduto, type ProdutoDoEstudio } from '@/lib/estudio/produto';
+import { aplicarSugestoes, sugestoesDoProduto, type ProdutoDoEstudio } from '@/lib/estudio/produto';
 import { salvarPecaAction, excluirPecaAction } from '@/app/actions/estudio';
 import { gravarPeca } from '@/lib/estudio/video';
 import type { Ctx } from '@/lib/estudio/marca';
@@ -55,6 +55,9 @@ export function EditorDePeca({
   // sensação de edição ao vivo, e rebaixar a foto do produto a cada letra
   // digitada tornaria isso impossível.
   const cacheRef = useRef<Map<string, Imagens>>(new Map());
+  // O que o produto escolhido sugeriu da ultima vez. Serve para saber, na troca
+  // de produto, qual campo ainda e do produto e qual o dono reescreveu.
+  const sugestoesRef = useRef<Record<string, string>>({});
 
   const produto = useMemo(
     () => produtos.find((p) => p.id === produtoId) ?? null,
@@ -108,7 +111,10 @@ export function EditorDePeca({
   function escolherProduto(id: string) {
     const p = produtos.find((x) => x.id === id) ?? null;
     setProdutoId(p?.id ?? null);
-    if (p) setConteudo((atual) => preencherComProduto(atual, p));
+    if (!p) return;
+    const sugestoes = sugestoesDoProduto(p);
+    setConteudo((atual) => aplicarSugestoes(atual, sugestoes, sugestoesRef.current));
+    sugestoesRef.current = sugestoes;
   }
 
   function nomeDoArquivo() {

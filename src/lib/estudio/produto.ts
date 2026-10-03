@@ -117,15 +117,15 @@ export function descontoEmPorcento(p: ProdutoDoEstudio): string {
   return `${Math.round((1 - promo / cheio) * 100)}%`;
 }
 
-/** Preenche os campos do modelo a partir do produto, sem apagar o que o dono
- *  já escreveu — quem edita manda. */
-export function preencherComProduto(
-  conteudo: Record<string, string>,
+/** O que o produto sugere para cada campo. Separado do preenchimento porque
+ *  quem chama precisa comparar com a sugestão anterior para saber o que é dele
+ *  e o que foi escrito à mão. */
+export function sugestoesDoProduto(
   p: ProdutoDoEstudio,
   prefixo: '' | 'A' | 'B' = ''
 ): Record<string, string> {
   const vigente = precoVigente(p);
-  const sugestoes: Record<string, string> = prefixo
+  return prefixo
     ? { [`rotulo${prefixo}`]: tituloDaArte(p) }
     : {
         titulo: tituloDaArte(p),
@@ -146,10 +146,28 @@ export function preencherComProduto(
         // cadastro; o terceiro era o que faltava.
         cta: 'WhatsApp →',
       };
+}
 
+/** Aplica as sugestões de um produto sobre o conteúdo atual.
+ *
+ *  A regra: o campo é atualizado quando está vazio **ou** quando ainda tem
+ *  exatamente o que o produto anterior sugeriu. O que o dono digitou à mão
+ *  sobrevive à troca de produto.
+ *
+ *  Antes disso o preenchimento só tocava campo vazio, e trocar o produto no
+ *  meio da edição deixava o preço e a ficha do anterior na peça — com o título
+ *  novo por cima, que é o pior dos dois mundos: parece preenchido e está
+ *  errado. */
+export function aplicarSugestoes(
+  conteudo: Record<string, string>,
+  sugestoes: Record<string, string>,
+  sugestoesAnteriores: Record<string, string>
+): Record<string, string> {
   const saida = { ...conteudo };
   for (const [chave, valor] of Object.entries(sugestoes)) {
-    if (valor && !saida[chave]?.trim()) saida[chave] = valor;
+    const atual = saida[chave]?.trim() ?? '';
+    const veioDoProdutoAnterior = atual !== '' && atual === (sugestoesAnteriores[chave] ?? '').trim();
+    if (atual === '' || veioDoProdutoAnterior) saida[chave] = valor;
   }
   return saida;
 }
