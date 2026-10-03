@@ -5,8 +5,6 @@
 // trava: um post de oferta às vezes mostra preço que ainda não está no site, e
 // um título de arte raramente é o nome completo do cadastro.
 
-import { formatBRL } from '@/lib/format';
-
 export type ProdutoDoEstudio = {
   id: string;
   sku: string;
