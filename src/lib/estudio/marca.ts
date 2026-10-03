@@ -498,6 +498,32 @@ export function produto(
   ctx.restore();
 }
 
+/** Retângulo de cantos arredondados, com raio por canto.
+ *
+ *  Raio por canto e não um só porque o balão de conversa do playbook tem três
+ *  cantos redondos e um vivo — é o vivo que diz de que lado a fala sai. */
+export function caminhoArredondado(
+  ctx: Ctx,
+  x: number,
+  y: number,
+  l: number,
+  a: number,
+  raios: [number, number, number, number]
+): void {
+  const [se, sd, id, ie] = raios.map((r) => Math.min(r, l / 2, a / 2)) as [number, number, number, number];
+  ctx.beginPath();
+  ctx.moveTo(x + se, y);
+  ctx.lineTo(x + l - sd, y);
+  ctx.quadraticCurveTo(x + l, y, x + l, y + sd);
+  ctx.lineTo(x + l, y + a - id);
+  ctx.quadraticCurveTo(x + l, y + a, x + l - id, y + a);
+  ctx.lineTo(x + ie, y + a);
+  ctx.quadraticCurveTo(x, y + a, x, y + a - ie);
+  ctx.lineTo(x, y + se);
+  ctx.quadraticCurveTo(x, y, x + se, y);
+  ctx.closePath();
+}
+
 /** Linha fina de separação, o traço que divide título de ficha técnica. */
 export function regua(ctx: Ctx, x: number, y: number, largura: number, cor: string, espessura = 2): void {
   ctx.fillStyle = cor;

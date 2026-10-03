@@ -9,10 +9,12 @@ import { carregarFontes, COR, preencher, type Ctx } from '@/lib/estudio/marca';
 import { recortarProduto } from '@/lib/image-cutout';
 import { DIMENSOES, modeloPorCodigo } from '@/lib/estudio/modelos';
 import { DESENHISTAS_DE_FEED } from '@/lib/estudio/desenhistas/feed';
+import { DESENHISTAS_DE_CARROSSEL } from '@/lib/estudio/desenhistas/carrossel';
 import type { Conteudo, Desenhista, Imagens } from '@/lib/estudio/desenhistas/tipos';
 
 export const DESENHISTAS: Record<string, Desenhista> = {
   ...DESENHISTAS_DE_FEED,
+  ...DESENHISTAS_DE_CARROSSEL,
 };
 
 /** Carrega uma imagem para o canvas.
