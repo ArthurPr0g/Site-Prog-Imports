@@ -64,8 +64,10 @@ export function tituloDaArte(p: ProdutoDoEstudio): string {
  *  inteiro vira parede e disputa com o produto. */
 export function marcaDaguaSugerida(p: ProdutoDoEstudio): string {
   const titulo = tituloDaArte(p);
+  // O primeiro número do nome é o do modelo; os seguintes costumam ser o
+  // tamanho da tela. "Area-51 16\"" tem que virar 51, não 16.
   const candidatos = titulo.match(/[A-Za-z]?\d+[A-Za-z]*/g) ?? [];
-  const curto = candidatos.filter((c) => c.length <= 4).pop();
+  const curto = candidatos.find((c) => c.length <= 4);
   if (curto) return curto;
   return titulo.split(/\s+/)[0]?.slice(0, 3) ?? '';
 }
