@@ -134,6 +134,10 @@ export function preencherComProduto(
         rodape: [p.gpu, parcelamento(vigente), (p.stock ?? 0) > 0 ? 'Pronta entrega' : '']
           .filter(Boolean)
           .join(' · '),
+        // O diagnóstico do playbook é explícito: todo post de produto precisa
+        // de preço, prazo e caminho para o WhatsApp. Os dois primeiros saem do
+        // cadastro; o terceiro era o que faltava.
+        cta: 'WhatsApp →',
       };
 
   const saida = { ...conteudo };
