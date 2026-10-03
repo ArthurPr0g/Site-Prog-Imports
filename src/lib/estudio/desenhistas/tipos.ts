@@ -32,6 +32,10 @@ export type Cena = {
   imagens: Imagens;
   /** 1-based. Só carrossel usa mais de um. */
   slide: number;
+  /** Instante da animação, em ms. Ausente significa arte parada — e é assim que
+   *  o mesmo desenhista serve para o PNG e para o vídeo, sem duas versões do
+   *  layout para manter em sincronia. */
+  t?: number;
 };
 
 export type Desenhista = (cena: Cena) => void;

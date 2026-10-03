@@ -34,6 +34,8 @@ export type Formato = 'feed' | 'story' | 'carrossel' | 'destaque';
 
 export type Modelo = {
   codigo: string;
+  /** Tem roteiro de motion escrito. Modelo sem isso so exporta PNG. */
+  animado?: boolean;
   nome: string;
   secao: string;
   formato: Formato;
@@ -61,6 +63,7 @@ const CAMPOS_DE_PRODUTO: Campo[] = [
 export const MODELOS: Modelo[] = [
   {
     codigo: '3a',
+    animado: true,
     nome: 'Produto — escuro',
     secao: '03 · Posts de feed',
     formato: 'feed',
@@ -102,6 +105,7 @@ export const MODELOS: Modelo[] = [
   },
   {
     codigo: '3c',
+    animado: true,
     nome: 'Oferta',
     secao: '03 · Posts de feed',
     formato: 'feed',
@@ -211,6 +215,7 @@ export const MODELOS: Modelo[] = [
   },
   {
     codigo: '5a',
+    animado: true,
     nome: 'Story de venda',
     secao: '05 · Stories',
     formato: 'story',

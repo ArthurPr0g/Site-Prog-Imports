@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, Loader2, Save, Trash2 } from 'lucide-react';
+import { Download, Loader2, Save, Trash2, Video } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { DIMENSOES, type Modelo, type Campo } from '@/lib/estudio/modelos';
 import { carregarImagens, desenharPeca } from '@/lib/estudio/desenhistas';
 import type { Imagens } from '@/lib/estudio/desenhistas/tipos';
 import { preencherComProduto, type ProdutoDoEstudio } from '@/lib/estudio/produto';
 import { salvarPecaAction, excluirPecaAction } from '@/app/actions/estudio';
+import { gravarPeca } from '@/lib/estudio/video';
 import type { Ctx } from '@/lib/estudio/marca';
 
 const HALOS = [
@@ -47,6 +48,7 @@ export function EditorDePeca({
   const [slide, setSlide] = useState(1);
   const [salvando, setSalvando] = useState(false);
   const [desenhando, setDesenhando] = useState(true);
+  const [gravando, setGravando] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // As imagens ficam em cache pela URL: redesenhar a cada tecla é o que dá a
@@ -109,9 +111,7 @@ export function EditorDePeca({
     if (p) setConteudo((atual) => preencherComProduto(atual, p));
   }
 
-  function baixar() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  function nomeDoArquivo() {
     const sufixo = modelo.slides > 1 ? `-${slide}` : '';
     const nome = (titulo || conteudo.titulo || modelo.nome)
       .toLowerCase()
@@ -119,8 +119,14 @@ export function EditorDePeca({
       .replace(/[̀-ͯ]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
+    return `prog-${modelo.codigo}-${nome}${sufixo}`;
+  }
+
+  function baixar() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     const link = document.createElement('a');
-    link.download = `prog-${modelo.codigo}-${nome}${sufixo}.png`;
+    link.download = `${nomeDoArquivo()}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   }
@@ -134,6 +140,42 @@ export function EditorDePeca({
       baixar();
       await new Promise((r) => setTimeout(r, 200));
     }
+  }
+
+  async function baixarVideo() {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d') as Ctx | null | undefined;
+    if (!canvas || !ctx) return;
+
+    setGravando(true);
+    const imagens =
+      cacheRef.current.get(chaveDasImagens) ??
+      (await carregarImagens({
+        produto: produto?.capa,
+        produtoA: produtoA?.capa,
+        produtoB: produtoB?.capa,
+        fundo: conteudo.imagem,
+      }));
+    cacheRef.current.set(chaveDasImagens, imagens);
+
+    const r = await gravarPeca(canvas, (t) =>
+      desenharPeca(ctx, modelo.codigo, conteudo, imagens, slide, t)
+    );
+    setGravando(false);
+
+    if (!r.ok) {
+      toast({ ok: false, message: r.motivo });
+      void redesenhar();
+      return;
+    }
+
+    const url = URL.createObjectURL(r.blob);
+    const link = document.createElement('a');
+    link.download = `${nomeDoArquivo()}.${r.extensao}`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+    void redesenhar();
   }
 
   async function salvar() {
@@ -278,7 +320,24 @@ export function EditorDePeca({
                 Baixar os {modelo.slides}
               </button>
             )}
+            {modelo.animado && (
+              <button
+                onClick={baixarVideo}
+                disabled={gravando}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-control border border-border-strong px-4 py-2.5 text-[13.5px] font-extrabold text-fg-secondary hover:border-accent hover:text-accent disabled:opacity-60"
+              >
+                {gravando ? <Loader2 size={15} className="animate-spin" /> : <Video size={15} />}
+                {gravando ? 'Gravando…' : 'Baixar vídeo (MP4)'}
+              </button>
+            )}
           </div>
+          {modelo.animado && (
+            <div className="mt-2 text-[12px] leading-relaxed text-fg-tertiary">
+              O vídeo dura 5 segundos e segue os tempos do playbook — produto em 900ms, título em
+              420ms com 80ms entre as linhas, preço depois de um respiro de 200ms. A gravação roda
+              em tempo real, então a prévia anima enquanto grava.
+            </div>
+          )}
 
           <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
             <select

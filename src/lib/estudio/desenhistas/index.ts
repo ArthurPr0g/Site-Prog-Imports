@@ -75,7 +75,9 @@ export async function desenharPeca(
   modelo: string,
   conteudo: Conteudo,
   imagens: Imagens,
-  slide = 1
+  slide = 1,
+  /** Instante da animação em ms. Ausente desenha a arte parada. */
+  t?: number
 ): Promise<void> {
   await carregarFontes();
 
@@ -96,5 +98,5 @@ export async function desenharPeca(
     return;
   }
 
-  desenhista({ ctx, largura, altura, conteudo, imagens, slide });
+  desenhista({ ctx, largura, altura, conteudo, imagens, slide, t });
 }

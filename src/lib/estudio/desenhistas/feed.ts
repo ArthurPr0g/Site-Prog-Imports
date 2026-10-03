@@ -30,6 +30,7 @@ import {
   titulo,
   type Halo,
 } from '@/lib/estudio/marca';
+import { animador, ROTEIRO, TEMPO } from '@/lib/estudio/animacao';
 import { campo, type Cena, type Desenhista } from '@/lib/estudio/desenhistas/tipos';
 
 const halo = (c: Record<string, string>, chave = 'halo'): Halo =>
@@ -39,29 +40,54 @@ const halo = (c: Record<string, string>, chave = 'halo'): Halo =>
 
 /* ------------------------------------------------------- 3A · produto escuro */
 
-export const desenhar3A: Desenhista = ({ ctx, largura, altura, conteudo, imagens }) => {
+export const desenhar3A: Desenhista = ({ ctx, largura, altura, conteudo, imagens, t }) => {
+  const a = animador(t);
+
   preencher(ctx, COR.onix, largura, altura);
   brilho(ctx, largura / 2, 520, 680, halo(conteudo), 0.5);
 
   const agua = campo(conteudo, 'marcaDagua');
-  if (agua) marcaDagua(ctx, agua, largura / 2, 150, 560);
+  if (agua) {
+    a.entrada(ctx, ROTEIRO.produto, () => marcaDagua(ctx, agua, largura / 2, 150, 560), {
+      subida: 0,
+      duracao: TEMPO.produto,
+    });
+  }
 
   if (imagens.produto) {
+    const img = imagens.produto;
     // A caixa é menor que a do protótipo de propósito. Lá a imagem é um PNG
     // quadrado com o aparelho pequeno no meio e muita transparência em volta;
     // aqui ela chega recortada rente ao produto, então a mesma caixa faria o
     // notebook sangrar pelos quatro lados. O que importa é a área que o produto
     // ocupa, não a da moldura que ele tinha na origem.
-    sombraDeContato(ctx, 540, 905, 760, 80, 0.75);
-    produto(ctx, imagens.produto, { x: 95, y: 250, largura: 890, altura: 650 }, { rotacao: -7 });
+    a.zoom(ctx, ROTEIRO.produto, 540, 600, () => {
+      sombraDeContato(ctx, 540, 905, 760, 80, 0.75);
+      produto(ctx, img, { x: 95, y: 250, largura: 890, altura: 650 }, { rotacao: -7 });
+    });
   }
 
-  lockup(ctx, imagens.icone ?? null, MARGEM, MARGEM, 64);
+  a.entrada(ctx, ROTEIRO.etiqueta, () => lockup(ctx, imagens.icone ?? null, MARGEM, MARGEM, 64), {
+    subida: 18,
+    duracao: TEMPO.micro,
+  });
   const marca = campo(conteudo, 'etiqueta');
-  if (marca) etiqueta(ctx, marca, largura - MARGEM, MARGEM + 6, { alinhamento: 'direita' });
+  if (marca) {
+    a.entrada(
+      ctx,
+      ROTEIRO.etiqueta,
+      () => etiqueta(ctx, marca, largura - MARGEM, MARGEM + 6, { alinhamento: 'direita' }),
+      { subida: 18, duracao: TEMPO.micro, linha: 1 }
+    );
+  }
 
   const desconto = campo(conteudo, 'selo');
-  if (desconto) selo(ctx, largura - 64 - 115, 755, 115, 'até', desconto, 12);
+  if (desconto) {
+    a.entrada(ctx, ROTEIRO.specs, () => selo(ctx, largura - 64 - 115, 755, 115, 'até', desconto, 12), {
+      subida: 24,
+      duracao: TEMPO.micro,
+    });
+  }
 
   rodapeEsfumado(ctx, COR.onix, largura, altura, 420, 0.4);
 
@@ -76,31 +102,64 @@ export const desenhar3A: Desenhista = ({ ctx, largura, altura, conteudo, imagens
   ctx.font = fonteTitulo(68);
   const larguraPreco = ctx.measureText(preco).width * 1.1;
   if (preco) {
-    ctx.fillStyle = ouroMetal(ctx, largura - MARGEM - larguraPreco, base - 68, larguraPreco, 68);
-    ctx.textAlign = 'right';
-    const soltar = espacamento(ctx, '-1.4px');
-    ctx.fillText(preco, largura - MARGEM, base);
-    soltar();
-    ctx.textAlign = 'left';
+    a.entrada(
+      ctx,
+      ROTEIRO.preco,
+      () => {
+        ctx.font = fonteTitulo(68);
+        ctx.fillStyle = ouroMetal(ctx, largura - MARGEM - larguraPreco, base - 68, larguraPreco, 68);
+        ctx.textAlign = 'right';
+        const soltar = espacamento(ctx, '-1.4px');
+        ctx.fillText(preco, largura - MARGEM, base);
+        soltar();
+        ctx.textAlign = 'left';
+      },
+      { subida: 28, duracao: TEMPO.micro }
+    );
+    // A varredura é uma por peça, e vai no preço: é o elemento que o
+    // diagnóstico apontou como o mais pedido nos comentários.
+    a.varredura(ctx, largura - MARGEM - larguraPreco, base - 72, larguraPreco, 80);
   }
   if (parcela) {
-    ctx.font = fonteTexto(24);
-    ctx.fillStyle = COR.prataEscura;
-    ctx.textAlign = 'right';
-    ctx.fillText(parcela, largura - MARGEM, base - 78);
-    ctx.textAlign = 'left';
+    a.entrada(
+      ctx,
+      ROTEIRO.preco,
+      () => {
+        ctx.font = fonteTexto(24);
+        ctx.fillStyle = COR.prataEscura;
+        ctx.textAlign = 'right';
+        ctx.fillText(parcela, largura - MARGEM, base - 78);
+        ctx.textAlign = 'left';
+      },
+      { subida: 20, duracao: TEMPO.micro, linha: 1 }
+    );
   }
-  if (ficha) specs(ctx, ficha, MARGEM, base - 86, 26, COR.prata);
+  if (ficha) {
+    a.entrada(ctx, ROTEIRO.specs, () => specs(ctx, ficha, MARGEM, base - 86, 26, COR.prata), {
+      subida: 24,
+      duracao: TEMPO.micro,
+    });
+  }
 
   const topoDaFicha = base - 110;
-  regua(ctx, MARGEM, topoDaFicha - 28, larguraUtil, COR.grafiteClaro);
+  a.estica(ctx, ROTEIRO.regua, MARGEM, () =>
+    regua(ctx, MARGEM, topoDaFicha - 28, larguraUtil, COR.grafiteClaro)
+  );
 
   const texto = campo(conteudo, 'titulo', 'Título do post');
   const alturaTitulo = medirTitulo(ctx, texto, larguraUtil, 104);
-  titulo(ctx, texto, MARGEM, topoDaFicha - 28 - 24 - alturaTitulo, 104, { largura: larguraUtil, maxLinhas: 2 });
+  const topoTitulo = topoDaFicha - 28 - 24 - alturaTitulo;
+  a.entrada(ctx, ROTEIRO.titulo, () =>
+    titulo(ctx, texto, MARGEM, topoTitulo, 104, { largura: larguraUtil, maxLinhas: 2 })
+  );
 
   const acima = campo(conteudo, 'sobretitulo');
-  if (acima) rotulo(ctx, acima, MARGEM, topoDaFicha - 28 - 24 - alturaTitulo - 32, 26, COR.prataEscura);
+  if (acima) {
+    a.entrada(ctx, ROTEIRO.sobretitulo, () => rotulo(ctx, acima, MARGEM, topoTitulo - 32, 26, COR.prataEscura), {
+      subida: 24,
+      duracao: TEMPO.micro,
+    });
+  }
 };
 
 /* -------------------------------------------------------- 3B · produto claro */
@@ -156,53 +215,94 @@ export const desenhar3B: Desenhista = ({ ctx, largura, altura, conteudo, imagens
 
 /* ---------------------------------------------------------------- 3C · oferta */
 
-export const desenhar3C: Desenhista = ({ ctx, largura, altura, conteudo, imagens }) => {
+export const desenhar3C: Desenhista = ({ ctx, largura, altura, conteudo, imagens, t }) => {
+  const a = animador(t);
+
   preencher(ctx, COR.onix, largura, altura);
   brilho(ctx, 700, 470, 620, halo(conteudo, 'halo'), 0.46);
 
   if (imagens.produto) {
+    const img = imagens.produto;
     // Sangra na borda de propósito — a caixa começa depois do meio e termina
     // fora da arte. O que não pode é o produto subir até o topo: o título mora
     // no canto superior esquerdo e precisa de fundo limpo atrás dele.
-    sombraDeContato(ctx, 760, 900, 820, 90, 0.75);
-    produto(ctx, imagens.produto, { x: 300, y: 310, largura: 900, altura: 620 }, {
-      rotacao: -5,
-      desfoque: 60,
-      sombra: 'rgba(0,0,0,.6)',
+    a.zoom(ctx, ROTEIRO.produto, 750, 620, () => {
+      sombraDeContato(ctx, 760, 900, 820, 90, 0.75);
+      produto(ctx, img, { x: 300, y: 310, largura: 900, altura: 620 }, {
+        rotacao: -5,
+        desfoque: 60,
+        sombra: 'rgba(0,0,0,.6)',
+      });
     });
   }
 
   const marca = campo(conteudo, 'etiqueta');
-  if (marca) rotulo(ctx, marca, MARGEM, MARGEM + 30, 26, COR.ouro);
-  if (imagens.icone) ctx.drawImage(imagens.icone, largura - MARGEM - 64, MARGEM, 64, 64);
+  if (marca) {
+    a.entrada(ctx, ROTEIRO.etiqueta, () => rotulo(ctx, marca, MARGEM, MARGEM + 30, 26, COR.ouro), {
+      subida: 18,
+      duracao: TEMPO.micro,
+    });
+  }
+  if (imagens.icone) {
+    const icone = imagens.icone;
+    a.entrada(ctx, ROTEIRO.etiqueta, () => ctx.drawImage(icone, largura - MARGEM - 64, MARGEM, 64, 64), {
+      subida: 18,
+      duracao: TEMPO.micro,
+      linha: 1,
+    });
+  }
 
   // O título do 3C ocupa só a metade esquerda: a direita é do produto sangrando.
   const texto = campo(conteudo, 'titulo', 'Oferta');
   const sub = campo(conteudo, 'tituloLinha2');
-  titulo(ctx, texto, MARGEM, 180, 104, { largura: 560, maxLinhas: 2 });
+  a.entrada(ctx, ROTEIRO.titulo, () => titulo(ctx, texto, MARGEM, 180, 104, { largura: 560, maxLinhas: 2 }));
   if (sub) {
     const alturaTexto = medirTitulo(ctx, texto, 560, 104);
-    titulo(ctx, sub, MARGEM, 180 + alturaTexto, 104, { largura: 560, cor: COR.prataEscura, maxLinhas: 1 });
+    a.entrada(
+      ctx,
+      ROTEIRO.titulo,
+      () => titulo(ctx, sub, MARGEM, 180 + alturaTexto, 104, { largura: 560, cor: COR.prataEscura, maxLinhas: 1 }),
+      { linha: 1 }
+    );
   }
 
   const desconto = campo(conteudo, 'selo');
-  if (desconto) selo(ctx, largura - 80 - 115, 285, 115, 'off', desconto, -12);
+  if (desconto) {
+    a.entrada(ctx, ROTEIRO.specs, () => selo(ctx, largura - 80 - 115, 285, 115, 'off', desconto, -12), {
+      subida: 24,
+      duracao: TEMPO.micro,
+    });
+  }
 
   rodapeEsfumado(ctx, COR.onix, largura, altura, 460, 0.45);
 
   const base = altura - MARGEM;
   const rodape = campo(conteudo, 'rodape');
   const cta = campo(conteudo, 'cta');
-  if (rodape) rotulo(ctx, rodape, MARGEM, base, 24, COR.prata);
+  if (rodape) {
+    a.entrada(ctx, ROTEIRO.cta, () => rotulo(ctx, rodape, MARGEM, base, 24, COR.prata), {
+      subida: 20,
+      duracao: TEMPO.micro,
+    });
+  }
   if (cta) {
-    ctx.font = fonteTexto(28, 600);
-    ctx.fillStyle = COR.marfim;
-    ctx.textAlign = 'right';
-    ctx.fillText(cta, largura - MARGEM, base);
-    ctx.textAlign = 'left';
+    a.entrada(
+      ctx,
+      ROTEIRO.cta,
+      () => {
+        ctx.font = fonteTexto(28, 600);
+        ctx.fillStyle = COR.marfim;
+        ctx.textAlign = 'right';
+        ctx.fillText(cta, largura - MARGEM, base);
+        ctx.textAlign = 'left';
+      },
+      { subida: 20, duracao: TEMPO.micro, linha: 1 }
+    );
   }
 
-  regua(ctx, MARGEM, base - 48, largura - MARGEM * 2, COR.grafiteClaro);
+  a.estica(ctx, ROTEIRO.regua, MARGEM, () =>
+    regua(ctx, MARGEM, base - 48, largura - MARGEM * 2, COR.grafiteClaro)
+  );
 
   // Preço de e preço por, na mesma linha de base.
   const preco = campo(conteudo, 'preco');
@@ -211,19 +311,39 @@ export const desenhar3C: Desenhista = ({ ctx, largura, altura, conteudo, imagens
   let cursor = MARGEM;
   if (precoDe) {
     ctx.font = fonteTexto(34);
-    ctx.fillStyle = COR.prataEscura;
-    ctx.fillText(precoDe, cursor, linhaPreco);
-    const l = ctx.measureText(precoDe).width;
-    ctx.fillRect(cursor, linhaPreco - 11, l, 2);
-    cursor += l + 28;
+    const larguraDe = ctx.measureText(precoDe).width;
+    const xDe = cursor;
+    a.entrada(
+      ctx,
+      ROTEIRO.preco,
+      () => {
+        ctx.font = fonteTexto(34);
+        ctx.fillStyle = COR.prataEscura;
+        ctx.fillText(precoDe, xDe, linhaPreco);
+        ctx.fillRect(xDe, linhaPreco - 11, larguraDe, 2);
+      },
+      { subida: 24, duracao: TEMPO.micro }
+    );
+    cursor += larguraDe + 28;
   }
   if (preco) {
     ctx.font = fonteTitulo(108);
     const l = ctx.measureText(preco).width * 1.12;
-    ctx.fillStyle = ouroMetal(ctx, cursor, linhaPreco - 108, l, 108);
-    const soltar = espacamento(ctx, '-3px');
-    ctx.fillText(preco, cursor, linhaPreco);
-    soltar();
+    const xPreco = cursor;
+    a.entrada(
+      ctx,
+      ROTEIRO.preco,
+      () => {
+        ctx.font = fonteTitulo(108);
+        ctx.fillStyle = ouroMetal(ctx, xPreco, linhaPreco - 108, l, 108);
+        const soltar = espacamento(ctx, '-3px');
+        ctx.fillText(preco, xPreco, linhaPreco);
+        soltar();
+      },
+      { subida: 32, duracao: TEMPO.micro, linha: 1 }
+    );
+    // A varredura é uma por peça, e aqui vai no preço novo.
+    a.varredura(ctx, xPreco, linhaPreco - 112, l, 128);
   }
 };
 

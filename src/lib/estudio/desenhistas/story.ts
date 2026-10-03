@@ -27,6 +27,7 @@ import {
   type Ctx,
   type Halo,
 } from '@/lib/estudio/marca';
+import { animador, ROTEIRO, TEMPO } from '@/lib/estudio/animacao';
 import { desenharIcone } from '@/lib/estudio/icones';
 import { campo, type Desenhista } from '@/lib/estudio/desenhistas/tipos';
 
@@ -41,63 +42,105 @@ const halo = (c: Record<string, string>, padrao: Halo = 'roxo'): Halo => {
 
 /* ---------------------------------------------------------- 5A · venda */
 
-export const desenhar5A: Desenhista = ({ ctx, largura, altura, conteudo, imagens }) => {
+export const desenhar5A: Desenhista = ({ ctx, largura, altura, conteudo, imagens, t }) => {
+  const a = animador(t);
+
   preencher(ctx, COR.onix, largura, altura);
   brilho(ctx, largura / 2, 760, 680, halo(conteudo), 0.46);
 
   if (imagens.produto) {
-    sombraDeContato(ctx, 540, 1010, 760, 90, 0.8);
-    produto(ctx, imagens.produto, { x: 110, y: 420, largura: 860, altura: 600 }, { rotacao: -7 });
+    const img = imagens.produto;
+    a.zoom(ctx, ROTEIRO.produto, 540, 720, () => {
+      sombraDeContato(ctx, 540, 1010, 760, 90, 0.8);
+      produto(ctx, img, { x: 110, y: 420, largura: 860, altura: 600 }, { rotacao: -7 });
+    });
   }
   rodapeEsfumado(ctx, COR.onix, largura, altura, 760, 0.35);
 
   const marca = campo(conteudo, 'etiqueta');
-  if (marca) rotulo(ctx, marca, MARGEM, SEGURO.topo + 60, 28, COR.ouro);
+  if (marca) {
+    a.entrada(ctx, ROTEIRO.etiqueta, () => rotulo(ctx, marca, MARGEM, SEGURO.topo + 60, 28, COR.ouro), {
+      subida: 20,
+      duracao: TEMPO.micro,
+    });
+  }
 
   // Pilha ancorada no fim da área segura, crescendo para cima.
   let y = SEGURO.base;
 
   const cta = campo(conteudo, 'cta');
   if (cta) {
-    ctx.font = fonteTexto(36, 600);
-    const l = ctx.measureText(cta).width + 96;
-    const a = 110;
-    caminhoArredondado(ctx, MARGEM, y - a, l, a, [a / 2, a / 2, a / 2, a / 2]);
-    ctx.fillStyle = COR.marfim;
-    ctx.fill();
-    ctx.fillStyle = COR.onix;
-    ctx.fillText(cta, MARGEM + 48, y - a / 2 + 13);
-    y -= a + 56;
+    const yCta = y;
+    a.entrada(
+      ctx,
+      ROTEIRO.cta,
+      () => {
+        ctx.font = fonteTexto(36, 600);
+        const l = ctx.measureText(cta).width + 96;
+        const altura = 110;
+        caminhoArredondado(ctx, MARGEM, yCta - altura, l, altura, [55, 55, 55, 55]);
+        ctx.fillStyle = COR.marfim;
+        ctx.fill();
+        ctx.fillStyle = COR.onix;
+        ctx.fillText(cta, MARGEM + 48, yCta - altura / 2 + 13);
+      },
+      { subida: 32, duracao: TEMPO.micro }
+    );
+    y -= 110 + 56;
   }
 
   const preco = campo(conteudo, 'preco');
   if (preco) {
+    const yPreco = y;
     ctx.font = fonteTitulo(116);
-    const l = ctx.measureText(preco).width * 1.12;
-    ctx.fillStyle = ouroMetal(ctx, MARGEM, y - 116, l, 116);
-    const soltar = espacamento(ctx, '-3px');
-    ctx.fillText(preco, MARGEM, y);
-    soltar();
+    const larguraPreco = ctx.measureText(preco).width * 1.12;
+    a.entrada(
+      ctx,
+      ROTEIRO.preco,
+      () => {
+        ctx.font = fonteTitulo(116);
+        ctx.fillStyle = ouroMetal(ctx, MARGEM, yPreco - 116, larguraPreco, 116);
+        const soltar = espacamento(ctx, '-3px');
+        ctx.fillText(preco, MARGEM, yPreco);
+        soltar();
+      },
+      { subida: 36, duracao: TEMPO.micro }
+    );
+    a.varredura(ctx, MARGEM, yPreco - 120, larguraPreco, 136);
     y -= 150;
   }
 
   const ficha = campo(conteudo, 'specs');
   if (ficha) {
-    ctx.font = fonteMono(28);
-    const soltar = espacamento(ctx, '2.6px');
-    ctx.fillStyle = COR.prata;
-    ctx.fillText(ficha.split('\n')[0].toUpperCase(), MARGEM, y);
-    soltar();
+    const yFicha = y;
+    a.entrada(
+      ctx,
+      ROTEIRO.specs,
+      () => {
+        ctx.font = fonteMono(28);
+        const soltar = espacamento(ctx, '2.6px');
+        ctx.fillStyle = COR.prata;
+        ctx.fillText(ficha.split('\n')[0].toUpperCase(), MARGEM, yFicha);
+        soltar();
+      },
+      { subida: 24, duracao: TEMPO.micro }
+    );
     y -= 44;
   }
 
-  regua(ctx, MARGEM, y, largura - MARGEM * 2, COR.grafiteClaro);
+  const yRegua = y;
+  a.estica(ctx, ROTEIRO.regua, MARGEM, () =>
+    regua(ctx, MARGEM, yRegua, largura - MARGEM * 2, COR.grafiteClaro)
+  );
   y -= 36;
 
   const texto = campo(conteudo, 'titulo', 'Título do story');
   ctx.font = fonteTitulo(104);
   const linhas = texto.includes('\n') ? texto.split('\n').length : 1;
-  titulo(ctx, texto, MARGEM, y - linhas * 96, 104, { largura: largura - MARGEM * 2, maxLinhas: 2 });
+  const yTitulo = y - linhas * 96;
+  a.entrada(ctx, ROTEIRO.titulo, () =>
+    titulo(ctx, texto, MARGEM, yTitulo, 104, { largura: largura - MARGEM * 2, maxLinhas: 2 })
+  );
 };
 
 /* -------------------------------------------------------- 5B · enquete */
