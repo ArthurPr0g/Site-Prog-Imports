@@ -41,7 +41,7 @@ const halo = (c: Record<string, string>, chave = 'halo'): Halo =>
 
 export const desenhar3A: Desenhista = ({ ctx, largura, altura, conteudo, imagens }) => {
   preencher(ctx, COR.onix, largura, altura);
-  brilho(ctx, largura / 2, 560, 620, halo(conteudo), 0.32);
+  brilho(ctx, largura / 2, 520, 680, halo(conteudo), 0.5);
 
   const agua = campo(conteudo, 'marcaDagua');
   if (agua) marcaDagua(ctx, agua, largura / 2, 150, 560);
@@ -158,7 +158,7 @@ export const desenhar3B: Desenhista = ({ ctx, largura, altura, conteudo, imagens
 
 export const desenhar3C: Desenhista = ({ ctx, largura, altura, conteudo, imagens }) => {
   preencher(ctx, COR.onix, largura, altura);
-  brilho(ctx, 750, 520, 560, halo(conteudo, 'halo'), 0.28);
+  brilho(ctx, 700, 470, 620, halo(conteudo, 'halo'), 0.46);
 
   if (imagens.produto) {
     // Sangra na borda de propósito — a caixa começa depois do meio e termina
@@ -288,7 +288,7 @@ export const desenhar3D: Desenhista = ({ ctx, largura, altura, conteudo, imagens
 
 export const desenhar3E: Desenhista = ({ ctx, largura, altura, conteudo, imagens }) => {
   preencher(ctx, COR.onix, largura, altura);
-  brilho(ctx, largura / 2, 800, 700, halo(conteudo, 'halo'), 0.3);
+  brilho(ctx, largura / 2, 760, 740, halo(conteudo, 'halo'), 0.48);
 
   const agua = campo(conteudo, 'marcaDagua');
   if (agua) marcaDagua(ctx, agua, largura / 2, 330, 420, { traco: 'rgba(217,182,110,.4)' });
