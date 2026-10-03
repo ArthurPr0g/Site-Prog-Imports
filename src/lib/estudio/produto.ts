@@ -24,12 +24,20 @@ export type ProdutoDoEstudio = {
   capa: string | null;
 };
 
+/** Preço como o playbook escreve: "R$ 42.499", sem centavos.
+ *
+ *  Centavo em arte de Instagram é ruído — ninguém decide compra de R$ 23 mil
+ *  por causa de noventa e dois centavos, e o ",00" rouba tamanho do número, que
+ *  é o elemento que precisa ser lido de longe no grid. */
+export function precoDaArte(valor: number): string {
+  return `R$ ${Math.round(valor).toLocaleString('pt-BR')}`;
+}
+
 /** Até 12 parcelas sem juros é a regra da loja; abaixo de R$ 1.000 a parcela
  *  fica ridícula e o playbook prefere o preço limpo. */
 function parcelamento(valor: number): string {
   if (valor < 1000) return '';
-  const parcela = valor / 12;
-  return `12× ${formatBRL(parcela)} sem juros`;
+  return `12× ${precoDaArte(valor / 12)} sem juros`;
 }
 
 /** O nome da arte não é o nome do cadastro.
@@ -42,9 +50,12 @@ export function tituloDaArte(p: ProdutoDoEstudio): string {
   const semPrefixo = base
     .replace(/^(notebook|notebook gamer|smartphone|tablet)\s+/i, '')
     .replace(/\s*\(.*?\)\s*/g, ' ')
+    // A marca sai do título porque ela já está na linha de cima, e repetir
+    // "Alienware Area-51" gasta duas das seis palavras dizendo a mesma coisa
+    // duas vezes. O que o cliente procura é o modelo.
+    .replace(/^(lenovo|alienware|asus|acer|apple|samsung|dell|rog|predator)\s+/i, '')
     .trim();
-  const palavras = semPrefixo.split(/\s+/);
-  return palavras.slice(0, 6).join(' ');
+  return semPrefixo.split(/\s+/).slice(0, 6).join(' ');
 }
 
 /** Linha de marca acima do título: fabricante · linha · geração. */
@@ -99,11 +110,11 @@ export function preencherComProduto(
         titulo: tituloDaArte(p),
         sobretitulo: sobretitulo(p),
         specs: fichaCurta(p),
-        preco: formatBRL(vigente),
+        preco: precoDaArte(vigente),
         parcela: parcelamento(vigente),
         etiqueta: etiquetaSugerida(p),
         selo: descontoEmPorcento(p),
-        precoDe: p.promo_price ? formatBRL(Number(p.price)) : '',
+        precoDe: p.promo_price ? precoDaArte(Number(p.price)) : '',
         subtitulo: [p.ram, p.storage].filter(Boolean).join(' · '),
         rodape: [p.gpu, parcelamento(vigente), (p.stock ?? 0) > 0 ? 'Pronta entrega' : '']
           .filter(Boolean)

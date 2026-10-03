@@ -76,6 +76,8 @@ export const fonteMono = (tamanho: number, peso: 400 | 500 | 600 | 700 = 500) =>
 // `fontStretch` e `letterSpacing` do canvas são recentes: a tipagem do DOM
 // aceita só as palavras-chave ("expanded", "condensed"), mas a implementação
 // aceita porcentagem, que é o que o playbook pede (115%). Daí o tipo próprio.
+export type Figura = HTMLImageElement | HTMLCanvasElement;
+
 export type Ctx = Omit<CanvasRenderingContext2D, 'fontStretch' | 'letterSpacing'> & {
   fontStretch?: string;
   letterSpacing?: string;
@@ -462,7 +464,7 @@ export function progresso(
  *  com rotação e sombra projetada. É o gesto que repete em quase todo modelo. */
 export function produto(
   ctx: Ctx,
-  img: HTMLImageElement,
+  img: Figura,
   caixa: { x: number; y: number; largura: number; altura: number },
   opcoes: {
     rotacao?: number;

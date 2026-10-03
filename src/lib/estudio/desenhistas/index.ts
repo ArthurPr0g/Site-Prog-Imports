@@ -6,6 +6,7 @@
 // num lugar só.
 
 import { carregarFontes, COR, preencher, type Ctx } from '@/lib/estudio/marca';
+import { recortarProduto } from '@/lib/image-cutout';
 import { DIMENSOES, modeloPorCodigo } from '@/lib/estudio/modelos';
 import { DESENHISTAS_DE_FEED } from '@/lib/estudio/desenhistas/feed';
 import type { Conteudo, Desenhista, Imagens } from '@/lib/estudio/desenhistas/tipos';
@@ -37,12 +38,26 @@ export type FontesDaPeca = {
   fundo?: string | null;
 };
 
+/** Carrega a foto do produto já recortada.
+ *
+ *  A foto do catálogo vem sobre o cartão da loja (#111114), e o playbook
+ *  precisa do aparelho solto para ele saltar sobre o halo colorido — sem o
+ *  recorte, o "produto" é a foto inteira e cobre a arte de ponta a ponta.
+ *
+ *  `recortarProduto` devolve `null` quando o fundo não é liso o bastante. Aí a
+ *  foto original é melhor que um recorte quebrado, e é ela que volta. */
+async function carregarProduto(src: string | null | undefined) {
+  const img = await carregarImagem(src);
+  if (!img) return null;
+  return recortarProduto(img) ?? img;
+}
+
 /** A marca entra em toda peça; vale carregar junto e não por modelo. */
 export async function carregarImagens(fontes: FontesDaPeca): Promise<Imagens> {
   const [produto, produtoA, produtoB, fundo, icone, logo] = await Promise.all([
-    carregarImagem(fontes.produto),
-    carregarImagem(fontes.produtoA),
-    carregarImagem(fontes.produtoB),
+    carregarProduto(fontes.produto),
+    carregarProduto(fontes.produtoA),
+    carregarProduto(fontes.produtoB),
     carregarImagem(fontes.fundo),
     carregarImagem('/marca/icone.png'),
     carregarImagem('/marca/logo.png'),

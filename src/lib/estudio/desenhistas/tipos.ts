@@ -4,18 +4,22 @@
 // encontram aqui. Quem acrescenta modelo escreve uma função com esta assinatura
 // e registra o código — nada mais muda.
 
-import type { Ctx } from '@/lib/estudio/marca';
+import type { Ctx, Figura } from '@/lib/estudio/marca';
 
 /** Os campos preenchidos no editor, na chave que `modelos.ts` declarou. */
 export type Conteudo = Record<string, string>;
 
 /** Imagens já carregadas. Vêm prontas porque o canvas não espera: desenhar com
- *  `img` ainda baixando produz peça sem produto, e o erro é silencioso. */
+ *  `img` ainda baixando produz peça sem produto, e o erro é silencioso.
+ *
+ *  As do produto chegam como canvas, não como `img`: a foto do catálogo tem o
+ *  fundo do cartão da loja, e o playbook precisa do aparelho recortado para
+ *  ele saltar sobre o halo. O recorte acontece no carregamento. */
 export type Imagens = {
-  produto?: HTMLImageElement | null;
-  produtoA?: HTMLImageElement | null;
-  produtoB?: HTMLImageElement | null;
-  fundo?: HTMLImageElement | null;
+  produto?: Figura | null;
+  produtoA?: Figura | null;
+  produtoB?: Figura | null;
+  fundo?: Figura | null;
   icone?: HTMLImageElement | null;
   logo?: HTMLImageElement | null;
 };
