@@ -46,7 +46,7 @@ export const desenhar5A: Desenhista = ({ ctx, largura, altura, conteudo, imagens
   const a = animador(t);
 
   preencher(ctx, COR.onix, largura, altura);
-  brilho(ctx, largura / 2, 760, 680, halo(conteudo), 0.46);
+  brilho(ctx, largura / 2, 760, 680, halo(conteudo), a.luz(0.46));
 
   if (imagens.produto) {
     const img = imagens.produto;
@@ -94,19 +94,24 @@ export const desenhar5A: Desenhista = ({ ctx, largura, altura, conteudo, imagens
     const yPreco = y;
     ctx.font = fonteTitulo(116);
     const larguraPreco = ctx.measureText(preco).width * 1.12;
-    a.entrada(
+    const pintarPreco = (c: Ctx) => {
+      c.font = fonteTitulo(116);
+      c.fillStyle = ouroMetal(c, MARGEM, yPreco - 116, larguraPreco, 116);
+      const soltar = espacamento(c, '-3px');
+      c.fillText(preco, MARGEM, yPreco);
+      soltar();
+    };
+    a.entrada(ctx, ROTEIRO.preco, () => pintarPreco(ctx), {
+      subida: 36,
+      duracao: TEMPO.micro,
+      escala: 0.94,
+      ancora: { x: MARGEM, y: yPreco },
+    });
+    a.varredura(
       ctx,
-      ROTEIRO.preco,
-      () => {
-        ctx.font = fonteTitulo(116);
-        ctx.fillStyle = ouroMetal(ctx, MARGEM, yPreco - 116, larguraPreco, 116);
-        const soltar = espacamento(ctx, '-3px');
-        ctx.fillText(preco, MARGEM, yPreco);
-        soltar();
-      },
-      { subida: 36, duracao: TEMPO.micro }
+      { x: MARGEM - 16, y: yPreco - 128, largura: larguraPreco + 32, altura: 156 },
+      pintarPreco
     );
-    a.varredura(ctx, MARGEM, yPreco - 120, larguraPreco, 136);
     y -= 150;
   }
 

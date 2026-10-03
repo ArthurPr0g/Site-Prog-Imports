@@ -28,6 +28,7 @@ import {
   sombraDeContato,
   specs,
   titulo,
+  type Ctx,
   type Halo,
 } from '@/lib/estudio/marca';
 import { animador, ROTEIRO, TEMPO } from '@/lib/estudio/animacao';
@@ -44,7 +45,7 @@ export const desenhar3A: Desenhista = ({ ctx, largura, altura, conteudo, imagens
   const a = animador(t);
 
   preencher(ctx, COR.onix, largura, altura);
-  brilho(ctx, largura / 2, 520, 680, halo(conteudo), 0.5);
+  brilho(ctx, largura / 2, 520, 680, halo(conteudo), a.luz(0.5));
 
   const agua = campo(conteudo, 'marcaDagua');
   if (agua) {
@@ -67,7 +68,7 @@ export const desenhar3A: Desenhista = ({ ctx, largura, altura, conteudo, imagens
     });
   }
 
-  a.entrada(ctx, ROTEIRO.etiqueta, () => lockup(ctx, imagens.icone ?? null, MARGEM, MARGEM, 64), {
+  a.entrada(ctx, ROTEIRO.lockup, () => lockup(ctx, imagens.icone ?? null, MARGEM, MARGEM, 64), {
     subida: 18,
     duracao: TEMPO.micro,
   });
@@ -77,7 +78,7 @@ export const desenhar3A: Desenhista = ({ ctx, largura, altura, conteudo, imagens
       ctx,
       ROTEIRO.etiqueta,
       () => etiqueta(ctx, marca, largura - MARGEM, MARGEM + 6, { alinhamento: 'direita' }),
-      { subida: 18, duracao: TEMPO.micro, linha: 1 }
+      { subida: 18, duracao: TEMPO.micro }
     );
   }
 
@@ -102,28 +103,37 @@ export const desenhar3A: Desenhista = ({ ctx, largura, altura, conteudo, imagens
   ctx.font = fonteTitulo(68);
   const larguraPreco = ctx.measureText(preco).width * 1.1;
   if (preco) {
-    a.entrada(
-      ctx,
-      ROTEIRO.preco,
-      () => {
-        ctx.font = fonteTitulo(68);
-        ctx.fillStyle = ouroMetal(ctx, largura - MARGEM - larguraPreco, base - 68, larguraPreco, 68);
-        ctx.textAlign = 'right';
-        const soltar = espacamento(ctx, '-1.4px');
-        ctx.fillText(preco, largura - MARGEM, base);
-        soltar();
-        ctx.textAlign = 'left';
-      },
-      { subida: 28, duracao: TEMPO.micro }
-    );
+    // A mesma função pinta o preço na arte e na camada da varredura. É por isso
+    // que ela recebe o contexto em vez de fechar sobre ele: a luz é recortada
+    // pelo algarismo numa camada à parte, e para recortar é preciso ter o
+    // algarismo lá também.
+    const pintarPreco = (c: Ctx) => {
+      c.font = fonteTitulo(68);
+      c.fillStyle = ouroMetal(c, largura - MARGEM - larguraPreco, base - 68, larguraPreco, 68);
+      c.textAlign = 'right';
+      const soltar = espacamento(c, '-1.4px');
+      c.fillText(preco, largura - MARGEM, base);
+      soltar();
+      c.textAlign = 'left';
+    };
+    a.entrada(ctx, ROTEIRO.preco, () => pintarPreco(ctx), {
+      subida: 28,
+      duracao: TEMPO.micro,
+      escala: 0.94,
+      ancora: { x: largura - MARGEM, y: base },
+    });
     // A varredura é uma por peça, e vai no preço: é o elemento que o
     // diagnóstico apontou como o mais pedido nos comentários.
-    a.varredura(ctx, largura - MARGEM - larguraPreco, base - 72, larguraPreco, 80);
+    a.varredura(
+      ctx,
+      { x: largura - MARGEM - larguraPreco - 16, y: base - 78, largura: larguraPreco + 32, altura: 96 },
+      pintarPreco
+    );
   }
   if (parcela) {
     a.entrada(
       ctx,
-      ROTEIRO.preco,
+      ROTEIRO.parcela,
       () => {
         ctx.font = fonteTexto(24);
         ctx.fillStyle = COR.prataEscura;
@@ -131,7 +141,7 @@ export const desenhar3A: Desenhista = ({ ctx, largura, altura, conteudo, imagens
         ctx.fillText(parcela, largura - MARGEM, base - 78);
         ctx.textAlign = 'left';
       },
-      { subida: 20, duracao: TEMPO.micro, linha: 1 }
+      { subida: 20, duracao: TEMPO.micro }
     );
   }
   if (ficha) {
@@ -219,7 +229,7 @@ export const desenhar3C: Desenhista = ({ ctx, largura, altura, conteudo, imagens
   const a = animador(t);
 
   preencher(ctx, COR.onix, largura, altura);
-  brilho(ctx, 700, 470, 620, halo(conteudo, 'halo'), 0.46);
+  brilho(ctx, 700, 470, 620, halo(conteudo, 'halo'), a.luz(0.46));
 
   if (imagens.produto) {
     const img = imagens.produto;
@@ -238,7 +248,7 @@ export const desenhar3C: Desenhista = ({ ctx, largura, altura, conteudo, imagens
 
   const marca = campo(conteudo, 'etiqueta');
   if (marca) {
-    a.entrada(ctx, ROTEIRO.etiqueta, () => rotulo(ctx, marca, MARGEM, MARGEM + 30, 26, COR.ouro), {
+    a.entrada(ctx, ROTEIRO.lockup, () => rotulo(ctx, marca, MARGEM, MARGEM + 30, 26, COR.ouro), {
       subida: 18,
       duracao: TEMPO.micro,
     });
@@ -248,7 +258,6 @@ export const desenhar3C: Desenhista = ({ ctx, largura, altura, conteudo, imagens
     a.entrada(ctx, ROTEIRO.etiqueta, () => ctx.drawImage(icone, largura - MARGEM - 64, MARGEM, 64, 64), {
       subida: 18,
       duracao: TEMPO.micro,
-      linha: 1,
     });
   }
 
@@ -315,7 +324,7 @@ export const desenhar3C: Desenhista = ({ ctx, largura, altura, conteudo, imagens
     const xDe = cursor;
     a.entrada(
       ctx,
-      ROTEIRO.preco,
+      ROTEIRO.precoDe,
       () => {
         ctx.font = fonteTexto(34);
         ctx.fillStyle = COR.prataEscura;
@@ -330,20 +339,21 @@ export const desenhar3C: Desenhista = ({ ctx, largura, altura, conteudo, imagens
     ctx.font = fonteTitulo(108);
     const l = ctx.measureText(preco).width * 1.12;
     const xPreco = cursor;
-    a.entrada(
-      ctx,
-      ROTEIRO.preco,
-      () => {
-        ctx.font = fonteTitulo(108);
-        ctx.fillStyle = ouroMetal(ctx, xPreco, linhaPreco - 108, l, 108);
-        const soltar = espacamento(ctx, '-3px');
-        ctx.fillText(preco, xPreco, linhaPreco);
-        soltar();
-      },
-      { subida: 32, duracao: TEMPO.micro, linha: 1 }
-    );
+    const pintarPreco = (c: Ctx) => {
+      c.font = fonteTitulo(108);
+      c.fillStyle = ouroMetal(c, xPreco, linhaPreco - 108, l, 108);
+      const soltar = espacamento(c, '-3px');
+      c.fillText(preco, xPreco, linhaPreco);
+      soltar();
+    };
+    a.entrada(ctx, ROTEIRO.preco, () => pintarPreco(ctx), {
+      subida: 32,
+      duracao: TEMPO.micro,
+      escala: 0.94,
+      ancora: { x: xPreco, y: linhaPreco },
+    });
     // A varredura é uma por peça, e aqui vai no preço novo.
-    a.varredura(ctx, xPreco, linhaPreco - 112, l, 128);
+    a.varredura(ctx, { x: xPreco - 16, y: linhaPreco - 120, largura: l + 32, altura: 144 }, pintarPreco);
   }
 };
 

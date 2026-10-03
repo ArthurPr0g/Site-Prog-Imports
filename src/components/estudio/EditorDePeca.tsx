@@ -186,6 +186,10 @@ export function EditorDePeca({
     link.href = url;
     link.click();
     URL.revokeObjectURL(url);
+    // A taxa real aparece no aviso porque ela é a única coisa da exportação que
+    // não dá para conferir olhando o arquivo. Abaixo de 50 o vídeo saiu
+    // engasgado, e é melhor saber antes de publicar que depois.
+    toast({ ok: true, message: `Vídeo pronto · ${r.fps} quadros por segundo` });
     void redesenhar();
   }
 

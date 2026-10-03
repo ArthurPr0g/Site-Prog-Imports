@@ -85,16 +85,28 @@ export type Ctx = Omit<CanvasRenderingContext2D, 'fontStretch' | 'letterSpacing'
 
 /** Garante que as fontes estão prontas antes do primeiro traço. Sem isto o
  *  canvas desenha com a fonte de sistema e o PNG sai com outra tipografia —
- *  falha silenciosa, e só aparece quando a peça já está no Instagram. */
-export async function carregarFontes(): Promise<void> {
-  if (typeof document === 'undefined' || !document.fonts) return;
-  await Promise.all([
-    document.fonts.load('800 104px Archivo'),
-    document.fonts.load('400 32px Archivo'),
-    document.fonts.load("500 26px 'JetBrains Mono'"),
-    document.fonts.load("700 44px 'JetBrains Mono'"),
-  ]);
-  await document.fonts.ready;
+ *  falha silenciosa, e só aparece quando a peça já está no Instagram.
+ *
+ *  Resolve uma vez e guarda a promessa. Quem desenha chama isto antes de cada
+ *  quadro, e `document.fonts.ready` não é de graça: numa gravação de 60 quadros
+ *  por segundo eram 300 esperas pelo mesmo resultado, cada uma empurrando o
+ *  desenho para depois do próximo quadro. */
+let fontesProntas: Promise<void> | null = null;
+
+export function carregarFontes(): Promise<void> {
+  if (typeof document === 'undefined' || !document.fonts) return Promise.resolve();
+  if (!fontesProntas) {
+    fontesProntas = (async () => {
+      await Promise.all([
+        document.fonts.load('800 104px Archivo'),
+        document.fonts.load('400 32px Archivo'),
+        document.fonts.load("500 26px 'JetBrains Mono'"),
+        document.fonts.load("700 44px 'JetBrains Mono'"),
+      ]);
+      await document.fonts.ready;
+    })();
+  }
+  return fontesProntas;
 }
 
 /** Aplica a largura expandida dos títulos e devolve a função que desfaz. */
