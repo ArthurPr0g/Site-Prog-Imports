@@ -10,11 +10,13 @@ import { recortarProduto } from '@/lib/image-cutout';
 import { DIMENSOES, modeloPorCodigo } from '@/lib/estudio/modelos';
 import { DESENHISTAS_DE_FEED } from '@/lib/estudio/desenhistas/feed';
 import { DESENHISTAS_DE_CARROSSEL } from '@/lib/estudio/desenhistas/carrossel';
+import { DESENHISTAS_DE_STORY } from '@/lib/estudio/desenhistas/story';
 import type { Conteudo, Desenhista, Imagens } from '@/lib/estudio/desenhistas/tipos';
 
 export const DESENHISTAS: Record<string, Desenhista> = {
   ...DESENHISTAS_DE_FEED,
   ...DESENHISTAS_DE_CARROSSEL,
+  ...DESENHISTAS_DE_STORY,
 };
 
 /** Carrega uma imagem para o canvas.
