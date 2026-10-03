@@ -213,8 +213,10 @@ export const desenhar4A: Desenhista = ({ ctx, largura, altura, conteudo, imagens
       sombraDeContato(ctx, 670, 1255, 700, 80, 0.8);
       produto(ctx, p, { x: 230, y: 700, largura: 800, altura: 560 }, { rotacao: -7 });
     }
-    lockup(ctx, imagens.icone ?? null, MARGEM, MARGEM, 64);
-    rotulo(ctx, 'Guia Prog · 01', MARGEM + 94, MARGEM + 42, 26, COR.prataEscura);
+    // O rotulo comeca onde o lockup termina: a largura dele muda com a fonte
+    // carregada, entao numero fixo colidia com o IMPORTS.
+    const fimDoLockup = lockup(ctx, imagens.icone ?? null, MARGEM, MARGEM, 64);
+    rotulo(ctx, 'Guia Prog · 01', fimDoLockup + 28, MARGEM + 42, 26, COR.prataEscura);
 
     const t = campo(conteudo, 'capaTitulo', 'Do site americano\nà sua mesa.');
     const alturaTitulo = tituloComUltimaLinhaEmOuro(ctx, t, MARGEM, 200, 118, largura - MARGEM * 2);
@@ -419,8 +421,8 @@ export const desenhar4B: Desenhista = ({ ctx, largura, altura, conteudo, imagens
     brilho(ctx, 700, 300, 620, halo(conteudo, 'magenta'), 0.46);
     if (p) produto(ctx, p, { x: 420, y: -60, largura: 760, altura: 540 }, { rotacao: 18, desfoque: 50 });
 
-    lockup(ctx, imagens.icone ?? null, MARGEM, MARGEM, 64);
-    rotulo(ctx, 'Lista VIP · 1º lote', MARGEM + 94, MARGEM + 42, 26, COR.prataEscura);
+    const fimDoLockup = lockup(ctx, imagens.icone ?? null, MARGEM, MARGEM, 64);
+    rotulo(ctx, 'Lista VIP · 1º lote', fimDoLockup + 28, MARGEM + 42, 26, COR.prataEscura);
 
     const t = campo(conteudo, 'vipTitulo', 'Seja o\nprimeiro\na receber.');
     const alturaTitulo = titulo(ctx, t, MARGEM, 560, 110, { largura: largura - MARGEM * 2, maxLinhas: 3 });
