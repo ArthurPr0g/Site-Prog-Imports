@@ -89,7 +89,23 @@ export async function gravarPeca(
     gravador.onstop = () => resolve();
   });
 
+  // Aquecimento, antes de o gravador existir.
+  //
+  // Todo custo de primeira vez cai no primeiro quadro que precisa dele, e o
+  // vídeo guarda o tombo: a medição mostrava 85ms parados em 0,16s, bem no meio
+  // da entrada do produto, e 54ms em 2,10s, exatamente quando a varredura
+  // acende pela primeira vez e aloca a camada da máscara. Desenhar uma vez cada
+  // trecho do roteiro paga essas contas aqui, onde ninguém está olhando.
+  for (const fracao of [0, 0.2, 0.45, 0.6, 1]) {
+    await desenharQuadro(duracao * fracao);
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+  }
+  await desenharQuadro(0);
+
   gravador.start();
+  // Uma folga para o codificador engatar. O canvas já está no primeiro quadro
+  // da peça, então o que entra nessa folga é o início dela.
+  await new Promise((r) => setTimeout(r, 120));
 
   // A grade de quadros é a do formato, não a do monitor. Pedir um quadro a
   // cada repintura parece generoso e é o contrário: num monitor de 165Hz saem
