@@ -56,6 +56,20 @@ export function tituloDaArte(p: ProdutoDoEstudio): string {
   return semPrefixo.split(/\s+/).slice(0, 6).join(' ');
 }
 
+/** A marca d'água gigante atrás do produto.
+ *
+ *  É o "9i", o "M5", o "51" do playbook: o pedaço do nome que identifica o
+ *  modelo sem precisar ser lido — em 560px de altura e só contornado, ele
+ *  funciona como textura, não como texto. Por isso são poucos caracteres: nome
+ *  inteiro vira parede e disputa com o produto. */
+export function marcaDaguaSugerida(p: ProdutoDoEstudio): string {
+  const titulo = tituloDaArte(p);
+  const candidatos = titulo.match(/[A-Za-z]?\d+[A-Za-z]*/g) ?? [];
+  const curto = candidatos.filter((c) => c.length <= 4).pop();
+  if (curto) return curto;
+  return titulo.split(/\s+/)[0]?.slice(0, 3) ?? '';
+}
+
 /** Linha de marca acima do título: fabricante · linha · geração. */
 export function sobretitulo(p: ProdutoDoEstudio): string {
   const base = (p.base_name || p.name).split('—')[0];
@@ -106,6 +120,7 @@ export function preencherComProduto(
     ? { [`rotulo${prefixo}`]: tituloDaArte(p) }
     : {
         titulo: tituloDaArte(p),
+        marcaDagua: marcaDaguaSugerida(p),
         sobretitulo: sobretitulo(p),
         specs: fichaCurta(p),
         preco: precoDaArte(vigente),

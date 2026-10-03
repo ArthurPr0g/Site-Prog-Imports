@@ -41,17 +41,19 @@ const halo = (c: Record<string, string>, chave = 'halo'): Halo =>
 
 export const desenhar3A: Desenhista = ({ ctx, largura, altura, conteudo, imagens }) => {
   preencher(ctx, COR.onix, largura, altura);
-  brilho(ctx, largura / 2, 625, 640, halo(conteudo), 0.32);
+  brilho(ctx, largura / 2, 560, 620, halo(conteudo), 0.32);
 
   const agua = campo(conteudo, 'marcaDagua');
-  if (agua) marcaDagua(ctx, agua, largura / 2, 120, 620);
+  if (agua) marcaDagua(ctx, agua, largura / 2, 150, 560);
 
   if (imagens.produto) {
-    sombraDeContato(ctx, 560, 865, 800, 90, 0.75);
-    produto(ctx, imagens.produto, { x: -40, y: 200, largura: 1160, altura: 1160 }, {
-      rotacao: -7,
-      recorteInferior: 0.26,
-    });
+    // A caixa é menor que a do protótipo de propósito. Lá a imagem é um PNG
+    // quadrado com o aparelho pequeno no meio e muita transparência em volta;
+    // aqui ela chega recortada rente ao produto, então a mesma caixa faria o
+    // notebook sangrar pelos quatro lados. O que importa é a área que o produto
+    // ocupa, não a da moldura que ele tinha na origem.
+    sombraDeContato(ctx, 540, 905, 760, 80, 0.75);
+    produto(ctx, imagens.produto, { x: 95, y: 250, largura: 890, altura: 650 }, { rotacao: -7 });
   }
 
   lockup(ctx, imagens.icone ?? null, MARGEM, MARGEM, 64);
