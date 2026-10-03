@@ -161,9 +161,11 @@ export const desenhar3C: Desenhista = ({ ctx, largura, altura, conteudo, imagens
   brilho(ctx, 750, 520, 560, halo(conteudo, 'halo'), 0.28);
 
   if (imagens.produto) {
-    sombraDeContato(ctx, 750, 815, 900, 110, 0.75);
-    // Sangra na borda de propósito: a caixa passa da largura da arte.
-    produto(ctx, imagens.produto, { x: 120, y: -60, largura: 1360, altura: 1360 }, {
+    // Sangra na borda de propósito — a caixa começa depois do meio e termina
+    // fora da arte. O que não pode é o produto subir até o topo: o título mora
+    // no canto superior esquerdo e precisa de fundo limpo atrás dele.
+    sombraDeContato(ctx, 760, 900, 820, 90, 0.75);
+    produto(ctx, imagens.produto, { x: 300, y: 310, largura: 900, altura: 620 }, {
       rotacao: -5,
       desfoque: 60,
       sombra: 'rgba(0,0,0,.6)',
@@ -174,10 +176,14 @@ export const desenhar3C: Desenhista = ({ ctx, largura, altura, conteudo, imagens
   if (marca) rotulo(ctx, marca, MARGEM, MARGEM + 30, 26, COR.ouro);
   if (imagens.icone) ctx.drawImage(imagens.icone, largura - MARGEM - 64, MARGEM, 64, 64);
 
+  // O título do 3C ocupa só a metade esquerda: a direita é do produto sangrando.
   const texto = campo(conteudo, 'titulo', 'Oferta');
-  const sub = campo(conteudo, 'subtitulo');
-  titulo(ctx, texto, MARGEM, 180, 110, { largura: 640, maxLinhas: 1 });
-  if (sub) titulo(ctx, sub, MARGEM, 180 + 99, 110, { largura: 640, cor: COR.prataEscura, maxLinhas: 1 });
+  const sub = campo(conteudo, 'tituloLinha2');
+  titulo(ctx, texto, MARGEM, 180, 104, { largura: 560, maxLinhas: 2 });
+  if (sub) {
+    const alturaTexto = medirTitulo(ctx, texto, 560, 104);
+    titulo(ctx, sub, MARGEM, 180 + alturaTexto, 104, { largura: 560, cor: COR.prataEscura, maxLinhas: 1 });
+  }
 
   const desconto = campo(conteudo, 'selo');
   if (desconto) selo(ctx, largura - 80 - 115, 285, 115, 'off', desconto, -12);

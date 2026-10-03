@@ -112,11 +112,14 @@ export const MODELOS: Modelo[] = [
       ...CAMPOS_DE_PRODUTO,
       { chave: 'etiqueta', rotulo: 'Rótulo do topo', tipo: 'rotulo', ajuda: 'OFERTA DA SEMANA, ÚLTIMA UNIDADE.' },
       { chave: 'titulo', rotulo: 'Título', tipo: 'texto', maxPalavras: 4, obrigatorio: true },
-      { chave: 'subtitulo', rotulo: 'Segunda linha do título', tipo: 'texto', ajuda: 'Sai em cinza, ex.: 16".' },
-      { chave: 'precoDe', rotulo: 'Preço antigo', tipo: 'preco', ajuda: 'Sai riscado.' },
+      // Chave própria, e não `subtitulo`: no 3B o subtítulo é a configuração
+      // ("32 GB · 1 TB"), e com a mesma chave o preenchimento automático
+      // mandava a ficha técnica para a segunda linha gigante do título.
+      { chave: 'tituloLinha2', rotulo: 'Segunda linha do título', tipo: 'texto', ajuda: 'Sai em cinza, abaixo do título. Ex.: 16".' },
+      { chave: 'precoDe', rotulo: 'Preço antigo', tipo: 'preco', ajuda: 'Sai riscado ao lado do novo.' },
       { chave: 'preco', rotulo: 'Preço com desconto', tipo: 'preco', obrigatorio: true },
-      { chave: 'selo', rotulo: 'Selo de desconto', tipo: 'texto', ajuda: 'Ex.: "12%".' },
-      { chave: 'rodape', rotulo: 'Linha do rodapé', tipo: 'rotulo', ajuda: 'RTX 5080 · 12× R$ 1.916 · PRONTA ENTREGA.' },
+      { chave: 'selo', rotulo: 'Selo de desconto', tipo: 'texto', ajuda: 'Ex.: "12%". Vazio não desenha o selo.' },
+      { chave: 'rodape', rotulo: 'Linha do rodapé', tipo: 'rotulo', ajuda: 'Placa, parcelamento e prazo: RTX 5080 · 12× R$ 1.916 · PRONTA ENTREGA.' },
       { chave: 'cta', rotulo: 'Chamada', tipo: 'texto', ajuda: 'Ex.: WhatsApp →' },
     ],
   },
