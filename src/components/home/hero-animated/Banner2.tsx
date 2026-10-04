@@ -29,33 +29,83 @@ const ARRIVALS = [
   { src: HERO_ASSET('mouse-white.png'), w: 72 },
 ];
 
-function Set2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; routeP: number; arriveP: number; msgP: number }) {
+// Houve aqui uma máscara que dissolvia os 5% externos de cada foto, para
+// esconder a borda da placa. Foi removida: ela apagava o produto junto. O iPad
+// e o MacBook encostam na borda da própria placa, então o que desaparecia não
+// era só o fundo — era a lateral do aparelho, com um esfumado que parecia
+// desfoque de lente. A suposição de que todas as quatro fotos tinham margem
+// saiu de olhar um print pequeno em vez de medir.
+//
+// O fundo sai agora no próprio arquivo, por recorte. Ver `recortarProduto` em
+// `lib/image-cutout.ts` e a seção de fotos com placa na skill
+// `tratamento-de-imagem`.
+
+/** A câmera do banner.
+ *
+ *  O enquadramento aberto mostra o mundo inteiro, e a viagem EUA → Brasil
+ *  acontece num pedaço pequeno dele: a rota é o assunto da peça e ficava do
+ *  tamanho de um polegar. Fechar nos dois pontos durante a viagem e abrir
+ *  quando a encomenda chega dá à peça a estrutura que ela já tinha no roteiro
+ *  mas não tinha na imagem — aproxima para contar, afasta para concluir.
+ *
+ *  O ponto focal é o meio do caminho entre os dois países. O alvo é à esquerda
+ *  do centro porque a metade direita da tela é onde o texto final entra: fechar
+ *  com a rota no meio faria o zoom-out parecer um salto lateral. */
+const FOCO = { x: (US.x + BR.x) / 2, y: (US.y + BR.y) / 2 };
+const ALVO = { x: 700, y: 400 };
+const ZOOM_MAXIMO = 1.9;
+
+function camera(c: number) {
+  const k = 1 + (ZOOM_MAXIMO - 1) * c;
+  // O ponto focal caminha da posição que ele já ocupa até o alvo, então em
+  // c = 0 a transformação é a identidade e o quadro aberto fica exatamente como
+  // era — sem isso, abrir a câmera deixaria o mapa deslocado no fim.
+  const alvoX = FOCO.x + (ALVO.x - FOCO.x) * c;
+  const alvoY = FOCO.y + (ALVO.y - FOCO.y) * c;
+  return { k, tx: alvoX - FOCO.x * k, ty: alvoY - FOCO.y * k };
+}
+
+function Set2({
+  t,
+  mapP,
+  routeP,
+  arriveP,
+  produtosP,
+  msgP,
+  cam,
+}: {
+  t: number;
+  mapP: number;
+  routeP: number;
+  arriveP: number;
+  produtosP: number;
+  msgP: number;
+  cam: number;
+}) {
+  const { k, tx, ty } = camera(cam);
   return (
     <div style={{ position: 'absolute', inset: 0, background: C.bg, overflow: 'hidden', fontFamily: F.body }}>
-      <img
-        src={HERO_ASSET('map-world.png')}
-        alt=""
-        style={{ position: 'absolute', inset: 0, width: 1920, height: 800, opacity: 0.9 * mapP, transform: `scale(${1.05 - 0.05 * mapP})` }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'linear-gradient(90deg, rgba(8,8,10,0) 45%, rgba(8,8,10,0.55) 62%, rgba(8,8,10,0.92) 82%)',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          left: US.x - 110,
-          top: US.y - 80,
-          width: 280,
-          height: 220,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgb(var(--brand-accent-rgb) / 0.16) 0%, rgb(var(--brand-accent-rgb) / 0) 60%)',
-          opacity: mapP,
-        }}
-      />
+      {/* O mundo — mapa, rotas, encomendas e rótulos — mora dentro da câmera.
+          O texto final e a vitrine ficam de fora: eles pertencem ao quadro
+          aberto, e seguir o zoom os faria entrar tortos. */}
+      <div style={{ position: 'absolute', inset: 0, transform: `translate(${tx}px, ${ty}px) scale(${k})`, transformOrigin: '0 0' }}>
+        <img
+          src={HERO_ASSET('map-world.png')}
+          alt=""
+          style={{ position: 'absolute', inset: 0, width: 1920, height: 800, opacity: 0.9 * mapP, transform: `scale(${1.05 - 0.05 * mapP})` }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: US.x - 110,
+            top: US.y - 80,
+            width: 280,
+            height: 220,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgb(var(--brand-accent-rgb) / 0.16) 0%, rgb(var(--brand-accent-rgb) / 0) 60%)',
+            opacity: mapP,
+          }}
+        />
 
       <svg width="1920" height="800" viewBox="0 0 1920 800" style={{ position: 'absolute', inset: 0 }}>
         {CTRLS.map((c, i) => {
@@ -66,7 +116,10 @@ function Set2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; rou
               d={`M ${US.x} ${US.y} Q ${c.x} ${c.y} ${BR.x} ${BR.y}`}
               fill="none"
               stroke={C.ouro}
-              strokeWidth={i === 0 ? 2 : 1}
+              // Dividido pela escala da câmera: traço que engorda junto com o
+              // zoom vira cabo em vez de rota, e denuncia que a imagem foi
+              // ampliada em vez de aproximada.
+              strokeWidth={(i === 0 ? 2 : 1) / k}
               opacity={(i === 0 ? 0.85 : 0.35) * Math.min(1, mapP)}
               pathLength={1}
               strokeDasharray="1"
@@ -74,13 +127,13 @@ function Set2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; rou
             />
           );
         })}
-        <circle cx={US.x} cy={US.y} r={5} fill={C.ouro} opacity={mapP} />
-        <circle cx={US.x} cy={US.y} r={9 + 5 * Math.sin(t * 2.4)} fill="none" stroke={C.ouro} strokeWidth="1" opacity={0.5 * mapP} />
-        <circle cx={BR.x} cy={BR.y} r={5} fill={C.ouro} opacity={Math.min(1, routeP * 2)} />
+        <circle cx={US.x} cy={US.y} r={5 / k} fill={C.ouro} opacity={mapP} />
+        <circle cx={US.x} cy={US.y} r={(9 + 5 * Math.sin(t * 2.4)) / k} fill="none" stroke={C.ouro} strokeWidth={1 / k} opacity={0.5 * mapP} />
+        <circle cx={BR.x} cy={BR.y} r={5 / k} fill={C.ouro} opacity={Math.min(1, routeP * 2)} />
         {arriveP > 0 &&
           [0, 1, 2].map((i) => {
             const rp = (t * 0.55 + i / 3) % 1;
-            return <circle key={i} cx={BR.x} cy={BR.y} r={8 + rp * 46} fill="none" stroke={C.ouro} strokeWidth="1.2" opacity={(1 - rp) * 0.6 * arriveP} />;
+            return <circle key={i} cx={BR.x} cy={BR.y} r={(8 + rp * 46) / k} fill="none" stroke={C.ouro} strokeWidth={1.2 / k} opacity={(1 - rp) * 0.6 * arriveP} />;
           })}
       </svg>
 
@@ -95,7 +148,10 @@ function Set2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; rou
               position: 'absolute',
               left: pos.x,
               top: pos.y,
-              transform: 'translate(-50%,-50%)',
+              // Contra-escala: a encomenda viaja pelo mapa ampliado mas mantém
+              // o tamanho que tem na tela. Sem isto ela cresce junto com o
+              // zoom e chega ao Brasil do tamanho do país.
+              transform: `translate(-50%,-50%) scale(${1 / k})`,
               opacity: vis,
               width: 52,
               height: 52,
@@ -113,33 +169,71 @@ function Set2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; rou
         );
       })}
 
-      <div style={{ position: 'absolute', left: US.x - 24, top: US.y - 42, fontFamily: F.mono, fontSize: 13, letterSpacing: '0.22em', color: C.white, opacity: 0.85 * mapP }}>
-        EUA
+        {/* Os rótulos acompanham os pontos no mapa ampliado, mas não crescem
+            com ele: tipografia que escala com o zoom deixa de ser rótulo e vira
+            título. */}
+        <div
+          style={{
+            position: 'absolute',
+            left: US.x - 24,
+            top: US.y - 42,
+            transformOrigin: 'left center',
+            transform: `scale(${1 / k})`,
+            fontFamily: F.mono,
+            fontSize: 13,
+            letterSpacing: '0.22em',
+            color: C.white,
+            opacity: 0.85 * mapP,
+          }}
+        >
+          EUA
+        </div>
+        <div
+          style={{
+            position: 'absolute',
+            left: BR.x + 18,
+            top: BR.y - 6,
+            transformOrigin: 'left center',
+            transform: `scale(${1 / k})`,
+            fontFamily: F.mono,
+            fontSize: 13,
+            letterSpacing: '0.22em',
+            color: C.white,
+            opacity: 0.85 * Math.min(1, routeP * 2),
+          }}
+        >
+          BRASIL
+        </div>
       </div>
+
+      {/* Fora da câmera daqui para baixo. O escurecimento da direita entra
+          junto com o texto porque ele existe só para o texto ter fundo: com a
+          câmera fechada ele apagaria metade do mapa sem motivo. */}
       <div
         style={{
           position: 'absolute',
-          left: BR.x + 18,
-          top: BR.y - 6,
-          fontFamily: F.mono,
-          fontSize: 13,
-          letterSpacing: '0.22em',
-          color: C.white,
-          opacity: 0.85 * Math.min(1, routeP * 2),
+          inset: 0,
+          background: 'linear-gradient(90deg, rgba(8,8,10,0) 45%, rgba(8,8,10,0.55) 62%, rgba(8,8,10,0.92) 82%)',
+          opacity: msgP,
         }}
-      >
-        BRASIL
-      </div>
+      />
 
       <div style={{ position: 'absolute', left: 150, bottom: 64, display: 'flex', alignItems: 'flex-end', gap: 38 }}>
         {ARRIVALS.map((p, i) => {
-          const a = sg(arriveP, i * 0.14, i * 0.14 + 0.36, Easing.easeOutCubic);
+          const a = sg(produtosP, i * 0.14, i * 0.14 + 0.36, Easing.easeOutCubic);
+          if (a <= 0) return null;
           return (
             <img
               key={i}
               src={p.src}
               alt=""
-              style={{ display: 'block', width: p.w, opacity: a, transform: `translateY(${(1 - a) * 36}px) scale(${0.8 + 0.2 * a})`, filter: 'drop-shadow(0 22px 26px rgba(0,0,0,0.6))' }}
+              style={{
+                display: 'block',
+                width: p.w,
+                opacity: a,
+                transform: `translateY(${(1 - a) * 36}px) scale(${0.8 + 0.2 * a})`,
+                filter: 'drop-shadow(0 22px 26px rgba(0,0,0,0.6))',
+              }}
             />
           );
         })}
@@ -147,7 +241,7 @@ function Set2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; rou
 
       <div style={{ position: 'absolute', right: 120, top: 0, bottom: 0, width: 600, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start', gap: 26 }}>
         <img src="/images/logo.png" alt="Prog Imports" style={{ width: 200, opacity: msgP, transform: `translateY(${(1 - msgP) * -16}px)` }} />
-        <div style={{ fontFamily: F.mono, fontSize: 15, letterSpacing: '0.34em', color: C.ouro, opacity: Math.min(1, mapP) }}>DIRETO DOS ESTADOS UNIDOS 🇺🇸</div>
+        <div style={{ fontFamily: F.mono, fontSize: 15, letterSpacing: '0.34em', color: C.ouro, opacity: msgP }}>DIRETO DOS ESTADOS UNIDOS 🇺🇸</div>
         <div style={{ overflow: 'hidden' }}>
           <h1
             style={{
@@ -195,23 +289,39 @@ export function Banner2({ index, progress, t }: { index: number; progress: numbe
   let mapP = 0;
   let routeP = 0;
   let arriveP = 0;
+  let produtosP = 0;
   let msgP = 0;
+  let cam = 0;
 
   if (index === 0) {
-    mapP = sg(progress, 0.05, 0.9);
+    // Mapa: abre no mundo inteiro e fecha entre os dois países. O zoom começa
+    // depois do mapa aparecer — aproximar enquanto a imagem ainda está entrando
+    // é movimento em cima de movimento, e o olho não acompanha os dois.
+    mapP = sg(progress, 0.05, 0.75);
+    cam = sg(progress, 0.42, 1, Easing.easeInOutCubic);
   } else if (index === 1) {
+    // Rotas: fechado o tempo todo. É a cena da viagem, e é para isso que
+    // fechamos.
     mapP = 1;
+    cam = 1;
     routeP = sg(progress, 0.02, 0.98, Easing.linear);
   } else if (index === 2) {
+    // Chegada: as ondas no Brasil acontecem ainda fechado, e só depois a
+    // câmera abre. Abrir junto com a chegada tiraria o close justamente do
+    // quadro que a cena existe para mostrar.
     mapP = 1;
     routeP = 1;
-    arriveP = sg(progress, 0.05, 0.9, Easing.linear);
+    arriveP = sg(progress, 0.05, 0.55, Easing.linear);
+    cam = 1 - sg(progress, 0.5, 1, Easing.easeInOutCubic);
+    // A vitrine entra montada na abertura, acompanhando o afastamento.
+    produtosP = sg(progress, 0.62, 1, Easing.easeOutCubic);
   } else {
     mapP = 1;
     routeP = 1;
     arriveP = 1;
+    produtosP = 1;
     msgP = sg(progress, 0.05, 0.32);
   }
 
-  return <Set2 t={t} mapP={mapP} routeP={routeP} arriveP={arriveP} msgP={msgP} />;
+  return <Set2 t={t} mapP={mapP} routeP={routeP} arriveP={arriveP} produtosP={produtosP} msgP={msgP} cam={cam} />;
 }

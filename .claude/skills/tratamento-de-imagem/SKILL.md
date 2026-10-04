@@ -67,6 +67,54 @@ que aparecem no log:
 o chassi ou deixa halo. Mantenha o fundo original e deixe a moldura do site
 separar.
 
+### Foto com placa: como descobrir antes de estragar
+
+PNG com transparência **não** quer dizer produto recortado. Várias fotos de
+fabricante vêm com dois ou três pixels transparentes em volta e, dentro deles,
+uma placa retangular de canto arredondado com o fundo embutido. Sobre fundo
+preto ela quase some; sobre mapa, foto ou seção clara ela aparece, e o cliente
+vê o produto dentro de uma plaquinha.
+
+**A medida que denuncia** é a densidade de pixels opacos **dentro da própria
+caixa delimitadora**, não a porcentagem de transparência do arquivo:
+
+- abaixo de ~85% → recorte de verdade (o contorno do aparelho deixa vazios);
+- acima de ~95% → placa retangular, não importa quanta transparência o arquivo
+  tenha na moldura.
+
+```js
+// no navegador, com a imagem já carregada em canvas
+// densidade = opacos / area(caixa delimitadora dos opacos)
+```
+
+**Quatro armadilhas, nessa ordem, todas já custaram retrabalho:**
+
+1. **Amostrar os cantos para achar a cor do fundo.** A placa tem canto
+   arredondado: o canto da caixa cai no vazio, devolve `0,0,0` com alfa 0, e o
+   algoritmo conclui que o fundo é preto e não remove nada.
+2. **Amostrar o meio das bordas.** O aparelho encosta na borda da placa, então a
+   amostra cai em cima do produto e a divergência estoura.
+3. **Usar a moda do anel de borda.** Resolve 1 e 2, mas só quando o fundo é
+   chapado. Medido nestas fotos, a cor mais comum do anel cobre de 7% a 28% dele
+   — o fundo é degradê de estúdio, e não existe "a cor do fundo" para comparar.
+4. **Mascarar as bordas em CSS para esconder a placa.** É a mais tentadora e a
+   pior: dissolver os 5% externos da foto apaga a lateral do aparelho junto,
+   porque o produto encosta na borda. O resultado parece desfoque de lente, e
+   quem vê não entende o que houve.
+
+**Quando o fundo é degradê e o produto é escuro, não há recorte automático.**
+MacBook cinza-espacial sobre degradê cinza não tem fronteira de cor para
+nenhum algoritmo achar: o certo é buscar arte nova na CDN do fabricante (ver
+`fotos-de-produto`) ou mascarar à mão. Insistir no automático produz contorno
+comido, que é pior que a placa.
+
+**O processo, e não só a técnica:** medir **imagem por imagem** antes de aplicar
+qualquer coisa, gravar o resultado numa pasta de prova, olhar sobre fundo
+magenta (`#f0f` revela qualquer resto de fundo e qualquer borda comida) e só
+então substituir o arquivo bom — guardando o original. Recorte automático erra
+de um jeito que relatório nenhum denuncia: ele come um pedaço do aparelho e
+segue reportando sucesso.
+
 ## Sombra de contato
 
 Produto recortado sem sombra flutua, e a peça perde o peso que o playbook pede.
