@@ -101,6 +101,27 @@ ouro nunca é fundo inteiro e **nunca aparece em mais de dois elementos por
 arte** — normalmente o preço e mais um. Quando bate em três, um deles vira prata
 ou marfim.
 
+### Halo: a cor é da família, e são três por fileira
+
+O halo é luz atrás do aparelho, não forma colada atrás dele — essa é a diferença
+entre o sistema e o adesivo laranja que as capas de coleção usavam antes. A cor
+segue a **marca do produto**, não a da Prog, e é o único lugar onde cor fora da
+paleta entra.
+
+Nas capas de coleção da loja:
+
+| Família | Halo |
+|---|---|
+| Gamer, peças e upgrades | roxo |
+| Apple (iPad, MacBook, iPhone) | turquesa |
+| Periféricos | rubi |
+| Mais vendidos, promoções, serviços | ouro |
+
+**Uma cor por capa vira arco-íris na fileira da home.** Agrupar em três ou
+quatro famílias é o que faz a vitrine parecer um sistema em vez de uma caixa de
+lápis de cor. Toda capa leva também sombra de contato — sem ela o produto
+flutua, e é a sombra que dá o peso de máquina cara.
+
 ## Antes de entregar
 
 Se alguma resposta for "não", a peça volta:
