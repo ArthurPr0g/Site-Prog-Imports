@@ -38,11 +38,17 @@ export function SimuladorDeParcelas({ preco }: { preco: number }) {
             {linhas.map((l) => (
               <tr
                 key={l.parcelas}
-                className={l.semJuros ? 'text-fg' : 'text-fg-secondary'}
+                // A linha divisória cai depois da última parcela sem juros: é
+                // onde a conta muda de dono. Sem ela, e com o selo só na
+                // terceira linha, o 1× e o 2× pareciam ter juros.
+                className={
+                  (l.semJuros ? 'text-fg' : 'text-fg-secondary') +
+                  (l.parcelas === PARCELAS_SEM_JUROS ? ' border-b border-divider-strong' : '')
+                }
               >
                 <td className="py-[5px] whitespace-nowrap">
                   <span className="font-bold">{l.parcelas}×</span>
-                  {l.parcelas === PARCELAS_SEM_JUROS && (
+                  {l.semJuros && (
                     <span className="etiqueta ml-2 text-[8.5px] text-ouro">sem juros</span>
                   )}
                 </td>
@@ -57,7 +63,7 @@ export function SimuladorDeParcelas({ preco }: { preco: number }) {
           </tbody>
         </table>
 
-        <p className="mt-3 border-t border-divider pt-3 text-[11px] leading-relaxed text-fg-muted">
+        <p className="mt-3 border-t border-divider pt-3 text-[11px] leading-relaxed text-fg-faded">
           Até {PARCELAS_SEM_JUROS}× a loja absorve a taxa e você paga o preço de tabela. Acima
           disso, o valor inclui a taxa da operadora do cartão. O total exato é confirmado no
           link de pagamento antes de você finalizar.
