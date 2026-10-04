@@ -75,6 +75,16 @@ export function CategoryScroller({ categories }: { categories: CategoryCard[] })
                   alt={c.name}
                   fill
                   sizes="(min-width: 640px) 312px, 229px"
+                  // Entregue como está, sem passar pelo otimizador da Vercel.
+                  //
+                  // A capa já é gerada no tamanho em que aparece — 640px de
+                  // largura em WebP, cerca de 55KB — então não há nada a
+                  // otimizar, e cada formato novo que o otimizador gerasse
+                  // consumiria cota. A cota estourou uma vez e devolveu 402
+                  // para **todas** as imagens da página, não só para estas: as
+                  // capas antigas tinham 1600×1200 e somavam 4,8MB para
+                  // aparecer num círculo de 312px.
+                  unoptimized
                   className="object-contain drop-shadow-[0_16px_32px_rgba(0,0,0,.5)] transition-transform duration-500 ease-out group-hover:scale-110"
                 />
               ) : (

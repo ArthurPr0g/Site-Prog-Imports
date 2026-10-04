@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
     // 75 é o padrão e serve para miniatura e capa; 90 é para a foto grande do
     // produto, que tem zoom e é onde o cliente decide a compra. O Next só
     // aceita os valores declarados aqui.
+    //
+    // Cada tamanho e qualidade que o otimizador gera conta na cota da Vercel, e
+    // ela já estourou uma vez: o site inteiro devolveu 402 nas imagens, não só
+    // a que passou do limite. Antes de acrescentar qualidade ou tamanho aqui,
+    // veja se o arquivo de origem não pode simplesmente nascer no tamanho em
+    // que é exibido — foi o que resolveu as capas de coleção, que tinham
+    // 1600×1200 e 4,8MB para aparecer num círculo de 312px.
     qualities: [75, 90],
   },
   experimental: {
