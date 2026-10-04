@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { PlaceholderImage } from '@/components/ui/PlaceholderImage';
 import { ReadyToShipBadge } from '@/components/ui/ReadyToShipBadge';
 import { GlowBorder, glowMouseMove, glowMouseLeave } from '@/components/ui/GlowBorder';
-import { formatBRL, formatParcel } from '@/lib/format';
+import { formatBRL } from '@/lib/format';
+import { PARCELAS_SEM_JUROS, parcelaSemJuros } from '@/lib/parcelamento';
 import { useCart } from '@/lib/cart-context';
 import type { ProductCard } from '@/lib/data/catalog';
 
@@ -66,9 +67,9 @@ export function ProductCardTile({ p, className }: { p: ProductCard; className?: 
               {formatBRL(p.price)}
             </span>
           )}
-          <span className="font-display text-base font-bold sm:text-[22px]">{formatBRL(activePrice)}</span>
+          <span className="titulo text-[17px] text-ouro-claro sm:text-[23px]">{formatBRL(activePrice)}</span>
           <div className="mt-0.5 text-[10px] text-fg-tertiary sm:text-xs">
-            ou 12x de {formatParcel(activePrice)} sem juros
+            ou {PARCELAS_SEM_JUROS}× de {formatBRL(parcelaSemJuros(activePrice))} sem juros
           </div>
         </div>
         <button

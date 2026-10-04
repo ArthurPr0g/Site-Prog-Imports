@@ -16,7 +16,7 @@ export function Categories({ categories }: { categories: CategoryCard[] }) {
           <div className="mb-2.5 text-xs font-extrabold uppercase tracking-[.14em] text-accent">
             Navegue por coleção
           </div>
-          <h2 className="font-display text-[36px] font-bold tracking-[-.02em]">O que você procura hoje?</h2>
+          <h2 className="titulo text-[36px]">O que você procura hoje?</h2>
         </div>
       </div>
       <CategoryScroller categories={categories} />

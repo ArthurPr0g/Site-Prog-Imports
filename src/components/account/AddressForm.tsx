@@ -28,7 +28,7 @@ export function AddressForm({ address }: { address: Tables<'addresses'> | null }
       <button
         type="submit"
         disabled={pending}
-        className="mt-4 rounded-control bg-accent px-6.5 py-3 text-[13.5px] font-extrabold text-page disabled:opacity-60"
+        className="mt-4 rounded-control bg-surface-light px-6.5 py-3 text-[13.5px] font-extrabold text-ink disabled:opacity-60"
       >
         {pending ? 'Salvando…' : 'Salvar endereço'}
       </button>

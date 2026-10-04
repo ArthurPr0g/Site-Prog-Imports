@@ -12,7 +12,7 @@ export default async function AddressPage() {
 
   return (
     <div>
-      <h1 className="mb-6 font-display text-[26px] font-bold tracking-[-.02em]">Endereço de entrega</h1>
+      <h1 className="mb-6 titulo text-[26px]">Endereço de entrega</h1>
       <AddressForm address={address} />
     </div>
   );

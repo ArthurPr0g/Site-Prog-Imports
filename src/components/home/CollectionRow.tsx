@@ -50,7 +50,7 @@ export function CollectionRow({
   return (
     <section id={id} className="mx-auto max-w-[1280px] scroll-mt-24 px-6 pt-16">
       <div className="mb-6 flex items-end justify-between gap-5">
-        <h2 className="font-display text-[26px] font-bold tracking-[-.02em] sm:text-[32px]">{title}</h2>
+        <h2 className="titulo text-[26px] sm:text-[32px]">{title}</h2>
         {collectionId && (
           <Link
             href={`/colecao/${collectionId}`}

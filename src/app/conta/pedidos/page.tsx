@@ -11,7 +11,7 @@ export default async function OrdersPage() {
 
   return (
     <div>
-      <h1 className="mb-6 font-display text-[26px] font-bold tracking-[-.02em]">Meus pedidos</h1>
+      <h1 className="mb-6 titulo text-[26px]">Meus pedidos</h1>
       <div className="flex flex-col gap-3.5">
         {orders.length === 0 && (
           <div className="rounded-[20px] border border-border bg-card p-8 text-center text-sm text-fg-tertiary">

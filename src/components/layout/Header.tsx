@@ -132,7 +132,7 @@ export function Header({
             >
               ♡
               {favCount > 0 && (
-                <span className="absolute -right-1 -top-1 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-accent text-[10px] font-extrabold text-page">
+                <span className="absolute -right-1 -top-1 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-surface-light text-[10px] font-extrabold text-ink">
                   {favCount}
                 </span>
               )}
@@ -144,7 +144,7 @@ export function Header({
             >
               <CartIcon count={count} className="h-5 w-5 text-fg" />
               {count > 0 && (
-                <span className="absolute -right-1 -top-1 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-accent text-[10px] font-extrabold text-page">
+                <span className="absolute -right-1 -top-1 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-surface-light text-[10px] font-extrabold text-ink">
                   {count}
                 </span>
               )}

@@ -31,7 +31,7 @@ export default async function FavoritesPage() {
 
   return (
     <div>
-      <h1 className="mb-6 font-display text-[26px] font-bold tracking-[-.02em]">Meus favoritos</h1>
+      <h1 className="mb-6 titulo text-[26px]">Meus favoritos</h1>
       {items.length === 0 && (
         <div className="rounded-[20px] border border-border bg-card p-8 text-center text-sm text-fg-tertiary">
           Você ainda não favoritou nenhum produto.

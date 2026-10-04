@@ -1,25 +1,18 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Manrope, JetBrains_Mono, Archivo } from "next/font/google";
+import { JetBrains_Mono, Archivo } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
 import { CartProvider } from "@/lib/cart-context";
 import { FloatingAssistant } from "@/components/assistant/FloatingAssistant";
 import { BRAND, brandCssVars } from "@/lib/brand";
+import { identidadeCssVars } from "@/lib/identidade";
 import { SITE_URL, SITE_DESCRIPTION, OG_IMAGE_PADRAO } from "@/lib/seo";
 import { JsonLd, organizationSchema, websiteSchema } from "@/components/seo/JsonLd";
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const manrope = Manrope({
-  variable: "--font-manrope",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-});
-
+// Space Grotesk e Manrope saíram daqui com o re-skin. O playbook tem duas
+// famílias, não quatro: Archivo em tudo que é texto e JetBrains Mono em tudo
+// que é ficha técnica. Carregar as outras duas custava duas requisições de
+// fonte para dar à loja uma voz tipográfica que a marca não tem.
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
   subsets: ["latin"],
@@ -28,9 +21,9 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500", "700"],
 });
 
-// Tipografia do playbook do Instagram. Vive no layout raiz, e não só no
-// Estúdio, porque o canvas só desenha com a fonte que o documento já carregou —
-// `document.fonts.load` não baixa o que a página não declarou.
+// A fonte da marca. Entrou no layout raiz por causa do Estúdio — o canvas só
+// desenha com a fonte que o documento já carregou, e `document.fonts.load` não
+// baixa o que a página não declarou — e hoje é a fonte da loja inteira.
 // Sem lista de pesos de propósito: com `axes` declarado, o Next carrega a
 // variável inteira, e é dela que vêm o 900 dos números gigantes e o eixo de
 // largura que dá o "Archivo Expanded 115%" dos títulos. Declarar pesos fixos
@@ -98,8 +91,8 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${spaceGrotesk.variable} ${manrope.variable} ${jetbrainsMono.variable} ${archivo.variable}`}
-      style={brandCssVars}
+      className={`${jetbrainsMono.variable} ${archivo.variable}`}
+      style={{ ...identidadeCssVars, ...brandCssVars }}
     >
       <body className="min-h-screen bg-page text-fg font-body antialiased">
         {/* Quem é a loja e o que é o site: vale para todas as páginas, então

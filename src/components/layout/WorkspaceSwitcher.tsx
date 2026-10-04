@@ -21,7 +21,7 @@ export function WorkspaceSwitcher({ active }: { active: AreaDeTrabalho }) {
           href={area.href}
           className={clsx(
             'rounded-full px-3.5 py-1.5 text-xs font-extrabold transition-colors',
-            active === area.chave ? 'bg-accent text-page' : 'text-fg-secondary hover:text-accent'
+            active === area.chave ? 'bg-surface-light text-ink' : 'text-fg-secondary hover:text-accent'
           )}
         >
           {area.rotulo}

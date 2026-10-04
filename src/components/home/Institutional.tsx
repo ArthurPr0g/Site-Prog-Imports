@@ -20,7 +20,7 @@ export function Institutional() {
             <div className="mb-3 text-xs font-extrabold uppercase tracking-[.14em] text-accent">
               Por que a Prog Imports?
             </div>
-            <h2 className="mb-4 font-display text-[28px] font-bold leading-tight tracking-[-.02em] md:text-[34px]">
+            <h2 className="mb-4 titulo text-[28px] md:text-[34px]">
               Tecnologia dos EUA, com a confiança que você merece
             </h2>
             <p className="mb-7 text-[15px] leading-relaxed text-fg-secondary">

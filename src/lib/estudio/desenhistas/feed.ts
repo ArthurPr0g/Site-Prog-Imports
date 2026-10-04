@@ -32,6 +32,7 @@ import {
   type Halo,
 } from '@/lib/estudio/marca';
 import { animador, ROTEIRO, TEMPO } from '@/lib/estudio/animacao';
+import { PARCELAS_SEM_JUROS } from '@/lib/parcelamento';
 import { campo, type Cena, type Desenhista } from '@/lib/estudio/desenhistas/tipos';
 
 const halo = (c: Record<string, string>, chave = 'halo'): Halo =>
@@ -204,7 +205,7 @@ export const desenhar3B: Desenhista = ({ ctx, largura, altura, conteudo, imagens
   if (preco) {
     ctx.font = fonteTitulo(56);
     larguraCartao = ctx.measureText(preco).width * 1.12 + 64;
-    cartaoDePreco(ctx, largura - MARGEM - larguraCartao / 2, base - 70, larguraCartao, campo(conteudo, 'parcela', '12× sem juros'), preco);
+    cartaoDePreco(ctx, largura - MARGEM - larguraCartao / 2, base - 70, larguraCartao, campo(conteudo, 'parcela', `${PARCELAS_SEM_JUROS}× sem juros`), preco);
   }
 
   const larguraTexto = largura - MARGEM * 2 - (larguraCartao ? larguraCartao + 24 : 0);
@@ -560,3 +561,4 @@ export const DESENHISTAS_DE_FEED: Record<string, Desenhista> = {
   '3d': desenhar3D,
   '3e': desenhar3E,
 };
+

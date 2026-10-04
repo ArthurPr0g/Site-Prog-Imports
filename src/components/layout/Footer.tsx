@@ -69,7 +69,7 @@ export function Footer() {
         <div>
           <div className="mb-4 text-[13px] font-extrabold uppercase tracking-[.1em]">Pagamento</div>
           <div className="flex flex-wrap gap-2">
-            {['Pix', 'Visa', 'Mastercard', 'Boleto', '12x sem juros'].map((chip) => (
+            {['Pix', 'Visa', 'Mastercard', 'Boleto', '3× sem juros'].map((chip) => (
               <span
                 key={chip}
                 className="rounded-lg border border-border-strong bg-input-alt px-3 py-1.5 text-xs font-bold text-fg-secondary"

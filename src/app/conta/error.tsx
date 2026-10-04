@@ -15,7 +15,7 @@ export default function AccountError({ error, reset }: { error: Error & { digest
       </p>
       <button
         onClick={reset}
-        className="rounded-control bg-accent px-6 py-3 text-[13.5px] font-extrabold text-page transition-all hover:-translate-y-0.5"
+        className="rounded-control bg-surface-light px-6 py-3 text-[13.5px] font-extrabold text-ink transition-all hover:-translate-y-0.5"
       >
         Tentar novamente
       </button>

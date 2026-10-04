@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { formatBRL, formatParcel } from '@/lib/format';
+import { formatBRL } from '@/lib/format';
+import { PARCELAS_SEM_JUROS, parcelaSemJuros } from '@/lib/parcelamento';
+import { SimuladorDeParcelas } from '@/components/product/SimuladorDeParcelas';
 import { buildWhatsAppLink } from '@/lib/whatsapp';
 import { useCart } from '@/lib/cart-context';
 import { VARIANT_DIM_LABELS, VARIANT_DIM_ORDER, VARIANT_DIM_CANONICAL, sortByCanonicalOrder } from '@/lib/product-specs';
@@ -151,25 +153,32 @@ export function BuyBox({
         </div>
       )}
 
-      <div className="mb-4.5 rounded-[20px] border border-border bg-card p-6">
+      <div className="mb-4.5 rounded-card-lg border border-border bg-card p-6">
         {hasPromo && <div className="text-sm text-fg-tertiary line-through">{formatBRL(price)}</div>}
         <div className="flex items-baseline gap-3">
-          <span className="font-display text-[38px] font-bold">{formatBRL(activePrice)}</span>
+          {/* O preço é o ouro da página, na mesma tipografia das peças do
+              Instagram. Quem vê o post e abre o site reconhece o número. */}
+          <span className="titulo text-[42px] text-ouro-claro">{formatBRL(activePrice)}</span>
           {hasPromo && (
-            <span className="rounded-full border border-accent/40 bg-accent/12 px-2.5 py-1 text-xs font-extrabold text-accent">
+            <span className="etiqueta rounded-full border border-ouro/40 px-2.5 py-1 text-[10px] text-ouro">
               −{discountPct}%
             </span>
           )}
         </div>
-        <div className="mt-1.5 text-sm text-fg-secondary">
-          ou <strong className="text-fg">12x de {formatParcel(activePrice)}</strong> sem juros
+        <div className="mt-2 text-sm text-fg-secondary">
+          ou{' '}
+          <strong className="text-fg">
+            {PARCELAS_SEM_JUROS}× de {formatBRL(parcelaSemJuros(activePrice))}
+          </strong>{' '}
+          sem juros
           {hasPromo && (
             <>
               {' '}
-              · <span className="font-bold text-accent">{formatBRL(pixPrice)} no Pix</span>
+              · <span className="font-bold text-ouro">{formatBRL(pixPrice)} no Pix</span>
             </>
           )}
         </div>
+        <SimuladorDeParcelas preco={activePrice} />
       </div>
       <div className="mb-3 flex gap-3">
         <div className="flex items-center gap-3 rounded-2xl border border-border-strong bg-card px-2">
@@ -183,7 +192,7 @@ export function BuyBox({
         </div>
         <button
           onClick={handleAddToCart}
-          className="flex flex-1 items-center justify-center rounded-2xl border border-border-hover bg-[#1c1c21] text-[15px] font-extrabold transition-all hover:border-accent hover:bg-accent hover:text-page"
+          className="flex flex-1 items-center justify-center rounded-card-lg border border-border-hover bg-card-hover text-[15px] font-extrabold transition-all hover:border-fg-faded hover:bg-card"
         >
           Adicionar ao carrinho
         </button>
@@ -203,7 +212,7 @@ export function BuyBox({
           handleBuyClick();
           openCart();
         }}
-        className="mb-3.5 flex items-center justify-center rounded-2xl bg-accent py-3.5 text-[15px] font-extrabold text-page shadow-[0_8px_28px_rgb(var(--brand-accent-rgb)/.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_36px_rgb(var(--brand-accent-rgb)/.45)]"
+        className="mb-3.5 flex items-center justify-center rounded-card-lg bg-surface-light py-3.5 text-[15px] font-extrabold text-ink shadow-[0_10px_30px_rgba(0,0,0,.45)] transition-all hover:-translate-y-0.5 hover:bg-surface-light-alt hover:shadow-[0_14px_38px_rgba(0,0,0,.55)]"
       >
         Comprar agora
       </a>

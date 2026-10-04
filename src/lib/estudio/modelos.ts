@@ -123,7 +123,7 @@ export const MODELOS: Modelo[] = [
       { chave: 'precoDe', rotulo: 'Preço antigo', tipo: 'preco', ajuda: 'Sai riscado ao lado do novo.' },
       { chave: 'preco', rotulo: 'Preço com desconto', tipo: 'preco', obrigatorio: true },
       { chave: 'selo', rotulo: 'Selo de desconto', tipo: 'texto', ajuda: 'Ex.: "12%". Vazio não desenha o selo.' },
-      { chave: 'rodape', rotulo: 'Linha do rodapé', tipo: 'rotulo', ajuda: 'Placa, parcelamento e prazo: RTX 5080 · 12× R$ 1.916 · PRONTA ENTREGA.' },
+      { chave: 'rodape', rotulo: 'Linha do rodapé', tipo: 'rotulo', ajuda: 'Placa, parcelamento e prazo: RTX 5080 · 3× R$ 7.666 · PRONTA ENTREGA.' },
       { chave: 'cta', rotulo: 'Chamada', tipo: 'texto', ajuda: 'Ex.: WhatsApp →' },
     ],
   },

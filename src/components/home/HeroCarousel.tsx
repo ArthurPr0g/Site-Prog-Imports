@@ -1,6 +1,7 @@
 'use client';
 
-import { formatBRL, formatParcel } from '@/lib/format';
+import { formatBRL } from '@/lib/format';
+import { PARCELAS_SEM_JUROS, parcelaSemJuros } from '@/lib/parcelamento';
 import { useCart } from '@/lib/cart-context';
 
 export type HeroSlide = {
@@ -39,7 +40,7 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
             <div className="relative z-1 mb-2 inline-flex w-fit items-center gap-1.5 rounded-full border border-accent/35 bg-accent/12 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[.08em] text-accent">
               {slide.tag}
             </div>
-            <h3 className="mb-1.5 font-display text-lg font-bold leading-tight tracking-[-.01em]">{slide.title}</h3>
+            <h3 className="mb-1.5 titulo text-lg">{slide.title}</h3>
             <p className="mb-4 text-[12.5px] leading-relaxed text-fg-secondary line-clamp-2">{slide.subtitle}</p>
             <div className="mt-auto flex items-center justify-between gap-3">
               <button
@@ -47,13 +48,13 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
                   add({ id: slide.id, sku: slide.sku, name: slide.title, price: slide.price });
                   openCart();
                 }}
-                className="flex-shrink-0 rounded-full bg-accent px-4.5 py-2.5 text-[12.5px] font-extrabold text-page shadow-[0_6px_18px_rgb(var(--brand-accent-rgb)/.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_26px_rgb(var(--brand-accent-rgb)/.45)]"
+                className="flex-shrink-0 rounded-full bg-surface-light px-4.5 py-2.5 text-[12.5px] font-extrabold text-ink shadow-[0_8px_22px_rgba(0,0,0,.45)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(0,0,0,.55)]"
               >
                 Comprar agora
               </button>
               <div className="text-right text-[10.5px] text-fg-tertiary">
                 <div className="text-sm font-extrabold text-fg">{formatBRL(slide.price)}</div>
-                12x de {formatParcel(slide.price)}
+                {PARCELAS_SEM_JUROS}× de {formatBRL(parcelaSemJuros(slide.price))}
               </div>
             </div>
           </div>
