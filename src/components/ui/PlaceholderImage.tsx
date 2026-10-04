@@ -32,6 +32,15 @@ export function PlaceholderImage({
           alt={label}
           fill
           sizes={sizes ?? '(min-width: 640px) 320px, 50vw'}
+          // Servida como está, sem o otimizador da Vercel.
+          //
+          // A foto já é guardada no tamanho de entrega — 1600px WebP, dezenas
+          // de kilobytes — e a cota do otimizador é finita: quando ela estourou,
+          // o site devolveu 402 em **todas** as imagens, não só na que passou do
+          // limite. As 130 fotos somavam 61,6MB em JPG e passaram a somar 5,6MB
+          // sem perda visível, o que torna a otimização em tempo de requisição
+          // um custo sem contrapartida.
+          unoptimized
           className="object-contain"
         />
       </div>

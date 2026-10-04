@@ -8,11 +8,20 @@
 
 /** Lado maior depois da redução.
  *
- *  2560px porque a foto do produto É a vitrine: ela aparece grande na página,
- *  ampliada no zoom e em tela de alta densidade, onde cada ponto do layout vale
- *  dois ou três pixels reais. Reduzir mais que isso economizava banda às custas
- *  do único lugar onde o cliente decide a compra. */
-const LADO_MAXIMO = 2560;
+ *  Era 2560, pelo argumento de que a foto do produto É a vitrine e precisa
+ *  aguentar o zoom numa tela de alta densidade. O argumento continua certo; o
+ *  número é que estava alto demais para ele.
+ *
+ *  A conta: a galeria declara `sizes="1080px"` e amplia 1,8× no hover, então o
+ *  maior pedido real da página é por volta de 1100px de layout. 1600 cobre isso
+ *  com folga, inclusive em tela densa. O que 2560 acrescentava não chegava a
+ *  aparecer — as 130 fotos do catálogo somavam 61,6MB e, refeitas em 1600 WebP,
+ *  passaram a somar 5,6MB sem diferença visível no zoom (o JPEG de 2560 tinha
+ *  até mais granulado no degradê que o WebP de 1600).
+ *
+ *  Isso importa além da banda: as fotos são servidas sem o otimizador da
+ *  Vercel, então o arquivo guardado é exatamente o arquivo entregue. */
+const LADO_MAXIMO = 1600;
 
 /** Abaixo disto não vale reprocessar: reencodar uma imagem já pequena só
  *  adiciona perda de qualidade sem ganho de tamanho. */

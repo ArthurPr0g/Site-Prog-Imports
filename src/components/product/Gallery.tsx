@@ -72,14 +72,18 @@ export function Gallery({ images, badge }: { images: GalleryImage[]; badge?: str
             {/* `sizes` pede quase o dobro da caixa de propósito: esta imagem
                 tem zoom de 1,8× no hover, e pedir os 560px do layout fazia o
                 zoom ampliar um arquivo pequeno — borrado justamente na hora em
-                que o cliente aproxima para decidir. `quality` acima do padrão
-                pelo mesmo motivo: é a foto que vende. */}
+                que o cliente aproxima para decidir.
+
+                `unoptimized` porque o arquivo guardado já tem 1600px: cobre
+                esses 1080 com folga para o zoom, e passar pelo otimizador só
+                gastaria cota — que, quando acaba, derruba as imagens do site
+                inteiro de uma vez. */}
             <Image
               src={active.url}
               alt={active.label}
               fill
               sizes="(min-width: 1024px) 1080px, 100vw"
-              quality={90}
+              unoptimized
               // `contain` protege as fotos antigas, que não são quadradas: elas
               // aparecem inteiras com faixa nas laterais em vez de cortadas.
               // Para a foto quadrada do padrão, dá no mesmo que preencher.
@@ -115,7 +119,7 @@ export function Gallery({ images, badge }: { images: GalleryImage[]; badge?: str
             style={{ borderColor: i === idx ? 'var(--color-accent)' : 'var(--prog-borda-forte)' }}
           >
             {img.url ? (
-              <Image src={img.url} alt={img.label} fill sizes="90px" className="object-contain" />
+              <Image src={img.url} alt={img.label} fill sizes="90px" unoptimized className="object-contain" />
             ) : (
               <span className="font-mono text-[10px] text-fg-faded">foto {i + 1}</span>
             )}
