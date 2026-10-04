@@ -41,7 +41,7 @@ function Panel3({ p, a, conv, t, i }: { p: Piece; a: number; conv: number; t: nu
         boxShadow: '0 0 34px rgb(var(--brand-accent-rgb) / 0.12), 0 24px 40px rgba(0,0,0,0.5)',
       }}
     >
-      <div style={{ fontFamily: F.mono, fontSize: 12, letterSpacing: '0.28em', color: C.orange }}>{p.tag}</div>
+      <div style={{ fontFamily: F.mono, fontSize: 12, letterSpacing: '0.28em', color: C.ouro }}>{p.tag}</div>
       <div style={{ fontFamily: F.display, fontWeight: 600, fontSize: 24, color: C.white, margin: '6px 0 2px' }}>{p.name}</div>
       <div style={{ fontFamily: F.body, fontSize: 15, color: C.gray }}>{p.sub}</div>
       <div style={{ height: 1, background: 'linear-gradient(90deg, rgb(var(--brand-accent-rgb) / 0.7), rgb(var(--brand-accent-rgb) / 0))', marginTop: 12 }} />
@@ -74,10 +74,10 @@ function Set3({ t, flyP, convP, msgP }: { t: number; flyP: number; convP: number
         {PIECES.map((p, i) => {
           const a = sg(flyP, i * 0.12, i * 0.12 + 0.3);
           return (
-            <line key={i} x1={p.px} y1={p.py} x2={LAP.x} y2={LAP.y} stroke={C.orange} strokeWidth="1" opacity={0.28 * a * (1 - convP)} strokeDasharray="4 7" />
+            <line key={i} x1={p.px} y1={p.py} x2={LAP.x} y2={LAP.y} stroke={C.ouro} strokeWidth="1" opacity={0.28 * a * (1 - convP)} strokeDasharray="4 7" />
           );
         })}
-        <circle cx={LAP.x} cy={LAP.y} r={220 * flash} fill="none" stroke={C.orange} strokeWidth={2.5 * (1 - flash) + 0.5} opacity={0.85 * flash * (1 - lapIn * 0.6)} />
+        <circle cx={LAP.x} cy={LAP.y} r={220 * flash} fill="none" stroke={C.ouro} strokeWidth={2.5 * (1 - flash) + 0.5} opacity={0.85 * flash * (1 - lapIn * 0.6)} />
       </svg>
 
       <img
@@ -114,7 +114,7 @@ function Set3({ t, flyP, convP, msgP }: { t: number; flyP: number; convP: number
 
       <div style={{ position: 'absolute', left: 120, top: 0, bottom: 0, width: 560, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 24 }}>
         <img src="/images/logo.png" alt="Prog Imports" style={{ width: 200, alignSelf: 'flex-start', opacity: msgP, transform: `translateY(${(1 - msgP) * -16}px)` }} />
-        <div style={{ fontFamily: F.mono, fontSize: 15, letterSpacing: '0.34em', color: C.orange, opacity: Math.min(1, flyP * 2) }}>ENGENHARIA PREMIUM</div>
+        <div style={{ fontFamily: F.mono, fontSize: 15, letterSpacing: '0.34em', color: C.ouro, opacity: Math.min(1, flyP * 2) }}>ENGENHARIA PREMIUM</div>
         <div>
           {WORDS.map((w, i) => {
             const a = sg(msgP, i * 0.18, i * 0.18 + 0.3, Easing.easeOutCubic);
@@ -127,7 +127,7 @@ function Set3({ t, flyP, convP, msgP }: { t: number; flyP: number; convP: number
                     fontSize: 64,
                     lineHeight: 1.14,
                     letterSpacing: '-0.02em',
-                    color: i === 2 ? C.orange : C.white,
+                    color: i === 2 ? C.ouro : C.white,
                     transform: `translateY(${(1 - a) * 110}%)`,
                   }}
                 >
@@ -145,7 +145,7 @@ function Set3({ t, flyP, convP, msgP }: { t: number; flyP: number; convP: number
           style={{
             display: 'inline-block',
             alignSelf: 'flex-start',
-            background: C.orange,
+            background: C.ouro,
             color: '#0A0A0C',
             textDecoration: 'none',
             fontFamily: F.display,

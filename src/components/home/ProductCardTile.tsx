@@ -61,13 +61,20 @@ export function ProductCardTile({ p, className }: { p: ProductCard; className?: 
         >
           {p.name}
         </Link>
+        {/* Preço de e preço por em linhas separadas, e não lado a lado.
+            Em Archivo expandido o preço ficou largo o bastante para que
+            "R$ 49.999,00  R$ 42.499,00" não coubesse nos 230px úteis de um
+            cartão de 270 — e como o cartão tem `overflow-hidden`, o que
+            acontecia não era quebrar linha: era o preço novo sumir pela borda
+            direita, justamente o número que a peça inteira existe para
+            mostrar. */}
         <div className="mt-1 sm:mt-2">
           {hasPromo && (
-            <span className="mr-1.5 text-[11px] text-fg-tertiary line-through sm:mr-2 sm:text-[13px]">
+            <div className="text-[11px] text-fg-tertiary line-through sm:text-[13px]">
               {formatBRL(p.price)}
-            </span>
+            </div>
           )}
-          <span className="titulo text-[17px] text-ouro-claro sm:text-[23px]">{formatBRL(activePrice)}</span>
+          <div className="titulo text-[17px] text-ouro-claro sm:text-[22px]">{formatBRL(activePrice)}</div>
           <div className="mt-0.5 text-[10px] text-fg-tertiary sm:text-xs">
             ou {PARCELAS_SEM_JUROS}× de {formatBRL(parcelaSemJuros(activePrice))} sem juros
           </div>
@@ -76,7 +83,7 @@ export function ProductCardTile({ p, className }: { p: ProductCard; className?: 
           onClick={() => {
             add({ id: p.id, sku: p.sku, name: p.name, price: activePrice, image: p.image, imageUrl: p.imageUrl });
           }}
-          className="mt-auto rounded-xl border border-border-hover bg-[#1c1c21] pb-2 pt-3 text-[11.5px] font-extrabold transition-all hover:border-accent hover:bg-accent hover:text-page sm:rounded-[14px] sm:pb-3 sm:pt-4 sm:text-sm"
+          className="mt-auto rounded-xl border border-border-hover bg-card-hover pb-2 pt-3 text-[11.5px] font-extrabold transition-all hover:border-fg-faded hover:bg-surface-light hover:text-ink sm:rounded-card sm:pb-3 sm:pt-4 sm:text-sm"
         >
           <span className="sm:hidden">Adicionar</span>
           <span className="hidden sm:inline">Adicionar ao carrinho</span>

@@ -38,8 +38,8 @@ function PkgM({ J }: { J: number }) {
         }}
       />
       <div style={{ position: 'relative', width: 50, height: 50, background: 'linear-gradient(160deg, #26272D, #17181C)', borderRadius: 8, border: '1px solid #34363D', boxShadow: '0 14px 22px rgba(0,0,0,0.55)' }}>
-        <div style={{ position: 'absolute', left: 0, right: 0, top: 21, height: 8, background: C.orange, opacity: 0.9 }} />
-        <div style={{ position: 'absolute', top: 0, bottom: 0, left: 21, width: 8, background: C.orange, opacity: 0.35 }} />
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 21, height: 8, background: C.ouro, opacity: 0.9 }} />
+        <div style={{ position: 'absolute', top: 0, bottom: 0, left: 21, width: 8, background: C.ouro, opacity: 0.35 }} />
       </div>
     </div>
   );
@@ -65,7 +65,7 @@ function SetM4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msg
 
       <div style={{ position: 'absolute', left: 60, right: 60, top: 78, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
         <img src="/images/logo.png" alt="Prog Imports" style={{ width: 160, opacity: baseP, transform: `translateY(${(1 - baseP) * -12}px)` }} />
-        <div style={{ fontFamily: F.mono, fontSize: 15, letterSpacing: '0.3em', color: C.orange, opacity: baseP }}>DA COMPRA À ENTREGA</div>
+        <div style={{ fontFamily: F.mono, fontSize: 15, letterSpacing: '0.3em', color: C.ouro, opacity: baseP }}>DA COMPRA À ENTREGA</div>
         <div style={{ overflow: 'hidden' }}>
           <h1
             style={{
@@ -80,19 +80,19 @@ function SetM4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msg
               transform: `translateY(${(1 - msgP) * 115}%)`,
             }}
           >
-            Sua tecnologia importada, acompanhada do início ao fim<span style={{ color: C.orange }}>.</span>
+            Sua tecnologia importada, acompanhada do início ao fim<span style={{ color: C.ouro }}>.</span>
           </h1>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, opacity: sg(msgP, 0.4, 0.85), transform: `translateY(${(1 - sg(msgP, 0.4, 0.85)) * 14}px)` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: F.mono, fontSize: 14, letterSpacing: '0.1em', color: C.gray, border: '1px solid #2A2B31', borderRadius: 999, padding: '9px 18px' }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: C.orange, display: 'inline-block' }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: C.ouro, display: 'inline-block' }} />
             RASTREIO EM TEMPO REAL, DIRETO PELO SITE
           </div>
           <a
             href="/produtos"
             style={{
               display: 'inline-block',
-              background: C.orange,
+              background: C.ouro,
               color: '#0A0A0C',
               textDecoration: 'none',
               fontFamily: F.display,
@@ -111,11 +111,11 @@ function SetM4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msg
       <div style={{ position: 'absolute', inset: 0, opacity: baseP }}>
         <svg width="1080" height="1350" viewBox="0 0 1080 1350" style={{ position: 'absolute', inset: 0 }}>
           <line x1={TX} y1={NODES[0].y} x2={TX} y2={NODES[4].y} stroke="#26272C" strokeWidth="2" />
-          <line x1={TX} y1={NODES[0].y} x2={TX} y2={NODES[0].y + (NODES[4].y - NODES[0].y) * fillH} stroke={C.orange} strokeWidth="2.5" />
+          <line x1={TX} y1={NODES[0].y} x2={TX} y2={NODES[0].y + (NODES[4].y - NODES[0].y) * fillH} stroke={C.ouro} strokeWidth="2.5" />
           <path
             d={`M ${TX} ${NODES[2].y} Q ${TX - 160} ${(NODES[2].y + NODES[3].y) / 2} ${TX} ${NODES[3].y}`}
             fill="none"
-            stroke={C.orange}
+            stroke={C.ouro}
             strokeWidth="1"
             strokeDasharray="4 7"
             opacity={J > 1.9 && J < 3.1 ? 0.5 : 0.18}
@@ -137,7 +137,7 @@ function SetM4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msg
                     height: 62,
                     transform: 'translate(-50%,-50%)',
                     borderRadius: '50%',
-                    border: `1px solid ${C.orange}`,
+                    border: `1px solid ${C.ouro}`,
                     opacity: 0.35 + 0.3 * Math.sin(t * 3),
                   }}
                 />
@@ -148,13 +148,13 @@ function SetM4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msg
                   height: 46,
                   borderRadius: '50%',
                   background: active ? '#141519' : C.node,
-                  border: `1.5px solid ${active ? C.orange : '#2E3036'}`,
+                  border: `1.5px solid ${active ? C.ouro : '#2E3036'}`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontFamily: F.mono,
                   fontSize: 14,
-                  color: active ? C.orange : '#5B5D64',
+                  color: active ? C.ouro : '#5B5D64',
                   boxShadow: active ? '0 0 18px rgb(var(--brand-accent-rgb) / 0.25)' : 'none',
                 }}
               >

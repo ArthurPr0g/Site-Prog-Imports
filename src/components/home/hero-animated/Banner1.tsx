@@ -36,7 +36,7 @@ function Particles1({ t, vis }: { t: number; vis: number }) {
               width: p.s,
               height: p.s,
               borderRadius: '50%',
-              background: p.or ? C.orange : '#DADCE2',
+              background: p.or ? C.ouro : '#DADCE2',
               opacity: p.o * tw * vis,
             }}
           />
@@ -103,15 +103,15 @@ function Set1({
                   y1={HUB.y}
                   x2={HUB.x + (p.x - HUB.x) * d}
                   y2={HUB.y + (p.y - HUB.y) * d}
-                  stroke={C.orange}
+                  stroke={C.ouro}
                   strokeWidth="1.4"
                   opacity="0.5"
                 />
-                <circle cx={HUB.x + (p.x - HUB.x) * d} cy={HUB.y + (p.y - HUB.y) * d} r="3" fill={C.orange} opacity={0.9 * Math.min(1, d * 3)} />
+                <circle cx={HUB.x + (p.x - HUB.x) * d} cy={HUB.y + (p.y - HUB.y) * d} r="3" fill={C.ouro} opacity={0.9 * Math.min(1, d * 3)} />
               </g>
             );
           })}
-          <circle cx={HUB.x} cy={HUB.y} r={5 + 2 * Math.sin(t * 3)} fill={C.orange} opacity={lineP > 0 ? 0.85 : 0} />
+          <circle cx={HUB.x} cy={HUB.y} r={5 + 2 * Math.sin(t * 3)} fill={C.ouro} opacity={lineP > 0 ? 0.85 : 0} />
         </svg>
         {P1_PRODUCTS.map((p, i) => {
           const a = sg(prodP, i * 0.105, i * 0.105 + 0.24, Easing.easeOutCubic);
@@ -158,7 +158,7 @@ function Set1({
               fontFamily: F.mono,
               fontSize: 15,
               letterSpacing: '0.34em',
-              color: C.orange,
+              color: C.ouro,
               transform: `translateY(${(1 - Math.min(1, titleP * 1.6)) * 110}%)`,
             }}
           >
@@ -178,7 +178,7 @@ function Set1({
               transform: `translateY(${(1 - titleP) * 110}%)`,
             }}
           >
-            O melhor da tecnologia mundial<span style={{ color: C.orange }}>.</span>
+            O melhor da tecnologia mundial<span style={{ color: C.ouro }}>.</span>
           </h1>
         </div>
         <div style={{ fontSize: 23, lineHeight: 1.5, color: C.gray, maxWidth: 520, opacity: brandP, transform: `translateY(${(1 - brandP) * 20}px)` }}>
@@ -189,7 +189,7 @@ function Set1({
             href="/produtos"
             style={{
               display: 'inline-block',
-              background: C.orange,
+              background: C.ouro,
               color: '#0A0A0C',
               textDecoration: 'none',
               fontFamily: F.display,

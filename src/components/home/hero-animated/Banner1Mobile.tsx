@@ -71,7 +71,7 @@ function SetM1({
                 width: p.s,
                 height: p.s,
                 borderRadius: '50%',
-                background: p.or ? C.orange : '#DADCE2',
+                background: p.or ? C.ouro : '#DADCE2',
                 opacity: p.o * tw * Math.min(1, titleP * 2),
               }}
             />
@@ -85,12 +85,12 @@ function SetM1({
             const d = sg(lineP, i * 0.09, i * 0.09 + 0.5);
             return (
               <g key={i} opacity={d > 0 ? 1 : 0}>
-                <line x1={HUB.x} y1={HUB.y} x2={HUB.x + (p.x - HUB.x) * d} y2={HUB.y + (p.y - HUB.y) * d} stroke={C.orange} strokeWidth="1.4" opacity="0.5" />
-                <circle cx={HUB.x + (p.x - HUB.x) * d} cy={HUB.y + (p.y - HUB.y) * d} r="3" fill={C.orange} opacity={0.9 * Math.min(1, d * 3)} />
+                <line x1={HUB.x} y1={HUB.y} x2={HUB.x + (p.x - HUB.x) * d} y2={HUB.y + (p.y - HUB.y) * d} stroke={C.ouro} strokeWidth="1.4" opacity="0.5" />
+                <circle cx={HUB.x + (p.x - HUB.x) * d} cy={HUB.y + (p.y - HUB.y) * d} r="3" fill={C.ouro} opacity={0.9 * Math.min(1, d * 3)} />
               </g>
             );
           })}
-          <circle cx={HUB.x} cy={HUB.y} r={5 + 2 * Math.sin(t * 3)} fill={C.orange} opacity={lineP > 0 ? 0.85 : 0} />
+          <circle cx={HUB.x} cy={HUB.y} r={5 + 2 * Math.sin(t * 3)} fill={C.ouro} opacity={lineP > 0 ? 0.85 : 0} />
         </svg>
         {M1_PRODUCTS.map((p, i) => {
           const a = sg(prodP, i * 0.105, i * 0.105 + 0.24, Easing.easeOutCubic);
@@ -123,7 +123,7 @@ function SetM1({
       <div style={{ position: 'absolute', left: 72, top: 64, width: 936, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <img src="/images/logo.png" alt="Prog Imports" style={{ width: 170, alignSelf: 'flex-start', opacity: brandP, transform: `translateY(${(1 - brandP) * -14}px)` }} />
         <div style={{ overflow: 'hidden' }}>
-          <div style={{ fontFamily: F.mono, fontSize: 16, letterSpacing: '0.3em', color: C.orange, transform: `translateY(${(1 - Math.min(1, titleP * 1.6)) * 110}%)` }}>
+          <div style={{ fontFamily: F.mono, fontSize: 16, letterSpacing: '0.3em', color: C.ouro, transform: `translateY(${(1 - Math.min(1, titleP * 1.6)) * 110}%)` }}>
             O FUTURO CHEGOU
           </div>
         </div>
@@ -141,7 +141,7 @@ function SetM1({
               maxWidth: 780,
             }}
           >
-            O melhor da tecnologia mundial<span style={{ color: C.orange }}>.</span>
+            O melhor da tecnologia mundial<span style={{ color: C.ouro }}>.</span>
           </h1>
         </div>
         <div style={{ fontSize: 23, lineHeight: 1.5, color: C.gray, opacity: brandP, transform: `translateY(${(1 - brandP) * 18}px)` }}>Importado diretamente para você.</div>
@@ -150,7 +150,7 @@ function SetM1({
           style={{
             display: 'inline-block',
             alignSelf: 'flex-start',
-            background: C.orange,
+            background: C.ouro,
             color: '#0A0A0C',
             textDecoration: 'none',
             fontFamily: F.display,
