@@ -57,7 +57,9 @@ export function CategoryScroller({ categories }: { categories: CategoryCard[] })
       )}
       <div
         ref={scrollerRef}
-        className="no-scrollbar flex snap-x snap-mandatory gap-2 overflow-x-auto px-6 pb-3"
+        // Mesmo motivo do CollectionRow: `overflow-x: auto` corta o eixo
+        // vertical junto, e aqui a categoria sobe 8px no hover.
+        className="no-scrollbar -my-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-6 py-4"
         style={{ scrollBehavior: 'smooth' }}
       >
         {categories.map((c) => (

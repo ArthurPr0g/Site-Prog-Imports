@@ -26,34 +26,15 @@ export const CORTE_GRID = { topo: 168, altura: 1012 } as const;
 
 /* ------------------------------------------------------------------ cores */
 
-export const COR = {
-  onix: '#0C0C0D',
-  grafite: '#18181B',
-  grafiteClaro: '#2A2A2E',
-  marfim: '#F2EEE7',
-  papel: '#E7E1D6',
-  papelBorda: '#d6cfc2',
-  ouro: '#C9A15A',
-  ouroClaro: '#D9B66E',
-  bronze: '#8C6A2F',
-  prata: '#B9B4AB',
-  prataEscura: '#9C978E',
-  grafiteTexto: '#6f6a62',
-  tintaSecundaria: '#4a4740',
-} as const;
+// A paleta mora em `lib/identidade.ts`, que a loja também lê. Antes ela vivia
+// aqui, e a loja tinha a sua — duas paletas que precisavam ser a mesma e não
+// tinham como saber disso. Quando separaram, nada quebrou: as duas metades
+// continuavam parecendo certas olhadas sozinhas.
+import { PALETA, HALO, type Halo } from '@/lib/identidade';
 
-/** Brilhos de fundo por família de produto. O playbook usa um halo colorido
- *  atrás do aparelho; a cor acompanha a identidade da marca do produto, não a
- *  da Prog — é o único lugar onde cor fora da paleta entra. */
-export const HALO = {
-  roxo: 'rgba(124,72,255,',
-  magenta: 'rgba(176,70,255,',
-  turquesa: 'rgba(54,209,196,',
-  rubi: 'rgba(230,40,90,',
-  ouro: 'rgba(201,161,90,',
-} as const;
-
-export type Halo = keyof typeof HALO;
+export const COR = PALETA;
+export { HALO };
+export type { Halo };
 
 /* -------------------------------------------------------------- tipografia */
 

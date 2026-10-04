@@ -78,19 +78,33 @@ export function useSceneClock(scenes: SceneSpec[], playing: boolean, reducedMoti
   return animState;
 }
 
+/** A paleta dos banners, apontando para a identidade.
+ *
+ *  Os valores eram hex soltos — um segundo tema, paralelo ao do site, que a
+ *  varredura por `#F28705` não achava porque as cores tinham nome em vez de
+ *  número. `ouro` se chamava `orange`; o valor já era o token, então a cor
+ *  acompanhou a troca sozinha e só o nome ficou mentindo. */
 export const HERO_COLORS = {
-  bg: '#08080A',
-  white: '#F5F5F3',
-  gray: '#9EA0A8',
-  faded: '#5B5D64',
-  orange: 'var(--color-accent)',
-  line: '#26272C',
-  node: '#1B1C21',
+  bg: 'var(--prog-onix)',
+  white: 'var(--prog-marfim)',
+  gray: 'var(--prog-prata)',
+  faded: 'var(--prog-grafite-texto)',
+  ouro: 'var(--color-accent)',
+  line: 'var(--prog-borda-forte)',
+  node: 'var(--prog-divisor-forte)',
 };
 
+/** Archivo nas duas, como no resto da loja.
+ *
+ *  `display` apontava para `--font-space-grotesk` e `body` para
+ *  `--font-manrope`. As duas saíram do layout no re-skin, e o navegador caía no
+ *  `sans-serif` genérico: a manchete do primeiro banner — a primeira coisa que
+ *  o cliente vê no site — passou a ser desenhada numa fonte que ninguém
+ *  escolheu, com métrica diferente da que o layout esperava, e estourava a
+ *  caixa. Variável de fonte que some não dá erro; só muda o desenho. */
 export const HERO_FONTS = {
-  display: "var(--font-space-grotesk), 'Space Grotesk', sans-serif",
-  body: "var(--font-manrope), 'Manrope', sans-serif",
+  display: "var(--font-archivo), sans-serif",
+  body: "var(--font-archivo), sans-serif",
   mono: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
 };
 

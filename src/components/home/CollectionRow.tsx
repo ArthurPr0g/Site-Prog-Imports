@@ -50,7 +50,7 @@ export function CollectionRow({
   return (
     <section id={id} className="mx-auto max-w-[1280px] scroll-mt-24 px-6 pt-16">
       <div className="mb-6 flex items-end justify-between gap-5">
-        <h2 className="font-display text-[26px] font-bold tracking-[-.02em] sm:text-[32px]">{title}</h2>
+        <h2 className="titulo text-[26px] sm:text-[32px]">{title}</h2>
         {collectionId && (
           <Link
             href={`/colecao/${collectionId}`}
@@ -80,7 +80,19 @@ export function CollectionRow({
             ›
           </button>
         )}
-        <div ref={scrollerRef} className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:gap-4.5">
+        {/* O respiro vertical existe para a animação de hover caber dentro da
+            caixa de rolagem.
+
+            `overflow-x: auto` não é só horizontal: o CSS obriga o outro eixo a
+            virar `auto` ou `hidden` junto. Com isso o cartão subia 6px no hover
+            e espalhava 48px de sombra, e as duas coisas eram cortadas rente à
+            borda — a animação começava bonita e terminava decepada. O padding
+            abre espaço dentro da rolagem e a margem negativa devolve o espaço
+            ao layout, então nada se desloca na página. */}
+        <div
+          ref={scrollerRef}
+          className="no-scrollbar -my-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 py-4 sm:gap-4.5"
+        >
           {products.map((p) => (
             <ProductCardTile key={p.id} p={p} className="w-[160px] flex-shrink-0 snap-start sm:w-[270px]" />
           ))}

@@ -32,7 +32,7 @@ export function Newsletter() {
           className="pointer-events-none absolute left-1/2 top-[-160px] h-[320px] w-[520px] -translate-x-1/2 rounded-full"
           style={{ background: 'radial-gradient(circle, rgb(var(--brand-accent-rgb) / .16), transparent 70%)' }}
         />
-        <h2 className="mb-3 font-display text-[32px] font-bold tracking-[-.02em]">Chegou primeiro, comprou primeiro</h2>
+        <h2 className="mb-3 titulo text-[32px]">Chegou primeiro, comprou primeiro</h2>
         <p className="mb-7 text-[15px] text-fg-secondary">
           Receba lançamentos exclusivos dos EUA e promoções antes de todo mundo.
         </p>
@@ -46,7 +46,7 @@ export function Newsletter() {
             />
             <button
               onClick={subscribe}
-              className="rounded-full bg-accent px-7 py-3.5 text-sm font-extrabold text-page transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgb(var(--brand-accent-rgb)/.4)]"
+              className="rounded-full bg-surface-light px-7 py-3.5 text-sm font-extrabold text-ink transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgb(var(--brand-accent-rgb)/.4)]"
             >
               Cadastrar
             </button>

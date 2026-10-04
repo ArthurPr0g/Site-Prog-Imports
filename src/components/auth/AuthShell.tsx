@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
@@ -58,7 +58,7 @@ export function AuthShell({
 
         <div className="rounded-[26px] border border-border-strong bg-card/90 p-8 shadow-[0_30px_80px_rgba(0,0,0,.55)] backdrop-blur-xl sm:p-9">
           <div className="mb-7 text-center">
-            <h1 className="mb-1.5 font-display text-2xl font-bold tracking-[-.02em]">{title}</h1>
+            <h1 className="mb-1.5 titulo text-2xl">{title}</h1>
             <p className="text-sm text-fg-tertiary">{subtitle}</p>
           </div>
           {children}

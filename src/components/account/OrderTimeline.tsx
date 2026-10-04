@@ -7,16 +7,16 @@ export function OrderTimeline({ steps }: { steps: Step[] }) {
     <div className="flex flex-col">
       {steps.map((s, i) => {
         const accent = 'var(--color-accent)';
-        const dotBg = s.done ? accent : s.current ? 'rgb(var(--brand-accent-rgb) / .15)' : '#141418';
-        const dotBorder = s.done || s.current ? accent : '#26262b';
-        const dotColor = s.done ? '#0a0a0c' : s.current ? accent : '#5b5b63';
-        const titleColor = s.done || s.current ? '#f4f4f5' : '#5b5b63';
+        const dotBg = s.done ? accent : s.current ? 'rgb(var(--brand-accent-rgb) / .15)' : 'var(--prog-cartao)';
+        const dotBorder = s.done || s.current ? accent : 'var(--prog-borda-forte)';
+        const dotColor = s.done ? 'var(--prog-onix)' : s.current ? accent : 'var(--prog-tinta-secundaria)';
+        const titleColor = s.done || s.current ? 'var(--prog-marfim)' : 'var(--prog-tinta-secundaria)';
         const hasLine = i < steps.length - 1;
-        let lineBg = '#26262b';
+        let lineBg = 'var(--prog-borda-forte)';
         if (i < steps.length - 1) {
           const nextDone = steps.length === 10 && steps[9].done; // fully delivered
           if (s.done) lineBg = accent;
-          else if (s.current) lineBg = nextDone ? accent : `linear-gradient(${accent},#26262b)`;
+          else if (s.current) lineBg = nextDone ? accent : `linear-gradient(${accent},var(--prog-borda-forte))`;
         }
 
         return (

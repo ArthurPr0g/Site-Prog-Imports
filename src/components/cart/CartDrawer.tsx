@@ -67,14 +67,14 @@ export function CartDrawer() {
                 <div className="mt-2 flex items-center gap-2.5">
                   <button
                     onClick={() => dec(it.id)}
-                    className="h-6.5 w-6.5 rounded-lg border border-border-hover bg-[#1c1c21] text-[13px]"
+                    className="h-6.5 w-6.5 rounded-lg border border-border-hover bg-[var(--prog-cartao-hover)] text-[13px]"
                   >
                     −
                   </button>
                   <span className="min-w-4 text-center text-[13px] font-extrabold">{it.qty}</span>
                   <button
                     onClick={() => inc(it.id)}
-                    className="h-6.5 w-6.5 rounded-lg border border-border-hover bg-[#1c1c21] text-[13px]"
+                    className="h-6.5 w-6.5 rounded-lg border border-border-hover bg-[var(--prog-cartao-hover)] text-[13px]"
                   >
                     +
                   </button>
@@ -101,7 +101,7 @@ export function CartDrawer() {
               />
               <button
                 onClick={applyCoupon}
-                className="rounded-control border border-border-hover bg-[#1c1c21] px-4.5 py-2.5 text-[13px] font-extrabold hover:border-accent"
+                className="rounded-control border border-border-hover bg-[var(--prog-cartao-hover)] px-4.5 py-2.5 text-[13px] font-extrabold hover:border-accent"
               >
                 Aplicar
               </button>
@@ -120,7 +120,7 @@ export function CartDrawer() {
               />
               <button
                 onClick={calcFrete}
-                className="rounded-control border border-border-hover bg-[#1c1c21] px-4.5 py-2.5 text-[13px] font-extrabold hover:border-accent"
+                className="rounded-control border border-border-hover bg-[var(--prog-cartao-hover)] px-4.5 py-2.5 text-[13px] font-extrabold hover:border-accent"
               >
                 Calcular
               </button>
@@ -144,14 +144,14 @@ export function CartDrawer() {
               </div>
               <div className="mt-1.5 flex justify-between border-t border-border pt-2.5 text-base">
                 <span className="font-extrabold">Total</span>
-                <span className="font-display text-[19px] font-extrabold text-accent">{formatBRL(total)}</span>
+                <span className="titulo text-[21px] text-ouro-claro">{formatBRL(total)}</span>
               </div>
             </div>
             <a
               href={whatsappCheckoutLink}
               target="_blank"
               rel="noreferrer"
-              className="block rounded-2xl bg-accent py-4 text-center text-[15px] font-extrabold text-page shadow-[0_8px_28px_rgb(var(--brand-accent-rgb)/.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_36px_rgb(var(--brand-accent-rgb)/.45)]"
+              className="block rounded-2xl bg-surface-light py-4 text-center text-[15px] font-extrabold text-ink shadow-[0_10px_30px_rgba(0,0,0,.45)] transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_38px_rgba(0,0,0,.55)]"
             >
               Finalizar pelo WhatsApp
             </a>

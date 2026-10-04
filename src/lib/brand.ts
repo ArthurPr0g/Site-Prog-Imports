@@ -13,7 +13,11 @@
 // Contato, frete e canais continuam em `constants.ts`, que já os lia de
 // ambiente antes desta mudança.
 
-const DEFAULT_ACCENT = '#F28705';
+// O ouro do playbook, que também é a cor da logo. Até o re-skin esta constante
+// era laranja `#F28705` — o site inteiro foi construído em volta de uma cor que
+// a marca não tinha, e a logo dourada no cabeçalho brigava com ela em toda
+// página.
+const DEFAULT_ACCENT = '#C9A15A';
 
 /** Aceita apenas hexadecimal (#rgb, #rrggbb, #rrggbbaa). O valor entra numa
  *  custom property inline no <html>; validar evita que uma variável mal

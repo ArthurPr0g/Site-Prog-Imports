@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { PlaceholderImage } from '@/components/ui/PlaceholderImage';
 import { ReadyToShipBadge } from '@/components/ui/ReadyToShipBadge';
 import { GlowBorder, glowMouseMove, glowMouseLeave } from '@/components/ui/GlowBorder';
-import { formatBRL, formatParcel } from '@/lib/format';
+import { formatBRL } from '@/lib/format';
+import { PARCELAS_SEM_JUROS, parcelaSemJuros } from '@/lib/parcelamento';
 import { useCart } from '@/lib/cart-context';
 import type { ProductCard } from '@/lib/data/catalog';
 
@@ -45,7 +46,7 @@ export function ProductCardTile({ p, className }: { p: ProductCard; className?: 
           // 36px no celular: com 28 o coração ficava menor que a polpa do dedo
           // e o toque caía no cartão, abrindo o produto sem querer.
           className="absolute right-1.5 top-1.5 grid h-9 w-9 place-items-center rounded-full border border-border-hover bg-page/70 text-sm backdrop-blur-sm hover:border-accent hover:scale-110 sm:right-3 sm:top-3 sm:text-[15px]"
-          style={{ color: isFav ? 'var(--color-accent)' : '#a8a8b0' }}
+          style={{ color: isFav ? 'var(--color-accent)' : 'var(--prog-prata-escura)' }}
         >
           {isFav ? '♥' : '♡'}
         </button>
@@ -60,22 +61,29 @@ export function ProductCardTile({ p, className }: { p: ProductCard; className?: 
         >
           {p.name}
         </Link>
+        {/* Preço de e preço por em linhas separadas, e não lado a lado.
+            Em Archivo expandido o preço ficou largo o bastante para que
+            "R$ 49.999,00  R$ 42.499,00" não coubesse nos 230px úteis de um
+            cartão de 270 — e como o cartão tem `overflow-hidden`, o que
+            acontecia não era quebrar linha: era o preço novo sumir pela borda
+            direita, justamente o número que a peça inteira existe para
+            mostrar. */}
         <div className="mt-1 sm:mt-2">
           {hasPromo && (
-            <span className="mr-1.5 text-[11px] text-fg-tertiary line-through sm:mr-2 sm:text-[13px]">
+            <div className="text-[11px] text-fg-tertiary line-through sm:text-[13px]">
               {formatBRL(p.price)}
-            </span>
+            </div>
           )}
-          <span className="font-display text-base font-bold sm:text-[22px]">{formatBRL(activePrice)}</span>
+          <div className="titulo text-[17px] text-ouro-claro sm:text-[22px]">{formatBRL(activePrice)}</div>
           <div className="mt-0.5 text-[10px] text-fg-tertiary sm:text-xs">
-            ou 12x de {formatParcel(activePrice)} sem juros
+            ou {PARCELAS_SEM_JUROS}× de {formatBRL(parcelaSemJuros(activePrice))} sem juros
           </div>
         </div>
         <button
           onClick={() => {
             add({ id: p.id, sku: p.sku, name: p.name, price: activePrice, image: p.image, imageUrl: p.imageUrl });
           }}
-          className="mt-auto rounded-xl border border-border-hover bg-[#1c1c21] pb-2 pt-3 text-[11.5px] font-extrabold transition-all hover:border-accent hover:bg-accent hover:text-page sm:rounded-[14px] sm:pb-3 sm:pt-4 sm:text-sm"
+          className="mt-auto rounded-xl border border-border-hover bg-card-hover pb-2 pt-3 text-[11.5px] font-extrabold transition-all hover:border-fg-faded hover:bg-surface-light hover:text-ink sm:rounded-card sm:pb-3 sm:pt-4 sm:text-sm"
         >
           <span className="sm:hidden">Adicionar</span>
           <span className="hidden sm:inline">Adicionar ao carrinho</span>

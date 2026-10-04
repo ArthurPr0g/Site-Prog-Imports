@@ -1,16 +1,16 @@
-﻿// Grava a peÃ§a animada em vÃ­deo, direto do canvas.
+// Grava a peça animada em vídeo, direto do canvas.
 //
-// MP4 e nÃ£o WebM: o Instagram nÃ£o aceita WebM, e descobrir isso na hora de
-// publicar Ã© o pior momento. O Chrome grava avc1 desde a versÃ£o 126; quando o
-// navegador nÃ£o souber, a funÃ§Ã£o avisa em vez de entregar um arquivo que nÃ£o
+// MP4 e não WebM: o Instagram não aceita WebM, e descobrir isso na hora de
+// publicar é o pior momento. O Chrome grava avc1 desde a versão 126; quando o
+// navegador não souber, a função avisa em vez de entregar um arquivo que não
 // sobe.
 //
-// O canvas Ã© o mesmo que desenha o PNG, no mesmo tamanho final â€” o vÃ­deo sai em
-// 1080Ã—1350 ou 1080Ã—1920 sem reescalar nada.
+// O canvas é o mesmo que desenha o PNG, no mesmo tamanho final — o vídeo sai em
+// 1080×1350 ou 1080×1920 sem reescalar nada.
 
 import { DURACAO } from '@/lib/estudio/animacao';
 
-/** Formatos aceitos, em ordem de preferÃªncia. */
+/** Formatos aceitos, em ordem de preferência. */
 const FORMATOS = [
   'video/mp4;codecs=avc1.42E01E',
   'video/mp4;codecs=avc1',
@@ -29,26 +29,26 @@ export type ResultadoDoVideo =
       extensao: string;
       /** Quadros entregues ao gravador. */
       quadros: number;
-      /** Quadros por segundo que a gravaÃ§Ã£o realmente alcanÃ§ou. */
+      /** Quadros por segundo que a gravação realmente alcançou. */
       fps: number;
-      /** Tempo mÃ©dio de um quadro, em ms. Acima de 16 nÃ£o dÃ¡ para 60fps. */
+      /** Tempo médio de um quadro, em ms. Acima de 16 não dá para 60fps. */
       mediaMs: number;
     }
   | { ok: false; motivo: string };
 
-/** Desenha a peÃ§a quadro a quadro e grava o resultado.
+/** Desenha a peça quadro a quadro e grava o resultado.
  *
- *  O gravador recebe um quadro quando hÃ¡ um quadro novo, e nÃ£o num relÃ³gio
- *  prÃ³prio. Ã‰ a diferenÃ§a entre vÃ­deo fluido e vÃ­deo tremido: com
+ *  O gravador recebe um quadro quando há um quadro novo, e não num relógio
+ *  próprio. É a diferença entre vídeo fluido e vídeo tremido: com
  *  `captureStream(fps)` o navegador tira uma amostra a cada 1/fps de segundo
- *  independentemente de o desenho ter terminado, e quando nÃ£o terminou ele
- *  repete a amostra anterior â€” o vÃ­deo fica com quadros gÃªmeos e o movimento
+ *  independentemente de o desenho ter terminado, e quando não terminou ele
+ *  repete a amostra anterior — o vídeo fica com quadros gêmeos e o movimento
  *  engasga em cima deles. Com `captureStream(0)` mais `requestFrame`, nenhum
- *  quadro Ã© repetido e nenhum Ã© perdido.
+ *  quadro é repetido e nenhum é perdido.
  *
- *  O relÃ³gio continua sendo o real, nÃ£o um contador de quadros: o vÃ­deo tem a
- *  duraÃ§Ã£o que a peÃ§a tem. Adiantar o desenho produziria um arquivo mais curto
- *  que a animaÃ§Ã£o, e atrasar produziria cÃ¢mera lenta. */
+ *  O relógio continua sendo o real, não um contador de quadros: o vídeo tem a
+ *  duração que a peça tem. Adiantar o desenho produziria um arquivo mais curto
+ *  que a animação, e atrasar produziria câmera lenta. */
 export async function gravarPeca(
   canvas: HTMLCanvasElement,
   desenharQuadro: (t: number) => Promise<void> | void,
@@ -61,21 +61,21 @@ export async function gravarPeca(
     return {
       ok: false,
       motivo:
-        'Este navegador nÃ£o grava MP4. O Instagram nÃ£o aceita WebM â€” abra o EstÃºdio no Chrome para exportar o vÃ­deo.',
+        'Este navegador não grava MP4. O Instagram não aceita WebM — abra o Estúdio no Chrome para exportar o vídeo.',
     };
   }
 
-  // 60 e nÃ£o 30: o movimento aqui Ã© lento e contÃ­nuo, e Ã© justamente nesse
+  // 60 e não 30: o movimento aqui é lento e contínuo, e é justamente nesse
   // tipo de movimento que 30 quadros aparecem como degraus. O arquivo cresce,
-  // mas o Instagram reconverte tudo de qualquer jeito â€” o que nÃ£o se recupera
-  // depois Ã© fluidez que nÃ£o foi gravada.
+  // mas o Instagram reconverte tudo de qualquer jeito — o que não se recupera
+  // depois é fluidez que não foi gravada.
   const stream = canvas.captureStream(0);
   const faixa = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack | undefined;
   const pedirQuadro =
     faixa && typeof faixa.requestFrame === 'function' ? () => faixa.requestFrame() : null;
   if (!pedirQuadro) {
-    // Sem `requestFrame` o navegador amostra sozinho; aÃ­ o melhor que dÃ¡ para
-    // fazer Ã© nÃ£o atrapalhar.
+    // Sem `requestFrame` o navegador amostra sozinho; aí o melhor que dá para
+    // fazer é não atrapalhar.
     stream.getTracks().forEach((f) => f.stop());
     return gravarPorAmostragem(canvas, desenharQuadro, { duracao, fps, formato });
   }
@@ -134,10 +134,10 @@ export async function gravarPeca(
     proximo = Math.max(proximo + intervalo, agora + intervalo * 0.5);
   }
 
-  // Um quadro final no estado de repouso: sem ele o Ãºltimo frame pode pegar a
-  // animaÃ§Ã£o a meio caminho e o vÃ­deo termina tremendo. A espera depois dele Ã©
-  // o que dÃ¡ duraÃ§Ã£o a esse quadro â€” um quadro sem duraÃ§Ã£o nÃ£o existe no
-  // arquivo, e o vÃ­deo volta a terminar no penÃºltimo.
+  // Um quadro final no estado de repouso: sem ele o último frame pode pegar a
+  // animação a meio caminho e o vídeo termina tremendo. A espera depois dele é
+  // o que dá duração a esse quadro — um quadro sem duração não existe no
+  // arquivo, e o vídeo volta a terminar no penúltimo.
   await desenharQuadro(duracao);
   pedirQuadro();
   quadros++;

@@ -2,6 +2,7 @@
 'use client';
 
 import { HERO_COLORS as C, HERO_FONTS as F, heroBgGrid, segment as sg, clamp, type SceneSpec } from './scene-engine';
+import { Pacote } from './Pacote';
 
 export const BANNER4_SCENES: SceneSpec[] = [
   { name: 'Compra', dur: 2 },
@@ -46,10 +47,7 @@ function Pkg({ J }: { J: number }) {
           background: 'radial-gradient(circle, rgb(var(--brand-accent-rgb) / 0.22) 0%, rgb(var(--brand-accent-rgb) / 0) 60%)',
         }}
       />
-      <div style={{ position: 'relative', width: 56, height: 56, background: 'linear-gradient(160deg, #26272D, #17181C)', borderRadius: 8, border: '1px solid #34363D', boxShadow: '0 18px 26px rgba(0,0,0,0.55)' }}>
-        <div style={{ position: 'absolute', left: 0, right: 0, top: 24, height: 8, background: C.orange, opacity: 0.9 }} />
-        <div style={{ position: 'absolute', top: 0, bottom: 0, left: 24, width: 8, background: C.orange, opacity: 0.35 }} />
-      </div>
+      <Pacote lado={60} />
       <div
         style={{
           position: 'absolute',
@@ -60,7 +58,7 @@ function Pkg({ J }: { J: number }) {
           fontFamily: F.mono,
           fontSize: 12,
           letterSpacing: '0.2em',
-          color: C.orange,
+          color: C.ouro,
           background: 'rgba(14,14,17,0.85)',
           border: '1px solid rgb(var(--brand-accent-rgb) / 0.35)',
           borderRadius: 4,
@@ -93,7 +91,7 @@ function Set4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msgP
 
       <div style={{ position: 'absolute', left: 0, right: 0, top: 96, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, textAlign: 'center' }}>
         <img src="/images/logo.png" alt="Prog Imports" style={{ width: 190, opacity: baseP, transform: `translateY(${(1 - baseP) * -14}px)` }} />
-        <div style={{ fontFamily: F.mono, fontSize: 14, letterSpacing: '0.34em', color: C.orange, opacity: baseP }}>DA COMPRA À ENTREGA</div>
+        <div style={{ fontFamily: F.mono, fontSize: 14, letterSpacing: '0.34em', color: C.ouro, opacity: baseP }}>DA COMPRA À ENTREGA</div>
         <div style={{ overflow: 'hidden' }}>
           <h1
             style={{
@@ -108,19 +106,19 @@ function Set4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msgP
               transform: `translateY(${(1 - msgP) * 115}%)`,
             }}
           >
-            Sua tecnologia importada, acompanhada do início ao fim<span style={{ color: C.orange }}>.</span>
+            Sua tecnologia importada, acompanhada do início ao fim<span style={{ color: C.ouro }}>.</span>
           </h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 18, opacity: sg(msgP, 0.4, 0.85), transform: `translateY(${(1 - sg(msgP, 0.4, 0.85)) * 16}px)` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: F.mono, fontSize: 13, letterSpacing: '0.14em', color: C.gray, border: '1px solid #2A2B31', borderRadius: 999, padding: '10px 20px' }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: C.orange, display: 'inline-block' }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: C.ouro, display: 'inline-block' }} />
             RASTREIO EM TEMPO REAL, DIRETO PELO SITE
           </div>
           <a
             href="/produtos"
             style={{
               display: 'inline-block',
-              background: C.orange,
+              background: C.ouro,
               color: '#0A0A0C',
               textDecoration: 'none',
               fontFamily: F.display,
@@ -139,11 +137,11 @@ function Set4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msgP
       <div style={{ position: 'absolute', inset: 0, opacity: baseP }}>
         <svg width="1920" height="800" viewBox="0 0 1920 800" style={{ position: 'absolute', inset: 0 }}>
           <line x1={NODES[0].x} y1={TY} x2={NODES[4].x} y2={TY} stroke="#26272C" strokeWidth="2" />
-          <line x1={NODES[0].x} y1={TY} x2={NODES[0].x + (NODES[4].x - NODES[0].x) * fillW} y2={TY} stroke={C.orange} strokeWidth="2.5" />
+          <line x1={NODES[0].x} y1={TY} x2={NODES[0].x + (NODES[4].x - NODES[0].x) * fillW} y2={TY} stroke={C.ouro} strokeWidth="2.5" />
           <path
             d={`M ${NODES[2].x} ${TY} Q ${(NODES[2].x + NODES[3].x) / 2} ${TY - 150} ${NODES[3].x} ${TY}`}
             fill="none"
-            stroke={C.orange}
+            stroke={C.ouro}
             strokeWidth="1"
             strokeDasharray="4 7"
             opacity={J > 1.9 && J < 3.1 ? 0.5 : 0.18}
@@ -165,7 +163,7 @@ function Set4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msgP
                     height: 64,
                     transform: 'translate(-50%,-50%)',
                     borderRadius: '50%',
-                    border: `1px solid ${C.orange}`,
+                    border: `1px solid ${C.ouro}`,
                     opacity: 0.35 + 0.3 * Math.sin(t * 3),
                   }}
                 />
@@ -176,13 +174,13 @@ function Set4({ t, baseP, J, msgP }: { t: number; baseP: number; J: number; msgP
                   height: 46,
                   borderRadius: '50%',
                   background: active ? '#141519' : C.node,
-                  border: `1.5px solid ${active ? C.orange : '#2E3036'}`,
+                  border: `1.5px solid ${active ? C.ouro : '#2E3036'}`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontFamily: F.mono,
                   fontSize: 14,
-                  color: active ? C.orange : '#5B5D64',
+                  color: active ? C.ouro : '#5B5D64',
                   boxShadow: active ? '0 0 20px rgb(var(--brand-accent-rgb) / 0.25)' : 'none',
                 }}
               >

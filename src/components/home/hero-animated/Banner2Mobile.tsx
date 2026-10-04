@@ -47,7 +47,7 @@ function SetM2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; ro
                 key={i}
                 d={`M ${US.x} ${US.y} Q ${c.x} ${c.y} ${BR.x} ${BR.y}`}
                 fill="none"
-                stroke={C.orange}
+                stroke={C.ouro}
                 strokeWidth={i === 0 ? 2 : 1}
                 opacity={(i === 0 ? 0.85 : 0.35) * Math.min(1, mapP)}
                 pathLength={1}
@@ -56,13 +56,13 @@ function SetM2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; ro
               />
             );
           })}
-          <circle cx={US.x} cy={US.y} r={5} fill={C.orange} opacity={mapP} />
-          <circle cx={US.x} cy={US.y} r={9 + 5 * Math.sin(t * 2.4)} fill="none" stroke={C.orange} strokeWidth="1" opacity={0.5 * mapP} />
-          <circle cx={BR.x} cy={BR.y} r={5} fill={C.orange} opacity={Math.min(1, routeP * 2)} />
+          <circle cx={US.x} cy={US.y} r={5} fill={C.ouro} opacity={mapP} />
+          <circle cx={US.x} cy={US.y} r={9 + 5 * Math.sin(t * 2.4)} fill="none" stroke={C.ouro} strokeWidth="1" opacity={0.5 * mapP} />
+          <circle cx={BR.x} cy={BR.y} r={5} fill={C.ouro} opacity={Math.min(1, routeP * 2)} />
           {arriveP > 0 &&
             [0, 1, 2].map((i) => {
               const rp = (t * 0.55 + i / 3) % 1;
-              return <circle key={i} cx={BR.x} cy={BR.y} r={8 + rp * 46} fill="none" stroke={C.orange} strokeWidth="1.2" opacity={(1 - rp) * 0.6 * arriveP} />;
+              return <circle key={i} cx={BR.x} cy={BR.y} r={8 + rp * 46} fill="none" stroke={C.ouro} strokeWidth="1.2" opacity={(1 - rp) * 0.6 * arriveP} />;
             })}
         </svg>
         {CHIPS.map((src, i) => {
@@ -104,7 +104,7 @@ function SetM2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; ro
 
       <div style={{ position: 'absolute', left: 72, right: 72, top: 735, display: 'flex', flexDirection: 'column', gap: 20 }}>
         <img src="/images/logo.png" alt="Prog Imports" style={{ width: 170, opacity: msgP, transform: `translateY(${(1 - msgP) * -14}px)` }} />
-        <div style={{ fontFamily: F.mono, fontSize: 16, letterSpacing: '0.3em', color: C.orange, opacity: Math.min(1, mapP) }}>DIRETO DOS EUA 🇺🇸</div>
+        <div style={{ fontFamily: F.mono, fontSize: 16, letterSpacing: '0.3em', color: C.ouro, opacity: Math.min(1, mapP) }}>DIRETO DOS EUA 🇺🇸</div>
         <div style={{ overflow: 'hidden' }}>
           <h1
             style={{
@@ -118,7 +118,7 @@ function SetM2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; ro
               transform: `translateY(${(1 - msgP) * 110}%)`,
             }}
           >
-            Produtos exclusivos, importados dos EUA<span style={{ color: C.orange }}>.</span>
+            Produtos exclusivos, importados dos EUA<span style={{ color: C.ouro }}>.</span>
           </h1>
         </div>
         <div style={{ fontSize: 22, lineHeight: 1.5, color: C.gray, maxWidth: 760, opacity: msgP, transform: `translateY(${(1 - msgP) * 16}px)` }}>
@@ -129,7 +129,7 @@ function SetM2({ t, mapP, routeP, arriveP, msgP }: { t: number; mapP: number; ro
           style={{
             display: 'inline-block',
             alignSelf: 'flex-start',
-            background: C.orange,
+            background: C.ouro,
             color: '#0A0A0C',
             textDecoration: 'none',
             fontFamily: F.display,

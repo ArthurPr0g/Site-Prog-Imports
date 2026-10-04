@@ -31,6 +31,7 @@ import {
   type Figura,
   type Halo,
 } from '@/lib/estudio/marca';
+import { PARCELAS_SEM_JUROS } from '@/lib/parcelamento';
 import { campo, type Desenhista } from '@/lib/estudio/desenhistas/tipos';
 
 const HALOS: Halo[] = ['roxo', 'magenta', 'turquesa', 'rubi', 'ouro'];
@@ -400,7 +401,7 @@ export const desenhar4B: Desenhista = ({ ctx, largura, altura, conteudo, imagens
     preencher(ctx, COR.marfim, largura, altura);
     rotulo(ctx, 'Preço no Brasil', MARGEM, MARGEM + 26, 26, COR.grafiteTexto);
     if (p) produto(ctx, p, { x: 360, y: 90, largura: 680, altura: 480 }, { rotacao: -8, sombra: 'rgba(60,45,20,.35)' });
-    placa(ctx, '12× sem juros', 'em todos', MARGEM, 200);
+    placa(ctx, `${PARCELAS_SEM_JUROS}× sem juros`, 'em todos', MARGEM, 200);
 
     let y = 620;
     for (const linha of linhasTabeladas(campo(conteudo, 'precos'))) {
@@ -498,3 +499,4 @@ export const DESENHISTAS_DE_CARROSSEL: Record<string, Desenhista> = {
   '4a': desenhar4A,
   '4b': desenhar4B,
 };
+

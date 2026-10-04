@@ -36,7 +36,7 @@ function PanelM3({ p, a, conv, t, i }: { p: Piece; a: number; conv: number; t: n
         boxShadow: '0 0 28px rgb(var(--brand-accent-rgb) / 0.12), 0 20px 32px rgba(0,0,0,0.5)',
       }}
     >
-      <div style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: '0.28em', color: C.orange }}>{p.tag}</div>
+      <div style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: '0.28em', color: C.ouro }}>{p.tag}</div>
       <div style={{ fontFamily: F.display, fontWeight: 600, fontSize: 20, color: C.white, margin: '5px 0 2px' }}>{p.name}</div>
       <div style={{ fontFamily: F.body, fontSize: 13, color: C.gray }}>{p.sub}</div>
       <div style={{ height: 1, background: 'linear-gradient(90deg, rgb(var(--brand-accent-rgb) / 0.7), rgb(var(--brand-accent-rgb) / 0))', marginTop: 10 }} />
@@ -68,9 +68,9 @@ function SetM3({ t, flyP, convP, msgP }: { t: number; flyP: number; convP: numbe
       <svg width="1080" height="1350" viewBox="0 0 1080 1350" style={{ position: 'absolute', inset: 0 }}>
         {PIECES.map((p, i) => {
           const a = sg(flyP, i * 0.12, i * 0.12 + 0.3);
-          return <line key={i} x1={p.px} y1={p.py} x2={LAP.x} y2={LAP.y} stroke={C.orange} strokeWidth="1" opacity={0.28 * a * (1 - convP)} strokeDasharray="4 7" />;
+          return <line key={i} x1={p.px} y1={p.py} x2={LAP.x} y2={LAP.y} stroke={C.ouro} strokeWidth="1" opacity={0.28 * a * (1 - convP)} strokeDasharray="4 7" />;
         })}
-        <circle cx={LAP.x} cy={LAP.y} r={200 * flash} fill="none" stroke={C.orange} strokeWidth={2.5 * (1 - flash) + 0.5} opacity={0.85 * flash * (1 - lapIn * 0.6)} />
+        <circle cx={LAP.x} cy={LAP.y} r={200 * flash} fill="none" stroke={C.ouro} strokeWidth={2.5 * (1 - flash) + 0.5} opacity={0.85 * flash * (1 - lapIn * 0.6)} />
       </svg>
 
       <img
@@ -107,7 +107,7 @@ function SetM3({ t, flyP, convP, msgP }: { t: number; flyP: number; convP: numbe
 
       <div style={{ position: 'absolute', left: 72, top: 80, width: 936, display: 'flex', flexDirection: 'column', gap: 18 }}>
         <img src="/images/logo.png" alt="Prog Imports" style={{ width: 165, alignSelf: 'flex-start', opacity: msgP, transform: `translateY(${(1 - msgP) * -14}px)` }} />
-        <div style={{ fontFamily: F.mono, fontSize: 16, letterSpacing: '0.3em', color: C.orange, opacity: Math.min(1, flyP * 2) }}>ENGENHARIA PREMIUM</div>
+        <div style={{ fontFamily: F.mono, fontSize: 16, letterSpacing: '0.3em', color: C.ouro, opacity: Math.min(1, flyP * 2) }}>ENGENHARIA PREMIUM</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', columnGap: 18 }}>
           {WORDS.map((w, i) => {
             const a = sg(msgP, i * 0.18, i * 0.18 + 0.3, Easing.easeOutCubic);
@@ -120,7 +120,7 @@ function SetM3({ t, flyP, convP, msgP }: { t: number; flyP: number; convP: numbe
                     fontSize: 55,
                     lineHeight: 1.16,
                     letterSpacing: '-0.02em',
-                    color: i === 2 ? C.orange : C.white,
+                    color: i === 2 ? C.ouro : C.white,
                     transform: `translateY(${(1 - a) * 110}%)`,
                   }}
                 >
@@ -138,7 +138,7 @@ function SetM3({ t, flyP, convP, msgP }: { t: number; flyP: number; convP: numbe
           style={{
             display: 'inline-block',
             alignSelf: 'flex-start',
-            background: C.orange,
+            background: C.ouro,
             color: '#0A0A0C',
             textDecoration: 'none',
             fontFamily: F.display,

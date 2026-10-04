@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PlaceholderImage } from '@/components/ui/PlaceholderImage';
 import { GlowBorder, glowMouseMove, glowMouseLeave } from '@/components/ui/GlowBorder';
-import { formatBRL, formatParcel } from '@/lib/format';
+import { formatBRL } from '@/lib/format';
+import { PARCELAS_SEM_JUROS, parcelaSemJuros } from '@/lib/parcelamento';
 import { toggleFavoriteAction } from '@/app/actions/account';
 import { useToast } from '@/components/ui/Toast';
 
@@ -61,8 +62,8 @@ export function FavoriteCard({
         <Link href={`/produto/${sku}`} className="mb-2 block text-sm font-extrabold leading-snug">
           {name}
         </Link>
-        <div className="font-display text-lg font-bold">{formatBRL(price)}</div>
-        <div className="text-xs text-fg-tertiary">12x de {formatParcel(price)}</div>
+        <div className="titulo text-[20px] text-ouro-claro">{formatBRL(price)}</div>
+        <div className="text-xs text-fg-tertiary">{PARCELAS_SEM_JUROS}× de {formatBRL(parcelaSemJuros(price))}</div>
       </div>
     </div>
   );

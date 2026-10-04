@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { geoEquirectangular, geoPath } from 'd3-geo';
 import { feature } from 'topojson-client';
 import type { Topology } from 'topojson-specification';
+import { PALETA } from '@/lib/identidade';
 
 type Vec3 = [number, number, number];
 type Deal = { t: string; img: string; image?: HTMLImageElement };
@@ -52,8 +53,12 @@ const DEALS: Deal[] = [
   { t: 'Galaxy S25 Ultra · $1.299', img: 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=120&q=60' },
 ];
 
-const ORANGE = '#f59e0b';
-const ORANGE2 = '#fb923c';
+// Dois laranjas escritos à mão que sobreviveram ao re-skin porque o globo é
+// desenhado em canvas e não lê token de CSS. Agora leem a paleta da marca pelo
+// mesmo arquivo que o resto do sistema — e o nome deixou de mentir, que foi o
+// que escondeu estas duas cores da varredura por `#F28705`.
+const OURO = PALETA.ouro;
+const OURO_CLARO = PALETA.ouroClaro;
 
 function ll2v(lat: number, lon: number): Vec3 {
   const la = (lat * Math.PI) / 180;
@@ -314,11 +319,11 @@ export function GlobeOpportunities() {
           ctx.beginPath();
           ctx.arc(p[0], p[1], 4 + pulse * 14, 0, Math.PI * 2);
           ctx.stroke();
-          ctx.fillStyle = ORANGE;
+          ctx.fillStyle = OURO;
           ctx.beginPath();
           ctx.arc(p[0], p[1], 4.2, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = '#0a0a0d';
+          ctx.fillStyle = PALETA.onix;
           ctx.beginPath();
           ctx.arc(p[0], p[1], 1.8, 0, Math.PI * 2);
           ctx.fill();
@@ -357,7 +362,7 @@ export function GlobeOpportunities() {
         ctx.beginPath();
         ctx.arc(p[0], p[1], 2.6, 0, Math.PI * 2);
         ctx.fill();
-        drawLabel(p[0], p[1], o.deal.t, o.city, a, ORANGE2, o.deal.image ?? null);
+        drawLabel(p[0], p[1], o.deal.t, o.city, a, OURO_CLARO, o.deal.image ?? null);
       }
 
       for (let i = planes.length - 1; i >= 0; i--) {
@@ -408,7 +413,7 @@ export function GlobeOpportunities() {
           ctx.translate(p1[0], p1[1]);
           ctx.rotate(ang);
           ctx.fillStyle = '#fff';
-          ctx.shadowColor = ORANGE;
+          ctx.shadowColor = OURO;
           ctx.shadowBlur = 6;
           ctx.beginPath();
           ctx.moveTo(7 * sc, 0);

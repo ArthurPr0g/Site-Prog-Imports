@@ -97,7 +97,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ nu
             href={supportLink}
             target="_blank"
             rel="noreferrer"
-            className="block rounded-2xl border border-border-hover bg-[#1c1c21] py-3.5 text-center text-[13.5px] font-extrabold transition-all hover:border-accent hover:text-accent"
+            className="block rounded-2xl border border-border-hover bg-[var(--prog-cartao-hover)] py-3.5 text-center text-[13.5px] font-extrabold transition-all hover:border-accent hover:text-accent"
           >
             Falar com o suporte
           </a>

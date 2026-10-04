@@ -55,7 +55,7 @@ export default async function AllProductsPage() {
 
       <main>
       <div className="mx-auto max-w-[1280px] px-6 pt-4">
-        <h1 className="font-display text-[30px] font-bold tracking-[-.02em] sm:text-[36px]">Todos os produtos</h1>
+        <h1 className="titulo text-[30px] sm:text-[36px]">Todos os produtos</h1>
         <p className="mt-1.5 text-[13.5px] text-fg-tertiary">{products.length} produtos disponíveis</p>
       </div>
 

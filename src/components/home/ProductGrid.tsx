@@ -1,4 +1,4 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 import { ProductCardTile } from './ProductCardTile';
 import type { ProductCard } from '@/lib/data/catalog';
 
@@ -10,7 +10,7 @@ export function ProductGrid({ products, activeCategoria }: { products: ProductCa
           <div className="mb-2.5 text-xs font-extrabold uppercase tracking-[.14em] text-accent">
             {activeCategoria ? 'Filtrando por categoria' : 'Destaques da semana'}
           </div>
-          <h2 className="font-display text-[36px] font-bold tracking-[-.02em]">
+          <h2 className="titulo text-[36px]">
             {activeCategoria ? activeCategoria : 'Produtos em destaque'}
           </h2>
         </div>
@@ -19,7 +19,7 @@ export function ProductGrid({ products, activeCategoria }: { products: ProductCa
             href="/#colecoes"
             className="rounded-full border border-border-hover px-4.5 py-2.5 text-[13px] font-bold text-fg-secondary transition-all hover:border-accent hover:text-accent"
           >
-            ✕ Limpar filtro
+            âœ• Limpar filtro
           </Link>
         )}
       </div>

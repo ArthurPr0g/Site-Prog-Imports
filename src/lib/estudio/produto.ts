@@ -5,6 +5,8 @@
 // trava: um post de oferta às vezes mostra preço que ainda não está no site, e
 // um título de arte raramente é o nome completo do cadastro.
 
+import { PARCELAS_SEM_JUROS, parcelaSemJuros } from '@/lib/parcelamento';
+
 export type ProdutoDoEstudio = {
   id: string;
   sku: string;
@@ -31,11 +33,15 @@ export function precoDaArte(valor: number): string {
   return `R$ ${Math.round(valor).toLocaleString('pt-BR')}`;
 }
 
-/** Até 12 parcelas sem juros é a regra da loja; abaixo de R$ 1.000 a parcela
- *  fica ridícula e o playbook prefere o preço limpo. */
+/** A regra de parcelamento da loja vive em `lib/parcelamento.ts`, e a arte lê
+ *  dela: post prometendo 12× sem juros enquanto o site oferece 3× é uma
+ *  promessa que alguém vai cobrar no direct.
+ *
+ *  Abaixo de R$ 1.000 a parcela fica ridícula e o playbook prefere o preço
+ *  limpo. */
 function parcelamento(valor: number): string {
   if (valor < 1000) return '';
-  return `12× ${precoDaArte(valor / 12)} sem juros`;
+  return `${PARCELAS_SEM_JUROS}× ${precoDaArte(parcelaSemJuros(valor))} sem juros`;
 }
 
 /** O nome da arte não é o nome do cadastro.

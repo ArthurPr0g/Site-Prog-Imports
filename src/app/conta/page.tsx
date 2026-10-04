@@ -25,7 +25,7 @@ export default async function AccountSummaryPage() {
 
   return (
     <div>
-      <h1 className="mb-1 font-display text-[26px] font-bold tracking-[-.02em]">Olá, {firstName}</h1>
+      <h1 className="mb-1 titulo text-[26px]">Olá, {firstName}</h1>
       <div className="mb-6 text-sm text-fg-tertiary">Acompanhe seus pedidos e gerencie sua conta.</div>
 
       <div className="mb-6 grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3.5">
@@ -52,7 +52,7 @@ export default async function AccountSummaryPage() {
       <CarneResumo parcelas={parcelas} />
 
       {activeOrder && (
-        <div className="mb-6 rounded-[20px] border border-accent/30 bg-[linear-gradient(135deg,#181014,#111114_60%)] p-6.5">
+        <div className="mb-6 rounded-[20px] border border-accent/30 bg-[linear-gradient(135deg,#181014,var(--prog-cartao)_60%)] p-6.5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="mb-2 text-xs font-extrabold uppercase tracking-[.1em] text-accent">
@@ -63,7 +63,7 @@ export default async function AccountSummaryPage() {
             </div>
             <Link
               href={`/conta/pedidos/${activeOrder.orderNumber}`}
-              className="rounded-xl bg-accent px-5.5 py-3 text-[13.5px] font-extrabold text-page transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgb(var(--brand-accent-rgb)/.4)]"
+              className="rounded-xl bg-surface-light px-5.5 py-3 text-[13.5px] font-extrabold text-ink transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgb(var(--brand-accent-rgb)/.4)]"
             >
               Rastrear pedido
             </Link>
@@ -79,7 +79,7 @@ export default async function AccountSummaryPage() {
                       ? 'var(--color-accent)'
                       : i === activeOrder.stage
                         ? 'rgb(var(--brand-accent-rgb) / .35)'
-                        : '#1c1c21',
+                        : 'var(--prog-cartao-hover)',
                 }}
               />
             ))}

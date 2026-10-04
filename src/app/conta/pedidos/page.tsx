@@ -11,7 +11,7 @@ export default async function OrdersPage() {
 
   return (
     <div>
-      <h1 className="mb-6 font-display text-[26px] font-bold tracking-[-.02em]">Meus pedidos</h1>
+      <h1 className="mb-6 titulo text-[26px]">Meus pedidos</h1>
       <div className="flex flex-col gap-3.5">
         {orders.length === 0 && (
           <div className="rounded-[20px] border border-border bg-card p-8 text-center text-sm text-fg-tertiary">
@@ -45,7 +45,7 @@ export default async function OrdersPage() {
                 </span>
                 <Link
                   href={`/conta/pedidos/${o.orderNumber}`}
-                  className="rounded-xl border border-border-hover bg-[#1c1c21] px-4.5 py-2.5 text-[13px] font-extrabold transition-all hover:border-accent hover:text-accent"
+                  className="rounded-xl border border-border-hover bg-[var(--prog-cartao-hover)] px-4.5 py-2.5 text-[13px] font-extrabold transition-all hover:border-accent hover:text-accent"
                 >
                   Ver detalhes
                 </Link>

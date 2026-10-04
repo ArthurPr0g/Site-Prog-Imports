@@ -206,7 +206,7 @@ export function FloatingAssistant() {
                 key={i}
                 className={`max-w-[85%] space-y-2 rounded-2xl px-4 py-2.5 text-[13.5px] leading-snug ${
                   m.role === 'user'
-                    ? 'ml-auto rounded-br-sm bg-accent text-page'
+                    ? 'ml-auto rounded-br-sm bg-surface-light text-ink'
                     : 'mr-auto rounded-bl-sm border border-border bg-card-dark text-fg-secondary'
                 }`}
               >
@@ -241,7 +241,7 @@ export function FloatingAssistant() {
               onClick={send}
               disabled={loading || !input.trim()}
               aria-label="Enviar mensagem"
-              className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-accent text-page transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+              className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-surface-light text-ink transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Send size={16} />
             </button>

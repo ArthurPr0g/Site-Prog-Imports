@@ -45,9 +45,11 @@ export function formatNumeroInput(valor: number, casas = 2): string {
   return valor.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
 }
 
-export function formatParcel(value: number): string {
-  return formatBRL(value / 12);
-}
+// `formatParcel` saiu daqui. Ela dividia por 12 porque o site anunciava "12x
+// sem juros", e dividir um preço por um número não é formatação — é a regra
+// comercial da loja escondida num utilitário de texto. A regra agora mora em
+// `lib/parcelamento.ts`, junto com as taxas da InfinitePay que a tornam
+// verdadeira ou falsa.
 
 export function formatDateBR(date: string | Date): string {
   const d = typeof date === 'string' ? new Date(date) : date;

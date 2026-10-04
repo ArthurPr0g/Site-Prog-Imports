@@ -8,7 +8,7 @@ export function Services({ services }: { services: Tables<'services'>[] }) {
         <div className="mb-2.5 text-xs font-extrabold uppercase tracking-[.14em] text-accent">
           Assistência especializada
         </div>
-        <h2 className="font-display text-[36px] font-bold tracking-[-.02em]">Serviços técnicos</h2>
+        <h2 className="titulo text-[36px]">Serviços técnicos</h2>
       </div>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3.5">
         {services.map((s) => {
