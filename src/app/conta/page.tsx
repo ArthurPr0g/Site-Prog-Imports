@@ -52,7 +52,7 @@ export default async function AccountSummaryPage() {
       <CarneResumo parcelas={parcelas} />
 
       {activeOrder && (
-        <div className="mb-6 rounded-[20px] border border-accent/30 bg-[linear-gradient(135deg,#181014,#111114_60%)] p-6.5">
+        <div className="mb-6 rounded-[20px] border border-accent/30 bg-[linear-gradient(135deg,#181014,var(--prog-cartao)_60%)] p-6.5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="mb-2 text-xs font-extrabold uppercase tracking-[.1em] text-accent">
@@ -79,7 +79,7 @@ export default async function AccountSummaryPage() {
                       ? 'var(--color-accent)'
                       : i === activeOrder.stage
                         ? 'rgb(var(--brand-accent-rgb) / .35)'
-                        : '#1c1c21',
+                        : 'var(--prog-cartao-hover)',
                 }}
               />
             ))}

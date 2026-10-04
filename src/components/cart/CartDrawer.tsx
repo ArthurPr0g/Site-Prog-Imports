@@ -67,14 +67,14 @@ export function CartDrawer() {
                 <div className="mt-2 flex items-center gap-2.5">
                   <button
                     onClick={() => dec(it.id)}
-                    className="h-6.5 w-6.5 rounded-lg border border-border-hover bg-[#1c1c21] text-[13px]"
+                    className="h-6.5 w-6.5 rounded-lg border border-border-hover bg-[var(--prog-cartao-hover)] text-[13px]"
                   >
                     −
                   </button>
                   <span className="min-w-4 text-center text-[13px] font-extrabold">{it.qty}</span>
                   <button
                     onClick={() => inc(it.id)}
-                    className="h-6.5 w-6.5 rounded-lg border border-border-hover bg-[#1c1c21] text-[13px]"
+                    className="h-6.5 w-6.5 rounded-lg border border-border-hover bg-[var(--prog-cartao-hover)] text-[13px]"
                   >
                     +
                   </button>
@@ -101,7 +101,7 @@ export function CartDrawer() {
               />
               <button
                 onClick={applyCoupon}
-                className="rounded-control border border-border-hover bg-[#1c1c21] px-4.5 py-2.5 text-[13px] font-extrabold hover:border-accent"
+                className="rounded-control border border-border-hover bg-[var(--prog-cartao-hover)] px-4.5 py-2.5 text-[13px] font-extrabold hover:border-accent"
               >
                 Aplicar
               </button>
@@ -120,7 +120,7 @@ export function CartDrawer() {
               />
               <button
                 onClick={calcFrete}
-                className="rounded-control border border-border-hover bg-[#1c1c21] px-4.5 py-2.5 text-[13px] font-extrabold hover:border-accent"
+                className="rounded-control border border-border-hover bg-[var(--prog-cartao-hover)] px-4.5 py-2.5 text-[13px] font-extrabold hover:border-accent"
               >
                 Calcular
               </button>

@@ -119,7 +119,7 @@ export function CarneResumo({ parcelas }: { parcelas: MinhaParcela[] }) {
                     style={
                       vencida
                         ? { background: `${VERMELHO}1f`, color: VERMELHO }
-                        : { background: '#ffffff10', color: '#a8a8b0' }
+                        : { background: '#ffffff10', color: 'var(--prog-prata-escura)' }
                     }
                   >
                     {vencida ? 'Vencida' : 'A vencer'}

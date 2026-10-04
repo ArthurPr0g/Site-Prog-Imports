@@ -29,7 +29,7 @@ export function ProductTabs({
             className="border-b-2 px-5.5 py-3.5 text-[15px] font-extrabold transition-all"
             style={{
               borderColor: tab === i ? 'var(--color-accent)' : 'transparent',
-              color: tab === i ? '#f4f4f5' : '#7a7a84',
+              color: tab === i ? 'var(--prog-marfim)' : 'var(--prog-grafite-texto)',
             }}
           >
             {name}
@@ -38,7 +38,7 @@ export function ProductTabs({
       </div>
 
       {tab === 0 && (
-        <div className="max-w-[760px] text-[15.5px] leading-loose text-[#c9c9d1] whitespace-pre-line">
+        <div className="max-w-[760px] text-[15.5px] leading-loose text-[var(--prog-prata)] whitespace-pre-line">
           {description}
         </div>
       )}
@@ -61,7 +61,7 @@ export function ProductTabs({
               <div className="mb-3">
                 <StarRating rating={r.rating} size={13} />
               </div>
-              <p className="mb-4 text-sm leading-relaxed text-[#c9c9d1]">{r.text}</p>
+              <p className="mb-4 text-sm leading-relaxed text-[var(--prog-prata)]">{r.text}</p>
               <div className="text-[13.5px] font-extrabold">
                 {r.author_name} <span className="font-semibold text-fg-tertiary">· {formatDateBR(r.created_at)}</span>
               </div>

@@ -199,7 +199,7 @@ export function BuyBox({
         <button
           onClick={() => toggleFavorite(productId)}
           className="h-12 w-12 flex-shrink-0 rounded-2xl border border-border-strong bg-card text-lg transition-all hover:border-accent"
-          style={{ color: isFav ? 'var(--color-accent)' : '#a8a8b0' }}
+          style={{ color: isFav ? 'var(--color-accent)' : 'var(--prog-prata-escura)' }}
         >
           {isFav ? '♥' : '♡'}
         </button>

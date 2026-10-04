@@ -45,7 +45,7 @@ export default async function OrdersPage() {
                 </span>
                 <Link
                   href={`/conta/pedidos/${o.orderNumber}`}
-                  className="rounded-xl border border-border-hover bg-[#1c1c21] px-4.5 py-2.5 text-[13px] font-extrabold transition-all hover:border-accent hover:text-accent"
+                  className="rounded-xl border border-border-hover bg-[var(--prog-cartao-hover)] px-4.5 py-2.5 text-[13px] font-extrabold transition-all hover:border-accent hover:text-accent"
                 >
                   Ver detalhes
                 </Link>
