@@ -2,6 +2,7 @@
 'use client';
 
 import { HERO_COLORS as C, HERO_FONTS as F, heroBgGrid, segment as sg, clamp } from './scene-engine';
+import { Pacote } from './Pacote';
 
 const TX = 190;
 const NODES = [
@@ -37,10 +38,7 @@ function PkgM({ J }: { J: number }) {
           background: 'radial-gradient(circle, rgb(var(--brand-accent-rgb) / 0.22) 0%, rgb(var(--brand-accent-rgb) / 0) 60%)',
         }}
       />
-      <div style={{ position: 'relative', width: 50, height: 50, background: 'linear-gradient(160deg, #26272D, #17181C)', borderRadius: 8, border: '1px solid #34363D', boxShadow: '0 14px 22px rgba(0,0,0,0.55)' }}>
-        <div style={{ position: 'absolute', left: 0, right: 0, top: 21, height: 8, background: C.ouro, opacity: 0.9 }} />
-        <div style={{ position: 'absolute', top: 0, bottom: 0, left: 21, width: 8, background: C.ouro, opacity: 0.35 }} />
-      </div>
+      <Pacote lado={54} />
     </div>
   );
 }

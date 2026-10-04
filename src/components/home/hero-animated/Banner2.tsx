@@ -53,7 +53,28 @@ const ARRIVALS = [
  *  com a rota no meio faria o zoom-out parecer um salto lateral. */
 const FOCO = { x: (US.x + BR.x) / 2, y: (US.y + BR.y) / 2 };
 const ALVO = { x: 700, y: 400 };
-const ZOOM_MAXIMO = 1.9;
+
+/** Até onde a câmera fecha.
+ *
+ *  O teto é a resolução do mapa, não o gosto: `map-world.png` tem 1920×800 e é
+ *  desenhado em 1920×800 pontos de CSS. Numa tela de alta densidade ele já
+ *  precisa do dobro de pixels que tem antes de qualquer zoom — fechar 1,9×
+ *  pedia quase quatro vezes, e o que aparecia era o pixel do arquivo.
+ *
+ *  1,55 é o quanto dá para fechar antes de a ampliação virar o assunto. Para
+ *  fechar mais seria preciso um mapa vetorial ou em 2×; enquanto isso, a
+ *  profundidade de campo abaixo faz o trabalho que a resolução não faz. */
+const ZOOM_MAXIMO = 1.55;
+
+/** Desfoque do mapa conforme a câmera fecha, em pixels.
+ *
+ *  Resolver o que não tem solução assumindo o problema: a ampliação amolece o
+ *  mapa de qualquer jeito, então o mapa **vai** para o fora de foco de
+ *  propósito, enquanto rota, pulsos e rótulos continuam nítidos porque são
+ *  vetor. Olho que vê fundo macio com frente nítida lê profundidade de campo,
+ *  que é o que uma câmera de verdade faz ao aproximar — e não lê falta de
+ *  resolução, que é o que ele lia antes. */
+const DESFOQUE_MAXIMO = 1.6;
 
 function camera(c: number) {
   const k = 1 + (ZOOM_MAXIMO - 1) * c;
@@ -92,7 +113,17 @@ function Set2({
         <img
           src={HERO_ASSET('map-world.png')}
           alt=""
-          style={{ position: 'absolute', inset: 0, width: 1920, height: 800, opacity: 0.9 * mapP, transform: `scale(${1.05 - 0.05 * mapP})` }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: 1920,
+            height: 800,
+            opacity: 0.9 * mapP,
+            transform: `scale(${1.05 - 0.05 * mapP})`,
+            // O desfoque é dividido pela escala porque ele é aplicado antes da
+            // câmera ampliar: sem isso, 1,6px viram 2,5px na tela e o mapa some.
+            filter: cam > 0.01 ? `blur(${((DESFOQUE_MAXIMO * cam) / k).toFixed(2)}px)` : undefined,
+          }}
         />
         <div
           style={{
