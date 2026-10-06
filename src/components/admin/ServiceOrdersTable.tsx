@@ -26,6 +26,7 @@ import {
   type LancamentoDaPrestacao,
   type ResumoRecebimentos,
 } from '@/lib/services';
+import { AvisoAjusteAutomatico, useAjusteAutomatico } from '@/components/admin/AjusteAutomatico';
 import { SEM_DESCONTO, temDesconto, aplicarDesconto, rotuloDoDesconto, type Desconto } from '@/lib/discount';
 import { DescontoFields } from '@/components/admin/DescontoFields';
 import { FormaPagamentoServico } from '@/components/admin/FormaPagamentoServico';
@@ -174,13 +175,25 @@ export function ServiceOrdersTable({
   const comCarne = !!form && (geraParcelas(form.paymentMethod) || condicaoDoMetodo(form.paymentMethod) !== null);
 
   const ativos = services.filter((s) => s.active);
+  // Combo e mensalidade única aplicados ao escolher serviços do catálogo.
+  const { ajuste, versaoLinhas, aplicar, desfazer, reiniciar } = useAjusteAutomatico(services);
+
+  function fecharForm() {
+    setForm(null);
+    reiniciar();
+  }
+
+  function desfazerAjuste() {
+    const antes = desfazer();
+    if (antes) setForm((f) => (f ? { ...f, items: antes } : f));
+  }
 
   function salvar() {
     if (!form) return;
     startTransition(async () => {
       const result = await saveServiceOrderAction(form);
       toast(result);
-      if (result.ok) setForm(null);
+      if (result.ok) fecharForm();
     });
   }
 
@@ -230,14 +243,21 @@ export function ServiceOrdersTable({
   function escolherServico(indice: number, serviceId: string) {
     const s = ativos.find((x) => x.id === serviceId);
     if (!s) return setItem(indice, { internalServiceId: null });
-    setItem(indice, {
-      internalServiceId: s.id,
-      name: s.name,
-      description: s.description,
-      amount: s.price,
-      billingType: s.billingType,
-      leadTimeDays: s.leadTimeDays,
-    });
+    if (!form) return;
+    const items = form.items.map((it, i) =>
+      i === indice
+        ? {
+            ...it,
+            internalServiceId: s.id,
+            name: s.name,
+            description: s.description,
+            amount: s.price,
+            billingType: s.billingType,
+            leadTimeDays: s.leadTimeDays,
+          }
+        : it
+    );
+    setForm({ ...form, items: aplicar(items) });
   }
 
   const cards = [
@@ -498,7 +518,7 @@ export function ServiceOrdersTable({
                   </div>
                   <div className="p-1.5">
                     <input
-                      key={`valor-${i}-${item.internalServiceId ?? 'avulso'}`}
+                      key={`valor-${versaoLinhas}-${i}-${item.internalServiceId ?? 'avulso'}`}
                       defaultValue={formatNumeroInput(item.amount)}
                       onChange={(e) => setItem(i, { amount: parseNumeroBR(e.target.value) })}
                       inputMode="decimal"
@@ -513,7 +533,7 @@ export function ServiceOrdersTable({
                       <div className="px-2 text-[11.5px] font-bold text-accent">mensal</div>
                     ) : (
                       <input
-                        key={`prazo-${i}-${item.internalServiceId ?? 'avulso'}`}
+                        key={`prazo-${versaoLinhas}-${i}-${item.internalServiceId ?? 'avulso'}`}
                         defaultValue={item.leadTimeDays || ''}
                         onChange={(e) => setItem(i, { leadTimeDays: Math.round(parseNumeroBR(e.target.value)) })}
                         inputMode="numeric"
@@ -557,6 +577,10 @@ export function ServiceOrdersTable({
             <div className="mb-1.5 text-[11px] text-fg-faded">
               O prazo é a <strong>soma</strong> dos serviços, não o maior: eles são executados em sequência.
               Serviço mensal não entra no prazo — é contínuo.
+            </div>
+
+            <div className="mt-3">
+              <AvisoAjusteAutomatico ajuste={ajuste} onDesfazer={desfazerAjuste} />
             </div>
 
             <div className="mt-4">
@@ -733,7 +757,7 @@ export function ServiceOrdersTable({
 
             <div className="flex justify-end gap-2.5">
               <button
-                onClick={() => setForm(null)}
+                onClick={fecharForm}
                 disabled={pending}
                 className="rounded-control border border-border-strong px-5 py-2.5 text-[13.5px] font-extrabold text-fg-secondary disabled:opacity-60"
               >

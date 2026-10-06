@@ -36,7 +36,7 @@ import {
   type ServiceQuoteInput,
 } from '@/app/actions/service-quotes';
 import { saveCustomerAction } from '@/app/actions/customers';
-import { ajustarCombosEMensalidades, type AjusteAutomatico } from '@/lib/combo-servicos';
+import { AvisoAjusteAutomatico, useAjusteAutomatico } from '@/components/admin/AjusteAutomatico';
 import { classificarServico, modulosExtrasDoServico, modulosPresentes, NOME_DO_MODULO, type ModuloContrato } from '@/lib/contract';
 
 const inputClass =
@@ -122,18 +122,8 @@ export function ServiceQuotesTable({
   type ClienteRapido = { name: string; doc: string; phone: string; email: string };
   const [clienteRapido, setClienteRapido] = useState<ClienteRapido | null>(null);
   const [criados, setCriados] = useState<typeof customers>([]);
-  // Combo e mensalidade única aplicados ao escolher serviços. `antes` permite
-  // desfazer; desfeito, não reaplica até fechar o formulário.
-  // O aviso acumula o que foi aplicado no formulário; `antes` e `avisoAntes`
-  // guardam só a última escolha, que é o que o "Desfazer" volta.
-  type Aviso = Omit<AjusteAutomatico, 'items'>;
-  const [ajuste, setAjuste] = useState<
-    (Aviso & { antes: ServiceOrderItem[] | null; avisoAntes: Aviso | null }) | null
-  >(null);
-  const [semAjuste, setSemAjuste] = useState(false);
-  // Os campos de valor e prazo são não controlados: trocar as linhas de lugar
-  // precisa remontá-los, senão mostram o número da linha que estava ali.
-  const [versaoLinhas, setVersaoLinhas] = useState(0);
+  // Combo e mensalidade única aplicados ao escolher serviços do catálogo.
+  const { ajuste, versaoLinhas, aplicar, desfazer, reiniciar } = useAjusteAutomatico(services);
   // Os recém-criados entram na lista na hora, sem esperar a página recarregar.
   const clientes = useMemo(
     () =>
@@ -287,43 +277,19 @@ export function ServiceQuotesTable({
           }
         : it
     );
-    // Site ou loja + gestão viram combo com desconto, e com mais de uma
-    // mensalidade fica só a mais cara (lib/combo-servicos).
-    const ajustado = semAjuste ? null : ajustarCombosEMensalidades(items, services);
-    if (ajustado) {
-      const avisoAntes = ajuste ? { combo: ajuste.combo, mensalidadesRemovidas: ajuste.mensalidadesRemovidas } : null;
-      setAjuste({
-        combo: ajustado.combo ?? ajuste?.combo ?? null,
-        mensalidadesRemovidas: [...(ajuste?.mensalidadesRemovidas ?? []), ...ajustado.mensalidadesRemovidas],
-        antes: items,
-        avisoAntes,
-      });
-      setVersaoLinhas((v) => v + 1);
-    } else if (ajuste) {
-      // O "desfazer" só vale para a última escolha: depois dela, voltaria
-      // atrás também o que foi escolhido em seguida. O aviso continua.
-      setAjuste({ ...ajuste, antes: null, avisoAntes: null });
-    }
     // O contrato agora cobre todo tipo de serviço do catálogo, então escolher
     // um serviço sugere anexá-lo. Nunca desmarca: só marca.
-    setForm({ ...form, items: ajustado ? ajustado.items : items, includeContract: true });
+    setForm({ ...form, items: aplicar(items), includeContract: true });
   }
 
   function desfazerAjuste() {
-    if (!ajuste) return;
-    const antes = ajuste.antes;
-    if (!antes) return;
-    setForm((f) => (f ? { ...f, items: antes } : f));
-    const aviso = ajuste.avisoAntes;
-    setAjuste(aviso && (aviso.combo || aviso.mensalidadesRemovidas.length) ? { ...aviso, antes: null, avisoAntes: null } : null);
-    setSemAjuste(true);
-    setVersaoLinhas((v) => v + 1);
+    const antes = desfazer();
+    if (antes) setForm((f) => (f ? { ...f, items: antes } : f));
   }
 
   function fecharForm() {
     setForm(null);
-    setAjuste(null);
-    setSemAjuste(false);
+    reiniciar();
   }
 
   const cards = [
@@ -672,38 +638,7 @@ export function ServiceQuotesTable({
               <strong>soma</strong> dos serviços, não o maior — serviço mensal não entra nele.
             </div>
 
-            {ajuste && (
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-control border border-accent/40 bg-[rgb(var(--brand-accent-rgb)/.06)] px-4 py-3 text-[12.5px]">
-                <div className="space-y-0.5">
-                  {ajuste.combo && (
-                    <div>
-                      🎁 <strong>Combo aplicado:</strong> {ajuste.combo.nome} por{' '}
-                      <strong>{formatBRL(ajuste.combo.valor)}</strong>{' '}
-                      <span className="text-fg-tertiary">
-                        (separados {formatBRL(ajuste.combo.separados)}, economia de{' '}
-                        {formatBRL(ajuste.combo.separados - ajuste.combo.valor)})
-                      </span>
-                    </div>
-                  )}
-                  {ajuste.mensalidadesRemovidas.length > 0 && (
-                    <div>
-                      🔁 <strong>Uma mensalidade só:</strong> ficou a mais cara; saiu{' '}
-                      {ajuste.mensalidadesRemovidas.join(', ')}.
-                    </div>
-                  )}
-                  <div className="text-[11px] text-fg-faded">O campo de desconto abaixo continua valendo por cima disso.</div>
-                </div>
-                {ajuste.antes && (
-                  <button
-                    type="button"
-                    onClick={desfazerAjuste}
-                    className="shrink-0 rounded-control border border-border-strong px-3 py-1.5 text-[12px] font-bold text-fg-secondary hover:border-accent hover:text-accent"
-                  >
-                    Desfazer
-                  </button>
-                )}
-              </div>
-            )}
+            <AvisoAjusteAutomatico ajuste={ajuste} onDesfazer={desfazerAjuste} />
 
             {totais.temPlano && (
               <div className="mb-4 rounded-control border border-accent/40 bg-[rgb(var(--brand-accent-rgb)/.05)] p-4">
