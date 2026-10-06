@@ -10,6 +10,7 @@ import {
   podeConverterEmPrestacao,
   PLAN_MONTHS_OPTIONS,
   SERVICE_QUOTE_STATUSES,
+  tituloDosServicos,
   type ServiceOrderItem,
   type ServiceQuoteStatus,
 } from '@/lib/services';
@@ -68,12 +69,12 @@ export async function saveServiceQuoteAction(input: ServiceQuoteInput): Promise<
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
 
-  const title = input.title.trim();
-  if (!title) return errResult('Informe o título do orçamento.');
   if (!SERVICE_QUOTE_STATUSES.includes(input.status)) return errResult('Status inválido.');
 
   const itens = input.items.filter((i) => i.name.trim());
   if (itens.length === 0) return errResult('Adicione ao menos um serviço ao orçamento.');
+  // Sem título digitado, o orçamento leva o nome dos serviços contratados.
+  const title = input.title.trim() || tituloDosServicos(itens);
   if (itens.some((i) => !Number.isFinite(i.amount) || i.amount < 0)) {
     return errResult('Todos os valores precisam ser números iguais ou maiores que zero.');
   }

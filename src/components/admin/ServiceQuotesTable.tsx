@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useTransition } from 'react';
 import Link from 'next/link';
-import { Pencil, Trash2, Plus, X, Search, ArrowRightCircle, FileDown } from 'lucide-react';
+import { Pencil, Trash2, Plus, X, Search, ArrowRightCircle, FileDown, UserPlus } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { formatBRL, parseNumeroBR, formatDateBR, formatNumeroInput } from '@/lib/format';
 import {
@@ -21,6 +21,7 @@ import {
   type ServiceOrderItem,
   type ServiceQuoteStatus,
   agruparPorCategoria,
+  tituloDosServicos,
 } from '@/lib/services';
 import { SEM_DESCONTO, temDesconto, aplicarDesconto, rotuloDoDesconto, type Desconto } from '@/lib/discount';
 import { DescontoFields } from '@/components/admin/DescontoFields';
@@ -34,6 +35,7 @@ import {
   convertServiceQuoteAction,
   type ServiceQuoteInput,
 } from '@/app/actions/service-quotes';
+import { saveCustomerAction } from '@/app/actions/customers';
 import { classificarServico, modulosPresentes, NOME_DO_MODULO, type ModuloContrato } from '@/lib/contract';
 
 const inputClass =
@@ -116,6 +118,20 @@ export function ServiceQuotesTable({
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 
+  // Cadastro rápido de cliente sem sair do orçamento: só o essencial, o resto
+  // (endereço, observações) se completa depois em Clientes.
+  type ClienteRapido = { name: string; doc: string; phone: string; email: string };
+  const [clienteRapido, setClienteRapido] = useState<ClienteRapido | null>(null);
+  const [criados, setCriados] = useState<typeof customers>([]);
+  // Os recém-criados entram na lista na hora, sem esperar a página recarregar.
+  const clientes = useMemo(
+    () =>
+      [...customers, ...criados.filter((n) => !customers.some((c) => c.id === n.id))].sort((a, b) =>
+        a.name.localeCompare(b.name, 'pt-BR')
+      ),
+    [customers, criados]
+  );
+
   const ind = useMemo(() => computeServiceQuoteIndicators(quotes), [quotes]);
 
   const filtrados = useMemo(() => {
@@ -133,7 +149,8 @@ export function ServiceQuotesTable({
   const totais = useMemo(() => totalizarItens(form?.items ?? []), [form]);
   const ativos = services.filter((s) => s.active);
   const modulosDoContrato = useMemo(() => modulosDoOrcamento(form?.items ?? [], services), [form, services]);
-  const clienteDoForm = customers.find((c) => c.id === form?.customerId);
+  const tituloAutomatico = tituloDosServicos(form?.items ?? []);
+  const clienteDoForm = clientes.find((c) => c.id === form?.customerId);
   const faltasNoCadastro = clienteDoForm
     ? [!clienteDoForm.doc && 'CPF/CNPJ', !clienteDoForm.temEndereco && 'endereço'].filter(Boolean).join(' e ')
     : '';
@@ -157,6 +174,33 @@ export function ServiceQuotesTable({
       const result = await saveServiceQuoteAction(form);
       toast(result);
       if (result.ok) setForm(null);
+    });
+  }
+
+  function cadastrarCliente() {
+    if (!clienteRapido) return;
+    const dados = clienteRapido;
+    startTransition(async () => {
+      const result = await saveCustomerAction({
+        name: dados.name,
+        doc: dados.doc,
+        phone: dados.phone,
+        email: dados.email,
+        cep: '',
+        addressLine: '',
+        addressNumber: '',
+        complement: '',
+        district: '',
+        city: '',
+        state: '',
+        notes: '',
+      });
+      toast(result);
+      if (!result.ok || !result.id) return;
+      const id = result.id;
+      setCriados((l) => [...l, { id, name: dados.name.trim(), doc: dados.doc.trim(), temEndereco: false }]);
+      set('customerId', id);
+      setClienteRapido(null);
     });
   }
 
@@ -422,24 +466,46 @@ export function ServiceQuotesTable({
             </div>
 
             <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <input
-                value={form.title}
-                onChange={(e) => set('title', e.target.value)}
-                placeholder="Título do orçamento *"
-                className={`sm:col-span-2 ${inputClass}`}
-              />
+              <div className="sm:col-span-2">
+                <input
+                  value={form.title}
+                  onChange={(e) => set('title', e.target.value)}
+                  placeholder={
+                    tituloAutomatico
+                      ? `${tituloAutomatico} (automático)`
+                      : 'Título do orçamento (automático pelos serviços)'
+                  }
+                  className={`w-full ${inputClass}`}
+                />
+                {!form.title.trim() && (
+                  <div className="mt-1 text-[11px] text-fg-faded">
+                    Deixe em branco para usar o nome dos serviços contratados. Mensalidades não entram no título.
+                  </div>
+                )}
+              </div>
               <div>
                 <div className="mb-1.5 text-[11px] text-fg-faded">Cliente</div>
-                <select
-                  value={form.customerId ?? ''}
-                  onChange={(e) => set('customerId', e.target.value || null)}
-                  className={`w-full ${inputClass}`}
-                >
-                  <option value="">Sem cliente vinculado</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    value={form.customerId ?? ''}
+                    onChange={(e) => set('customerId', e.target.value || null)}
+                    className={`min-w-0 flex-1 ${inputClass}`}
+                  >
+                    <option value="">Sem cliente vinculado</option>
+                    {clientes.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setClienteRapido({ name: '', doc: '', phone: '', email: '' })}
+                    title="Cadastrar cliente novo"
+                    aria-label="Cadastrar cliente novo"
+                    className="shrink-0 rounded-control border border-border-strong px-3 text-fg-secondary hover:border-accent hover:text-accent"
+                  >
+                    <UserPlus size={17} />
+                  </button>
+                </div>
               </div>
               <div>
                 <div className="mb-1.5 text-[11px] text-fg-faded">Status</div>
@@ -804,6 +870,69 @@ export function ServiceQuotesTable({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {clienteRapido && (
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              cadastrarCliente();
+            }}
+            className="w-full max-w-[460px] rounded-[20px] border border-border-strong bg-card p-7"
+          >
+            <div className="mb-1 text-[15px] font-extrabold">Cadastrar cliente</div>
+            <div className="mb-5 text-[12px] text-fg-tertiary">
+              Só o essencial. Endereço e o resto você completa depois em Clientes.
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+              <input
+                autoFocus
+                value={clienteRapido.name}
+                onChange={(e) => setClienteRapido({ ...clienteRapido, name: e.target.value })}
+                placeholder="Nome *"
+                className={inputClass}
+              />
+              <input
+                value={clienteRapido.doc}
+                onChange={(e) => setClienteRapido({ ...clienteRapido, doc: e.target.value })}
+                placeholder="CPF (opcional)"
+                inputMode="numeric"
+                className={inputClass}
+              />
+              <input
+                value={clienteRapido.phone}
+                onChange={(e) => setClienteRapido({ ...clienteRapido, phone: e.target.value })}
+                placeholder="Telefone (opcional)"
+                inputMode="tel"
+                className={inputClass}
+              />
+              <input
+                value={clienteRapido.email}
+                onChange={(e) => setClienteRapido({ ...clienteRapido, email: e.target.value })}
+                placeholder="E-mail (opcional)"
+                type="email"
+                className={inputClass}
+              />
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setClienteRapido(null)}
+                className="rounded-control border border-border-strong px-5 py-2.5 text-[13.5px] font-extrabold text-fg-secondary"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={pending || !clienteRapido.name.trim()}
+                className="rounded-control bg-accent px-6 py-2.5 text-[13.5px] font-extrabold text-page disabled:opacity-60"
+              >
+                Cadastrar e selecionar
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>
