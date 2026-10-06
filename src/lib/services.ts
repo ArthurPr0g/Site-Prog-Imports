@@ -79,6 +79,15 @@ export type ServiceOrderItem = {
   leadTimeDays: number;
 };
 
+/** Título automático de um orçamento: os serviços contratados unidos por " + ".
+ *  As mensalidades ficam de fora porque só acompanham o serviço principal; se o
+ *  orçamento for só de mensalidade, entram elas. Nomes repetidos aparecem uma vez. */
+export function tituloDosServicos(itens: Pick<ServiceOrderItem, 'name' | 'billingType'>[]): string {
+  const nomes = itens.map((i) => ({ nome: i.name.trim(), mensal: i.billingType === 'mensal' })).filter((i) => i.nome);
+  const principais = nomes.filter((i) => !i.mensal);
+  return [...new Set((principais.length ? principais : nomes).map((i) => i.nome))].join(' + ');
+}
+
 export type ServiceQuote = {
   id: string;
   customerId: string | null;

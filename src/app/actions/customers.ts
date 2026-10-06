@@ -68,6 +68,8 @@ export async function saveCustomerAction(input: CustomerFormInput): Promise<Acti
   const { data, error } = await supabase.from('customers').insert(payload).select('id').single();
   if (error) return errResult(friendlyDbError(error, 'Não foi possível cadastrar o cliente.'));
   revalidatePath('/admin/clientes');
+  // O cadastro rápido do orçamento de serviço também cria clientes.
+  revalidatePath('/admin/orcamentos-servicos');
   return { ...okResult('Cliente cadastrado.'), id: data?.id };
 }
 
