@@ -20,6 +20,7 @@ import {
   type ServiceQuote,
   type ServiceOrderItem,
   type ServiceQuoteStatus,
+  agruparPorCategoria,
 } from '@/lib/services';
 import { SEM_DESCONTO, temDesconto, aplicarDesconto, rotuloDoDesconto, type Desconto } from '@/lib/discount';
 import { DescontoFields } from '@/components/admin/DescontoFields';
@@ -481,10 +482,14 @@ export function ServiceQuotesTable({
                       className={`w-full ${inputClass}`}
                     >
                       <option value="">Avulso</option>
-                      {ativos.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}{s.billingType === 'mensal' ? ' (mensal)' : ''}
-                        </option>
+                      {agruparPorCategoria(ativos).map(([categoria, lista]) => (
+                        <optgroup key={categoria} label={categoria}>
+                          {lista.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}{s.billingType === 'mensal' ? ' (mensal)' : ''}
+                            </option>
+                          ))}
+                        </optgroup>
                       ))}
                     </select>
                   </div>
