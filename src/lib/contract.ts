@@ -54,6 +54,8 @@ export const NOME_DO_MODULO: Record<ModuloContrato, string> = {
 export type ServicoDoContrato = {
   nome: string;
   modulo: ModuloContrato;
+  /** Combo (site ou loja + sistema): leva também as cláusulas do outro tipo. */
+  modulosExtras?: ModuloContrato[];
   cobranca: 'unico' | 'mensal';
 };
 
@@ -184,7 +186,8 @@ const PADROES_DO_MODULO: [ModuloContrato, RegExp][] = [
   ['mentoria', /mentoria|treinamento|curso|aula/],
   ['powerbi', /power ?bi|dashboard/],
   ['sistema', /sistema|\berp\b|software|aplicativo|\bapp\b/],
-  ['site', /site|landing ?page/],
+  // Loja virtual é um site: leva as mesmas cláusulas (domínio, hospedagem).
+  ['site', /site|landing ?page|loja|e-?commerce/],
 ];
 
 /** Tipo de serviço de um item do orçamento.
@@ -203,9 +206,22 @@ export function classificarServico(servico: { categoria?: string | null; nome: s
   return 'outro';
 }
 
+/** Um combo junta site (ou loja) e sistema num item só, então precisa das
+ *  cláusulas dos dois. Devolve os tipos além do principal. */
+export function modulosExtrasDoServico(servico: { categoria?: string | null; nome: string }): ModuloContrato[] {
+  const texto = semAcentos(`${servico.categoria ?? ''} ${servico.nome}`);
+  if (!/combo/.test(texto)) return [];
+  const principal = classificarServico(servico);
+  return (['site', 'sistema'] as const).filter((m) => m !== principal);
+}
+
+function temModulo(s: Pick<ServicoDoContrato, 'modulo' | 'modulosExtras'>, m: ModuloContrato): boolean {
+  return s.modulo === m || (s.modulosExtras?.includes(m) ?? false);
+}
+
 /** Módulos presentes, na ordem do contrato e sem repetição. */
-export function modulosPresentes(servicos: Pick<ServicoDoContrato, 'modulo'>[]): ModuloContrato[] {
-  return MODULOS_CONTRATO.filter((m) => servicos.some((s) => s.modulo === m));
+export function modulosPresentes(servicos: Pick<ServicoDoContrato, 'modulo' | 'modulosExtras'>[]): ModuloContrato[] {
+  return MODULOS_CONTRATO.filter((m) => servicos.some((s) => temModulo(s, m)));
 }
 
 /** Endereço numa linha para a qualificação do contratante.
@@ -254,7 +270,7 @@ export function qualificacaoDasPartes(d: Pick<DadosDoContrato, 'contratante' | '
   };
 }
 
-export function tituloDoContrato(servicos: Pick<ServicoDoContrato, 'modulo'>[]): string {
+export function tituloDoContrato(servicos: Pick<ServicoDoContrato, 'modulo' | 'modulosExtras'>[]): string {
   const modulos = modulosPresentes(servicos);
   if (modulos.length === 1 && modulos[0] === 'mentoria') return 'CONTRATO DE PRESTAÇÃO DE SERVIÇOS DE MENTORIA';
   return 'CONTRATO DE PRESTAÇÃO DE SERVIÇOS DE TECNOLOGIA';
@@ -267,7 +283,7 @@ export function tituloDoContrato(servicos: Pick<ServicoDoContrato, 'modulo'>[]):
  *  de R$ 4.500 é o erro mais caro que este documento pode conter. */
 export function montarClausulas(d: DadosDoContrato): ClausulaNumerada[] {
   const R = REGRAS_DO_CONTRATO;
-  const tem = (m: ModuloContrato) => d.servicos.some((s) => s.modulo === m);
+  const tem = (m: ModuloContrato) => d.servicos.some((s) => temModulo(s, m));
 
   const site = tem('site');
   const sistema = tem('sistema');
