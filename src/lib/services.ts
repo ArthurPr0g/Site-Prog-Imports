@@ -55,6 +55,20 @@ export type InternalService = {
   position: number;
 };
 
+/** Serviços agrupados por categoria, na ordem do catálogo (posição). A
+ *  categoria aparece na ordem em que surge pela primeira vez, então quem manda
+ *  na ordem dos grupos é a posição dos serviços. Sem categoria vira "Outros". */
+export function agruparPorCategoria(servicos: InternalService[]): [string, InternalService[]][] {
+  const grupos = new Map<string, InternalService[]>();
+  for (const s of servicos) {
+    const chave = s.category.trim() || 'Outros';
+    const lista = grupos.get(chave);
+    if (lista) lista.push(s);
+    else grupos.set(chave, [s]);
+  }
+  return [...grupos.entries()];
+}
+
 export type ServiceOrderItem = {
   id?: string;
   internalServiceId: string | null;

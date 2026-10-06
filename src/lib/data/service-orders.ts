@@ -10,6 +10,7 @@ import {
 import type { Desconto } from '@/lib/discount';
 import { listInstallments, listInstallmentsBySource } from '@/lib/data/installments';
 import { OFFSET_PARCELA_PIX, dataDeCaixa, type Installment } from '@/lib/installments';
+import { rotuloDaParcela } from '@/lib/pagamento-servico';
 
 type ItemRow = {
   id: string;
@@ -133,7 +134,7 @@ export async function sincronizarFinanceiroDaPrestacao(orderId: string): Promise
   const { data } = await supabase
     .from('service_orders')
     .select(
-      'title, status, payment_status, total_amount, monthly_amount, plan_months, plan_start_date, start_date, due_date, discount_type, discount_value, discount_note'
+      'title, status, payment_status, payment_method, total_amount, monthly_amount, plan_months, plan_start_date, start_date, due_date, discount_type, discount_value, discount_note'
     )
     .eq('id', orderId)
     .maybeSingle();
@@ -172,7 +173,7 @@ export async function sincronizarFinanceiroDaPrestacao(orderId: string): Promise
               parcela: OFFSET_PARCELA_PIX + p.number,
               amount: p.amount,
               status: p.status === 'Recebida' ? ('Pago' as const) : ('Previsto' as const),
-              description: `Serviço: ${data.title} — ${p.number === 0 ? 'entrada' : `parcela ${p.number}`}`,
+              description: `Serviço: ${data.title} — ${rotuloDaParcela(data.payment_method ?? '', p.number)}`,
               // Mesma regra da venda: recebida entra no dia do recebimento,
               // pendente no dia do vencimento.
               entryDate: dataDeCaixa(p),

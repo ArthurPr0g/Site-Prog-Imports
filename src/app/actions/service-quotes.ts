@@ -16,6 +16,7 @@ import {
 import { sincronizarFinanceiroDaPrestacao } from '@/lib/data/service-orders';
 import { salvarParcelas } from '@/lib/data/installments';
 import { geraParcelas, gerarParcelas, MAX_JUROS_PCT } from '@/lib/installments';
+import { carneDaCondicao, condicoesGravadas } from '@/lib/pagamento-servico';
 import { DISCOUNT_TYPES, aplicarDesconto, type Desconto } from '@/lib/discount';
 
 export type ServiceQuoteInput = {
@@ -194,6 +195,7 @@ export async function convertServiceQuoteAction(input: ConversaoInput): Promise<
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
 
   if (!input.startDate) return errResult('Informe a data de início da execução.');
+  if (!input.paymentMethod.trim()) return errResult('Escolha a forma de pagamento combinada com o cliente.');
 
   const { data: q } = await supabase
     .from('service_quotes')
@@ -256,6 +258,22 @@ export async function convertServiceQuoteAction(input: ConversaoInput): Promise<
     return errResult('A entrada não pode ser maior que o valor dos serviços.');
   }
 
+  // Condição da tabela (50% + 50%, cartão): o carnê sai da própria condição,
+  // com as datas de início e entrega. Null para as formas antigas.
+  const entrega = calcularEntrega(input.startDate, prazoDias);
+  const carne = carneDaCondicao(input.paymentMethod.trim(), trabalho, input.startDate, entrega);
+  const condicoes = carne
+    ? { ...condicoesGravadas(carne), installment_notes: '' }
+    : {
+        // Condições do carnê. Zeradas fora do PIX Parcelado, como na tela de
+        // Prestação: condição esquecida continuaria gerando parcelas depois.
+        installment_count: parcelado ? input.installmentCount : 0,
+        down_payment: parcelado ? input.downPayment : 0,
+        interest_pct: parcelado ? input.interestPct : 0,
+        first_due_date: parcelado ? input.firstDueDate : null,
+        installment_notes: parcelado ? input.installmentNotes.trim() : '',
+      };
+
   const { data: order, error: erroOrder } = await supabase
     .from('service_orders')
     .insert({
@@ -277,16 +295,10 @@ export async function convertServiceQuoteAction(input: ConversaoInput): Promise<
       discount_note: q.discount_note,
       plan_months: temPlano ? q.plan_months : null,
       plan_start_date: temPlano ? input.planStartDate || input.startDate : null,
-      // Condições do carnê. Zeradas fora do PIX Parcelado, como na tela de
-      // Prestação: condição esquecida continuaria gerando parcelas depois.
-      installment_count: parcelado ? input.installmentCount : 0,
-      down_payment: parcelado ? input.downPayment : 0,
-      interest_pct: parcelado ? input.interestPct : 0,
-      first_due_date: parcelado ? input.firstDueDate : null,
-      installment_notes: parcelado ? input.installmentNotes.trim() : '',
+      ...condicoes,
       lead_time_days: prazoDias,
       start_date: input.startDate,
-      due_date: calcularEntrega(input.startDate, prazoDias),
+      due_date: entrega,
     })
     .select('id')
     .single();
@@ -315,7 +327,9 @@ export async function convertServiceQuoteAction(input: ConversaoInput): Promise<
 
   // O carnê vem antes da sincronização: com PIX parcelado é dele que sai a
   // receita do trabalho no caixa, no lugar da linha única.
-  if (parcelado) {
+  if (carne && carne.length > 0) {
+    await salvarParcelas('servico', order.id, carne);
+  } else if (parcelado) {
     await salvarParcelas(
       'servico',
       order.id,
@@ -342,8 +356,10 @@ export async function convertServiceQuoteAction(input: ConversaoInput): Promise<
 
   revalidar();
   return okResult(
-    parcelado
-      ? `Prestação criada com carnê de ${input.installmentCount}× no PIX. As parcelas já estão no Financeiro como previstas.`
-      : 'Prestação criada e orçamento marcado como convertido.'
+    carne && carne.length > 0
+      ? `Prestação criada (${input.paymentMethod.trim()}). ${carne.length === 1 ? 'O recebimento já está' : `Os ${carne.length} recebimentos já estão`} no Financeiro como previstos.`
+      : parcelado
+        ? `Prestação criada com carnê de ${input.installmentCount}× no PIX. As parcelas já estão no Financeiro como previstas.`
+        : 'Prestação criada e orçamento marcado como convertido.'
   );
 }

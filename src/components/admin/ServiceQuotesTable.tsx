@@ -20,10 +20,13 @@ import {
   type ServiceQuote,
   type ServiceOrderItem,
   type ServiceQuoteStatus,
+  agruparPorCategoria,
 } from '@/lib/services';
 import { SEM_DESCONTO, temDesconto, aplicarDesconto, rotuloDoDesconto, type Desconto } from '@/lib/discount';
 import { DescontoFields } from '@/components/admin/DescontoFields';
-import { ParcelamentoFields, type CondicoesForm } from '@/components/admin/ParcelamentoFields';
+import { type CondicoesForm } from '@/components/admin/ParcelamentoFields';
+import { FormaPagamentoServico } from '@/components/admin/FormaPagamentoServico';
+import { condicaoDoMetodo } from '@/lib/pagamento-servico';
 import { geraParcelas } from '@/lib/installments';
 import {
   saveServiceQuoteAction,
@@ -145,7 +148,8 @@ export function ServiceQuotesTable({
   const trabalhoDaConversao = conversao
     ? aplicarDesconto(conversao.quote.totalAmount, conversao.quote.desconto)
     : 0;
-  const conversaoParcelada = !!conversao && geraParcelas(conversao.paymentMethod);
+  const conversaoParcelada =
+    !!conversao && (geraParcelas(conversao.paymentMethod) || condicaoDoMetodo(conversao.paymentMethod) !== null);
 
   function salvar() {
     if (!form) return;
@@ -481,10 +485,14 @@ export function ServiceQuotesTable({
                       className={`w-full ${inputClass}`}
                     >
                       <option value="">Avulso</option>
-                      {ativos.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}{s.billingType === 'mensal' ? ' (mensal)' : ''}
-                        </option>
+                      {agruparPorCategoria(ativos).map(([categoria, lista]) => (
+                        <optgroup key={categoria} label={categoria}>
+                          {lista.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}{s.billingType === 'mensal' ? ' (mensal)' : ''}
+                            </option>
+                          ))}
+                        </optgroup>
                       ))}
                     </select>
                   </div>
@@ -727,10 +735,10 @@ export function ServiceQuotesTable({
               )}
             </div>
 
-            {/* O mesmo seletor de Vendas e Prestação, com PIX Parcelado: era o
-                único lugar onde a forma de pagamento era texto livre, e o que
-                se digitava ali não gerava carnê nenhum. */}
-            <ParcelamentoFields
+            {/* As condições da tabela (as mesmas da página de planos) e, em
+                "Outra forma", o seletor de sempre com PIX Parcelado. A forma é
+                obrigatória: é dela que sai o lançamento no Financeiro. */}
+            <FormaPagamentoServico
               condicoes={{
                 paymentMethod: conversao.paymentMethod,
                 installmentCount: conversao.installmentCount,
@@ -739,9 +747,10 @@ export function ServiceQuotesTable({
                 firstDueDate: conversao.firstDueDate,
                 installmentNotes: conversao.installmentNotes,
               }}
-              // Só o trabalho entra no carnê: a mensalidade do plano tem ciclo
-              // próprio e já vira parcela por conta dela.
-              total={trabalhoDaConversao}
+              // Só o trabalho entra: a mensalidade do plano tem ciclo próprio.
+              trabalho={trabalhoDaConversao}
+              inicio={conversao.startDate}
+              entrega={entregaPrevista}
               onChange={(patch) => setConversao((c) => (c ? { ...c, ...patch } : c))}
             />
 
@@ -753,7 +762,7 @@ export function ServiceQuotesTable({
                   <>
                     {' '}o trabalho de{' '}
                     <strong className="text-accent">{formatBRL(trabalhoDaConversao)}</strong> dividido
-                    no carnê acima, uma linha por parcela
+                    nos recebimentos acima, uma linha para cada
                   </>
                 ) : (
                   <>
@@ -787,7 +796,8 @@ export function ServiceQuotesTable({
               </button>
               <button
                 onClick={converter}
-                disabled={pending}
+                disabled={pending || !conversao.paymentMethod.trim()}
+                title={conversao.paymentMethod.trim() ? undefined : 'Escolha a forma de pagamento'}
                 className="rounded-control bg-accent px-6 py-2.5 text-[13.5px] font-extrabold text-page disabled:opacity-60"
               >
                 {pending ? 'Gerando…' : 'Gerar prestação'}
