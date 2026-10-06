@@ -29,7 +29,7 @@ vive inteiro online; a pasta local é só uma cópia de trabalho.
 ## Banco de dados (migrations)
 
 - Toda mudança de schema: criar `supabase/migrations/NNNN_descricao.sql` com o
-  próximo número (a última é `0048`) **e** aplicar no projeto pelo conector da
+  próximo número (a última é `0049`) **e** aplicar no projeto pelo conector da
   Supabase (`apply_migration`) com o mesmo nome. As duas coisas no mesmo commit.
 - Histórico divergente (conferido em 2026-09-11): os nomes registrados na
   Supabase não batem 1:1 com os arquivos até a `0033` — várias migrations antigas
@@ -49,7 +49,7 @@ no mesmo pedido, e é publicada e conferida sem precisar de aprovação:
 3. **Página avulsa e tabela interna** — `ArthurPr0g/Resgate-Cr-dito-Claude`,
    `index.html` e `PACOTES.md`.
 
-Regras vigentes: combo site/loja + gestão com 10/12/15% (mesmo nível) ou 10%
+Regras vigentes: combo site/loja + gestão com 15/15/20% (mesmo nível) ou 15%
 (níveis diferentes), terminado em 97; mensalidade do combo = a maior das duas;
 marca: Logo Essencial 497, Identidade a partir do Logo 597, Identidade Visual
 Completa 997 (combo dos dois). Antes de publicar, testar todas as combinações
