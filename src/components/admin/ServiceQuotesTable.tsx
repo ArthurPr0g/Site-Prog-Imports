@@ -36,6 +36,7 @@ import {
   type ServiceQuoteInput,
 } from '@/app/actions/service-quotes';
 import { saveCustomerAction } from '@/app/actions/customers';
+import { ajustarCombosEMensalidades, type AjusteAutomatico } from '@/lib/combo-servicos';
 import { classificarServico, modulosPresentes, NOME_DO_MODULO, type ModuloContrato } from '@/lib/contract';
 
 const inputClass =
@@ -123,6 +124,13 @@ export function ServiceQuotesTable({
   type ClienteRapido = { name: string; doc: string; phone: string; email: string };
   const [clienteRapido, setClienteRapido] = useState<ClienteRapido | null>(null);
   const [criados, setCriados] = useState<typeof customers>([]);
+  // Combo e mensalidade única aplicados ao escolher serviços. `antes` permite
+  // desfazer; desfeito, não reaplica até fechar o formulário.
+  const [ajuste, setAjuste] = useState<(AjusteAutomatico & { antes: ServiceOrderItem[] }) | null>(null);
+  const [semAjuste, setSemAjuste] = useState(false);
+  // Os campos de valor e prazo são não controlados: trocar as linhas de lugar
+  // precisa remontá-los, senão mostram o número da linha que estava ali.
+  const [versaoLinhas, setVersaoLinhas] = useState(0);
   // Os recém-criados entram na lista na hora, sem esperar a página recarregar.
   const clientes = useMemo(
     () =>
@@ -173,7 +181,7 @@ export function ServiceQuotesTable({
     startTransition(async () => {
       const result = await saveServiceQuoteAction(form);
       toast(result);
-      if (result.ok) setForm(null);
+      if (result.ok) fecharForm();
     });
   }
 
@@ -262,25 +270,49 @@ export function ServiceQuotesTable({
     const s = ativos.find((x) => x.id === serviceId);
     if (!s) return setItem(indice, { internalServiceId: null });
 
-    setForm((f) => {
-      if (!f) return f;
-      const items = f.items.map((it, i) =>
-        i === indice
-          ? {
-              ...it,
-              internalServiceId: s.id,
-              name: s.name,
-              description: s.description,
-              amount: s.price,
-              billingType: s.billingType,
-              leadTimeDays: s.leadTimeDays,
-            }
-          : it
-      );
-      // O contrato agora cobre todo tipo de serviço do catálogo, então escolher
-      // um serviço sugere anexá-lo. Nunca desmarca: só marca.
-      return { ...f, items, includeContract: true };
-    });
+    if (!form) return;
+    const items = form.items.map((it, i) =>
+      i === indice
+        ? {
+            ...it,
+            internalServiceId: s.id,
+            name: s.name,
+            description: s.description,
+            amount: s.price,
+            billingType: s.billingType,
+            leadTimeDays: s.leadTimeDays,
+          }
+        : it
+    );
+    // Site ou loja + gestão viram combo com desconto, e com mais de uma
+    // mensalidade fica só a mais cara (lib/combo-servicos).
+    const ajustado = semAjuste ? null : ajustarCombosEMensalidades(items, services);
+    if (ajustado) {
+      setAjuste({ ...ajustado, antes: items });
+      setVersaoLinhas((v) => v + 1);
+    } else {
+      // O "desfazer" só vale para a última escolha: depois dela, voltaria
+      // atrás também o que foi escolhido em seguida.
+      setAjuste(null);
+    }
+    // O contrato agora cobre todo tipo de serviço do catálogo, então escolher
+    // um serviço sugere anexá-lo. Nunca desmarca: só marca.
+    setForm({ ...form, items: ajustado ? ajustado.items : items, includeContract: true });
+  }
+
+  function desfazerAjuste() {
+    if (!ajuste) return;
+    const antes = ajuste.antes;
+    setForm((f) => (f ? { ...f, items: antes } : f));
+    setAjuste(null);
+    setSemAjuste(true);
+    setVersaoLinhas((v) => v + 1);
+  }
+
+  function fecharForm() {
+    setForm(null);
+    setAjuste(null);
+    setSemAjuste(false);
   }
 
   const cards = [
@@ -572,7 +604,7 @@ export function ServiceQuotesTable({
                   </div>
                   <div className="p-1.5">
                     <input
-                      key={`valor-${i}-${item.internalServiceId ?? 'avulso'}`}
+                      key={`valor-${versaoLinhas}-${i}-${item.internalServiceId ?? 'avulso'}`}
                       defaultValue={formatNumeroInput(item.amount)}
                       onChange={(e) => setItem(i, { amount: parseNumeroBR(e.target.value) })}
                       inputMode="decimal"
@@ -585,7 +617,7 @@ export function ServiceQuotesTable({
                       <div className="px-2 text-[11.5px] font-bold text-accent">mensal</div>
                     ) : (
                       <input
-                        key={`prazo-${i}-${item.internalServiceId ?? 'avulso'}`}
+                        key={`prazo-${versaoLinhas}-${i}-${item.internalServiceId ?? 'avulso'}`}
                         defaultValue={item.leadTimeDays || ''}
                         onChange={(e) => setItem(i, { leadTimeDays: Math.round(parseNumeroBR(e.target.value)) })}
                         inputMode="numeric"
@@ -628,6 +660,37 @@ export function ServiceQuotesTable({
               O valor vem do catálogo mas é <strong>ajustável nesta proposta</strong>. O prazo é a{' '}
               <strong>soma</strong> dos serviços, não o maior — serviço mensal não entra nele.
             </div>
+
+            {ajuste && (
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-control border border-accent/40 bg-[rgb(var(--brand-accent-rgb)/.06)] px-4 py-3 text-[12.5px]">
+                <div className="space-y-0.5">
+                  {ajuste.combo && (
+                    <div>
+                      🎁 <strong>Combo aplicado:</strong> {ajuste.combo.nome} por{' '}
+                      <strong>{formatBRL(ajuste.combo.valor)}</strong>{' '}
+                      <span className="text-fg-tertiary">
+                        (separados {formatBRL(ajuste.combo.separados)}, economia de{' '}
+                        {formatBRL(ajuste.combo.separados - ajuste.combo.valor)})
+                      </span>
+                    </div>
+                  )}
+                  {ajuste.mensalidadesRemovidas.length > 0 && (
+                    <div>
+                      🔁 <strong>Uma mensalidade só:</strong> ficou a mais cara; saiu{' '}
+                      {ajuste.mensalidadesRemovidas.join(', ')}.
+                    </div>
+                  )}
+                  <div className="text-[11px] text-fg-faded">O campo de desconto abaixo continua valendo por cima disso.</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={desfazerAjuste}
+                  className="shrink-0 rounded-control border border-border-strong px-3 py-1.5 text-[12px] font-bold text-fg-secondary hover:border-accent hover:text-accent"
+                >
+                  Desfazer
+                </button>
+              </div>
+            )}
 
             {totais.temPlano && (
               <div className="mb-4 rounded-control border border-accent/40 bg-[rgb(var(--brand-accent-rgb)/.05)] p-4">
@@ -748,7 +811,7 @@ export function ServiceQuotesTable({
 
             <div className="flex justify-end gap-2.5">
               <button
-                onClick={() => setForm(null)}
+                onClick={fecharForm}
                 disabled={pending}
                 className="rounded-control border border-border-strong px-5 py-2.5 text-[13.5px] font-extrabold text-fg-secondary disabled:opacity-60"
               >
