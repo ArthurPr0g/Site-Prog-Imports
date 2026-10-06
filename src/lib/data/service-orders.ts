@@ -6,6 +6,7 @@ import {
   type ServiceOrderItem,
   type ServiceOrderStatus,
   type ServicePaymentStatus,
+  type LancamentoDaPrestacao,
 } from '@/lib/services';
 import type { Desconto } from '@/lib/discount';
 import { listInstallments, listInstallmentsBySource } from '@/lib/data/installments';
@@ -94,6 +95,28 @@ function toOrder(r: OrderRow, parcelas: Installment[] = []): ServiceOrder {
     dueDate: r.due_date,
     items: (r.service_order_items ?? []).sort((a, b) => a.position - b.position).map(toItem),
   };
+}
+
+/** Os lançamentos do Financeiro de cada prestação, para a tela mostrar quanto
+ *  já foi recebido e quanto falta. Lido em uma consulta só. */
+export async function lancamentosDasPrestacoes(ids: string[]): Promise<Record<string, LancamentoDaPrestacao[]>> {
+  const mapa: Record<string, LancamentoDaPrestacao[]> = {};
+  if (ids.length === 0) return mapa;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('finance_entries')
+    .select('reference_id, amount, status, entry_date')
+    .eq('source', 'servico')
+    .in('reference_id', ids);
+  for (const e of data ?? []) {
+    const id = e.reference_id as string;
+    (mapa[id] ??= []).push({
+      amount: Number(e.amount),
+      status: e.status === 'Pago' ? 'Pago' : 'Previsto',
+      date: e.entry_date as string,
+    });
+  }
+  return mapa;
 }
 
 export async function listServiceOrders(): Promise<ServiceOrder[]> {

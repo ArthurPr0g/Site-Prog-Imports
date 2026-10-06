@@ -1,4 +1,4 @@
-import { listServiceOrders } from '@/lib/data/service-orders';
+import { listServiceOrders, lancamentosDasPrestacoes } from '@/lib/data/service-orders';
 import { listInternalServices } from '@/lib/data/internal-services';
 import { listCustomers } from '@/lib/data/customers';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
@@ -10,6 +10,7 @@ export default async function AdminPrestacaoServicoPage() {
     listInternalServices(),
     listCustomers(),
   ]);
+  const lancamentos = await lancamentosDasPrestacoes(orders.map((o) => o.id));
 
   return (
     <div>
@@ -21,6 +22,7 @@ export default async function AdminPrestacaoServicoPage() {
         orders={orders}
         services={services}
         customers={customers.map((c) => ({ id: c.id, name: c.name }))}
+        lancamentos={lancamentos}
       />
     </div>
   );

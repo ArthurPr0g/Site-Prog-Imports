@@ -299,6 +299,53 @@ export function lancamentosDaPrestacao(order: {
   return alvos;
 }
 
+/** Um lançamento do Financeiro que pertence à prestação: trabalho, parcela do
+ *  carnê ou mensalidade do plano. */
+export type LancamentoDaPrestacao = { amount: number; status: 'Pago' | 'Previsto'; date: string };
+
+export type ResumoRecebimentos = {
+  /** Já entrou no caixa. */
+  recebido: number;
+  /** Ainda não entrou: trabalho, parcelas e mensalidades em aberto. */
+  aReceber: number;
+  /** Parte do `aReceber` com data já passada. */
+  vencido: number;
+  /** O próximo recebimento em aberto (o vencido mais antigo, se houver). */
+  proximo: { date: string; amount: number } | null;
+};
+
+/** Quanto o cliente já pagou e quanto falta, lido do Financeiro.
+ *
+ *  O Financeiro é a fonte: é lá que o trabalho, cada parcela do carnê e cada
+ *  mensalidade viram linha, e é lá que o dono dá baixa. Calcular pela situação
+ *  geral da prestação ignoraria entrada paga e mensalidades recebidas. */
+export function resumirRecebimentos(lancamentos: LancamentoDaPrestacao[], hoje: string): ResumoRecebimentos {
+  const cent = (v: number) => Math.round(v * 100) / 100;
+  let recebido = 0;
+  let aReceber = 0;
+  let vencido = 0;
+  let proximo: ResumoRecebimentos['proximo'] = null;
+  for (const l of lancamentos) {
+    const v = Number.isFinite(l.amount) ? l.amount : 0;
+    if (l.status === 'Pago') {
+      recebido += v;
+      continue;
+    }
+    aReceber += v;
+    if (l.date < hoje) vencido += v;
+    if (!proximo || l.date < proximo.date) proximo = { date: l.date, amount: v };
+  }
+  return { recebido: cent(recebido), aReceber: cent(aReceber), vencido: cent(vencido), proximo };
+}
+
+export type SituacaoDoPagamento = 'Atrasado' | 'Quitado' | 'Parcial' | 'Previsto' | 'Sem cobrança';
+
+export function situacaoDoPagamento(r: ResumoRecebimentos): SituacaoDoPagamento {
+  if (r.vencido > 0) return 'Atrasado';
+  if (r.aReceber === 0) return r.recebido > 0 ? 'Quitado' : 'Sem cobrança';
+  return r.recebido > 0 ? 'Parcial' : 'Previsto';
+}
+
 export type ServiceIndicators = {
   emAndamento: number;
   concluidas: number;
