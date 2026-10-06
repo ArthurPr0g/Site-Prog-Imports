@@ -18,6 +18,7 @@ import {
   tituloDoContrato,
   qualificacaoDasPartes,
   classificarServico,
+  modulosExtrasDoServico,
   type ClausulaContrato,
   type DadosDoContratado,
   type DadosDoContratante,
@@ -224,6 +225,7 @@ export function PropostaDocument(d: DadosDaProposta) {
   const servicosDoContrato: ServicoDoContrato[] = d.itens.map((i) => ({
     nome: i.name,
     modulo: classificarServico({ categoria: i.categoria, nome: i.name }),
+    modulosExtras: modulosExtrasDoServico({ categoria: i.categoria, nome: i.name }),
     cobranca: i.billingType,
   }));
 

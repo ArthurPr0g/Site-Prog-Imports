@@ -37,7 +37,7 @@ import {
 } from '@/app/actions/service-quotes';
 import { saveCustomerAction } from '@/app/actions/customers';
 import { ajustarCombosEMensalidades, type AjusteAutomatico } from '@/lib/combo-servicos';
-import { classificarServico, modulosPresentes, NOME_DO_MODULO, type ModuloContrato } from '@/lib/contract';
+import { classificarServico, modulosExtrasDoServico, modulosPresentes, NOME_DO_MODULO, type ModuloContrato } from '@/lib/contract';
 
 const inputClass =
   'rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px] outline-none focus:border-accent';
@@ -87,12 +87,10 @@ function modulosDoOrcamento(itens: ServiceOrderItem[], services: InternalService
   return modulosPresentes(
     itens
       .filter((i) => i.name.trim())
-      .map((i) => ({
-        modulo: classificarServico({
-          categoria: services.find((s) => s.id === i.internalServiceId)?.category,
-          nome: i.name,
-        }),
-      }))
+      .map((i) => {
+        const servico = { categoria: services.find((s) => s.id === i.internalServiceId)?.category, nome: i.name };
+        return { modulo: classificarServico(servico), modulosExtras: modulosExtrasDoServico(servico) };
+      })
   );
 }
 
@@ -126,7 +124,12 @@ export function ServiceQuotesTable({
   const [criados, setCriados] = useState<typeof customers>([]);
   // Combo e mensalidade única aplicados ao escolher serviços. `antes` permite
   // desfazer; desfeito, não reaplica até fechar o formulário.
-  const [ajuste, setAjuste] = useState<(AjusteAutomatico & { antes: ServiceOrderItem[] }) | null>(null);
+  // O aviso acumula o que foi aplicado no formulário; `antes` e `avisoAntes`
+  // guardam só a última escolha, que é o que o "Desfazer" volta.
+  type Aviso = Omit<AjusteAutomatico, 'items'>;
+  const [ajuste, setAjuste] = useState<
+    (Aviso & { antes: ServiceOrderItem[] | null; avisoAntes: Aviso | null }) | null
+  >(null);
   const [semAjuste, setSemAjuste] = useState(false);
   // Os campos de valor e prazo são não controlados: trocar as linhas de lugar
   // precisa remontá-los, senão mostram o número da linha que estava ali.
@@ -288,12 +291,18 @@ export function ServiceQuotesTable({
     // mensalidade fica só a mais cara (lib/combo-servicos).
     const ajustado = semAjuste ? null : ajustarCombosEMensalidades(items, services);
     if (ajustado) {
-      setAjuste({ ...ajustado, antes: items });
+      const avisoAntes = ajuste ? { combo: ajuste.combo, mensalidadesRemovidas: ajuste.mensalidadesRemovidas } : null;
+      setAjuste({
+        combo: ajustado.combo ?? ajuste?.combo ?? null,
+        mensalidadesRemovidas: [...(ajuste?.mensalidadesRemovidas ?? []), ...ajustado.mensalidadesRemovidas],
+        antes: items,
+        avisoAntes,
+      });
       setVersaoLinhas((v) => v + 1);
-    } else {
+    } else if (ajuste) {
       // O "desfazer" só vale para a última escolha: depois dela, voltaria
-      // atrás também o que foi escolhido em seguida.
-      setAjuste(null);
+      // atrás também o que foi escolhido em seguida. O aviso continua.
+      setAjuste({ ...ajuste, antes: null, avisoAntes: null });
     }
     // O contrato agora cobre todo tipo de serviço do catálogo, então escolher
     // um serviço sugere anexá-lo. Nunca desmarca: só marca.
@@ -303,8 +312,10 @@ export function ServiceQuotesTable({
   function desfazerAjuste() {
     if (!ajuste) return;
     const antes = ajuste.antes;
+    if (!antes) return;
     setForm((f) => (f ? { ...f, items: antes } : f));
-    setAjuste(null);
+    const aviso = ajuste.avisoAntes;
+    setAjuste(aviso && (aviso.combo || aviso.mensalidadesRemovidas.length) ? { ...aviso, antes: null, avisoAntes: null } : null);
     setSemAjuste(true);
     setVersaoLinhas((v) => v + 1);
   }
@@ -587,7 +598,7 @@ export function ServiceQuotesTable({
                         <optgroup key={categoria} label={categoria}>
                           {lista.map((s) => (
                             <option key={s.id} value={s.id}>
-                              {s.name}{s.billingType === 'mensal' ? ' (mensal)' : ''}
+                              {s.name} · {formatBRL(s.price)}{s.billingType === 'mensal' ? '/mês' : ''}
                             </option>
                           ))}
                         </optgroup>
@@ -682,13 +693,15 @@ export function ServiceQuotesTable({
                   )}
                   <div className="text-[11px] text-fg-faded">O campo de desconto abaixo continua valendo por cima disso.</div>
                 </div>
-                <button
-                  type="button"
-                  onClick={desfazerAjuste}
-                  className="shrink-0 rounded-control border border-border-strong px-3 py-1.5 text-[12px] font-bold text-fg-secondary hover:border-accent hover:text-accent"
-                >
-                  Desfazer
-                </button>
+                {ajuste.antes && (
+                  <button
+                    type="button"
+                    onClick={desfazerAjuste}
+                    className="shrink-0 rounded-control border border-border-strong px-3 py-1.5 text-[12px] font-bold text-fg-secondary hover:border-accent hover:text-accent"
+                  >
+                    Desfazer
+                  </button>
+                )}
               </div>
             )}
 

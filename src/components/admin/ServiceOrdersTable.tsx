@@ -481,7 +481,7 @@ export function ServiceOrdersTable({
                         <optgroup key={categoria} label={categoria}>
                           {lista.map((s) => (
                             <option key={s.id} value={s.id}>
-                              {s.name}{s.billingType === 'mensal' ? ' (mensal)' : ''}
+                              {s.name} · {formatBRL(s.price)}{s.billingType === 'mensal' ? '/mês' : ''}
                             </option>
                           ))}
                         </optgroup>
