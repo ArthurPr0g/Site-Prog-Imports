@@ -3,8 +3,8 @@
 //
 // - **Combo:** site ou loja + sistema de gestão viram uma linha só, com o
 //   desconto da tabela da página de planos (portfolio-arthur-prog.vercel.app/#/planos):
-//   10% / 12% / 15% no mesmo nível (Essencial/Básico, Profissional/Intermediário,
-//   Premium/Avançado) e 10% em níveis diferentes, arredondado para baixo até um
+//   15% / 15% / 20% no mesmo nível (Essencial/Básico, Profissional/Intermediário,
+//   Premium/Avançado) e 15% em níveis diferentes, arredondado para baixo até um
 //   valor terminado em 97. No mesmo nível o resultado é exatamente o preço do
 //   combo do catálogo, e a linha usa o item de catálogo dele.
 // - **Marca:** Logo Essencial + Identidade a partir do Logo viram a Identidade
@@ -30,8 +30,8 @@ const COMBOS: Record<'site' | 'loja', string[]> = {
   loja: ['Combo Loja Start', 'Combo Loja Growth', 'Combo Loja Enterprise'],
 };
 
-const DESCONTO_MESMO_NIVEL = [0.1, 0.12, 0.15];
-const DESCONTO_NIVEIS_DIFERENTES = 0.1;
+const DESCONTO_MESMO_NIVEL = [0.15, 0.15, 0.2];
+const DESCONTO_NIVEIS_DIFERENTES = 0.15;
 
 /** Arredonda para baixo até um valor terminado em 97 (ex.: 4.494,60 → 4.397). */
 export function terminadoEm97(v: number): number {
