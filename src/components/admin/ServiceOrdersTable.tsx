@@ -281,13 +281,17 @@ export function ServiceOrdersTable({
             key={c.rotulo}
             className={`rounded-[18px] border bg-card px-5 py-4 ${'atrasado' in c && c.atrasado ? 'border-error/50' : 'border-border'}`}
           >
-            <div className="mb-1 flex items-baseline gap-2">
-              <span className="text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{c.rotulo}</span>
-              <span className="text-[10.5px] text-fg-faded/70">{c.nota}</span>
+            {/* Título sempre numa linha só. A nota vai ao lado dele só no card que
+                tem alerta (o alerta ocupa a linha de baixo); nos outros, abaixo do valor. */}
+            <div className="mb-1 flex items-baseline gap-2 whitespace-nowrap">
+              <span title={c.rotulo} className="truncate text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{c.rotulo}</span>
+              {'alerta' in c && <span className="text-[10.5px] text-fg-faded/70">{c.nota}</span>}
             </div>
             <div className="text-[22px] font-extrabold">{c.valor}</div>
-            {'alerta' in c && (
+            {'alerta' in c ? (
               <div className={`mt-0.5 text-[11px] font-bold ${c.atrasado ? 'text-error' : 'text-fg-faded'}`}>{c.alerta}</div>
+            ) : (
+              <div className="mt-0.5 text-[11px] font-bold text-fg-faded">{c.nota}</div>
             )}
           </div>
         ))}
