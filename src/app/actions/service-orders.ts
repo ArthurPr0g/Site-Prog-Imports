@@ -19,6 +19,7 @@ import { revalidarDinheiro } from '@/lib/data/revalidate';
 import { DISCOUNT_TYPES, aplicarDesconto, type Desconto } from '@/lib/discount';
 import { salvarParcelas, removerParcelas } from '@/lib/data/installments';
 import { geraParcelas, gerarParcelas, MAX_JUROS_PCT } from '@/lib/installments';
+import { carneDaCondicao, condicoesGravadas } from '@/lib/pagamento-servico';
 
 export type ServiceOrderInput = {
   id?: string;
@@ -88,7 +89,11 @@ export async function saveServiceOrderAction(input: ServiceOrderInput): Promise<
   const trabalho = aplicarDesconto(total, input.desconto);
 
   const parcelado = geraParcelas(input.paymentMethod);
-  if (parcelado) {
+  // Condição da tabela (50% + 50%, cartão): o carnê sai da própria condição e
+  // das datas de início e entrega, não dos campos do PIX Parcelado.
+  const entrega = calcularEntrega(input.startDate, prazoDias);
+  const carne = carneDaCondicao(input.paymentMethod.trim(), trabalho, input.startDate, entrega);
+  if (parcelado && !carne) {
     if (!input.firstDueDate) return errResult('Informe a data da primeira parcela.');
     if (!Number.isInteger(input.installmentCount) || input.installmentCount < 1) {
       return errResult('Informe a quantidade de parcelas.');
@@ -113,18 +118,22 @@ export async function saveServiceOrderAction(input: ServiceOrderInput): Promise<
     discount_type: input.desconto.tipo,
     discount_value: input.desconto.valor,
     discount_note: input.desconto.descricao.trim(),
-    installment_count: parcelado ? input.installmentCount : 0,
-    down_payment: parcelado ? input.downPayment : 0,
-    interest_pct: parcelado ? input.interestPct : 0,
-    first_due_date: parcelado ? input.firstDueDate : null,
-    installment_notes: parcelado ? input.installmentNotes.trim() : '',
+    ...(carne
+      ? { ...condicoesGravadas(carne), installment_notes: '' }
+      : {
+          installment_count: parcelado ? input.installmentCount : 0,
+          down_payment: parcelado ? input.downPayment : 0,
+          interest_pct: parcelado ? input.interestPct : 0,
+          first_due_date: parcelado ? input.firstDueDate : null,
+          installment_notes: parcelado ? input.installmentNotes.trim() : '',
+        }),
     // Sem serviço mensal não há plano. Zerar aqui evita que uma duração
     // esquecida de uma edição anterior continue gerando parcelas de nada.
     plan_months: temPlano ? input.planMonths : null,
     plan_start_date: temPlano ? input.planStartDate || input.startDate : null,
     lead_time_days: prazoDias,
     start_date: input.startDate,
-    due_date: calcularEntrega(input.startDate, prazoDias),
+    due_date: entrega,
     updated_at: new Date().toISOString(),
   };
 
@@ -136,7 +145,7 @@ export async function saveServiceOrderAction(input: ServiceOrderInput): Promise<
     ? await supabase
         .from('service_orders')
         .select(
-          'total_amount, discount_type, discount_value, installment_count, down_payment, interest_pct, first_due_date'
+          'payment_method, start_date, due_date, total_amount, discount_type, discount_value, installment_count, down_payment, interest_pct, first_due_date'
         )
         .eq('id', orderId)
         .maybeSingle()
@@ -171,7 +180,27 @@ export async function saveServiceOrderAction(input: ServiceOrderInput): Promise<
   // Só refaz o carnê quando o valor ou as condições mudaram: o dono ajusta
   // parcelas uma a uma pela página do cliente, e regerar a cada salvamento
   // desfaria esse trabalho em silêncio.
-  if (parcelado) {
+  if (carne) {
+    // Refaz quando a forma, o valor ou as datas mudaram. As datas do carnê
+    // seguem início e entrega, então aqui elas são redefinidas junto; o status
+    // das parcelas já recebidas é preservado por `salvarParcelas`.
+    const trabalhoAnterior = anterior
+      ? aplicarDesconto(Number(anterior.total_amount), {
+          tipo: anterior.discount_type as Desconto['tipo'],
+          valor: Number(anterior.discount_value),
+          descricao: '',
+        })
+      : null;
+    const mesmaCondicao =
+      !!anterior &&
+      anterior.payment_method === input.paymentMethod.trim() &&
+      trabalhoAnterior === trabalho &&
+      anterior.start_date === input.startDate &&
+      (anterior.due_date ?? '') === (entrega ?? '');
+
+    if (carne.length === 0) await removerParcelas('servico', orderId);
+    else if (!mesmaCondicao) await salvarParcelas('servico', orderId, carne, { redefinirDatas: true });
+  } else if (parcelado) {
     const trabalhoAnterior = anterior
       ? aplicarDesconto(Number(anterior.total_amount), {
           tipo: anterior.discount_type as Desconto['tipo'],

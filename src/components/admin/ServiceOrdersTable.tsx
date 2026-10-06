@@ -24,7 +24,8 @@ import {
 } from '@/lib/services';
 import { SEM_DESCONTO, temDesconto, aplicarDesconto, rotuloDoDesconto, type Desconto } from '@/lib/discount';
 import { DescontoFields } from '@/components/admin/DescontoFields';
-import { ParcelamentoFields } from '@/components/admin/ParcelamentoFields';
+import { FormaPagamentoServico } from '@/components/admin/FormaPagamentoServico';
+import { condicaoDoMetodo } from '@/lib/pagamento-servico';
 import { ParcelasList } from '@/components/admin/ParcelasList';
 import { geraParcelas, calcularParcelamento } from '@/lib/installments';
 import { saveServiceOrderAction, deleteServiceOrderAction, type ServiceOrderInput } from '@/app/actions/service-orders';
@@ -117,6 +118,9 @@ export function ServiceOrdersTable({
   // o que o dono vê no formulário não poder divergir do que vai para o banco.
   const totais = useMemo(() => totalizarItens(form?.items ?? []), [form]);
   const entrega = form ? calcularEntrega(form.startDate, totais.prazoDias) : null;
+  // Com carnê (PIX Parcelado ou condição da tabela), cada recebimento tem
+  // status próprio e o caixa segue as parcelas, não a situação geral.
+  const comCarne = !!form && (geraParcelas(form.paymentMethod) || condicaoDoMetodo(form.paymentMethod) !== null);
 
   const ativos = services.filter((s) => s.active);
 
@@ -528,7 +532,7 @@ export function ServiceOrdersTable({
             )}
 
             <div className="mt-4">
-              <ParcelamentoFields
+              <FormaPagamentoServico
                 condicoes={{
                   paymentMethod: form.paymentMethod,
                   installmentCount: form.installmentCount,
@@ -537,14 +541,16 @@ export function ServiceOrdersTable({
                   firstDueDate: form.firstDueDate,
                   installmentNotes: form.installmentNotes,
                 }}
-                // Só o trabalho entra no carnê: a mensalidade do plano tem
-                // ciclo próprio e já vira parcela por conta dela.
-                total={aplicarDesconto(totais.total, form.desconto)}
+                // Só o trabalho entra: a mensalidade do plano tem ciclo
+                // próprio e já vira parcela por conta dela.
+                trabalho={aplicarDesconto(totais.total, form.desconto)}
+                inicio={form.startDate}
+                entrega={calcularEntrega(form.startDate, totais.prazoDias)}
                 onChange={(patch) => setForm((f) => (f ? { ...f, ...patch } : f))}
               />
             </div>
 
-            {!geraParcelas(form.paymentMethod) && totais.total > 0 && (
+            {!comCarne && totais.total > 0 && (
               <div className="mb-4 rounded-control border border-border bg-card-dark px-4 py-3 text-[12px] text-fg-tertiary">
                 Sem parcelamento, vale o padrão do contrato: <strong>50% na contratação</strong> e{' '}
                 <strong>50% na entrega</strong>. O Financeiro recebe o valor do trabalho numa linha só, e o
@@ -560,13 +566,15 @@ export function ServiceOrdersTable({
                   // Com juros o carnê cobra mais que o trabalho; é essa soma que
                   // ele tem que fechar, não o valor puro dos serviços.
                   totalEsperado={
-                    calcularParcelamento({
+                    condicaoDoMetodo(form.paymentMethod) !== null
+                      ? aplicarDesconto(totais.total, form.desconto)
+                      : calcularParcelamento({
                       total: aplicarDesconto(totais.total, form.desconto),
                       parcelas: form.installmentCount,
                       entrada: form.downPayment,
                       jurosPct: form.interestPct,
                       primeiroVencimento: form.firstDueDate,
-                    }).totalComJuros
+                        }).totalComJuros
                   }
                 />
               </div>
@@ -591,13 +599,13 @@ export function ServiceOrdersTable({
                   value={form.paymentStatus}
                   onChange={(e) => set('paymentStatus', e.target.value as ServicePaymentStatus)}
                   className={`w-full ${inputClass}`}
-                  disabled={geraParcelas(form.paymentMethod)}
+                  disabled={comCarne}
                 >
                   {SERVICE_PAYMENT_STATUSES.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
-                {geraParcelas(form.paymentMethod) && (
+                {comCarne && (
                   <div className="mt-1.5 text-[10.5px] text-fg-faded">
                     Com parcelamento, quem manda no caixa é o status de cada parcela.
                   </div>
@@ -618,7 +626,14 @@ export function ServiceOrdersTable({
               ) : (
                 <>
                   Ao salvar, o Financeiro recebe
-                  {totais.total > 0 && (
+                  {totais.total > 0 && comCarne && (
+                    <>
+                      {' '}o trabalho de{' '}
+                      <strong className="text-accent">{formatBRL(aplicarDesconto(totais.total, form.desconto))}</strong>{' '}
+                      dividido nos recebimentos da forma de pagamento, cada um com a sua data
+                    </>
+                  )}
+                  {totais.total > 0 && !comCarne && (
                     <>
                       {' '}<strong>uma receita</strong> de{' '}
                       <strong className="text-accent">{formatBRL(aplicarDesconto(totais.total, form.desconto))}</strong>
