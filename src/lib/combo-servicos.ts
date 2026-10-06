@@ -7,6 +7,8 @@
 //   Premium/Avançado) e 10% em níveis diferentes, arredondado para baixo até um
 //   valor terminado em 97. No mesmo nível o resultado é exatamente o preço do
 //   combo do catálogo, e a linha usa o item de catálogo dele.
+// - **Marca:** Logo Essencial + Identidade a partir do Logo viram a Identidade
+//   Visual Completa do catálogo, que é o combo dos dois.
 // - **Mensalidade:** com mais de uma mensalidade, fica só a mais cara (decisão
 //   do dono: um cliente paga uma mensalidade só).
 //
@@ -116,6 +118,30 @@ export function ajustarCombosEMensalidades(
     const segundo = Math.max(iPrincipal, iGestao);
     items = items.flatMap((it, i) => (i === primeiro ? [linha] : i === segundo ? [] : [it]));
     combo = { nome: linha.name, separados, valor };
+  }
+
+  // Marca: logo + identidade a partir do logo = identidade completa.
+  const nomeDoCatalogo = (i: ServiceOrderItem) =>
+    i.internalServiceId ? catalogo.find((s) => s.id === i.internalServiceId)?.name : undefined;
+  const iLogo = items.findIndex((i) => nomeDoCatalogo(i) === 'Logo Essencial');
+  const iIdentidade = items.findIndex((i) => nomeDoCatalogo(i) === 'Identidade a partir do Logo');
+  const completa = catalogo.find((s) => s.active && s.name === 'Identidade Visual Completa');
+  if (iLogo >= 0 && iIdentidade >= 0 && completa) {
+    const separados = items[iLogo].amount + items[iIdentidade].amount;
+    const linha: ServiceOrderItem = {
+      internalServiceId: completa.id,
+      name: completa.name,
+      description: completa.description,
+      amount: completa.price,
+      billingType: 'unico',
+      leadTimeDays: completa.leadTimeDays,
+    };
+    const primeiro = Math.min(iLogo, iIdentidade);
+    const segundo = Math.max(iLogo, iIdentidade);
+    items = items.flatMap((it, i) => (i === primeiro ? [linha] : i === segundo ? [] : [it]));
+    // Só a marca virou combo: mostra ela no aviso. Se site + gestão também
+    // viraram, o aviso fica com o maior desconto, que é o deles.
+    combo ??= { nome: linha.name, separados, valor: linha.amount };
   }
 
   // Mensalidade única: fica a mais cara, na posição da primeira.
