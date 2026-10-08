@@ -66,18 +66,13 @@ os 340 de baixo. Fora dessa faixa o texto existe no arquivo e some na tela.
 
 ## O que falta
 
-- **Geração de texto por assunto.** É a metade do pedido original que ainda não
-  existe: escolher um assunto e a peça vir escrita. O `ANTHROPIC_API_KEY` já
-  está no projeto para o assistente de compras, e o mesmo caminho serve para
-  propor título, specs e legenda no tom do playbook. Hoje o preenchimento
-  automático vem do cadastro do produto, que resolve peça de venda e não
-  resolve peça de conteúdo (3D, 4A, 5B, 5C).
 - **Animar os modelos restantes.** São animados o 3A, o 3C e o 5A — os que o
   playbook marca. Os outros exportam só PNG. A infraestrutura já serve a todos:
   o desenhista é o mesmo para a arte parada e para o vídeo, basta marcar
   `animado` no catálogo e passar o animador nos elementos.
 - **O LUT da marca em `.cube`**, para o dono aplicar em CapCut ou Premiere e as
-  fotos próprias passarem a conviver com os renders.
+  fotos próprias passarem a conviver com os renders. (Saiu do playbook, não de
+  um pedido do dono.)
 
 ## O que já saiu daqui
 
@@ -86,3 +81,15 @@ os 340 de baixo. Fora dessa faixa o texto existe no arquivo e some na tela.
   gravação por canvas cobra está na skill `motion-design`, e não é pouco.
 - **Slide 5 do 4A com três produtos distintos**, via os campos `produtoA` e
   `produtoB`.
+- **Geração por assunto** (`lib/estudio/redacao.ts` + `api/estudio/redigir`).
+  Uma linha de assunto preenche os campos daquele modelo. O esquema sai dos
+  próprios campos do `modelos.ts`, então modelo novo nasce redigível. Preço,
+  parcela e desconto ficam de fora de propósito: têm fonte no cadastro, e
+  inventá-los é o único erro caro que essa tela poderia cometer.
+  **Vem por ferramenta, não por JSON em prosa** — o modelo recusa prefill de
+  mensagem do assistente, e pedir JSON em texto falha sem aviso.
+- **Grade de modelos desenhada** (`MiniaturaDoModelo`). Cada modelo aparece
+  renderizado pelo mesmo desenhista da arte final, com foto real do catálogo e
+  conteúdo de exemplo em `lib/estudio/exemplos.ts`. A escala entra por
+  `setTransform`: catorze canvas de 1080×1350 encolhidos por CSS ocupariam a
+  memória do tamanho cheio.
