@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, Loader2, Save, Trash2, Video } from 'lucide-react';
+import { Download, Loader2, Save, Trash2, Video, Wand2 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { DIMENSOES, type Modelo, type Campo } from '@/lib/estudio/modelos';
 import { carregarImagens, desenharPeca } from '@/lib/estudio/desenhistas';
@@ -46,6 +46,8 @@ export function EditorDePeca({
   const [legenda, setLegenda] = useState(peca?.legenda ?? '');
   const [status, setStatus] = useState(peca?.status ?? 'Rascunho');
   const [slide, setSlide] = useState(1);
+  const [assunto, setAssunto] = useState('');
+  const [redigindo, setRedigindo] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [desenhando, setDesenhando] = useState(true);
   const [gravando, setGravando] = useState(false);
@@ -58,6 +60,10 @@ export function EditorDePeca({
   // O que o produto escolhido sugeriu da ultima vez. Serve para saber, na troca
   // de produto, qual campo ainda e do produto e qual o dono reescreveu.
   const sugestoesRef = useRef<Record<string, string>>({});
+  // O que a geração por assunto escreveu da última vez. Mesmo papel do anterior,
+  // e separado dele porque as duas fontes convivem: um post de venda tem título
+  // escrito e preço vindo do cadastro.
+  const redacaoRef = useRef<Record<string, string>>({});
 
   const produto = useMemo(
     () => produtos.find((p) => p.id === produtoId) ?? null,
@@ -120,6 +126,38 @@ export function EditorDePeca({
     const anteriores = sugestoesRef.current;
     sugestoesRef.current = sugestoes;
     setConteudo((atual) => aplicarSugestoes(atual, sugestoes, anteriores));
+  }
+
+  /** Pede o texto da peça a partir do assunto e aplica sobre o formulário.
+   *
+   *  Usa a mesma regra da troca de produto: campo vazio ou com exatamente o que
+   *  a geração anterior escreveu é atualizado; o que o dono digitou à mão fica.
+   *  Sem isso, pedir para reescrever apagaria a correção que ele acabou de
+   *  fazer — e aí ninguém pede duas vezes. */
+  async function redigir() {
+    if (redigindo || assunto.trim().length < 3) return;
+    setRedigindo(true);
+    try {
+      const r = await fetch('/api/estudio/redigir', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modelo: modelo.codigo, assunto }),
+      });
+      const dados = await r.json();
+      if (!r.ok) {
+        toast({ ok: false, message: dados?.erro ?? 'Não consegui redigir agora.' });
+        return;
+      }
+      const campos: Record<string, string> = dados.campos ?? {};
+      const anteriores = redacaoRef.current;
+      redacaoRef.current = campos;
+      setConteudo((atual) => aplicarSugestoes(atual, campos, anteriores));
+      toast({ ok: true, message: `${Object.keys(campos).length} campos escritos` });
+    } catch {
+      toast({ ok: false, message: 'Não consegui falar com o servidor.' });
+    } finally {
+      setRedigindo(false);
+    }
   }
 
   function nomeDoArquivo() {
@@ -242,6 +280,41 @@ export function EditorDePeca({
               placeholder="Ex.: Legion 9i — pronta entrega"
               className="w-full rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px]"
             />
+          </Rotulo>
+
+          {/* Escrever a peça a partir de um assunto.
+
+              Fica acima dos campos porque é o ponto de partida: você diz do que
+              a peça trata e os campos abaixo chegam preenchidos para corrigir.
+              Preço, parcela e desconto continuam vindo do cadastro do produto —
+              esses têm fonte, e inventá-los seria o único erro caro que esta
+              tela poderia cometer. */}
+          <Rotulo
+            texto="Escrever a partir de um assunto"
+            ajuda="Uma linha basta. O que você já tiver digitado à mão não é sobrescrito."
+          >
+            <div className="flex gap-2">
+              <input
+                value={assunto}
+                onChange={(e) => setAssunto(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void redigir();
+                  }
+                }}
+                placeholder="Ex.: por que importar dos EUA sai mais barato que comprar aqui"
+                className="w-full rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px]"
+              />
+              <button
+                onClick={() => void redigir()}
+                disabled={redigindo || assunto.trim().length < 3}
+                className="flex flex-shrink-0 items-center gap-1.5 rounded-control bg-surface-light px-4 text-[13px] font-extrabold text-ink transition-all hover:bg-surface-light-alt disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {redigindo ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />}
+                Escrever
+              </button>
+            </div>
           </Rotulo>
 
           {modelo.slides > 1 && (

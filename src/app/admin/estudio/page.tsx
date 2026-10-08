@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { modelosPorSecao, DIMENSOES } from '@/lib/estudio/modelos';
+import { MiniaturaDoModelo } from '@/components/estudio/MiniaturaDoModelo';
+import { listarProdutosDoEstudio } from '@/lib/estudio/catalogo';
 
 export const metadata: Metadata = { title: 'Estúdio' };
 
@@ -25,6 +27,12 @@ export default async function EstudioPage() {
 
   const pecas = (data ?? []) as Peca[];
   const secoes = modelosPorSecao();
+
+  // Uma foto real do catálogo nas miniaturas. Com um retângulo cinza no lugar
+  // do produto, metade dos modelos fica impossível de distinguir — é o produto
+  // que define o enquadramento de quase todos eles.
+  const produtos = await listarProdutosDoEstudio();
+  const capaDeExemplo = produtos.find((p) => p.capa)?.capa ?? null;
 
   return (
     <div>
@@ -73,33 +81,45 @@ export default async function EstudioPage() {
           <div className="mb-3.5 font-mono text-[11px] font-bold tracking-[.14em] text-accent">
             {secao.toUpperCase()}
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {/* Grade de miniaturas desenhadas, e não de descrições.
+
+              O que faz escolher entre o 3A e o 3C não é ler "post de produto
+              escuro" e "post de oferta": é ver quanto texto cabe, onde o preço
+              fica e como o produto sangra na borda. As miniaturas são a peça de
+              verdade desenhada pequena, pelo mesmo desenhista — então a grade
+              não tem como ficar desatualizada em relação ao que o botão gera. */}
+          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {modelos.map((m) => {
               const d = DIMENSOES[m.formato];
               return (
                 <Link
                   key={m.codigo}
                   href={`/admin/estudio/nova?modelo=${m.codigo}`}
-                  className="flex flex-col gap-2.5 rounded-[18px] border border-border bg-card p-5 transition-colors hover:border-accent"
+                  className="group flex flex-col gap-2.5 rounded-card-lg border border-border bg-card p-3 transition-all hover:-translate-y-1 hover:border-border-hover hover:shadow-[0_18px_40px_rgba(0,0,0,.45)]"
                 >
-                  <div className="flex items-baseline justify-between gap-3">
-                    <div className="font-display text-[15px] font-bold">{m.nome}</div>
-                    <span className="font-mono text-[11px] text-fg-tertiary">
+                  <MiniaturaDoModelo modelo={m} capa={capaDeExemplo} />
+                  <div className="flex items-baseline justify-between gap-2 px-1">
+                    <div className="truncate text-[13.5px] font-extrabold">{m.nome}</div>
+                    <span className="etiqueta flex-shrink-0 text-[9px] text-fg-muted">
                       {m.codigo.toUpperCase()}
                     </span>
                   </div>
-                  <div className="text-[13px] leading-relaxed text-fg-secondary">{m.descricao}</div>
-                  <div className="mt-auto flex flex-wrap items-center gap-2 pt-1 font-mono text-[11px] text-fg-tertiary">
-                    <span>
+                  <div className="line-clamp-2 px-1 text-[12px] leading-snug text-fg-tertiary">
+                    {m.descricao}
+                  </div>
+                  <div className="mt-auto flex flex-wrap items-center gap-1.5 px-1 pt-1">
+                    <span className="etiqueta text-[9px] text-fg-muted">
                       {d.largura}×{d.altura}
                     </span>
-                    <span>·</span>
-                    <span>{m.superficie}</span>
                     {m.slides > 1 && (
-                      <>
-                        <span>·</span>
-                        <span>{m.slides} slides</span>
-                      </>
+                      <span className="etiqueta rounded-full border border-border-strong px-1.5 py-0.5 text-[9px] text-fg-tertiary">
+                        {m.slides} slides
+                      </span>
+                    )}
+                    {m.animado && (
+                      <span className="etiqueta rounded-full border border-ouro/40 px-1.5 py-0.5 text-[9px] text-ouro">
+                        vídeo
+                      </span>
                     )}
                   </div>
                 </Link>
