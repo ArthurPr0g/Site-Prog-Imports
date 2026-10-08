@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAdmin } from '@/lib/auth';
 import { modeloPorCodigo } from '@/lib/estudio/modelos';
-import { VOZ, instrucaoDoModelo, lerJson, peneirar } from '@/lib/estudio/redacao';
+import { VOZ, ferramentaDoModelo, instrucaoDoModelo, peneirar } from '@/lib/estudio/redacao';
 
 // Escreve os campos de uma peça a partir de um assunto.
 //
@@ -46,22 +46,20 @@ export async function POST(req: NextRequest) {
 
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const ferramenta = ferramentaDoModelo(modelo);
     const resposta = await anthropic.messages.create({
       model: MODELO,
       max_tokens: MAX_TOKENS,
       system: VOZ,
-      messages: [
-        { role: 'user', content: instrucaoDoModelo(modelo, assunto) },
-        // A resposta já começa com a chave aberta: é o jeito mais barato de
-        // impedir o "Claro! Aqui está:" que estragaria o JSON.
-        { role: 'assistant', content: '{' },
-      ],
+      tools: [ferramenta],
+      // Obriga a resposta a vir pela ferramenta: o formato passa a ser contrato
+      // da API em vez de pedido em prosa.
+      tool_choice: { type: 'tool', name: ferramenta.name },
+      messages: [{ role: 'user', content: instrucaoDoModelo(modelo, assunto) }],
     });
 
-    const texto = resposta.content
-      .map((bloco) => (bloco.type === 'text' ? bloco.text : ''))
-      .join('');
-    const campos = peneirar(lerJson('{' + texto), modelo);
+    const uso = resposta.content.find((bloco) => bloco.type === 'tool_use');
+    const campos = peneirar(uso?.type === 'tool_use' ? uso.input : null, modelo);
 
     if (Object.keys(campos).length === 0) {
       return NextResponse.json(

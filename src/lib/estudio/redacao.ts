@@ -71,7 +71,30 @@ ${assunto}
 CAMPOS A PREENCHER:
 ${lista}
 
-Responda SOMENTE com um objeto JSON cujas chaves são exatamente as chaves acima e os valores são strings. Sem comentário, sem cerca de código, sem nenhum texto fora do JSON.`;
+Chame a ferramenta "preencher" com um valor para cada campo. Campo que não faz sentido para este assunto vai como string vazia.`;
+}
+
+/** O esquema da ferramenta, montado dos campos do modelo.
+ *
+ *  Pedir JSON em texto e depois procurar as chaves funcionava na maioria das
+ *  vezes e falhava sem aviso no resto — e a primeira tentativa nem chegou lá:
+ *  ela forçava o formato começando a resposta do assistente com `{`, e o modelo
+ *  recusou ("does not support assistant message prefill"). Com ferramenta, o
+ *  formato é contrato da API: ou vem no esquema, ou não vem. */
+export function ferramentaDoModelo(modelo: Modelo) {
+  const propriedades: Record<string, { type: 'string'; description: string }> = {};
+  for (const c of camposRedigiveis(modelo)) {
+    const partes = [c.rotulo];
+    if (c.maxPalavras) partes.push(`no máximo ${c.maxPalavras} palavras`);
+    if (c.slide) partes.push(`slide ${c.slide}`);
+    if (c.ajuda) partes.push(c.ajuda);
+    propriedades[c.chave] = { type: 'string', description: partes.join(' — ') };
+  }
+  return {
+    name: 'preencher',
+    description: 'Preenche os campos de texto da peça.',
+    input_schema: { type: 'object' as const, properties: propriedades },
+  };
 }
 
 /** Fica só com as chaves que o modelo declarou, e só com strings.
@@ -93,18 +116,7 @@ export function peneirar(bruto: unknown, modelo: Modelo): Record<string, string>
   return saida;
 }
 
-/** Extrai o JSON da resposta.
- *
- *  Pede-se JSON puro e quase sempre é o que vem; o recorte entre a primeira
- *  chave e a última existe para a vez em que vier embrulhado em cerca de código,
- *  que é a forma mais comum de desobediência e a mais fácil de perdoar. */
-export function lerJson(texto: string): unknown {
-  const inicio = texto.indexOf('{');
-  const fim = texto.lastIndexOf('}');
-  if (inicio < 0 || fim <= inicio) return null;
-  try {
-    return JSON.parse(texto.slice(inicio, fim + 1));
-  } catch {
-    return null;
-  }
-}
+// Havia aqui um `lerJson` que recortava o objeto entre a primeira e a última
+// chave do texto. Saiu junto com a tentativa de pedir JSON em prosa: com
+// ferramenta, o que volta já é objeto, e peneirar continua necessário porque o
+// esquema garante o formato e não o conteúdo.
