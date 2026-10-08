@@ -6,10 +6,12 @@ import {
   type ServiceOrderItem,
   type ServiceOrderStatus,
   type ServicePaymentStatus,
+  type LancamentoDaPrestacao,
 } from '@/lib/services';
 import type { Desconto } from '@/lib/discount';
 import { listInstallments, listInstallmentsBySource } from '@/lib/data/installments';
 import { OFFSET_PARCELA_PIX, dataDeCaixa, type Installment } from '@/lib/installments';
+import { rotuloDaParcela } from '@/lib/pagamento-servico';
 
 type ItemRow = {
   id: string;
@@ -95,6 +97,28 @@ function toOrder(r: OrderRow, parcelas: Installment[] = []): ServiceOrder {
   };
 }
 
+/** Os lançamentos do Financeiro de cada prestação, para a tela mostrar quanto
+ *  já foi recebido e quanto falta. Lido em uma consulta só. */
+export async function lancamentosDasPrestacoes(ids: string[]): Promise<Record<string, LancamentoDaPrestacao[]>> {
+  const mapa: Record<string, LancamentoDaPrestacao[]> = {};
+  if (ids.length === 0) return mapa;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('finance_entries')
+    .select('reference_id, amount, status, entry_date')
+    .eq('source', 'servico')
+    .in('reference_id', ids);
+  for (const e of data ?? []) {
+    const id = e.reference_id as string;
+    (mapa[id] ??= []).push({
+      amount: Number(e.amount),
+      status: e.status === 'Pago' ? 'Pago' : 'Previsto',
+      date: e.entry_date as string,
+    });
+  }
+  return mapa;
+}
+
 export async function listServiceOrders(): Promise<ServiceOrder[]> {
   const supabase = await createClient();
   const { data } = await supabase
@@ -133,7 +157,7 @@ export async function sincronizarFinanceiroDaPrestacao(orderId: string): Promise
   const { data } = await supabase
     .from('service_orders')
     .select(
-      'title, status, payment_status, total_amount, monthly_amount, plan_months, plan_start_date, start_date, due_date, discount_type, discount_value, discount_note'
+      'title, status, payment_status, payment_method, total_amount, monthly_amount, plan_months, plan_start_date, start_date, due_date, discount_type, discount_value, discount_note'
     )
     .eq('id', orderId)
     .maybeSingle();
@@ -172,7 +196,7 @@ export async function sincronizarFinanceiroDaPrestacao(orderId: string): Promise
               parcela: OFFSET_PARCELA_PIX + p.number,
               amount: p.amount,
               status: p.status === 'Recebida' ? ('Pago' as const) : ('Previsto' as const),
-              description: `Serviço: ${data.title} — ${p.number === 0 ? 'entrada' : `parcela ${p.number}`}`,
+              description: `Serviço: ${data.title} — ${rotuloDaParcela(data.payment_method ?? '', p.number)}`,
               // Mesma regra da venda: recebida entra no dia do recebimento,
               // pendente no dia do vencimento.
               entryDate: dataDeCaixa(p),

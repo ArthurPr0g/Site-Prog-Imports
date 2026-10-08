@@ -29,13 +29,31 @@ vive inteiro online; a pasta local é só uma cópia de trabalho.
 ## Banco de dados (migrations)
 
 - Toda mudança de schema: criar `supabase/migrations/NNNN_descricao.sql` com o
-  próximo número (a última é `0044`) **e** aplicar no projeto pelo conector da
+  próximo número (a última é `0049`) **e** aplicar no projeto pelo conector da
   Supabase (`apply_migration`) com o mesmo nome. As duas coisas no mesmo commit.
 - Histórico divergente (conferido em 2026-09-11): os nomes registrados na
   Supabase não batem 1:1 com os arquivos até a `0033` — várias migrations antigas
   foram aplicadas por SQL direto ou agrupadas. O **estado** do banco confere com
   os arquivos. A `0039_my_installments_com_paid_at` existe só no banco e foi
   substituída pela `0043`. Não rode `supabase db push` contra este projeto.
+
+## Preços dos serviços da Prog Soluções (regra do dono)
+
+Toda mudança de valor (pacote, combo, marca, mensalidade) vale nos três lugares,
+no mesmo pedido, e é publicada e conferida sem precisar de aprovação:
+
+1. **Catálogo deste ERP** — tabela `internal_services`, por migration (ver acima).
+   Lógica de combo/mensalidade em `src/lib/combo-servicos.ts`.
+2. **Página de planos do portfólio** — `ArthurPr0g/Portfolio-Arthur-Prog`,
+   `app/src/pages/planos/planos.js` (portfolio-arthur-prog.vercel.app/#/planos).
+3. **Página avulsa e tabela interna** — `ArthurPr0g/Resgate-Cr-dito-Claude`,
+   `index.html` e `PACOTES.md`.
+
+Regras vigentes: combo site/loja + gestão com 15/15/20% (mesmo nível) ou 15%
+(níveis diferentes), terminado em 97; mensalidade do combo = a maior das duas;
+marca: Logo Essencial 497, Identidade a partir do Logo 597, Identidade Visual
+Completa 997 (combo dos dois). Antes de publicar, testar todas as combinações
+do quiz e do simulador das páginas de planos.
 
 ## Retomar do zero (sem pasta local)
 

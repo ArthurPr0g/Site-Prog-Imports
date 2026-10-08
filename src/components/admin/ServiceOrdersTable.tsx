@@ -20,10 +20,17 @@ import {
   type ServiceOrderItem,
   type ServiceOrderStatus,
   type ServicePaymentStatus,
+  agruparPorCategoria,
+  resumirRecebimentos,
+  situacaoDoPagamento,
+  type LancamentoDaPrestacao,
+  type ResumoRecebimentos,
 } from '@/lib/services';
+import { AvisoAjusteAutomatico, useAjusteAutomatico } from '@/components/admin/AjusteAutomatico';
 import { SEM_DESCONTO, temDesconto, aplicarDesconto, rotuloDoDesconto, type Desconto } from '@/lib/discount';
 import { DescontoFields } from '@/components/admin/DescontoFields';
-import { ParcelamentoFields } from '@/components/admin/ParcelamentoFields';
+import { FormaPagamentoServico } from '@/components/admin/FormaPagamentoServico';
+import { condicaoDoMetodo } from '@/lib/pagamento-servico';
 import { ParcelasList } from '@/components/admin/ParcelasList';
 import { geraParcelas, calcularParcelamento } from '@/lib/installments';
 import { saveServiceOrderAction, deleteServiceOrderAction, type ServiceOrderInput } from '@/app/actions/service-orders';
@@ -31,10 +38,12 @@ import { saveServiceOrderAction, deleteServiceOrderAction, type ServiceOrderInpu
 const inputClass =
   'rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px] outline-none focus:border-accent';
 
-const COLUNAS = 'grid grid-cols-[1.7fr_1fr_120px_110px_120px_110px_70px] gap-2';
+const COLUNAS = 'grid grid-cols-[1.6fr_1fr_120px_150px_100px_120px_100px_70px] gap-2';
 
 const VERDE = '#4ade80';
 const CINZA = '#7a7a84';
+const VERMELHO = '#f87171';
+const AMBAR = '#fbbf24';
 
 /** "Em andamento" sai pelo accent da marca via CLASSE, porque o accent é
  *  configurável por loja (RFC-0001) e cravar o laranja aqui quebraria o tema de
@@ -81,14 +90,47 @@ function formVazio(): ServiceOrderInput {
   };
 }
 
+/** Célula "Recebido / a receber": quanto falta, quanto já entrou e o próximo
+ *  vencimento, com uma barra de progresso do contrato. */
+function RecebimentoDaPrestacao({ r, cancelada }: { r?: ResumoRecebimentos; cancelada: boolean }) {
+  if (cancelada || !r || r.recebido + r.aReceber === 0) {
+    return <div className="text-right text-fg-tertiary">—</div>;
+  }
+  const total = r.recebido + r.aReceber;
+  const pct = Math.round((r.recebido / total) * 100);
+  return (
+    <div className="text-right">
+      <div className={`font-bold ${r.vencido > 0 ? 'text-error' : r.aReceber === 0 ? '' : 'text-accent'}`}>
+        {r.aReceber === 0 ? 'Quitado' : `${formatBRL(r.aReceber)} a receber`}
+      </div>
+      <div className="text-[11px] text-fg-tertiary">{formatBRL(r.recebido)} recebido</div>
+      <div className="mt-1 h-1 overflow-hidden rounded-full bg-divider" aria-hidden="true">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: VERDE }} />
+      </div>
+      {r.vencido > 0 ? (
+        <div className="mt-0.5 text-[10.5px] font-bold text-error">{formatBRL(r.vencido)} vencido</div>
+      ) : (
+        r.proximo && (
+          <div className="mt-0.5 text-[10.5px] text-fg-faded">
+            próx. {formatDateBR(r.proximo.date + 'T12:00:00')}
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
 export function ServiceOrdersTable({
   orders,
   services,
   customers,
+  lancamentos,
 }: {
   orders: ServiceOrder[];
   services: InternalService[];
   customers: { id: string; name: string }[];
+  /** Lançamentos do Financeiro por prestação: a fonte do recebido e do a receber. */
+  lancamentos: Record<string, LancamentoDaPrestacao[]>;
 }) {
   const [busca, setBusca] = useState('');
   const [form, setForm] = useState<ServiceOrderInput | null>(null);
@@ -96,6 +138,18 @@ export function ServiceOrdersTable({
   const toast = useToast();
 
   const ind = useMemo(() => computeServiceIndicators(orders), [orders]);
+
+  // Recebido e a receber de cada prestação, e a soma para os cards. Cancelada
+  // não entra: os lançamentos dela já foram removidos do Financeiro.
+  const recebimentos = useMemo(() => {
+    const hoje = hojeISO();
+    const porOrdem = new Map(orders.map((o) => [o.id, resumirRecebimentos(lancamentos[o.id] ?? [], hoje)]));
+    const vivas = orders.filter((o) => o.status !== 'Cancelada');
+    const somar = (k: 'recebido' | 'aReceber' | 'vencido') =>
+      Math.round(vivas.reduce((s, o) => s + (porOrdem.get(o.id)?.[k] ?? 0), 0) * 100) / 100;
+    const devedores = new Set(vivas.filter((o) => (porOrdem.get(o.id)?.aReceber ?? 0) > 0).map((o) => o.customerName || o.id));
+    return { porOrdem, recebido: somar('recebido'), aReceber: somar('aReceber'), vencido: somar('vencido'), devedores: devedores.size };
+  }, [orders, lancamentos]);
 
   /** Carnê já gravado, lido da lista e não copiado para o estado: dar baixa ou
    *  corrigir uma parcela revalida a página, e uma cópia local continuaria
@@ -116,15 +170,30 @@ export function ServiceOrdersTable({
   // o que o dono vê no formulário não poder divergir do que vai para o banco.
   const totais = useMemo(() => totalizarItens(form?.items ?? []), [form]);
   const entrega = form ? calcularEntrega(form.startDate, totais.prazoDias) : null;
+  // Com carnê (PIX Parcelado ou condição da tabela), cada recebimento tem
+  // status próprio e o caixa segue as parcelas, não a situação geral.
+  const comCarne = !!form && (geraParcelas(form.paymentMethod) || condicaoDoMetodo(form.paymentMethod) !== null);
 
   const ativos = services.filter((s) => s.active);
+  // Combo e mensalidade única aplicados ao escolher serviços do catálogo.
+  const { ajuste, versaoLinhas, aplicar, desfazer, reiniciar } = useAjusteAutomatico(services);
+
+  function fecharForm() {
+    setForm(null);
+    reiniciar();
+  }
+
+  function desfazerAjuste() {
+    const antes = desfazer();
+    if (antes) setForm((f) => (f ? { ...f, items: antes } : f));
+  }
 
   function salvar() {
     if (!form) return;
     startTransition(async () => {
       const result = await saveServiceOrderAction(form);
       toast(result);
-      if (result.ok) setForm(null);
+      if (result.ok) fecharForm();
     });
   }
 
@@ -174,21 +243,35 @@ export function ServiceOrdersTable({
   function escolherServico(indice: number, serviceId: string) {
     const s = ativos.find((x) => x.id === serviceId);
     if (!s) return setItem(indice, { internalServiceId: null });
-    setItem(indice, {
-      internalServiceId: s.id,
-      name: s.name,
-      description: s.description,
-      amount: s.price,
-      billingType: s.billingType,
-      leadTimeDays: s.leadTimeDays,
-    });
+    if (!form) return;
+    const items = form.items.map((it, i) =>
+      i === indice
+        ? {
+            ...it,
+            internalServiceId: s.id,
+            name: s.name,
+            description: s.description,
+            amount: s.price,
+            billingType: s.billingType,
+            leadTimeDays: s.leadTimeDays,
+          }
+        : it
+    );
+    setForm({ ...form, items: aplicar(items) });
   }
 
   const cards = [
     { rotulo: 'Em andamento', valor: String(ind.emAndamento), nota: 'prestações' },
     { rotulo: 'Concluídas', valor: String(ind.concluidas), nota: 'prestações' },
     { rotulo: 'Recorrente', valor: `${formatBRL(ind.recorrenteMensal)}/mês`, nota: `${ind.planosAtivos} plano(s)` },
-    { rotulo: 'Receita recebida', valor: formatBRL(ind.receitaRecebida), nota: 'já paga' },
+    { rotulo: 'Receita recebida', valor: formatBRL(recebimentos.recebido), nota: 'já entrou no caixa' },
+    {
+      rotulo: 'A receber',
+      valor: formatBRL(recebimentos.aReceber),
+      nota: `${recebimentos.devedores} cliente(s)`,
+      alerta: recebimentos.vencido > 0 ? `${formatBRL(recebimentos.vencido)} vencido` : 'nada vencido',
+      atrasado: recebimentos.vencido > 0,
+    },
     { rotulo: 'Valor em contratos', valor: formatBRL(ind.receitaPrevista), nota: 'trabalho + planos' },
   ];
 
@@ -212,14 +295,24 @@ export function ServiceOrdersTable({
         </button>
       </div>
 
-      <div className="mb-3.5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mb-3.5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {cards.map((c) => (
-          <div key={c.rotulo} className="rounded-[18px] border border-border bg-card px-5 py-4">
-            <div className="mb-1 flex items-baseline gap-2">
-              <span className="text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{c.rotulo}</span>
-              <span className="text-[10.5px] text-fg-faded/70">{c.nota}</span>
+          <div
+            key={c.rotulo}
+            className={`rounded-[18px] border bg-card px-5 py-4 ${'atrasado' in c && c.atrasado ? 'border-error/50' : 'border-border'}`}
+          >
+            {/* Título sempre numa linha só. A nota vai ao lado dele só no card que
+                tem alerta (o alerta ocupa a linha de baixo); nos outros, abaixo do valor. */}
+            <div className="mb-1 flex items-baseline gap-2 whitespace-nowrap">
+              <span title={c.rotulo} className="truncate text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{c.rotulo}</span>
+              {'alerta' in c && <span className="text-[10.5px] text-fg-faded/70">{c.nota}</span>}
             </div>
             <div className="text-[22px] font-extrabold">{c.valor}</div>
+            {'alerta' in c ? (
+              <div className={`mt-0.5 text-[11px] font-bold ${c.atrasado ? 'text-error' : 'text-fg-faded'}`}>{c.alerta}</div>
+            ) : (
+              <div className="mt-0.5 text-[11px] font-bold text-fg-faded">{c.nota}</div>
+            )}
           </div>
         ))}
       </div>
@@ -229,6 +322,7 @@ export function ServiceOrdersTable({
           <div>Prestação</div>
           <div>Cliente</div>
           <div className="text-right">Valor</div>
+          <div className="text-right">Recebido / a receber</div>
           <div>Entrega</div>
           <div>Status</div>
           <div>Pagamento</div>
@@ -283,6 +377,7 @@ export function ServiceOrdersTable({
               )}
               {o.totalAmount === 0 && o.monthlyAmount === 0 && <span className="text-fg-tertiary">—</span>}
             </div>
+            <RecebimentoDaPrestacao r={recebimentos.porOrdem.get(o.id)} cancelada={o.status === 'Cancelada'} />
             <div className="text-fg-secondary">{o.dueDate ? formatDateBR(o.dueDate + 'T12:00:00') : '—'}</div>
             <div>
               <span
@@ -293,16 +388,22 @@ export function ServiceOrdersTable({
               </span>
             </div>
             <div>
-              <span
-                className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-extrabold"
-                style={
-                  o.paymentStatus === 'Recebido'
-                    ? { background: `${VERDE}1f`, color: VERDE }
-                    : { background: `${CINZA}1f`, color: CINZA }
-                }
-              >
-                {o.paymentStatus}
-              </span>
+              {(() => {
+                // A situação sai do Financeiro (trabalho, parcelas e mensalidades),
+                // não só do campo geral da prestação.
+                const r = recebimentos.porOrdem.get(o.id);
+                const sit = o.status === 'Cancelada' || !r ? null : situacaoDoPagamento(r);
+                const cor =
+                  sit === 'Atrasado' ? VERMELHO : sit === 'Quitado' ? VERDE : sit === 'Parcial' ? AMBAR : CINZA;
+                return (
+                  <span
+                    className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-extrabold"
+                    style={{ background: `${cor}1f`, color: cor }}
+                  >
+                    {sit ?? o.paymentStatus}
+                  </span>
+                );
+              })()}
             </div>
             <div className="flex justify-end gap-1.5">
               <button
@@ -396,10 +497,14 @@ export function ServiceOrdersTable({
                       className={`w-full ${inputClass}`}
                     >
                       <option value="">Avulso</option>
-                      {ativos.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}{s.billingType === 'mensal' ? ' (mensal)' : ''}
-                        </option>
+                      {agruparPorCategoria(ativos).map(([categoria, lista]) => (
+                        <optgroup key={categoria} label={categoria}>
+                          {lista.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name} · {formatBRL(s.price)}{s.billingType === 'mensal' ? '/mês' : ''}
+                            </option>
+                          ))}
+                        </optgroup>
                       ))}
                     </select>
                   </div>
@@ -413,7 +518,7 @@ export function ServiceOrdersTable({
                   </div>
                   <div className="p-1.5">
                     <input
-                      key={`valor-${i}-${item.internalServiceId ?? 'avulso'}`}
+                      key={`valor-${versaoLinhas}-${i}-${item.internalServiceId ?? 'avulso'}`}
                       defaultValue={formatNumeroInput(item.amount)}
                       onChange={(e) => setItem(i, { amount: parseNumeroBR(e.target.value) })}
                       inputMode="decimal"
@@ -428,7 +533,7 @@ export function ServiceOrdersTable({
                       <div className="px-2 text-[11.5px] font-bold text-accent">mensal</div>
                     ) : (
                       <input
-                        key={`prazo-${i}-${item.internalServiceId ?? 'avulso'}`}
+                        key={`prazo-${versaoLinhas}-${i}-${item.internalServiceId ?? 'avulso'}`}
                         defaultValue={item.leadTimeDays || ''}
                         onChange={(e) => setItem(i, { leadTimeDays: Math.round(parseNumeroBR(e.target.value)) })}
                         inputMode="numeric"
@@ -472,6 +577,10 @@ export function ServiceOrdersTable({
             <div className="mb-1.5 text-[11px] text-fg-faded">
               O prazo é a <strong>soma</strong> dos serviços, não o maior: eles são executados em sequência.
               Serviço mensal não entra no prazo — é contínuo.
+            </div>
+
+            <div className="mt-3">
+              <AvisoAjusteAutomatico ajuste={ajuste} onDesfazer={desfazerAjuste} />
             </div>
 
             <div className="mt-4">
@@ -523,7 +632,7 @@ export function ServiceOrdersTable({
             )}
 
             <div className="mt-4">
-              <ParcelamentoFields
+              <FormaPagamentoServico
                 condicoes={{
                   paymentMethod: form.paymentMethod,
                   installmentCount: form.installmentCount,
@@ -532,14 +641,16 @@ export function ServiceOrdersTable({
                   firstDueDate: form.firstDueDate,
                   installmentNotes: form.installmentNotes,
                 }}
-                // Só o trabalho entra no carnê: a mensalidade do plano tem
-                // ciclo próprio e já vira parcela por conta dela.
-                total={aplicarDesconto(totais.total, form.desconto)}
+                // Só o trabalho entra: a mensalidade do plano tem ciclo
+                // próprio e já vira parcela por conta dela.
+                trabalho={aplicarDesconto(totais.total, form.desconto)}
+                inicio={form.startDate}
+                entrega={calcularEntrega(form.startDate, totais.prazoDias)}
                 onChange={(patch) => setForm((f) => (f ? { ...f, ...patch } : f))}
               />
             </div>
 
-            {!geraParcelas(form.paymentMethod) && totais.total > 0 && (
+            {!comCarne && totais.total > 0 && (
               <div className="mb-4 rounded-control border border-border bg-card-dark px-4 py-3 text-[12px] text-fg-tertiary">
                 Sem parcelamento, vale o padrão do contrato: <strong>50% na contratação</strong> e{' '}
                 <strong>50% na entrega</strong>. O Financeiro recebe o valor do trabalho numa linha só, e o
@@ -555,13 +666,15 @@ export function ServiceOrdersTable({
                   // Com juros o carnê cobra mais que o trabalho; é essa soma que
                   // ele tem que fechar, não o valor puro dos serviços.
                   totalEsperado={
-                    calcularParcelamento({
+                    condicaoDoMetodo(form.paymentMethod) !== null
+                      ? aplicarDesconto(totais.total, form.desconto)
+                      : calcularParcelamento({
                       total: aplicarDesconto(totais.total, form.desconto),
                       parcelas: form.installmentCount,
                       entrada: form.downPayment,
                       jurosPct: form.interestPct,
                       primeiroVencimento: form.firstDueDate,
-                    }).totalComJuros
+                        }).totalComJuros
                   }
                 />
               </div>
@@ -586,13 +699,13 @@ export function ServiceOrdersTable({
                   value={form.paymentStatus}
                   onChange={(e) => set('paymentStatus', e.target.value as ServicePaymentStatus)}
                   className={`w-full ${inputClass}`}
-                  disabled={geraParcelas(form.paymentMethod)}
+                  disabled={comCarne}
                 >
                   {SERVICE_PAYMENT_STATUSES.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
-                {geraParcelas(form.paymentMethod) && (
+                {comCarne && (
                   <div className="mt-1.5 text-[10.5px] text-fg-faded">
                     Com parcelamento, quem manda no caixa é o status de cada parcela.
                   </div>
@@ -613,7 +726,14 @@ export function ServiceOrdersTable({
               ) : (
                 <>
                   Ao salvar, o Financeiro recebe
-                  {totais.total > 0 && (
+                  {totais.total > 0 && comCarne && (
+                    <>
+                      {' '}o trabalho de{' '}
+                      <strong className="text-accent">{formatBRL(aplicarDesconto(totais.total, form.desconto))}</strong>{' '}
+                      dividido nos recebimentos da forma de pagamento, cada um com a sua data
+                    </>
+                  )}
+                  {totais.total > 0 && !comCarne && (
                     <>
                       {' '}<strong>uma receita</strong> de{' '}
                       <strong className="text-accent">{formatBRL(aplicarDesconto(totais.total, form.desconto))}</strong>
@@ -637,7 +757,7 @@ export function ServiceOrdersTable({
 
             <div className="flex justify-end gap-2.5">
               <button
-                onClick={() => setForm(null)}
+                onClick={fecharForm}
                 disabled={pending}
                 className="rounded-control border border-border-strong px-5 py-2.5 text-[13.5px] font-extrabold text-fg-secondary disabled:opacity-60"
               >

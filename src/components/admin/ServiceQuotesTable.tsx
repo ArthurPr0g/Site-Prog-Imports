@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useTransition } from 'react';
 import Link from 'next/link';
-import { Pencil, Trash2, Plus, X, Search, ArrowRightCircle, FileDown } from 'lucide-react';
+import { Pencil, Trash2, Plus, X, Search, ArrowRightCircle, FileDown, UserPlus } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { formatBRL, parseNumeroBR, formatDateBR, formatNumeroInput } from '@/lib/format';
 import {
@@ -20,10 +20,14 @@ import {
   type ServiceQuote,
   type ServiceOrderItem,
   type ServiceQuoteStatus,
+  agruparPorCategoria,
+  tituloDosServicos,
 } from '@/lib/services';
 import { SEM_DESCONTO, temDesconto, aplicarDesconto, rotuloDoDesconto, type Desconto } from '@/lib/discount';
 import { DescontoFields } from '@/components/admin/DescontoFields';
-import { ParcelamentoFields, type CondicoesForm } from '@/components/admin/ParcelamentoFields';
+import { type CondicoesForm } from '@/components/admin/ParcelamentoFields';
+import { FormaPagamentoServico } from '@/components/admin/FormaPagamentoServico';
+import { condicaoDoMetodo } from '@/lib/pagamento-servico';
 import { geraParcelas } from '@/lib/installments';
 import {
   saveServiceQuoteAction,
@@ -31,7 +35,9 @@ import {
   convertServiceQuoteAction,
   type ServiceQuoteInput,
 } from '@/app/actions/service-quotes';
-import { classificarServico, modulosPresentes, NOME_DO_MODULO, type ModuloContrato } from '@/lib/contract';
+import { saveCustomerAction } from '@/app/actions/customers';
+import { AvisoAjusteAutomatico, useAjusteAutomatico } from '@/components/admin/AjusteAutomatico';
+import { classificarServico, modulosExtrasDoServico, modulosPresentes, NOME_DO_MODULO, type ModuloContrato } from '@/lib/contract';
 
 const inputClass =
   'rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px] outline-none focus:border-accent';
@@ -81,12 +87,10 @@ function modulosDoOrcamento(itens: ServiceOrderItem[], services: InternalService
   return modulosPresentes(
     itens
       .filter((i) => i.name.trim())
-      .map((i) => ({
-        modulo: classificarServico({
-          categoria: services.find((s) => s.id === i.internalServiceId)?.category,
-          nome: i.name,
-        }),
-      }))
+      .map((i) => {
+        const servico = { categoria: services.find((s) => s.id === i.internalServiceId)?.category, nome: i.name };
+        return { modulo: classificarServico(servico), modulosExtras: modulosExtrasDoServico(servico) };
+      })
   );
 }
 
@@ -113,6 +117,22 @@ export function ServiceQuotesTable({
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 
+  // Cadastro rápido de cliente sem sair do orçamento: só o essencial, o resto
+  // (endereço, observações) se completa depois em Clientes.
+  type ClienteRapido = { name: string; doc: string; phone: string; email: string };
+  const [clienteRapido, setClienteRapido] = useState<ClienteRapido | null>(null);
+  const [criados, setCriados] = useState<typeof customers>([]);
+  // Combo e mensalidade única aplicados ao escolher serviços do catálogo.
+  const { ajuste, versaoLinhas, aplicar, desfazer, reiniciar } = useAjusteAutomatico(services);
+  // Os recém-criados entram na lista na hora, sem esperar a página recarregar.
+  const clientes = useMemo(
+    () =>
+      [...customers, ...criados.filter((n) => !customers.some((c) => c.id === n.id))].sort((a, b) =>
+        a.name.localeCompare(b.name, 'pt-BR')
+      ),
+    [customers, criados]
+  );
+
   const ind = useMemo(() => computeServiceQuoteIndicators(quotes), [quotes]);
 
   const filtrados = useMemo(() => {
@@ -130,7 +150,8 @@ export function ServiceQuotesTable({
   const totais = useMemo(() => totalizarItens(form?.items ?? []), [form]);
   const ativos = services.filter((s) => s.active);
   const modulosDoContrato = useMemo(() => modulosDoOrcamento(form?.items ?? [], services), [form, services]);
-  const clienteDoForm = customers.find((c) => c.id === form?.customerId);
+  const tituloAutomatico = tituloDosServicos(form?.items ?? []);
+  const clienteDoForm = clientes.find((c) => c.id === form?.customerId);
   const faltasNoCadastro = clienteDoForm
     ? [!clienteDoForm.doc && 'CPF/CNPJ', !clienteDoForm.temEndereco && 'endereço'].filter(Boolean).join(' e ')
     : '';
@@ -145,14 +166,42 @@ export function ServiceQuotesTable({
   const trabalhoDaConversao = conversao
     ? aplicarDesconto(conversao.quote.totalAmount, conversao.quote.desconto)
     : 0;
-  const conversaoParcelada = !!conversao && geraParcelas(conversao.paymentMethod);
+  const conversaoParcelada =
+    !!conversao && (geraParcelas(conversao.paymentMethod) || condicaoDoMetodo(conversao.paymentMethod) !== null);
 
   function salvar() {
     if (!form) return;
     startTransition(async () => {
       const result = await saveServiceQuoteAction(form);
       toast(result);
-      if (result.ok) setForm(null);
+      if (result.ok) fecharForm();
+    });
+  }
+
+  function cadastrarCliente() {
+    if (!clienteRapido) return;
+    const dados = clienteRapido;
+    startTransition(async () => {
+      const result = await saveCustomerAction({
+        name: dados.name,
+        doc: dados.doc,
+        phone: dados.phone,
+        email: dados.email,
+        cep: '',
+        addressLine: '',
+        addressNumber: '',
+        complement: '',
+        district: '',
+        city: '',
+        state: '',
+        notes: '',
+      });
+      toast(result);
+      if (!result.ok || !result.id) return;
+      const id = result.id;
+      setCriados((l) => [...l, { id, name: dados.name.trim(), doc: dados.doc.trim(), temEndereco: false }]);
+      set('customerId', id);
+      setClienteRapido(null);
     });
   }
 
@@ -214,25 +263,33 @@ export function ServiceQuotesTable({
     const s = ativos.find((x) => x.id === serviceId);
     if (!s) return setItem(indice, { internalServiceId: null });
 
-    setForm((f) => {
-      if (!f) return f;
-      const items = f.items.map((it, i) =>
-        i === indice
-          ? {
-              ...it,
-              internalServiceId: s.id,
-              name: s.name,
-              description: s.description,
-              amount: s.price,
-              billingType: s.billingType,
-              leadTimeDays: s.leadTimeDays,
-            }
-          : it
-      );
-      // O contrato agora cobre todo tipo de serviço do catálogo, então escolher
-      // um serviço sugere anexá-lo. Nunca desmarca: só marca.
-      return { ...f, items, includeContract: true };
-    });
+    if (!form) return;
+    const items = form.items.map((it, i) =>
+      i === indice
+        ? {
+            ...it,
+            internalServiceId: s.id,
+            name: s.name,
+            description: s.description,
+            amount: s.price,
+            billingType: s.billingType,
+            leadTimeDays: s.leadTimeDays,
+          }
+        : it
+    );
+    // O contrato agora cobre todo tipo de serviço do catálogo, então escolher
+    // um serviço sugere anexá-lo. Nunca desmarca: só marca.
+    setForm({ ...form, items: aplicar(items), includeContract: true });
+  }
+
+  function desfazerAjuste() {
+    const antes = desfazer();
+    if (antes) setForm((f) => (f ? { ...f, items: antes } : f));
+  }
+
+  function fecharForm() {
+    setForm(null);
+    reiniciar();
   }
 
   const cards = [
@@ -418,24 +475,46 @@ export function ServiceQuotesTable({
             </div>
 
             <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <input
-                value={form.title}
-                onChange={(e) => set('title', e.target.value)}
-                placeholder="Título do orçamento *"
-                className={`sm:col-span-2 ${inputClass}`}
-              />
+              <div className="sm:col-span-2">
+                <input
+                  value={form.title}
+                  onChange={(e) => set('title', e.target.value)}
+                  placeholder={
+                    tituloAutomatico
+                      ? `${tituloAutomatico} (automático)`
+                      : 'Título do orçamento (automático pelos serviços)'
+                  }
+                  className={`w-full ${inputClass}`}
+                />
+                {!form.title.trim() && (
+                  <div className="mt-1 text-[11px] text-fg-faded">
+                    Deixe em branco para usar o nome dos serviços contratados. Mensalidades não entram no título.
+                  </div>
+                )}
+              </div>
               <div>
                 <div className="mb-1.5 text-[11px] text-fg-faded">Cliente</div>
-                <select
-                  value={form.customerId ?? ''}
-                  onChange={(e) => set('customerId', e.target.value || null)}
-                  className={`w-full ${inputClass}`}
-                >
-                  <option value="">Sem cliente vinculado</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    value={form.customerId ?? ''}
+                    onChange={(e) => set('customerId', e.target.value || null)}
+                    className={`min-w-0 flex-1 ${inputClass}`}
+                  >
+                    <option value="">Sem cliente vinculado</option>
+                    {clientes.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setClienteRapido({ name: '', doc: '', phone: '', email: '' })}
+                    title="Cadastrar cliente novo"
+                    aria-label="Cadastrar cliente novo"
+                    className="shrink-0 rounded-control border border-border-strong px-3 text-fg-secondary hover:border-accent hover:text-accent"
+                  >
+                    <UserPlus size={17} />
+                  </button>
+                </div>
               </div>
               <div>
                 <div className="mb-1.5 text-[11px] text-fg-faded">Status</div>
@@ -481,10 +560,14 @@ export function ServiceQuotesTable({
                       className={`w-full ${inputClass}`}
                     >
                       <option value="">Avulso</option>
-                      {ativos.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}{s.billingType === 'mensal' ? ' (mensal)' : ''}
-                        </option>
+                      {agruparPorCategoria(ativos).map(([categoria, lista]) => (
+                        <optgroup key={categoria} label={categoria}>
+                          {lista.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name} · {formatBRL(s.price)}{s.billingType === 'mensal' ? '/mês' : ''}
+                            </option>
+                          ))}
+                        </optgroup>
                       ))}
                     </select>
                   </div>
@@ -498,7 +581,7 @@ export function ServiceQuotesTable({
                   </div>
                   <div className="p-1.5">
                     <input
-                      key={`valor-${i}-${item.internalServiceId ?? 'avulso'}`}
+                      key={`valor-${versaoLinhas}-${i}-${item.internalServiceId ?? 'avulso'}`}
                       defaultValue={formatNumeroInput(item.amount)}
                       onChange={(e) => setItem(i, { amount: parseNumeroBR(e.target.value) })}
                       inputMode="decimal"
@@ -511,7 +594,7 @@ export function ServiceQuotesTable({
                       <div className="px-2 text-[11.5px] font-bold text-accent">mensal</div>
                     ) : (
                       <input
-                        key={`prazo-${i}-${item.internalServiceId ?? 'avulso'}`}
+                        key={`prazo-${versaoLinhas}-${i}-${item.internalServiceId ?? 'avulso'}`}
                         defaultValue={item.leadTimeDays || ''}
                         onChange={(e) => setItem(i, { leadTimeDays: Math.round(parseNumeroBR(e.target.value)) })}
                         inputMode="numeric"
@@ -554,6 +637,8 @@ export function ServiceQuotesTable({
               O valor vem do catálogo mas é <strong>ajustável nesta proposta</strong>. O prazo é a{' '}
               <strong>soma</strong> dos serviços, não o maior — serviço mensal não entra nele.
             </div>
+
+            <AvisoAjusteAutomatico ajuste={ajuste} onDesfazer={desfazerAjuste} />
 
             {totais.temPlano && (
               <div className="mb-4 rounded-control border border-accent/40 bg-[rgb(var(--brand-accent-rgb)/.05)] p-4">
@@ -674,7 +759,7 @@ export function ServiceQuotesTable({
 
             <div className="flex justify-end gap-2.5">
               <button
-                onClick={() => setForm(null)}
+                onClick={fecharForm}
                 disabled={pending}
                 className="rounded-control border border-border-strong px-5 py-2.5 text-[13.5px] font-extrabold text-fg-secondary disabled:opacity-60"
               >
@@ -727,10 +812,10 @@ export function ServiceQuotesTable({
               )}
             </div>
 
-            {/* O mesmo seletor de Vendas e Prestação, com PIX Parcelado: era o
-                único lugar onde a forma de pagamento era texto livre, e o que
-                se digitava ali não gerava carnê nenhum. */}
-            <ParcelamentoFields
+            {/* As condições da tabela (as mesmas da página de planos) e, em
+                "Outra forma", o seletor de sempre com PIX Parcelado. A forma é
+                obrigatória: é dela que sai o lançamento no Financeiro. */}
+            <FormaPagamentoServico
               condicoes={{
                 paymentMethod: conversao.paymentMethod,
                 installmentCount: conversao.installmentCount,
@@ -739,9 +824,10 @@ export function ServiceQuotesTable({
                 firstDueDate: conversao.firstDueDate,
                 installmentNotes: conversao.installmentNotes,
               }}
-              // Só o trabalho entra no carnê: a mensalidade do plano tem ciclo
-              // próprio e já vira parcela por conta dela.
-              total={trabalhoDaConversao}
+              // Só o trabalho entra: a mensalidade do plano tem ciclo próprio.
+              trabalho={trabalhoDaConversao}
+              inicio={conversao.startDate}
+              entrega={entregaPrevista}
               onChange={(patch) => setConversao((c) => (c ? { ...c, ...patch } : c))}
             />
 
@@ -753,7 +839,7 @@ export function ServiceQuotesTable({
                   <>
                     {' '}o trabalho de{' '}
                     <strong className="text-accent">{formatBRL(trabalhoDaConversao)}</strong> dividido
-                    no carnê acima, uma linha por parcela
+                    nos recebimentos acima, uma linha para cada
                   </>
                 ) : (
                   <>
@@ -787,13 +873,77 @@ export function ServiceQuotesTable({
               </button>
               <button
                 onClick={converter}
-                disabled={pending}
+                disabled={pending || !conversao.paymentMethod.trim()}
+                title={conversao.paymentMethod.trim() ? undefined : 'Escolha a forma de pagamento'}
                 className="rounded-control bg-accent px-6 py-2.5 text-[13.5px] font-extrabold text-page disabled:opacity-60"
               >
                 {pending ? 'Gerando…' : 'Gerar prestação'}
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {clienteRapido && (
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              cadastrarCliente();
+            }}
+            className="w-full max-w-[460px] rounded-[20px] border border-border-strong bg-card p-7"
+          >
+            <div className="mb-1 text-[15px] font-extrabold">Cadastrar cliente</div>
+            <div className="mb-5 text-[12px] text-fg-tertiary">
+              Só o essencial. Endereço e o resto você completa depois em Clientes.
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+              <input
+                autoFocus
+                value={clienteRapido.name}
+                onChange={(e) => setClienteRapido({ ...clienteRapido, name: e.target.value })}
+                placeholder="Nome *"
+                className={inputClass}
+              />
+              <input
+                value={clienteRapido.doc}
+                onChange={(e) => setClienteRapido({ ...clienteRapido, doc: e.target.value })}
+                placeholder="CPF (opcional)"
+                inputMode="numeric"
+                className={inputClass}
+              />
+              <input
+                value={clienteRapido.phone}
+                onChange={(e) => setClienteRapido({ ...clienteRapido, phone: e.target.value })}
+                placeholder="Telefone (opcional)"
+                inputMode="tel"
+                className={inputClass}
+              />
+              <input
+                value={clienteRapido.email}
+                onChange={(e) => setClienteRapido({ ...clienteRapido, email: e.target.value })}
+                placeholder="E-mail (opcional)"
+                type="email"
+                className={inputClass}
+              />
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setClienteRapido(null)}
+                className="rounded-control border border-border-strong px-5 py-2.5 text-[13.5px] font-extrabold text-fg-secondary"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={pending || !clienteRapido.name.trim()}
+                className="rounded-control bg-accent px-6 py-2.5 text-[13.5px] font-extrabold text-page disabled:opacity-60"
+              >
+                Cadastrar e selecionar
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>
