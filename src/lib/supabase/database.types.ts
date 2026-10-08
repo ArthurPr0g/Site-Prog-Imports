@@ -1603,6 +1603,45 @@ export type Database = {
           },
         ]
       }
+      studio_topics: {
+        Row: {
+          created_at: string
+          fonte: string
+          id: string
+          marcas: string[]
+          publicado_em: string | null
+          relevancia: number
+          resumo: string
+          status: string
+          titulo: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          fonte: string
+          id?: string
+          marcas?: string[]
+          publicado_em?: string | null
+          relevancia?: number
+          resumo?: string
+          status?: string
+          titulo: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          fonte?: string
+          id?: string
+          marcas?: string[]
+          publicado_em?: string | null
+          relevancia?: number
+          resumo?: string
+          status?: string
+          titulo?: string
+          url?: string
+        }
+        Relationships: []
+      }
       testimonials: {
         Row: {
           bought: string

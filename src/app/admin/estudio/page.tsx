@@ -5,6 +5,7 @@ import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { modelosPorSecao, DIMENSOES } from '@/lib/estudio/modelos';
 import { MiniaturaDoModelo } from '@/components/estudio/MiniaturaDoModelo';
 import { listarProdutosDoEstudio } from '@/lib/estudio/catalogo';
+import { PautaDeAssuntos, type AssuntoNaPauta } from '@/components/estudio/PautaDeAssuntos';
 
 export const metadata: Metadata = { title: 'Estúdio' };
 
@@ -33,6 +34,17 @@ export default async function EstudioPage() {
   // que define o enquadramento de quase todos eles.
   const produtos = await listarProdutosDoEstudio();
   const capaDeExemplo = produtos.find((p) => p.capa)?.capa ?? null;
+
+  // Só o que ainda não foi lido e decidido. Descartado e produzido somem da
+  // mesa: pauta que acumula o que já foi resolvido deixa de ser pauta.
+  const { data: pauta } = await supabase
+    .from('studio_topics')
+    .select('id, titulo, resumo, fonte, url, publicado_em, relevancia, marcas')
+    .eq('status', 'novo')
+    .order('relevancia', { ascending: false })
+    .order('publicado_em', { ascending: false, nullsFirst: false })
+    .limit(24);
+  const assuntos = (pauta ?? []) as AssuntoNaPauta[];
 
   return (
     <div>
@@ -75,6 +87,8 @@ export default async function EstudioPage() {
           </div>
         )}
       </div>
+
+      <PautaDeAssuntos assuntos={assuntos} />
 
       {secoes.map(({ secao, modelos }) => (
         <div key={secao} className="mb-7">

@@ -25,9 +25,12 @@ export function EditorDePeca({
   modelo,
   produtos,
   peca,
+  assuntoInicial,
 }: {
   modelo: Modelo;
   produtos: ProdutoDoEstudio[];
+  /** Vem da pauta, quando a peça nasceu de uma notícia. */
+  assuntoInicial?: string;
   peca?: {
     id: string;
     titulo: string;
@@ -47,7 +50,7 @@ export function EditorDePeca({
   const [legenda, setLegenda] = useState(peca?.legenda ?? '');
   const [status, setStatus] = useState(peca?.status ?? 'Rascunho');
   const [slide, setSlide] = useState(1);
-  const [assunto, setAssunto] = useState('');
+  const [assunto, setAssunto] = useState(assuntoInicial ?? '');
   const [redigindo, setRedigindo] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [desenhando, setDesenhando] = useState(true);
