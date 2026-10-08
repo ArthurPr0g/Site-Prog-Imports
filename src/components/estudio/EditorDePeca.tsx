@@ -10,6 +10,7 @@ import type { Imagens } from '@/lib/estudio/desenhistas/tipos';
 import { aplicarSugestoes, sugestoesDoProduto, type ProdutoDoEstudio } from '@/lib/estudio/produto';
 import { salvarPecaAction, excluirPecaAction } from '@/app/actions/estudio';
 import { gravarPeca } from '@/lib/estudio/video';
+import { SeletorDeIcone } from '@/components/estudio/SeletorDeIcone';
 import type { Ctx } from '@/lib/estudio/marca';
 
 const HALOS = [
@@ -350,6 +351,7 @@ export function EditorDePeca({
                   : mudar(campo.chave, v)
               }
               produtoEscolhido={campo.chave === 'produto' ? (produtoId ?? '') : undefined}
+              codigoDoModelo={modelo.codigo}
             />
           ))}
         </div>
@@ -485,12 +487,15 @@ function CampoDoFormulario({
   produtos,
   onChange,
   produtoEscolhido,
+  codigoDoModelo,
 }: {
   campo: Campo;
   valor: string;
   produtos: ProdutoDoEstudio[];
   onChange: (v: string) => void;
   produtoEscolhido?: string;
+  /** O seletor de ícone desenha a capa na direção deste modelo. */
+  codigoDoModelo: string;
 }) {
   const classe =
     'w-full rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px]';
@@ -529,6 +534,14 @@ function CampoDoFormulario({
             </option>
           ))}
         </select>
+      </Rotulo>
+    );
+  }
+
+  if (campo.tipo === 'icone') {
+    return (
+      <Rotulo texto={campo.rotulo} ajuda={campo.ajuda}>
+        <SeletorDeIcone modelo={codigoDoModelo} valor={valor} onChange={onChange} />
       </Rotulo>
     );
   }

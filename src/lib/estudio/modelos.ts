@@ -13,6 +13,8 @@ export type TipoDeCampo =
   | 'rotulo'
   | 'preco'
   | 'halo'
+  /** O jogo de capas de destaque, escolhido vendo as sete. */
+  | 'icone'
   | 'produto'
   | 'imagem'
   | 'numero';
@@ -293,7 +295,7 @@ export const MODELOS: Modelo[] = [
     superficie: 'escuro',
     descricao: 'Disco escuro com luz de canto e ícone fino em ouro. É a direção recomendada: o anel do Instagram já faz a moldura.',
     campos: [
-      { chave: 'icone', rotulo: 'Ícone', tipo: 'texto', obrigatorio: true, ajuda: 'package, plane, route, shield-check, message-square-quote, flame, globo.' },
+      { chave: 'icone', rotulo: 'Ícone do destaque', tipo: 'icone', obrigatorio: true, ajuda: 'As sete capas do playbook. Clique para ver cada uma desenhada.' },
       { chave: 'nome', rotulo: 'Nome do destaque', tipo: 'texto', ajuda: 'Só para você se achar na lista — não é desenhado.' },
     ],
   },
@@ -306,7 +308,7 @@ export const MODELOS: Modelo[] = [
     superficie: 'claro',
     descricao: 'Disco em ouro escovado com ícone ônix. Conversa direto com o acabamento do logo e chama mais atenção.',
     campos: [
-      { chave: 'icone', rotulo: 'Ícone', tipo: 'texto', obrigatorio: true },
+      { chave: 'icone', rotulo: 'Ícone do destaque', tipo: 'icone', obrigatorio: true },
       { chave: 'nome', rotulo: 'Nome do destaque', tipo: 'texto' },
     ],
   },
@@ -319,7 +321,7 @@ export const MODELOS: Modelo[] = [
     superficie: 'escuro',
     descricao: 'Grafite com anel de precisão e numeração em mono. Deixa a ordem do funil explícita.',
     campos: [
-      { chave: 'icone', rotulo: 'Ícone', tipo: 'texto', obrigatorio: true },
+      { chave: 'icone', rotulo: 'Ícone do destaque', tipo: 'icone', obrigatorio: true },
       { chave: 'numero', rotulo: 'Número', tipo: 'numero', ajuda: 'A ordem do funil: 01 estoque → 07 marca.' },
       { chave: 'nome', rotulo: 'Nome do destaque', tipo: 'texto' },
     ],
