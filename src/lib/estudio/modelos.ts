@@ -73,6 +73,21 @@ const CAMPOS_DE_PRODUTO: Campo[] = [
   { chave: 'halo', rotulo: 'Cor do brilho de fundo', tipo: 'halo', ajuda: 'Acompanha a marca do produto, não a da Prog.' },
 ];
 
+/** A foto de fora, para quando o catálogo não tem a máquina.
+
+ *  Só entra nos modelos em que o produto é cenário (3D, 3E, 4A): é onde uma
+ *  notícia de lançamento fala de aparelho que a loja ainda não vende, e não
+ *  existe foto nossa de algo anunciado ontem. Nos modelos de venda a máquina é
+ *  sempre do catálogo — vender com foto de terceiro seria vender o que não
+ *  está na vitrine.
+ *
+ *  Ocupa o mesmo espaço do produto na arte; só aparece na tela quando nenhuma
+ *  máquina foi escolhida. */
+const CAMPO_DE_IMAGEM_DE_FORA: Campo = {
+  chave: 'imagem',
+  rotulo: 'Imagem, se a loja não tiver a máquina',
+  tipo: 'imagem',
+};
 export const MODELOS: Modelo[] = [
   {
     codigo: '3a',
@@ -162,6 +177,7 @@ export const MODELOS: Modelo[] = [
       { chave: 'avaliacoes', rotulo: 'Quantidade de avaliações', tipo: 'texto', ajuda: 'Ex.: 23 avaliações no site.' },
       { chave: 'depoimento', rotulo: 'Depoimento', tipo: 'textoLongo', obrigatorio: true, ajuda: 'Frase do cliente, entre aspas.' },
       { chave: 'autor', rotulo: 'Assinatura', tipo: 'texto', ajuda: '— Lucas T., comprou Alienware Area-51.' },
+      CAMPO_DE_IMAGEM_DE_FORA,
     ],
   },
   {
@@ -178,6 +194,7 @@ export const MODELOS: Modelo[] = [
       { chave: 'etiqueta', rotulo: 'Série e episódio', tipo: 'rotulo', ajuda: 'TESTE DE FOGO · EP. 04.' },
       { chave: 'titulo', rotulo: 'Título', tipo: 'texto', maxPalavras: 6, obrigatorio: true },
       { chave: 'subtitulo', rotulo: 'Linha de apoio', tipo: 'texto' },
+      CAMPO_DE_IMAGEM_DE_FORA,
     ],
   },
   {
@@ -209,6 +226,7 @@ export const MODELOS: Modelo[] = [
       // o mesmo aparelho não é prateleira. Dois produtos a mais só para ele.
       { chave: 'produtoA', rotulo: 'Segunda máquina da vitrine', tipo: 'produto', slide: 5, ajuda: 'Só aparece no slide de fechamento.' },
       { chave: 'produtoB', rotulo: 'Terceira máquina da vitrine', tipo: 'produto', slide: 5 },
+      CAMPO_DE_IMAGEM_DE_FORA,
     ],
   },
   {

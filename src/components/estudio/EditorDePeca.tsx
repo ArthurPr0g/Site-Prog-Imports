@@ -15,6 +15,8 @@ import {
   type ProdutoDoEstudio,
 } from '@/lib/estudio/produto';
 import { modeloEscolheOProduto } from '@/lib/estudio/redacao';
+import { comCredito, termoDaPeca, type Ilustracao } from '@/lib/estudio/ilustracao';
+import { SeletorDeIlustracao } from '@/components/estudio/SeletorDeIlustracao';
 import { salvarPecaAction, excluirPecaAction } from '@/app/actions/estudio';
 import { gravarPeca } from '@/lib/estudio/video';
 import { SeletorDeIcone } from '@/components/estudio/SeletorDeIcone';
@@ -105,6 +107,10 @@ export function EditorDePeca({
   const [escrevendoLegenda, setEscrevendoLegenda] = useState(false);
   const [gerando, setGerando] = useState(false);
   const [cortado, setCortado] = useState<string[]>([]);
+  // Resultado da busca que a cadeia dispara quando o catálogo não tem a máquina.
+  // chave muda a cada busca para o seletor remontar já aberto, em vez de um
+  // efeito mandar abrir — estado derivado de props não precisa de efeito.
+  const [buscaDeImagem, setBuscaDeImagem] = useState<{ termo: string; lista: Ilustracao[]; chave: number } | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // As imagens ficam em cache pela URL: redesenhar a cada tecla é o que dá a
@@ -132,9 +138,19 @@ export function EditorDePeca({
     [produtos, conteudo.produtoB]
   );
 
+  /** Nesta peça a máquina é cenário, e quem escolhe é a redação. */
+  const escolhaAutomatica = modeloEscolheOProduto(modelo);
+
+  /** De onde sai a imagem que ocupa o lugar do produto na arte.
+   *
+   *  O catálogo vem primeiro, sempre. A foto de fora só entra quando nenhuma
+   *  máquina foi escolhida — e só em peça onde o produto é cenário: em peça de
+   *  venda, ilustrar com foto de terceiro seria vender o que não está na
+   *  vitrine. */
+  const fonteDoProduto = produto?.capa ?? (escolhaAutomatica ? conteudo.imagem || null : null);
   const palavraChave = useMemo(() => palavraChaveDa(conteudo, legenda), [conteudo, legenda]);
 
-  const chaveDasImagens = [produto?.capa, produtoA?.capa, produtoB?.capa, conteudo.imagem]
+  const chaveDasImagens = [fonteDoProduto, produtoA?.capa, produtoB?.capa, conteudo.imagem]
     .map((s) => s ?? '')
     .join('|');
 
@@ -147,7 +163,7 @@ export function EditorDePeca({
     let imagens = cacheRef.current.get(chaveDasImagens);
     if (!imagens) {
       imagens = await carregarImagens({
-        produto: produto?.capa,
+        produto: fonteDoProduto,
         produtoA: produtoA?.capa,
         produtoB: produtoB?.capa,
         fundo: conteudo.imagem,
@@ -166,7 +182,7 @@ export function EditorDePeca({
     // que o desenho inteiro.
     setPrevia(canvas!.toDataURL('image/jpeg', 0.86));
     setDesenhando(false);
-  }, [chaveDasImagens, conteudo, modelo.codigo, produto, produtoA, produtoB, slide]);
+  }, [chaveDasImagens, conteudo, fonteDoProduto, modelo.codigo, produtoA, produtoB, slide]);
 
   useEffect(() => {
     // Um respiro curto evita redesenhar a cada tecla de uma frase longa, sem a
@@ -196,10 +212,22 @@ export function EditorDePeca({
     setConteudo((atual) => ({ ...atual, [chave]: valor }));
   }
 
+  /** Tira a foto de fora quando uma máquina do catálogo passa a valer.
+   *
+   *  Catálogo vem primeiro. Sem isto a imagem ficava guardada na peça sem
+   *  aparecer, e o crédito dela seguia na legenda — atribuição a uma foto que não
+   *  está na arte. */
+  function soltarImagemDeFora() {
+    if (!conteudo.imagem) return;
+    setLegenda((l) => comCredito(l, '', conteudo.imagemCredito ?? ''));
+    setConteudo((atual) => ({ ...atual, imagem: '', imagemCredito: '' }));
+  }
+
   function escolherProduto(id: string) {
     const p = produtos.find((x) => x.id === id) ?? null;
     setProdutoId(p?.id ?? null);
     if (!p) return;
+    soltarImagemDeFora();
     const sugestoes = sugestoesDoProduto(p);
     // As sugestões anteriores são capturadas AQUI, e não lidas dentro do
     // atualizador: o atualizador roda depois, e nessa hora a referência já
@@ -260,6 +288,10 @@ export function EditorDePeca({
         const anterioresDoProduto = sugestoesRef.current;
         sugestoesRef.current = sugestoes;
         base = aplicarSugestoes(base, sugestoes, anterioresDoProduto);
+        if (base.imagem) {
+          setLegenda((l) => comCredito(l, '', base.imagemCredito ?? ''));
+          base = { ...base, imagem: '', imagemCredito: '' };
+        }
         novoProduto = escolhido;
         setProdutoId(escolhido.id);
       }
@@ -322,7 +354,12 @@ export function EditorDePeca({
         toast({ ok: false, message: dados?.erro ?? 'Não consegui escrever a legenda agora.' });
         return false;
       }
-      setLegenda(dados.legenda);
+      // O crédito da foto não é opcional: CC BY e CC BY-SA exigem atribuição
+      // na publicação, e a legenda é onde a publicação tem texto. Entra depois
+      // das hashtags, numa linha só, para não disputar com o gancho.
+      const creditoDaFoto = conteudoAtual.imagemCredito?.trim();
+      setLegenda(creditoDaFoto ? `${dados.legenda}\n\n${creditoDaFoto}` : dados.legenda);
+
       if (!sobre.silencioso) {
         toast({ ok: true, message: 'Legenda escrita. Confira os números antes de publicar.' });
       }
@@ -332,6 +369,23 @@ export function EditorDePeca({
       return false;
     } finally {
       setEscrevendoLegenda(false);
+    }
+  }
+
+  async function procurarImagemDeFora(c: Record<string, string>) {
+    const termo = termoDaPeca(c, assunto);
+    if (termo.length < 2) return;
+    try {
+      const r = await fetch(`/api/estudio/ilustrar?q=${encodeURIComponent(termo)}`);
+      const d = await r.json();
+      if (!r.ok) return;
+      setBuscaDeImagem({ termo, lista: d.ilustracoes ?? [], chave: Date.now() });
+      toast({
+        ok: true,
+        message: 'Nenhuma máquina do catálogo combina com este assunto — escolha uma imagem licenciada abaixo.',
+      });
+    } catch {
+      // A busca é conforto. Falhar não pode derrubar a peça que já foi escrita.
     }
   }
 
@@ -357,6 +411,14 @@ export function EditorDePeca({
         conteudo: escrita.conteudo,
         produto: escrita.produto,
       });
+
+      // Catálogo primeiro, internet só quando a loja não tem. A redação já
+      // tentou escolher uma máquina; se não achou nenhuma que combine, a busca
+      // licenciada abre com os resultados. A escolha da foto fica com o dono:
+      // a licença de cada uma precisa ser vista antes, e o crédito vai junto.
+      if (escolhaAutomatica && !escrita.produto && !conteudo.imagem) {
+        await procurarImagemDeFora(escrita.conteudo ?? {});
+      }
 
       const palavra = palavraChaveDa(escrita.conteudo ?? {}, '');
       setRespostaDireta(
@@ -427,7 +489,7 @@ export function EditorDePeca({
     const imagens =
       cacheRef.current.get(chaveDasImagens) ??
       (await carregarImagens({
-        produto: produto?.capa,
+        produto: fonteDoProduto,
         produtoA: produtoA?.capa,
         produtoB: produtoB?.capa,
         fundo: conteudo.imagem,
@@ -485,9 +547,6 @@ export function EditorDePeca({
   }
 
   const camposDoSlide = modelo.campos.filter((c) => !c.slide || c.slide === slide);
-
-  /** Nesta peça a máquina é cenário, e quem escolhe é a redação. */
-  const escolhaAutomatica = modeloEscolheOProduto(modelo);
 
   /** Qualquer coisa rodando. Um só estado para travar os três botões: dois
    *  pedidos simultâneos para a mesma peça produziriam duas redações
@@ -602,7 +661,11 @@ export function EditorDePeca({
             </div>
           )}
 
-          {camposDoSlide.map((campo) => (
+          {camposDoSlide
+            // Com máquina do catálogo escolhida a foto de fora não tem função: o
+            // campo some, e a imagem de fora só aparece quando o catálogo não serve.
+            .filter((c) => !(c.tipo === 'imagem' && escolhaAutomatica && produtoId))
+            .map((campo) => (
             <CampoDoFormulario
               key={campo.chave}
               campo={campo}
@@ -616,6 +679,14 @@ export function EditorDePeca({
               produtoEscolhido={campo.chave === 'produto' ? (produtoId ?? '') : undefined}
               codigoDoModelo={modelo.codigo}
               escolhaAutomatica={escolhaAutomatica}
+              termoDeBusca={termoDaPeca(conteudo, assunto)}
+              credito={conteudo.imagemCredito ?? ''}
+              buscaInicial={buscaDeImagem}
+              onEscolherImagem={(url, cred) => {
+                setConteudo((atual) => ({ ...atual, imagem: url, imagemCredito: cred }));
+                // O crédito acompanha a escolha mesmo com a legenda já escrita.
+                setLegenda((l) => comCredito(l, cred, conteudo.imagemCredito ?? ''));
+              }}
             />
           ))}
         </div>
@@ -818,6 +889,10 @@ function CampoDoFormulario({
   produtoEscolhido,
   codigoDoModelo,
   escolhaAutomatica,
+  termoDeBusca,
+  credito,
+  buscaInicial,
+  onEscolherImagem,
 }: {
   campo: Campo;
   valor: string;
@@ -828,6 +903,10 @@ function CampoDoFormulario({
   codigoDoModelo: string;
   /** Nesta peça a máquina é cenário e quem escolhe é a redação. */
   escolhaAutomatica?: boolean;
+  termoDeBusca: string;
+  credito: string;
+  buscaInicial: { termo: string; lista: Ilustracao[]; chave: number } | null;
+  onEscolherImagem: (url: string, credito: string) => void;
 }) {
   const classe =
     'w-full rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px]';
@@ -886,6 +965,26 @@ function CampoDoFormulario({
     return (
       <Rotulo texto={campo.rotulo} ajuda={campo.ajuda} obrigatorio={campo.obrigatorio} vazio={vazio}>
         <SeletorDeIcone modelo={codigoDoModelo} valor={valor} onChange={onChange} />
+      </Rotulo>
+    );
+  }
+
+  if (campo.tipo === 'imagem') {
+    return (
+      <Rotulo
+        texto={campo.rotulo}
+        ajuda="Sua foto é sempre melhor. Quando não tiver, busque no acervo licenciado — a imagem é copiada para o nosso storage e o crédito entra na legenda."
+        obrigatorio={campo.obrigatorio}
+        vazio={vazio}
+      >
+        <SeletorDeIlustracao
+          key={buscaInicial?.chave ?? 'sem-busca'}
+          inicial={buscaInicial ? { termo: buscaInicial.termo, lista: buscaInicial.lista } : undefined}
+          termoSugerido={termoDeBusca}
+          valor={valor}
+          credito={credito}
+          onEscolher={onEscolherImagem}
+        />
       </Rotulo>
     );
   }
