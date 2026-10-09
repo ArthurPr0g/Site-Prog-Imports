@@ -69,13 +69,14 @@ export function RespostaDoDirect({
       <div className="mb-2.5 text-[12px] leading-relaxed text-fg-tertiary">
         {palavraDetectada ? (
           <>
-            A peça pede para comentar <b className="text-fg-secondary">{palavraDetectada}</b>. Esta é
-            a mensagem que você manda para quem comentar.
+            A peça pede <b className="text-fg-secondary">{palavraDetectada}</b>. Esta é a mensagem
+            que você manda para quem responder.
           </>
         ) : (
           <>
-            Para quando a peça pedir um comentário com palavra-chave. Escreva{' '}
-            <b className="text-fg-secondary">Comente &quot;QUERO&quot;</b> na arte ou na legenda e a
+            Para quando a peça pedir uma palavra-chave. Escreva{' '}
+            <b className="text-fg-secondary">Comente &quot;QUERO&quot;</b> ou{' '}
+            <b className="text-fg-secondary">Responda &quot;QUERO&quot;</b> na arte ou na legenda e a
             palavra aparece aqui sozinha.
           </>
         )}{' '}

@@ -18,17 +18,27 @@ export function linkDoProduto(sku: string, base = 'https://www.prog-imports.com'
   return `${base}/produto/${encodeURIComponent(sku)}`;
 }
 
-/** Acha a palavra que a peça mandou comentar.
+/** Os jeitos de pedir a palavra.
+ *
+ *  Começou só com "comente" e a primeira peça real do catálogo dizia
+ *  **Responda "QUERO"** — no story a chamada é responder, não comentar, e a
+ *  detecção passou direto. Daí a lista: o que varia é o verbo, a palavra vem
+ *  logo depois em qualquer um deles. */
+const PEDIDOS = 'comente|comenta|responda|responde|mande|manda|envie|escreva|escreve|digite|digita';
+
+/** Acha a palavra que a peça mandou comentar ou responder.
  *
  *  Procura no que está escrito na arte e na legenda, porque a chamada pode
  *  estar em qualquer um dos dois. Devolve vazio quando não acha — e aí a tela
  *  pergunta em vez de inventar uma palavra que o post não pediu. */
 export function palavraChaveDa(conteudo: Record<string, string>, legenda: string): string {
   const textos = [...Object.values(conteudo), legenda].filter(Boolean);
+  // Aspas retas ou curvas, e com ou sem elas: a arte usa curvas, o formulário
+  // costuma receber retas. Só maiúsculas, que é como palavra-chave é escrita
+  // — assim "responda rápido" não vira palavra-chave "RÁPIDO".
+  const padrao = new RegExp(`(?:${PEDIDOS})\\s*[:\\-]?\\s*["“'']?([\\p{Lu}][\\p{Lu}\\p{N}]{2,14})["”'']?`, 'u');
   for (const texto of textos) {
-    // Aceita com e sem aspas, retas ou curvas: a arte usa curvas, o formulário
-    // costuma receber retas.
-    const m = texto.match(/comente\s*[:\-]?\s*["“'']?([\p{Lu}][\p{Lu}\p{N}]{2,14})["”'']?/u);
+    const m = texto.match(padrao);
     if (m) return m[1];
   }
   return '';
