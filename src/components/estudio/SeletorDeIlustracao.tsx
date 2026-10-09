@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Check, Loader2, Search, X } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import type { Ilustracao } from '@/lib/estudio/ilustracao';
+import { Dica } from '@/components/ui/Dica';
 
 /** Foto de fora, para quando a loja não tem a imagem.
  *
@@ -107,16 +108,18 @@ export function SeletorDeIlustracao({
       )}
 
       {!aberto ? (
-        <button
-          onClick={() => {
-            setAberto(true);
-            if (!achadas) void buscar();
-          }}
-          className="inline-flex items-center gap-2 rounded-control border border-border-strong px-3.5 py-2 text-[13px] font-extrabold text-fg-secondary transition-colors hover:border-accent hover:text-accent"
-        >
-          <Search size={14} />
-          {valor ? 'Trocar a imagem' : 'Buscar imagem licenciada'}
-        </button>
+        <Dica texto="Procura fotos em um acervo aberto, só com licença que permite uso comercial e acima de 1080px. A que você escolher é copiada para o nosso storage e o crédito do autor entra na legenda sozinho.">
+          <button
+            onClick={() => {
+              setAberto(true);
+              if (!achadas) void buscar();
+            }}
+            className="inline-flex items-center gap-2 rounded-control border border-border-strong px-3.5 py-2 text-[13px] font-extrabold text-fg-secondary transition-colors hover:border-accent hover:text-accent"
+          >
+            <Search size={14} />
+            {valor ? 'Trocar a imagem' : 'Buscar imagem licenciada'}
+          </button>
+        </Dica>
       ) : (
         <div className="rounded-control border border-border-strong bg-input-alt p-3.5">
           <div className="mb-2 flex flex-col gap-2 sm:flex-row">

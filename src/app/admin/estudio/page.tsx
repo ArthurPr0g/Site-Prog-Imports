@@ -6,6 +6,7 @@ import { modelosPorSecao, DIMENSOES } from '@/lib/estudio/modelos';
 import { MiniaturaDoModelo } from '@/components/estudio/MiniaturaDoModelo';
 import { listarProdutosDoEstudio } from '@/lib/estudio/catalogo';
 import { PautaDeAssuntos, type AssuntoNaPauta } from '@/components/estudio/PautaDeAssuntos';
+import { Dica } from '@/components/ui/Dica';
 
 export const metadata: Metadata = { title: 'Estúdio' };
 
@@ -53,12 +54,14 @@ export default async function EstudioPage() {
         title="Estúdio"
         subtitle="Peças de Instagram no padrão do playbook — arte em 1080, pronta para baixar"
         action={
-          <Link
-            href="/admin/estudio/instagram"
-            className="rounded-control border border-border-strong px-4 py-2 text-[13px] font-extrabold text-fg-secondary hover:border-accent hover:text-accent"
-          >
-            Instagram
-          </Link>
+          <Dica texto="Liga a conta do Instagram da loja ao Estúdio. É daqui que o botão Publicar passa a funcionar, e onde você renova o token a cada 60 dias.">
+            <Link
+              href="/admin/estudio/instagram"
+              className="rounded-control border border-border-strong px-4 py-2 text-[13px] font-extrabold text-fg-secondary hover:border-accent hover:text-accent"
+            >
+              Instagram
+            </Link>
+          </Dica>
         }
       />
 

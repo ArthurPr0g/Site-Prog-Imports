@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Check, Copy, ExternalLink, RotateCcw } from 'lucide-react';
 import { mensagemPadrao } from '@/lib/estudio/direct';
+import { Dica } from '@/components/ui/Dica';
 import type { ProdutoDoEstudio } from '@/lib/estudio/produto';
 
 /** A resposta de quem comentou a palavra-chave.
@@ -56,13 +57,22 @@ export function RespostaDoDirect({
             </span>
           )}
         </div>
-        <button
-          onClick={gerar}
-          className="inline-flex items-center gap-1.5 rounded-control border border-border-strong px-3 py-1.5 text-[12px] font-extrabold text-fg-secondary transition-colors hover:border-accent hover:text-accent"
+        <Dica
+          texto={
+            valor.trim()
+              ? 'Monta a mensagem de novo, com o link e o preço do produto desta peça. Substitui o texto que está aí — inclusive o que você editou.'
+              : 'Monta a mensagem para mandar no direct de quem responder, com o link e o preço do produto desta peça. Não envia nada: só prepara o texto.'
+          }
+          className="flex-shrink-0"
         >
-          <RotateCcw size={13} />
-          {valor.trim() ? 'Refazer' : 'Gerar mensagem'}
-        </button>
+          <button
+            onClick={gerar}
+            className="inline-flex items-center gap-1.5 rounded-control border border-border-strong px-3 py-1.5 text-[12px] font-extrabold text-fg-secondary transition-colors hover:border-accent hover:text-accent"
+          >
+            <RotateCcw size={13} />
+            {valor.trim() ? 'Refazer' : 'Gerar mensagem'}
+          </button>
+        </Dica>
       </div>
 
       <div className="mb-2.5 text-[12px] leading-relaxed text-fg-tertiary">
@@ -92,23 +102,33 @@ export function RespostaDoDirect({
       />
 
       <div className="mt-2.5 flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => void copiar()}
-          disabled={!valor.trim()}
-          className="inline-flex items-center gap-2 rounded-control bg-accent px-4 py-2 text-[13px] font-extrabold text-page disabled:cursor-not-allowed disabled:opacity-40"
+        <Dica
+          texto={
+            valor.trim()
+              ? 'Copia a mensagem para colar no direct de cada pessoa que respondeu. Todo mundo recebe o mesmo texto, com o link certo.'
+              : 'Gere a mensagem primeiro — não há nada para copiar ainda.'
+          }
         >
-          {copiado ? <Check size={14} /> : <Copy size={14} />}
-          {copiado ? 'Copiado' : 'Copiar mensagem'}
-        </button>
-        <a
-          href="https://www.instagram.com/direct/inbox/"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-control border border-border-strong px-3.5 py-2 text-[13px] font-extrabold text-fg-secondary transition-colors hover:border-accent hover:text-accent"
-        >
-          <ExternalLink size={13} />
-          Abrir o direct
-        </a>
+          <button
+            onClick={() => void copiar()}
+            disabled={!valor.trim()}
+            className="inline-flex items-center gap-2 rounded-control bg-accent px-4 py-2 text-[13px] font-extrabold text-page disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {copiado ? <Check size={14} /> : <Copy size={14} />}
+            {copiado ? 'Copiado' : 'Copiar mensagem'}
+          </button>
+        </Dica>
+        <Dica texto="Abre a caixa de mensagens do Instagram em outra aba, para você colar a resposta. Não envia nada sozinho.">
+          <a
+            href="https://www.instagram.com/direct/inbox/"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-control border border-border-strong px-3.5 py-2 text-[13px] font-extrabold text-fg-secondary transition-colors hover:border-accent hover:text-accent"
+          >
+            <ExternalLink size={13} />
+            Abrir o direct
+          </a>
+        </Dica>
         {!produto && valor.trim() && (
           <span className="text-[11.5px] text-fg-muted">
             Sem produto escolhido, a mensagem não tem link.

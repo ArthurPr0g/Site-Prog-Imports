@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useSyncExternalStore } from 'react';
+import { Dica } from '@/components/ui/Dica';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, Loader2, RefreshCw, X } from 'lucide-react';
@@ -156,6 +157,7 @@ export function PautaDeAssuntos({ assuntos }: { assuntos: AssuntoNaPauta[] }) {
         <button
           onClick={dobrar}
           aria-expanded={aberta}
+          title={aberta ? 'Recolher a pauta' : 'Abrir a pauta'}
           className="group flex min-w-0 items-start gap-2.5 text-left"
         >
           <ChevronDown
@@ -180,6 +182,10 @@ export function PautaDeAssuntos({ assuntos }: { assuntos: AssuntoNaPauta[] }) {
             </div>
           </div>
         </button>
+        <Dica
+          texto="Busca as notícias mais recentes das publicações do setor, filtra pelo que a loja vende e traduz para o português. O que você já descartou não volta."
+          className="flex-shrink-0"
+        >
         <button
           onClick={() => void atualizar()}
           disabled={buscando || traduzindo}
@@ -192,6 +198,7 @@ export function PautaDeAssuntos({ assuntos }: { assuntos: AssuntoNaPauta[] }) {
           )}
           {traduzindo ? 'Traduzindo…' : 'Atualizar assuntos'}
         </button>
+        </Dica>
       </div>
 
       {!aberta ? null : assuntos.length === 0 ? (
@@ -233,31 +240,38 @@ export function PautaDeAssuntos({ assuntos }: { assuntos: AssuntoNaPauta[] }) {
                     ))}
                   </div>
                 </div>
-                <button
-                  onClick={() => void descartar(a.id)}
-                  aria-label="Descartar assunto"
-                  title="Descartar"
-                  className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full border border-border-strong text-fg-muted transition-colors hover:border-error hover:text-error"
+                <Dica
+                  texto="Tira esta notícia da pauta. Ela não volta nas próximas atualizações."
+                  className="flex-shrink-0"
                 >
-                  <X size={14} />
-                </button>
+                  <button
+                    onClick={() => void descartar(a.id)}
+                    aria-label="Descartar assunto"
+                    className="grid h-8 w-8 place-items-center rounded-full border border-border-strong text-fg-muted transition-colors hover:border-error hover:text-error"
+                  >
+                    <X size={14} />
+                  </button>
+                </Dica>
               </div>
 
               {/* O assunto viaja na URL para o editor, onde o botão de escrever
                   já encontra o campo preenchido. É o caminho inteiro: li a
                   notícia, escolhi o formato, a peça chega escrita. */}
               <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={modelo[a.id] ?? MODELOS[0].codigo}
-                  onChange={(e) => setModelo((m) => ({ ...m, [a.id]: e.target.value }))}
-                  className="rounded-control border border-border-strong bg-input px-2.5 py-1.5 text-[12px]"
-                >
-                  {MODELOS.map((m) => (
-                    <option key={m.codigo} value={m.codigo}>
-                      {m.rotulo}
-                    </option>
-                  ))}
-                </select>
+                <Dica texto="O formato da peça que será criada a partir desta notícia: carrossel explicando, capa de Reels, story ou post de oferta.">
+                  <select
+                    value={modelo[a.id] ?? MODELOS[0].codigo}
+                    onChange={(e) => setModelo((m) => ({ ...m, [a.id]: e.target.value }))}
+                    className="rounded-control border border-border-strong bg-input px-2.5 py-1.5 text-[12px]"
+                  >
+                    {MODELOS.map((m) => (
+                      <option key={m.codigo} value={m.codigo}>
+                        {m.rotulo}
+                      </option>
+                    ))}
+                  </select>
+                </Dica>
+                <Dica texto="Abre uma peça nova no formato escolhido, com esta notícia como assunto. A peça se escreve sozinha ao abrir: textos, legenda, resposta de direct e, quando o produto é cenário, a máquina do catálogo. Marca a notícia como produzida.">
                 <Link
                   // O título em português vai para o editor: a peça é escrita
                   // em português, e mandar a manchete em inglês faria o
@@ -268,6 +282,7 @@ export function PautaDeAssuntos({ assuntos }: { assuntos: AssuntoNaPauta[] }) {
                 >
                   Produzir
                 </Link>
+                </Dica>
               </div>
             </div>
           ))}

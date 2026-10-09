@@ -12,6 +12,7 @@ import {
   type TipoDePublicacao,
 } from '@/app/actions/instagram';
 import type { Formato } from '@/lib/estudio/modelos';
+import { Dica } from '@/components/ui/Dica';
 
 /** Publicar direto do Estúdio.
  *
@@ -115,15 +116,25 @@ export function PublicarNoInstagram({
     <div className="mt-3">
       {!aberto ? (
         <>
-          <button
-            onClick={() => setAberto(true)}
-            disabled={!pecaId || Boolean(impedimento)}
-            title={impedimento ?? (pecaId ? undefined : 'Salve a peça antes de publicar.')}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-control border border-border-strong px-4 py-2.5 text-[13.5px] font-extrabold text-fg-secondary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+          <Dica
+            texto={
+              impedimento
+                ? `Ainda não dá para publicar. ${impedimento}`
+                : !pecaId
+                  ? 'Salve a peça primeiro — é a peça salva que vai para o Instagram.'
+                  : 'Abre a confirmação para publicar direto no perfil da loja. Antes de enviar você vê a legenda e escolhe feed, story ou carrossel. Nada sai até você confirmar.'
+            }
+            className="w-full"
           >
-            <Share2 size={15} />
-            Publicar no Instagram
-          </button>
+            <button
+              onClick={() => setAberto(true)}
+              disabled={!pecaId || Boolean(impedimento)}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-control border border-border-strong px-4 py-2.5 text-[13.5px] font-extrabold text-fg-secondary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Share2 size={15} />
+              Publicar no Instagram
+            </button>
+          </Dica>
           {/* O motivo fica escrito, e não só no title: botão apagado sem
               explicação faz a pessoa clicar três vezes e desistir. */}
           {impedimento && (
@@ -176,21 +187,28 @@ export function PublicarNoInstagram({
           </div>
 
           <div className="flex gap-2">
-            <button
-              onClick={() => void publicar()}
-              disabled={enviando}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-control bg-accent px-4 py-2.5 text-[13.5px] font-extrabold text-page disabled:opacity-60"
+            <Dica
+              texto="Envia agora para o Instagram da loja. Não há como desfazer pelo sistema — para apagar, só pelo aplicativo."
+              className="flex-1"
             >
-              {enviando ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-              {enviando ? 'Publicando…' : 'Publicar agora'}
-            </button>
-            <button
-              onClick={() => setAberto(false)}
-              disabled={enviando}
-              className="rounded-control border border-border-strong px-4 py-2.5 text-[13.5px] font-extrabold text-fg-secondary hover:border-accent hover:text-accent disabled:opacity-60"
-            >
-              Cancelar
-            </button>
+              <button
+                onClick={() => void publicar()}
+                disabled={enviando}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-control bg-accent px-4 py-2.5 text-[13.5px] font-extrabold text-page disabled:opacity-60"
+              >
+                {enviando ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+                {enviando ? 'Publicando…' : 'Publicar agora'}
+              </button>
+            </Dica>
+            <Dica texto="Fecha a confirmação sem publicar nada.">
+              <button
+                onClick={() => setAberto(false)}
+                disabled={enviando}
+                className="rounded-control border border-border-strong px-4 py-2.5 text-[13.5px] font-extrabold text-fg-secondary hover:border-accent hover:text-accent disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+            </Dica>
           </div>
         </div>
       )}

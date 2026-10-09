@@ -17,6 +17,7 @@ import {
 import { modeloEscolheOProduto } from '@/lib/estudio/redacao';
 import { comCredito, termoDaPeca, type Ilustracao } from '@/lib/estudio/ilustracao';
 import { SeletorDeIlustracao } from '@/components/estudio/SeletorDeIlustracao';
+import { Dica } from '@/components/ui/Dica';
 import { salvarPecaAction, excluirPecaAction } from '@/app/actions/estudio';
 import { gravarPeca } from '@/lib/estudio/video';
 import { SeletorDeIcone } from '@/components/estudio/SeletorDeIcone';
@@ -704,24 +705,42 @@ export function EditorDePeca({
                 placeholder="Ex.: por que importar dos EUA sai mais barato que comprar aqui"
                 className="w-full rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px]"
               />
-              <button
-                onClick={() => void gerarPeca()}
-                disabled={ocupado || assunto.trim().length < 3}
-                title="Escreve os campos, a legenda e a resposta de direct (Ctrl+Enter)"
-                className="flex flex-shrink-0 items-center justify-center gap-1.5 rounded-control bg-surface-light px-4 py-2.5 text-[13px] font-extrabold text-ink transition-all hover:bg-surface-light-alt disabled:cursor-not-allowed disabled:opacity-50"
+              <Dica
+                texto={
+                  assunto.trim().length < 3
+                    ? 'Escreva o assunto da peça primeiro — é a partir dele que tudo é escrito.'
+                    : escolhaAutomatica
+                      ? 'Escreve tudo de uma vez: os textos da arte, a legenda e a resposta de direct. Aqui a máquina é só cenário, então a IA escolhe o produto do catálogo pelo assunto. Atalho: Ctrl+Enter.'
+                      : 'Escreve tudo de uma vez: os textos da arte, a legenda e a resposta de direct. A máquina é a que você escolheu — a IA não troca. Atalho: Ctrl+Enter.'
+                }
+                className="flex-shrink-0"
               >
-                {ocupado ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-                {gerando ? 'Escrevendo…' : 'Gerar peça'}
-              </button>
-              <button
-                onClick={() => void redigir()}
-                disabled={ocupado || assunto.trim().length < 3}
-                title="Só os campos da arte, sem mexer na legenda"
-                className="flex flex-shrink-0 items-center justify-center gap-1.5 rounded-control border border-border-strong px-3.5 py-2.5 text-[13px] font-extrabold text-fg-secondary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+                <button
+                  onClick={() => void gerarPeca()}
+                  disabled={ocupado || assunto.trim().length < 3}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-control bg-surface-light px-4 py-2.5 text-[13px] font-extrabold text-ink transition-all hover:bg-surface-light-alt disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {ocupado ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                  {gerando ? 'Escrevendo…' : 'Gerar peça'}
+                </button>
+              </Dica>
+              <Dica
+                texto={
+                  assunto.trim().length < 3
+                    ? 'Escreva o assunto da peça primeiro.'
+                    : 'Escreve só os textos da arte. Não mexe na legenda nem na resposta de direct — use quando você já revisou a legenda e quer refazer apenas o texto da imagem.'
+                }
+                className="flex-shrink-0"
               >
-                {redigindo && !gerando ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />}
-                Só a arte
-              </button>
+                <button
+                  onClick={() => void redigir()}
+                  disabled={ocupado || assunto.trim().length < 3}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-control border border-border-strong px-3.5 py-2.5 text-[13px] font-extrabold text-fg-secondary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {redigindo && !gerando ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />}
+                  Só a arte
+                </button>
+              </Dica>
             </div>
           </Rotulo>
 
@@ -737,17 +756,21 @@ export function EditorDePeca({
               <div className="mb-1.5 text-[12.5px] font-bold">Slide</div>
               <div className="flex flex-wrap gap-1.5">
                 {Array.from({ length: modelo.slides }, (_, i) => i + 1).map((n) => (
-                  <button
+                  <Dica
                     key={n}
-                    onClick={() => setSlide(n)}
-                    className={`h-9 w-9 rounded-control border text-[13px] font-extrabold transition-colors ${
-                      slide === n
-                        ? 'border-accent bg-accent text-page'
-                        : 'border-border-strong text-fg-secondary hover:border-accent'
-                    }`}
+                    texto={`Mostra o slide ${n} de ${modelo.slides}. Cada slide tem os seus próprios campos — o formulário muda junto.`}
                   >
-                    {n}
-                  </button>
+                    <button
+                      onClick={() => setSlide(n)}
+                      className={`h-9 w-9 rounded-control border text-[13px] font-extrabold transition-colors ${
+                        slide === n
+                          ? 'border-accent bg-accent text-page'
+                          : 'border-border-strong text-fg-secondary hover:border-accent'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  </Dica>
                 ))}
               </div>
             </div>
@@ -768,18 +791,23 @@ export function EditorDePeca({
         <div className="rounded-[18px] border border-border bg-card p-6">
           <div className="mb-1.5 flex items-center justify-between gap-3">
             <div className="text-[12.5px] font-bold">Legenda</div>
-            <button
-              onClick={() => void escreverLegenda()}
-              disabled={escrevendoLegenda}
-              className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-control border border-border-strong px-3 py-1.5 text-[12px] font-extrabold text-fg-secondary transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+            <Dica
+              texto="Escreve só a legenda, no formato do playbook: gancho, três fatos, chamada e hashtags de nicho. Usa os dados conferidos do produto — não inventa preço. Substitui a legenda atual, e pergunta antes."
+              className="flex-shrink-0"
             >
-              {escrevendoLegenda ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Wand2 size={13} />
-              )}
-              Escrever legenda
-            </button>
+              <button
+                onClick={() => void escreverLegenda()}
+                disabled={escrevendoLegenda}
+                className="inline-flex items-center gap-1.5 rounded-control border border-border-strong px-3 py-1.5 text-[12px] font-extrabold text-fg-secondary transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+              >
+                {escrevendoLegenda ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <Wand2 size={13} />
+                )}
+                Escrever legenda
+              </button>
+            </Dica>
           </div>
           <div className="mb-1.5 text-[12px] leading-relaxed text-fg-tertiary">
             L1 gancho até 8 palavras · L2–4 três fatos com número · L5 CTA com palavra-chave · 3 a 5
@@ -834,29 +862,43 @@ export function EditorDePeca({
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2.5">
-            <button
-              onClick={baixar}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-control bg-accent px-5 py-2.5 text-[13.5px] font-extrabold text-page"
+            <Dica
+              texto={`Baixa a arte${modelo.slides > 1 ? ' do slide que está na tela' : ''} em ${largura}×${altura}, sem compressão. Serve para postar pelo celular ou conferir em tamanho real.`}
+              className="flex-1"
             >
-              <Download size={15} /> Baixar PNG
-            </button>
-            {modelo.slides > 1 && (
               <button
-                onClick={baixarTodos}
-                className="rounded-control border border-border-strong px-4 py-2.5 text-[13.5px] font-extrabold text-fg-secondary hover:border-accent hover:text-accent"
+                onClick={baixar}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-control bg-accent px-5 py-2.5 text-[13.5px] font-extrabold text-page"
               >
-                Baixar os {modelo.slides}
+                <Download size={15} /> Baixar PNG
               </button>
+            </Dica>
+            {modelo.slides > 1 && (
+              <Dica
+                texto={`Baixa os ${modelo.slides} slides do carrossel, um arquivo por slide, já na ordem. O navegador pode pedir permissão para baixar vários arquivos.`}
+              >
+                <button
+                  onClick={baixarTodos}
+                  className="rounded-control border border-border-strong px-4 py-2.5 text-[13.5px] font-extrabold text-fg-secondary hover:border-accent hover:text-accent"
+                >
+                  Baixar os {modelo.slides}
+                </button>
+              </Dica>
             )}
             {modelo.animado && (
-              <button
-                onClick={baixarVideo}
-                disabled={gravando}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-control border border-border-strong px-4 py-2.5 text-[13.5px] font-extrabold text-fg-secondary hover:border-accent hover:text-accent disabled:opacity-60"
+              <Dica
+                texto="Grava a animação de 5 segundos e baixa o vídeo. A gravação roda em tempo real, então leva alguns segundos — e a prévia anima enquanto grava."
+                className="w-full"
               >
-                {gravando ? <Loader2 size={15} className="animate-spin" /> : <Video size={15} />}
-                {gravando ? 'Gravando…' : 'Baixar vídeo (MP4)'}
-              </button>
+                <button
+                  onClick={baixarVideo}
+                  disabled={gravando}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-control border border-border-strong px-4 py-2.5 text-[13.5px] font-extrabold text-fg-secondary hover:border-accent hover:text-accent disabled:opacity-60"
+                >
+                  {gravando ? <Loader2 size={15} className="animate-spin" /> : <Video size={15} />}
+                  {gravando ? 'Gravando…' : 'Baixar vídeo (MP4)'}
+                </button>
+              </Dica>
             )}
           </div>
           {modelo.animado && (
@@ -881,32 +923,40 @@ export function EditorDePeca({
           />
 
           <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="rounded-control border border-border-strong bg-input px-3 py-2.5 text-[13px]"
-            >
-              <option>Rascunho</option>
-              <option>Pronta</option>
-              <option>Publicada</option>
-            </select>
-            <button
-              onClick={salvar}
-              disabled={salvando}
-              title="Salvar (Ctrl+S)"
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-control border border-border-strong px-5 py-2.5 text-[13.5px] font-extrabold text-fg-secondary hover:border-accent hover:text-accent disabled:opacity-60"
-            >
-              {salvando ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-              Salvar
-            </button>
-            {peca?.id && (
-              <button
-                onClick={excluir}
-                aria-label="Excluir peça"
-                className="grid h-10 w-10 place-items-center rounded-control border border-border-strong text-fg-tertiary hover:border-error hover:text-error"
+            <Dica texto="Em que pé a peça está. Rascunho: ainda em edição. Pronta: revisada, esperando publicar. Publicada: já foi ao ar. Só organiza a lista — não publica nada.">
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="rounded-control border border-border-strong bg-input px-3 py-2.5 text-[13px]"
               >
-                <Trash2 size={15} />
+                <option>Rascunho</option>
+                <option>Pronta</option>
+                <option>Publicada</option>
+              </select>
+            </Dica>
+            <Dica
+              texto="Guarda o texto, o produto e a legenda. A arte não é salva — ela é redesenhada toda vez que você abre. Atalho: Ctrl+S."
+              className="flex-1"
+            >
+              <button
+                onClick={salvar}
+                disabled={salvando}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-control border border-border-strong px-5 py-2.5 text-[13.5px] font-extrabold text-fg-secondary hover:border-accent hover:text-accent disabled:opacity-60"
+              >
+                {salvando ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                Salvar
               </button>
+            </Dica>
+            {peca?.id && (
+              <Dica texto="Apaga esta peça da lista. A arte não é recuperável, mas o modelo continua disponível. Pergunta antes de apagar.">
+                <button
+                  onClick={excluir}
+                  aria-label="Excluir peça"
+                  className="grid h-10 w-10 place-items-center rounded-control border border-border-strong text-fg-tertiary hover:border-error hover:text-error"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </Dica>
             )}
           </div>
         </div>

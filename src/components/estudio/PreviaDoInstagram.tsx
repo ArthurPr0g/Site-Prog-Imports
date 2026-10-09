@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Bookmark, Heart, Send } from 'lucide-react';
 import { INSTAGRAM_HANDLE } from '@/lib/constants';
+import { Dica } from '@/components/ui/Dica';
 import type { Formato } from '@/lib/estudio/modelos';
 
 // Como a peça fica publicada, no telefone.
@@ -85,15 +86,19 @@ export function PreviaDoInstagram({
         <div className="text-[13px] font-bold">Como fica publicado</div>
         <div className="flex overflow-hidden rounded-full border border-border-strong">
           {(['escuro', 'claro'] as Tema[]).map((t) => (
-            <button
+            <Dica
               key={t}
-              onClick={() => setTema(t)}
-              className={`px-2.5 py-1 text-[11px] font-bold capitalize transition-colors ${
-                tema === t ? 'bg-surface-light text-ink' : 'text-fg-tertiary hover:text-accent'
-              }`}
+              texto={`Mostra a publicação como aparece para quem usa o Instagram no tema ${t}. Arte de fundo claro some no tema claro, e a de fundo escuro some no escuro — vale conferir os dois.`}
             >
-              {t}
-            </button>
+              <button
+                onClick={() => setTema(t)}
+                className={`px-2.5 py-1 text-[11px] font-bold capitalize transition-colors ${
+                  tema === t ? 'bg-surface-light text-ink' : 'text-fg-tertiary hover:text-accent'
+                }`}
+              >
+                {t}
+              </button>
+            </Dica>
           ))}
         </div>
       </div>
