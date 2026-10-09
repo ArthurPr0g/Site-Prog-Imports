@@ -388,6 +388,16 @@ function FilaDeRespostas({
               O pedido mais antigo foi feito {haQuanto(maisAntigo.comentadoEm, agora)}.
             </div>
           )}
+          {pendentes.some((r) => !r.usuario) && (
+            <div className="mt-2 max-w-[520px] text-[12px] leading-snug text-warning">
+              O Instagram está escondendo quem comentou. Na próxima renovação do token, em{' '}
+              <Link href="/admin/estudio/instagram" className="underline">
+                Estúdio → Instagram
+              </Link>
+              , marque também <span className="font-mono">instagram_manage_comments</span> — aí cada pedido vem com o
+              @ e o botão de abrir o direct.
+            </div>
+          )}
         </div>
         <div className="max-w-[420px] text-[12px] leading-relaxed text-fg-tertiary">
           Copie a mensagem do post, abra o direct de cada pessoa, cole e marque como respondido. A resposta é manual
@@ -423,7 +433,7 @@ function FilaDeRespostas({
               {respondidos.slice(0, 200).map((r) => (
                 <div key={r.id} className="flex items-center gap-3 border-b border-divider py-2 text-[12.5px] last:border-b-0">
                   <Check size={14} className="flex-shrink-0 text-success" aria-hidden />
-                  <span className="font-bold">@{r.usuario}</span>
+                  <span className="font-bold">{r.usuario ? `@${r.usuario}` : 'autor oculto'}</span>
                   <span className="min-w-0 flex-1 truncate text-fg-tertiary">
                     {primeiraLinha(postPorId.get(r.mediaId)?.legenda ?? '', 50)}
                   </span>
@@ -530,27 +540,46 @@ function GrupoDaFila({
       <ul className="flex flex-col">
         {lista.map((r) => (
           <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-divider py-2.5 sm:flex-nowrap">
-            <a
-              href={`https://www.instagram.com/${encodeURIComponent(r.usuario)}/`}
-              target="_blank"
-              rel="noreferrer"
-              className="w-[150px] flex-shrink-0 truncate text-[13px] font-extrabold hover:text-ouro"
-            >
-              @{r.usuario}
-            </a>
+            {r.usuario ? (
+              <a
+                href={`https://www.instagram.com/${encodeURIComponent(r.usuario)}/`}
+                target="_blank"
+                rel="noreferrer"
+                className="w-[150px] flex-shrink-0 truncate text-[13px] font-extrabold hover:text-ouro"
+              >
+                @{r.usuario}
+              </a>
+            ) : (
+              <span className="w-[150px] flex-shrink-0 truncate text-[13px] font-bold italic text-fg-tertiary">autor oculto</span>
+            )}
             <span className="min-w-0 flex-1 truncate text-[12.5px] text-fg-secondary">&ldquo;{r.texto}&rdquo;</span>
             <span className="flex-shrink-0 text-[11.5px] text-fg-faded">{haQuanto(r.comentadoEm, agora)}</span>
             <div className="flex flex-shrink-0 items-center gap-2">
-              <Dica texto={`Abre a conversa de direct com @${r.usuario} no Instagram. Cole a mensagem copiada e envie.`}>
-                <a
-                  href={`https://ig.me/m/${encodeURIComponent(r.usuario)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-control border border-border-strong px-3 py-1.5 text-[12px] font-bold text-fg-secondary hover:border-fg hover:text-fg"
-                >
-                  <MessageCircle size={13} /> Abrir direct
-                </a>
-              </Dica>
+              {r.usuario ? (
+                <Dica texto={`Abre a conversa de direct com @${r.usuario} no Instagram. Cole a mensagem copiada e envie.`}>
+                  <a
+                    href={`https://ig.me/m/${encodeURIComponent(r.usuario)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-control border border-border-strong px-3 py-1.5 text-[12px] font-bold text-fg-secondary hover:border-fg hover:text-fg"
+                  >
+                    <MessageCircle size={13} /> Abrir direct
+                  </a>
+                </Dica>
+              ) : (
+                post?.link && (
+                  <Dica texto="O Instagram não informou quem comentou. Abre o post para achar o comentário e responder a pessoa por lá.">
+                    <a
+                      href={post.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-control border border-border-strong px-3 py-1.5 text-[12px] font-bold text-fg-secondary hover:border-fg hover:text-fg"
+                    >
+                      <ExternalLink size={13} /> Achar no post
+                    </a>
+                  </Dica>
+                )
+              )}
               <Dica texto="Tira esta pessoa da fila. Use depois de mandar a mensagem — dá para desfazer em Respondidos.">
                 <button
                   type="button"

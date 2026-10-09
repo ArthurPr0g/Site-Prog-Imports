@@ -227,26 +227,34 @@ export async function carregarPainel(supabase: Supabase): Promise<Painel> {
     await emLotes(paraLer, 4, async (post) => {
       try {
         const comentarios = await comentariosDe(c, post.id, 500);
+        // Comentário sem autor (a API o esconde sem instagram_manage_comments)
+        // entra na fila do mesmo jeito; só o da própria loja fica de fora.
         const pedidos = comentarios
-          .filter((k) => k.usuario && k.usuario.toLowerCase() !== usuarioDaLoja)
+          .filter((k) => k.usuario.toLowerCase() !== usuarioDaLoja)
           .filter((k) => comentarioPede(k.texto, post.palavra));
 
         if (pedidos.length) {
-          const { data: inseridos } = await supabase
+          const { data: existentes } = await supabase
             .from('studio_respostas')
-            .upsert(
-              pedidos.map((k) => ({
-                media_id: post.id,
-                comment_id: k.id,
-                usuario: k.usuario,
-                texto: k.texto.slice(0, 500),
-                palavra: post.palavra,
-                comentado_em: k.quando || agora,
-              })),
-              { onConflict: 'comment_id', ignoreDuplicates: true }
-            )
-            .select('id');
-          novos += inseridos?.length ?? 0;
+            .select('comment_id')
+            .eq('media_id', post.id);
+          const ja = new Set((existentes ?? []).map((r) => r.comment_id));
+          novos += pedidos.filter((k) => !ja.has(k.id)).length;
+
+          // Atualiza os que já existiam em vez de ignorá-los: o autor que vinha
+          // oculto aparece quando o token ganha a permissão de comentários.
+          // `respondido_em` não vai no corpo, então a marcação não se perde.
+          await supabase.from('studio_respostas').upsert(
+            pedidos.map((k) => ({
+              media_id: post.id,
+              comment_id: k.id,
+              usuario: k.usuario,
+              texto: k.texto.slice(0, 500),
+              palavra: post.palavra,
+              comentado_em: k.quando || agora,
+            })),
+            { onConflict: 'comment_id' }
+          );
         }
 
         await supabase.from('studio_posts').upsert(

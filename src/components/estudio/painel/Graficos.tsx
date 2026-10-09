@@ -278,7 +278,8 @@ export function Barras({ barras, formatar = (v: number) => formatarNumero(v, 1) 
   const linha = 34;
   const espessura = 16;
   const esquerda = 92;
-  const direita = 64;
+  // Espaço para "584,7 · 3 posts" depois da barra mais longa.
+  const direita = 130;
   const altura = Math.max(linha, barras.length * linha);
   const teto = Math.max(1, ...barras.map((b) => b.valor));
   const util = Math.max(0, largura - esquerda - direita);

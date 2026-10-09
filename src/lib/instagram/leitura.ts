@@ -191,14 +191,17 @@ export async function comentariosDe(c: Credenciais, mediaId: string, maximo = 30
   let depois: string | undefined;
   while (saida.length < maximo) {
     const pagina = await chamar<{
-      data?: { id: string; text?: string; username?: string; timestamp?: string }[];
+      data?: { id: string; text?: string; username?: string; from?: { username?: string }; timestamp?: string }[];
       paging?: { cursors?: { after?: string }; next?: string };
     }>(`/${mediaId}/comments`, {
       token: c.token,
-      parametros: { fields: 'id,text,username,timestamp', limit: '50', ...(depois ? { after: depois } : {}) },
+      parametros: { fields: 'id,text,username,from,timestamp', limit: '50', ...(depois ? { after: depois } : {}) },
     });
+    // Sem instagram_manage_comments a API devolve o texto e esconde o autor —
+    // `username` e `from` vêm vazios. O comentário entra assim mesmo: saber
+    // que alguém pediu já é metade do controle.
     for (const k of pagina.data ?? []) {
-      saida.push({ id: k.id, texto: k.text ?? '', usuario: k.username ?? '', quando: k.timestamp ?? '' });
+      saida.push({ id: k.id, texto: k.text ?? '', usuario: k.username ?? k.from?.username ?? '', quando: k.timestamp ?? '' });
     }
     depois = pagina.paging?.next ? pagina.paging.cursors?.after : undefined;
     if (!depois) break;
