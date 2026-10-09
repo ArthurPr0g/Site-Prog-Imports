@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Bookmark, Heart, MessageCircle, Send } from 'lucide-react';
+import { Bookmark, Heart, Send } from 'lucide-react';
 import { INSTAGRAM_HANDLE } from '@/lib/constants';
 import type { Formato } from '@/lib/estudio/modelos';
 
@@ -202,7 +202,8 @@ function Feed({
         <div className="min-w-0 flex-1">
           <div className="truncate text-[13px] font-semibold leading-tight">{INSTAGRAM_HANDLE}</div>
         </div>
-        <div className="flex flex-col gap-[3px] pr-1">
+        {/* Em pé, não deitado: no Instagram o menu do post é "⋯". */}
+        <div className="flex items-center gap-[3px] pr-1">
           {[0, 1, 2].map((i) => (
             <span key={i} className="block h-[3px] w-[3px] rounded-full" style={{ background: cor.texto }} />
           ))}
@@ -229,7 +230,7 @@ function Feed({
       <div className="relative flex items-center px-3 pb-1.5 pt-2.5">
         <div className="flex items-center gap-3.5">
           <Heart size={23} strokeWidth={1.6} />
-          <MessageCircle size={23} strokeWidth={1.6} style={{ transform: 'scaleX(-1)' }} />
+          <Balao />
           <Send size={22} strokeWidth={1.6} style={{ transform: 'rotate(10deg) translateY(-1px)' }} />
         </div>
 
@@ -274,11 +275,23 @@ function Feed({
           )}
         </div>
 
-        <div className="mt-1.5 text-[11px] uppercase tracking-[.01em]" style={{ color: cor.secundario }}>
-          agora
+        <div className="mt-1.5 text-[12px]" style={{ color: cor.secundario }}>
+          Agora
         </div>
       </div>
     </div>
+  );
+}
+
+/** O balão de comentário.
+ *
+ *  Desenhado à mão porque o da biblioteca de ícones é um círculo sem rabicho,
+ *  e o rabicho é o que faz o olho ler "comentário" sem pensar. */
+function Balao() {
+  return (
+    <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
+      <path d="M12 2.6a9.4 9.4 0 1 1-4.55 17.62L2.9 21.5l1.33-4.23A9.4 9.4 0 0 1 12 2.6Z" strokeLinejoin="round" />
+    </svg>
   );
 }
 
