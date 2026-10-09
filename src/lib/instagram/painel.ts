@@ -229,9 +229,27 @@ export async function carregarPainel(supabase: Supabase): Promise<Painel> {
         const comentarios = await comentariosDe(c, post.id, 500);
         // Comentário sem autor (a API o esconde sem instagram_manage_comments)
         // entra na fila do mesmo jeito; só o da própria loja fica de fora.
+        //
+        // E comentário que repete a própria chamada ("Comente QUERO…") não é
+        // pedido, é eco da legenda: o primeiro post com palavra tinha um
+        // comentário que copiava a legenda inteira, e ele entrava na fila.
         const pedidos = comentarios
           .filter((k) => k.usuario.toLowerCase() !== usuarioDaLoja)
-          .filter((k) => comentarioPede(k.texto, post.palavra));
+          .filter((k) => comentarioPede(k.texto, post.palavra))
+          .filter((k) => !palavraChaveDa({}, k.texto));
+
+        // O que estava na fila e deixou de valer (palavra trocada, regra nova)
+        // sai dela. O que já foi respondido fica, é histórico.
+        const validos = new Set(pedidos.map((k) => k.id));
+        const { data: pendentesDoPost } = await supabase
+          .from('studio_respostas')
+          .select('id, comment_id')
+          .eq('media_id', post.id)
+          .is('respondido_em', null);
+        const sobra = (pendentesDoPost ?? []).filter((r) => !validos.has(r.comment_id)).map((r) => r.id);
+        if (sobra.length) {
+          await supabase.from('studio_respostas').delete().in('id', sobra).is('respondido_em', null);
+        }
 
         if (pedidos.length) {
           const { data: existentes } = await supabase
