@@ -40,6 +40,7 @@ O TOM
 O QUE NÃO INVENTAR
 - NUNCA escreva preço, parcela, porcentagem de desconto ou especificação técnica que não venha no assunto. Esses campos saem do cadastro do produto, não da sua cabeça. Se um campo pede preço e o assunto não traz, devolva string vazia.
 - Nome de produto só se o assunto citar. Não suponha modelo, geração nem configuração.
+- SÉRIE: a única série da marca é "Teste de Fogo" (reviews com benchmark). Não invente série, quadro, número de episódio nem temporada. Se o assunto não for um Teste de Fogo, o campo de série vai como string vazia.
 - RUMOR NÃO É FATO. Se o assunto vem de relato, vazamento ou rumor — sinais: "diz relatório", "segundo", "rumor", "teria", "deve", "pode", "reportedly" —, escreva como relato: "deve chegar", "segundo relatos", "pode ganhar". Nunca como data ou recurso confirmado. Não cite o veículo se o assunto não citar. Prometer um lançamento que a fabricante não confirmou é a promessa que alguém cobra depois.
 
 COMO ESCREVER CADA CAMPO

@@ -66,13 +66,28 @@ function credito(autor: string, licenca: string, fonte: string): string {
   return `Foto: ${quem} (${licenca}) via ${onde}`;
 }
 
+/** O teto de resultados por página para quem não tem chave.
+ *
+ *  Passou de 20 e a API recusa com 401 -- "page_size may not exceed 20 for
+ *  anonymous requests". A primeira versão pedia 24 e não achava nada, nem para
+ *  "laptop". */
+const TETO_ANONIMO = 20;
+
+/** O que a busca devolve: a lista e, separado dela, o erro.
+ *
+ *  Separados de propósito. A primeira versão devolvia lista vazia quando a API
+ *  recusava, e a tela dizia "nada licenciado nesse termo" -- uma afirmação
+ *  sobre o acervo quando o que tinha acontecido era uma recusa de pedido. Lista
+ *  vazia e busca que falhou são coisas diferentes e pedem mensagens diferentes. */
+export type ResultadoDaBusca = { lista: Ilustracao[]; erro?: string };
+
 /** Busca ilustrações licenciadas para uso comercial.
  *
  *  Nunca lança: ilustração é conforto sobre a peça, e a peça funciona sem
- *  ela. Falhou, devolve lista vazia e a tela diz que não achou. */
-export async function buscarIlustracoes(termo: string, quantas = 12): Promise<Ilustracao[]> {
+ *  ela. Mas também nunca engole a falha -- ela volta em erro. */
+export async function buscarIlustracoes(termo: string, quantas = 12): Promise<ResultadoDaBusca> {
   const busca = termo.trim();
-  if (busca.length < 2) return [];
+  if (busca.length < 2) return { lista: [] };
 
   const parametros = new URLSearchParams({
     q: busca,
@@ -82,7 +97,7 @@ export async function buscarIlustracoes(termo: string, quantas = 12): Promise<Il
     license_type: 'commercial,modification',
     size: 'large',
     mature: 'false',
-    page_size: String(Math.min(quantas * 2, 40)),
+    page_size: String(TETO_ANONIMO),
   });
 
   try {
@@ -91,10 +106,12 @@ export async function buscarIlustracoes(termo: string, quantas = 12): Promise<Il
       cache: 'no-store',
       signal: AbortSignal.timeout(15000),
     });
-    if (!resposta.ok) return [];
+    if (!resposta.ok) {
+      return { lista: [], erro: `O acervo recusou a busca (${resposta.status}). Tente de novo em instantes.` };
+    }
     const dados = (await resposta.json()) as RespostaDaBusca;
 
-    return (dados.results ?? [])
+    const lista = (dados.results ?? [])
       .filter((r) => r.url && (r.width ?? 0) >= LARGURA_MINIMA)
       .slice(0, quantas)
       .map((r) => {
@@ -115,8 +132,9 @@ export async function buscarIlustracoes(termo: string, quantas = 12): Promise<Il
           credito: credito(autor, licenca, fonte),
         };
       });
+    return { lista };
   } catch {
-    return [];
+    return { lista: [], erro: 'Não consegui falar com o acervo agora.' };
   }
 }
 

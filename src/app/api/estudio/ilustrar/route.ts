@@ -34,8 +34,11 @@ export async function GET(req: NextRequest) {
   const termo = req.nextUrl.searchParams.get('q')?.trim() ?? '';
   if (termo.length < 2) return NextResponse.json({ erro: 'Escreva o que procurar.' }, { status: 400 });
 
-  const achadas = await buscarIlustracoes(termo);
-  return NextResponse.json({ ilustracoes: achadas });
+  const { lista, erro } = await buscarIlustracoes(termo);
+  // Falha de busca e busca sem resultado voltam diferentes: a tela diz coisas
+  // distintas para cada uma, e a primeira não é afirmação sobre o acervo.
+  if (erro) return NextResponse.json({ erro, ilustracoes: [] }, { status: 502 });
+  return NextResponse.json({ ilustracoes: lista });
 }
 
 export async function POST(req: NextRequest) {
