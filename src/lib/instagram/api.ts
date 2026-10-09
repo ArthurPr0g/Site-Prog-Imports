@@ -49,7 +49,9 @@ type RespostaDeErro = {
   };
 };
 
-async function chamar<T>(
+/** Exportada para a leitura de métricas (`leitura.ts`), que fala com a mesma
+ *  API, com o mesmo token e precisa do mesmo tratamento de erro. */
+export async function chamar<T>(
   caminho: string,
   opcoes: { metodo?: 'GET' | 'POST'; token: string; parametros?: Record<string, string> }
 ): Promise<T> {
