@@ -273,16 +273,28 @@ export function EditorDePeca({
       // mensagem de direct — precisa do valor **agora**; o estado do React só
       // chega no próximo render, e ler dali entregaria a peça anterior para a
       // legenda da peça nova.
+      const anteriores = redacaoRef.current;
+      redacaoRef.current = campos;
+
+      // O texto da redação entra primeiro, e o cadastro só completa o que ficou
+      // vazio. A ordem contrária era o defeito: numa peça de notícia, o cadastro
+      // preenchia o título com o nome do produto, o campo deixava de estar
+      // vazio, e a regra de mesclagem — que protege o que já está escrito —
+      // barrava o gancho que a redação acabara de criar.
+      //
+      // Onde o produto é cenário, o texto da redação também vence o que o
+      // cadastro escreveu antes (a primeira passada). O que o dono digitou à
+      // mão continua intocado nas duas.
       let base = conteudo;
+      if (escolhaAutomatica) base = aplicarSugestoes(base, campos, sugestoesRef.current);
+      base = aplicarSugestoes(base, campos, anteriores);
+
       let novoProduto = produto;
 
       const escolhido = dados.produtoId
         ? (produtos.find((p) => p.id === dados.produtoId) ?? null)
         : null;
 
-      // A máquina entra antes do texto: as duas fontes são mescladas pela
-      // mesma regra, e na ordem inversa o cadastro sobrescreveria o que acabou
-      // de ser escrito sobre ele.
       if (escolhido && escolhido.id !== produtoId) {
         const sugestoes = sugestoesDoProduto(escolhido);
         const anterioresDoProduto = sugestoesRef.current;
@@ -296,9 +308,7 @@ export function EditorDePeca({
         setProdutoId(escolhido.id);
       }
 
-      const anteriores = redacaoRef.current;
-      redacaoRef.current = campos;
-      const final = aplicarSugestoes(base, campos, anteriores);
+      const final = base;
       setConteudo(final);
 
       if (!silencioso) {
@@ -422,7 +432,7 @@ export function EditorDePeca({
 
       const palavra = palavraChaveDa(escrita.conteudo ?? {}, '');
       setRespostaDireta(
-        mensagemPadrao({ palavra: palavra || 'QUERO', produto: escrita.produto ?? null })
+        mensagemPadrao({ palavra, produto: escrita.produto ?? null })
       );
 
       if (!silencioso) {

@@ -30,7 +30,6 @@ export function RespostaDoDirect({
   onChange: (v: string) => void;
 }) {
   const [copiado, setCopiado] = useState(false);
-  const palavra = palavraDetectada || 'QUERO';
 
   async function copiar() {
     try {
@@ -43,7 +42,7 @@ export function RespostaDoDirect({
   }
 
   function gerar() {
-    onChange(mensagemPadrao({ palavra, produto }));
+    onChange(mensagemPadrao({ palavra: palavraDetectada, produto }));
   }
 
   return (

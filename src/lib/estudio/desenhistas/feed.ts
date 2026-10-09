@@ -447,7 +447,7 @@ export const desenhar3E: Desenhista = ({ ctx, largura, altura, conteudo, imagens
   rodapeEsfumado(ctx, COR.onix, largura, altura, 920, 0.28);
 
   const base = 1180;
-  const marca = campo(conteudo, 'etiqueta');
+  const marca = campo(conteudo, 'serie');
   if (marca) rotulo(ctx, marca, MARGEM, base + 32, 32, COR.ouro);
 
   const texto = campo(conteudo, 'titulo', 'Título do Reels');

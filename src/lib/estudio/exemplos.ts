@@ -52,7 +52,7 @@ export const EXEMPLOS: Record<string, Record<string, string>> = {
     autor: 'Rafael M. · São Paulo',
   },
   '3e': {
-    etiqueta: 'Teste de fogo',
+    serie: 'Teste de fogo',
     titulo: '7 dias com o Area-51',
     subtitulo: 'Temperatura, FPS e o que ninguém mostra no unboxing.',
     marcaDagua: '51',

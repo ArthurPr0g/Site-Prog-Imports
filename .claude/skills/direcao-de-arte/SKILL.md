@@ -83,6 +83,28 @@ como lê manchete — "RTX 5080 · 32 GB · 240 HZ" comunica mais que um adjetiv
 ou depende de cotação, use "a partir de" ou "sob consulta" — o que não pode é o
 cliente ter que perguntar.
 
+**Rumor não é fato.** Post de notícia nasce de matéria que muitas vezes é
+relato — "diz relatório", "segundo", "deve", "reportedly". A frase certa é "deve
+chegar em 27 de outubro, segundo relatos", e não "chega em 27 de outubro". É o
+mesmo erro do imposto de cima, com outro vestido: prometer o que a fabricante
+não anunciou é promessa que alguém cobra depois, e numa loja que vende máquina
+de R$ 40 mil a cobrança chega por direct.
+
+**Catálogo primeiro, foto de fora depois.** Onde o produto é cenário (prova
+social, capa de série, carrossel educativo), a máquina vem do catálogo. A foto de
+fora entra só quando a loja não tem — em lançamento e notícia, onde não existe
+foto nossa de um aparelho anunciado ontem. Duas regras que vêm junto: só
+licença que permite uso comercial e alteração, acima de 1080px, e **o crédito
+sempre na legenda** (CC BY e CC BY-SA exigem atribuição). Em peça de venda nunca:
+vender com foto de terceiro é vender o que não está na vitrine.
+
+**Dois campos com a mesma chave brigam.** Quando um modelo reaproveita uma chave
+que o cadastro de produto também preenche (`etiqueta`, `subtitulo`), o cadastro
+escreve por cima do que a peça queria dizer. O 3D, o 3C e o 3E já tiveram o
+mesmo defeito, cada um com chave própria agora (`chamada`, `tituloLinha2`,
+`serie`). Ao criar um modelo, confira `sugestoesDoProduto()` antes de escolher o
+nome de um campo.
+
 ### Estrutura da legenda
 
 Linha 1 é o gancho, até 8 palavras. Linhas 2 a 4 trazem três fatos com número.

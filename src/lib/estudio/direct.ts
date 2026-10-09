@@ -62,11 +62,18 @@ export function mensagemPadrao({
   produto: ProdutoDoEstudio | null;
   base?: string;
 }): string {
-  const chave = palavra.trim() || 'QUERO';
+  // Sem palavra-chave na peça, a abertura não cita nenhuma. Antes o padrão era
+  // "QUERO" — e a mensagem dizia "Vi seu QUERO no post" a quem comentou outra
+  // coisa, num post que nunca pediu essa palavra. Dizer ao cliente que ele
+  // escreveu o que não escreveu é o tipo de detalhe que denuncia automação.
+  const chave = palavra.trim();
+  const abertura = chave
+    ? `Oi! Vi seu "${chave}" no post.`
+    : 'Oi! Vi seu comentário no post.';
 
   if (!produto) {
     return [
-      `Oi! Vi seu "${chave}" no post.`,
+      abertura,
       '',
       'Me diz qual modelo te interessou que eu te mando o link e as condições.',
     ].join('\n');
@@ -84,7 +91,7 @@ export function mensagemPadrao({
     .filter((item) => !nomeNormalizado.includes(item.toLowerCase()))
     .join(' · ');
 
-  const linhas = [`Oi! Vi seu "${chave}" no post.`, ''];
+  const linhas = [abertura, ''];
   linhas.push(produto.name);
   if (ficha) linhas.push(ficha);
   if (preco) linhas.push(`${formatBRL(preco)}${produto.condition ? ` · ${produto.condition}` : ''}`);

@@ -191,7 +191,9 @@ export const MODELOS: Modelo[] = [
     campos: [
       ...CAMPOS_DE_PRODUTO,
       { chave: 'marcaDagua', rotulo: 'Marca d’água atrás', tipo: 'texto', ajuda: 'Ex.: "VS".', maxPalavras: 1 },
-      { chave: 'etiqueta', rotulo: 'Série e episódio', tipo: 'rotulo', ajuda: 'TESTE DE FOGO · EP. 04.' },
+      // Chave própria, e não `etiqueta`: o cadastro de produto preenche`etiqueta` com a condição (PRONTA ENTREGA), e aqui o campo é a série.
+      // Com a chave compartilhada a capa saía com a série trocada pela condição.
+      { chave: 'serie', rotulo: 'Série e episódio', tipo: 'rotulo', ajuda: 'TESTE DE FOGO · EP. 04.' },
       { chave: 'titulo', rotulo: 'Título', tipo: 'texto', maxPalavras: 6, obrigatorio: true },
       { chave: 'subtitulo', rotulo: 'Linha de apoio', tipo: 'texto' },
       CAMPO_DE_IMAGEM_DE_FORA,
