@@ -52,6 +52,14 @@ export type Modelo = {
    *  decisão: a peça fala de importação, não daquele notebook. Nesses, a
    *  escrita por assunto escolhe sozinha. */
   produtoEhOAssunto?: boolean;
+  /** Quão rígida é a escolha da máquina que ilustra.
+   *
+   *  `estrita` é para notícia: a imagem tem de ser do aparelho da notícia, ou da
+   *  mesma marca e linha. Uma máquina parecida de outra marca não conta a
+   *  notícia — foi o que aconteceu quando uma notícia sobre Surface e RTX Spark
+   *  saiu ilustrada com um Legion. Sem a marca, a escolha é livre: numa prova
+   *  social qualquer máquina boa ilustra. */
+  escolhaDoProduto?: 'estrita';
   nome: string;
   secao: string;
   formato: Formato;
@@ -204,6 +212,7 @@ export const MODELOS: Modelo[] = [
   },
   {
     codigo: '3f',
+    escolhaDoProduto: 'estrita',
     nome: 'Notícia',
     secao: '03 · Posts de feed',
     formato: 'feed',

@@ -9,6 +9,7 @@ import {
   modeloEscolheOProduto,
   peneirar,
   produtoEscolhido,
+  termoDeBuscaDa,
   type ProdutoParaEscolha,
 } from '@/lib/estudio/redacao';
 import { listarProdutosDoEstudio } from '@/lib/estudio/catalogo';
@@ -101,6 +102,7 @@ export async function POST(req: NextRequest) {
     const entrada = uso?.type === 'tool_use' ? uso.input : null;
     const campos = peneirar(entrada, modelo);
     const produtoId = escolhe ? produtoEscolhido(entrada, idsValidos) : null;
+    const termoDeBusca = escolhe ? termoDeBuscaDa(entrada) : '';
 
     if (Object.keys(campos).length === 0) {
       return NextResponse.json(
@@ -109,7 +111,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ campos, produtoId });
+    return NextResponse.json({ campos, produtoId, termoDeBusca });
   } catch (e) {
     // A mensagem da biblioteca pode trazer detalhe de conta e cobrança; o que
     // interessa na tela é que falhou e que dá para tentar de novo.

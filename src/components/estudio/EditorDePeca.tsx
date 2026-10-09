@@ -51,6 +51,8 @@ type Redacao = {
   ok: boolean;
   conteudo?: Record<string, string>;
   produto?: ProdutoDoEstudio | null;
+  /** Termo de busca de foto, em inglês, escrito por quem leu a notícia. */
+  termoDeBusca?: string;
 };
 
 /** Sobrescritas para quem é chamado dentro da cadeia, antes de o estado virar. */
@@ -371,7 +373,7 @@ export function EditorDePeca({
             : `${quantos} campos escritos`,
         });
       }
-      return { ok: true, conteudo: final, produto: novoProduto };
+      return { ok: true, conteudo: final, produto: novoProduto, termoDeBusca: dados.termoDeBusca ?? '' };
     } catch {
       toast({ ok: false, message: 'Não consegui falar com o servidor.' });
       return { ok: false };
@@ -444,8 +446,11 @@ export function EditorDePeca({
     }
   }
 
-  async function procurarImagemDeFora(c: Record<string, string>) {
-    const termo = termoDaPeca(c, assunto);
+  async function procurarImagemDeFora(c: Record<string, string>, termoDaIA?: string) {
+    // O termo que a redação escreveu em inglês vence o montado das palavras do
+    // assunto: o acervo é catalogado em inglês, e as primeiras palavras de uma
+    // manchete em português não acham nada.
+    const termo = termoDaIA?.trim() || termoDaPeca(c, assunto);
     if (termo.length < 2) return;
     try {
       const r = await fetch(`/api/estudio/ilustrar?q=${encodeURIComponent(termo)}`);
@@ -489,7 +494,7 @@ export function EditorDePeca({
       // licenciada abre com os resultados. A escolha da foto fica com o dono:
       // a licença de cada uma precisa ser vista antes, e o crédito vai junto.
       if (escolhaAutomatica && !escrita.produto && !conteudo.imagem) {
-        await procurarImagemDeFora(escrita.conteudo ?? {});
+        await procurarImagemDeFora(escrita.conteudo ?? {}, escrita.termoDeBusca);
       }
 
       const palavra = palavraChaveDa(escrita.conteudo ?? {}, '');

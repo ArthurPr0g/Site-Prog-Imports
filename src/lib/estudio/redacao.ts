@@ -111,8 +111,13 @@ export function instrucaoDoModelo(
     const catalogo = contexto.produtos
       .map((p) => `- ${p.id} · ${p.nome} · ${p.ficha} · ${p.preco}${p.estoque > 0 ? ' · em estoque' : ''}`)
       .join('\n');
+    const regra =
+      modelo.escolhaDoProduto === 'estrita'
+        ? 'Esta peça é uma NOTÍCIA: a imagem tem de ser do aparelho da notícia. Escolha uma máquina SÓ se ela for esse aparelho, ou da mesma marca e linha (notícia de MacBook Pro → um MacBook Pro do catálogo). Máquina parecida de OUTRA marca não ilustra a notícia — uma notícia sobre Surface ou sobre chip da Nvidia não se ilustra com um notebook gamer qualquer. Notícia sobre acessório, software, serviço, chip avulso ou aparelho que a loja não vende: devolva "produtoId" vazio, e a imagem será buscada fora. Na dúvida, vazio: uma imagem errada conta uma notícia errada.'
+        : 'Nesta peça o produto é cenário, não o assunto: escolha a que mais combina com o texto que você vai escrever. Prefira a que está em estoque. Se nenhuma combinar, devolva "produtoId" vazio.';
+
     blocos.push(
-      `CATÁLOGO DA LOJA — escolha UMA máquina para ilustrar esta peça:\n${catalogo}\n\nNesta peça o produto é cenário, não o assunto: escolha a que mais combina com o texto que você vai escrever. Prefira a que está em estoque. Devolva o id exato em "produtoId". Se nenhuma combinar, devolva "produtoId" vazio.`
+      `CATÁLOGO DA LOJA — escolha UMA máquina para ilustrar esta peça:\n${catalogo}\n\n${regra}\nDevolva o id exato em "produtoId".\n\nEm "termoDeBusca" escreva, SEMPRE, de 2 a 4 palavras em inglês para achar uma foto do assunto da notícia num acervo aberto — o aparelho ou a coisa de que ela trata ("Surface Laptop", "gaming laptop RTX", "MacBook Pro"). Só use nome de produto que a notícia cite.`
     );
   }
 
@@ -151,6 +156,14 @@ export function ferramentaDoModelo(modelo: Modelo) {
       type: 'string',
       description: 'O id, exatamente como veio no catálogo, da máquina que ilustra esta peça. Vazio se nenhuma combinar.',
     };
+    // Vem no mesmo pedido porque quem acabou de ler a notícia sabe, melhor que
+    // qualquer regra sobre o texto, do que ela trata. A alternativa era buscar
+    // foto com as primeiras palavras do assunto em português — e o acervo é
+    // catalogado em inglês: "Pré-vendas dos dispositivos Nvidia" não acha nada.
+    propriedades.termoDeBusca = {
+      type: 'string',
+      description: 'De 2 a 4 palavras em inglês para achar uma foto do assunto da notícia em acervo aberto. Ex.: "Surface Laptop".',
+    };
   }
 
   return {
@@ -158,6 +171,18 @@ export function ferramentaDoModelo(modelo: Modelo) {
     description: 'Preenche os campos de texto da peça.',
     input_schema: { type: 'object' as const, properties: propriedades },
   };
+}
+
+/** O termo de busca de foto que a redação escreveu, limpo.
+ *
+ *  Só letras, números e espaço, no máximo 60 caracteres: o termo vai para a
+ *  URL de uma busca externa, e o que volta de um modelo de linguagem é texto,
+ *  não contrato. */
+export function termoDeBuscaDa(bruto: unknown): string {
+  if (!bruto || typeof bruto !== 'object') return '';
+  const termo = (bruto as Record<string, unknown>).termoDeBusca;
+  if (typeof termo !== 'string') return '';
+  return termo.replace(/[^\p{L}\p{N}\s-]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
 }
 
 /** O id do produto que a resposta escolheu, conferido contra o catálogo.
