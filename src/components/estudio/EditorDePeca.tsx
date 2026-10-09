@@ -107,6 +107,9 @@ export function EditorDePeca({
   const [escrevendoLegenda, setEscrevendoLegenda] = useState(false);
   const [gerando, setGerando] = useState(false);
   const [cortado, setCortado] = useState<string[]>([]);
+  // Campos que a redação escreveu e o dono ainda não mexeu. Depois de dois
+  // "Gerar" ninguém lembra o que já revisou; a marca sai no primeiro toque.
+  const [daIA, setDaIA] = useState<Record<string, true>>({});
   // Resultado da busca que a cadeia dispara quando o catálogo não tem a máquina.
   // chave muda a cada busca para o seletor remontar já aberto, em vez de um
   // efeito mandar abrir — estado derivado de props não precisa de efeito.
@@ -208,8 +211,38 @@ export function EditorDePeca({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Atalhos: Ctrl+Enter gera a peça, Ctrl+S salva.
+  //
+  // As ações vão numa ref atualizada a cada render, e o ouvinte é registrado
+  // uma vez só. Registrar o ouvinte com as funções nas dependências o refaria a
+  // cada tecla digitada — e as funções, que leem o formulário inteiro, mudam a
+  // cada tecla. A ref guarda sempre a versão mais nova sem esse custo.
+  const acoes = useRef<{ salvar: () => void; gerar: () => void }>({ salvar: () => {}, gerar: () => {} });
+  useEffect(() => {
+    acoes.current = { salvar: () => void salvar(), gerar: () => void gerarPeca() };
+  });
+  useEffect(() => {
+    function aoApertar(e: KeyboardEvent) {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.key.toLowerCase() === 's') {
+        e.preventDefault(); // senão o navegador abre "salvar página"
+        acoes.current.salvar();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        acoes.current.gerar();
+      }
+    }
+    window.addEventListener('keydown', aoApertar);
+    return () => window.removeEventListener('keydown', aoApertar);
+  }, []);
   function mudar(chave: string, valor: string) {
     setConteudo((atual) => ({ ...atual, [chave]: valor }));
+    setDaIA((m) => {
+      if (!m[chave]) return m;
+      const { [chave]: _saiu, ...resto } = m;
+      void _saiu;
+      return resto;
+    });
   }
 
   /** Tira a foto de fora quando uma máquina do catálogo passa a valer.
@@ -310,6 +343,15 @@ export function EditorDePeca({
 
       const final = base;
       setConteudo(final);
+      // Só o que realmente entrou: campo que o dono tinha escrito à mão não foi
+      // tocado, então não é da IA.
+      setDaIA((m) => {
+        const novo = { ...m };
+        for (const [chave, valor] of Object.entries(campos)) {
+          if (final[chave] === valor) novo[chave] = true;
+        }
+        return novo;
+      });
 
       if (!silencioso) {
         const quantos = Object.keys(campos).length;
@@ -570,6 +612,46 @@ export function EditorDePeca({
    *  depois de publicar é tarde. */
   const faltando = modelo.campos.filter((c) => c.obrigatorio && !conteudo[c.chave]?.trim());
 
+  /** O que a tela mostra do slide atual. Com máquina do catálogo escolhida a
+   *  foto de fora não tem função: o campo some, e ela só aparece quando o
+   *  catálogo não serve. */
+  const camposVisiveis = camposDoSlide.filter(
+    (c) => !(c.tipo === 'imagem' && escolhaAutomatica && produtoId)
+  );
+
+  /** Dois grupos, porque são dois tipos de trabalho. Escolher a máquina, o halo
+   *  e a imagem é decisão visual; o resto é texto, e é onde a redação escreve.
+   *  Quinze campos numa coluna só escondem qual deles é a decisão. */
+  const TIPOS_VISUAIS = ['produto', 'halo', 'imagem', 'icone'];
+  const camposVisuais = camposVisiveis.filter((c) => TIPOS_VISUAIS.includes(c.tipo));
+  const camposDeTexto = camposVisiveis.filter((c) => !TIPOS_VISUAIS.includes(c.tipo));
+
+  const renderCampo = (campo: Campo) => (
+    <CampoDoFormulario
+      key={campo.chave}
+      campo={campo}
+      valor={conteudo[campo.chave] ?? ''}
+      produtos={produtos}
+      onChange={(v) =>
+        campo.tipo === 'produto' && campo.chave === 'produto'
+          ? escolherProduto(v)
+          : mudar(campo.chave, v)
+      }
+      produtoEscolhido={campo.chave === 'produto' ? (produtoId ?? '') : undefined}
+      codigoDoModelo={modelo.codigo}
+      escolhaAutomatica={escolhaAutomatica}
+      daIA={Boolean(daIA[campo.chave])}
+      termoDeBusca={termoDaPeca(conteudo, assunto)}
+      credito={conteudo.imagemCredito ?? ''}
+      buscaInicial={buscaDeImagem}
+      onEscolherImagem={(url, cred) => {
+        setConteudo((atual) => ({ ...atual, imagem: url, imagemCredito: cred }));
+        // O crédito acompanha a escolha mesmo com a legenda já escrita.
+        setLegenda((l) => comCredito(l, cred, conteudo.imagemCredito ?? ''));
+      }}
+    />
+  );
+
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
       {/* ------------------------------------------------------- formulário */}
@@ -625,7 +707,7 @@ export function EditorDePeca({
               <button
                 onClick={() => void gerarPeca()}
                 disabled={ocupado || assunto.trim().length < 3}
-                title="Escreve os campos, a legenda e a resposta de direct"
+                title="Escreve os campos, a legenda e a resposta de direct (Ctrl+Enter)"
                 className="flex flex-shrink-0 items-center justify-center gap-1.5 rounded-control bg-surface-light px-4 py-2.5 text-[13px] font-extrabold text-ink transition-all hover:bg-surface-light-alt disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {ocupado ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
@@ -671,34 +753,16 @@ export function EditorDePeca({
             </div>
           )}
 
-          {camposDoSlide
-            // Com máquina do catálogo escolhida a foto de fora não tem função: o
-            // campo some, e a imagem de fora só aparece quando o catálogo não serve.
-            .filter((c) => !(c.tipo === 'imagem' && escolhaAutomatica && produtoId))
-            .map((campo) => (
-            <CampoDoFormulario
-              key={campo.chave}
-              campo={campo}
-              valor={conteudo[campo.chave] ?? ''}
-              produtos={produtos}
-              onChange={(v) =>
-                campo.tipo === 'produto' && campo.chave === 'produto'
-                  ? escolherProduto(v)
-                  : mudar(campo.chave, v)
-              }
-              produtoEscolhido={campo.chave === 'produto' ? (produtoId ?? '') : undefined}
-              codigoDoModelo={modelo.codigo}
-              escolhaAutomatica={escolhaAutomatica}
-              termoDeBusca={termoDaPeca(conteudo, assunto)}
-              credito={conteudo.imagemCredito ?? ''}
-              buscaInicial={buscaDeImagem}
-              onEscolherImagem={(url, cred) => {
-                setConteudo((atual) => ({ ...atual, imagem: url, imagemCredito: cred }));
-                // O crédito acompanha a escolha mesmo com a legenda já escrita.
-                setLegenda((l) => comCredito(l, cred, conteudo.imagemCredito ?? ''));
-              }}
-            />
-          ))}
+          {camposVisuais.length > 0 && (
+            <GrupoDoFormulario titulo="Máquina e visual" comTitulo={camposDeTexto.length > 0}>
+              {camposVisuais.map(renderCampo)}
+            </GrupoDoFormulario>
+          )}
+          {camposDeTexto.length > 0 && (
+            <GrupoDoFormulario titulo="Texto da arte" comTitulo={camposVisuais.length > 0}>
+              {camposDeTexto.map(renderCampo)}
+            </GrupoDoFormulario>
+          )}
         </div>
 
         <div className="rounded-[18px] border border-border bg-card p-6">
@@ -742,7 +806,7 @@ export function EditorDePeca({
       </div>
 
       {/* ---------------------------------------------------------- preview */}
-      <div className="xl:sticky xl:top-6 xl:self-start">
+      <div className="xl:sticky xl:top-6 xl:max-h-[calc(100vh-3rem)] xl:self-start xl:overflow-y-auto xl:pr-1 xl:[scrollbar-width:thin]">
         <div className="rounded-[18px] border border-border bg-card p-5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="text-[13px] font-bold">Prévia</div>
@@ -829,6 +893,7 @@ export function EditorDePeca({
             <button
               onClick={salvar}
               disabled={salvando}
+              title="Salvar (Ctrl+S)"
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-control border border-border-strong px-5 py-2.5 text-[13.5px] font-extrabold text-fg-secondary hover:border-accent hover:text-accent disabled:opacity-60"
             >
               {salvando ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
@@ -859,17 +924,42 @@ export function EditorDePeca({
   );
 }
 
+/** Um bloco do formulário, com título discreto.
+ *
+ *  O título some quando só há um grupo: rótulo de seção sobre uma única seção é
+ *  ruído, e há modelos (os destaques) que só têm campos visuais. */
+function GrupoDoFormulario({
+  titulo,
+  comTitulo,
+  children,
+}: {
+  titulo: string;
+  comTitulo: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mb-2 border-t border-divider pt-4 first:border-0 first:pt-0">
+      {comTitulo && (
+        <div className="etiqueta mb-3 text-[10px] text-fg-muted">{titulo}</div>
+      )}
+      {children}
+    </section>
+  );
+}
+
 function Rotulo({
   texto,
   ajuda,
   obrigatorio,
   vazio,
+  daIA,
   children,
 }: {
   texto: string;
   ajuda?: string;
   obrigatorio?: boolean;
   vazio?: boolean;
+  daIA?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -883,6 +973,14 @@ function Rotulo({
             title={vazio ? 'Obrigatório e ainda vazio' : 'Obrigatório'}
             className={`inline-block h-1.5 w-1.5 rounded-full ${vazio ? 'bg-warning' : 'bg-border-strong'}`}
           />
+        )}
+        {daIA && (
+          <span
+            title='Escrito pela IA — confira. A marca some quando você editar.'
+            className='etiqueta rounded-full border border-ouro/40 px-1.5 py-px text-[8px] text-ouro'
+          >
+            IA
+          </span>
         )}
       </div>
       {ajuda && <div className="mb-1.5 text-[12px] leading-relaxed text-fg-tertiary">{ajuda}</div>}
@@ -899,6 +997,7 @@ function CampoDoFormulario({
   produtoEscolhido,
   codigoDoModelo,
   escolhaAutomatica,
+  daIA,
   termoDeBusca,
   credito,
   buscaInicial,
@@ -913,6 +1012,8 @@ function CampoDoFormulario({
   codigoDoModelo: string;
   /** Nesta peça a máquina é cenário e quem escolhe é a redação. */
   escolhaAutomatica?: boolean;
+  /** O texto veio da redação e ainda não foi tocado pelo dono. */
+  daIA?: boolean;
   termoDeBusca: string;
   credito: string;
   buscaInicial: { termo: string; lista: Ilustracao[]; chave: number } | null;
@@ -1001,14 +1102,14 @@ function CampoDoFormulario({
 
   if (campo.tipo === 'textoLongo') {
     return (
-      <Rotulo texto={campo.rotulo} ajuda={campo.ajuda} obrigatorio={campo.obrigatorio} vazio={vazio}>
+      <Rotulo texto={campo.rotulo} ajuda={campo.ajuda} obrigatorio={campo.obrigatorio} vazio={vazio} daIA={daIA}>
         <textarea value={valor} onChange={(e) => onChange(e.target.value)} rows={3} className={classe} />
       </Rotulo>
     );
   }
 
   return (
-    <Rotulo texto={campo.rotulo} ajuda={campo.ajuda} obrigatorio={campo.obrigatorio} vazio={vazio}>
+    <Rotulo texto={campo.rotulo} ajuda={campo.ajuda} obrigatorio={campo.obrigatorio} vazio={vazio} daIA={daIA}>
       <input value={valor} onChange={(e) => onChange(e.target.value)} className={classe} />
       {campo.maxPalavras && (
         <div className={`mt-1 text-[12px] ${passou ? 'text-error' : 'text-fg-tertiary'}`}>
