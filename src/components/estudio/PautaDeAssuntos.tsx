@@ -274,7 +274,7 @@ export function PautaDeAssuntos({ assuntos }: { assuntos: AssuntoNaPauta[] }) {
                   // O título em português vai para o editor: a peça é escrita
                   // em português, e mandar a manchete em inglês faria o
                   // redator traduzir de novo, com outra escolha de palavras.
-                  href={`/admin/estudio/nova?modelo=${modelo[a.id] ?? MODELOS[0].codigo}&assunto=${encodeURIComponent(a.titulo_pt || a.titulo)}&fonte=${encodeURIComponent(a.fonte)}`}
+                  href={`/admin/estudio/nova?modelo=${modelo[a.id] ?? MODELOS[0].codigo}&assunto=${encodeURIComponent(a.titulo_pt || a.titulo)}&fonte=${encodeURIComponent(a.fonte)}&noticia=${a.id}`}
                   onClick={() => void mudarStatusDoAssuntoAction(a.id, 'produzido')}
                   className="rounded-control border border-ouro/40 px-3.5 py-1.5 text-[12px] font-extrabold text-ouro transition-colors hover:bg-ouro hover:text-ink"
                 >

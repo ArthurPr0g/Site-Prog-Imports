@@ -16,6 +16,7 @@ import {
 } from '@/lib/estudio/produto';
 import { modeloEscolheOProduto } from '@/lib/estudio/redacao';
 import { comCredito, termoDaPeca, type Ilustracao } from '@/lib/estudio/ilustracao';
+import type { ImagemDaMateria } from '@/lib/estudio/materia';
 import { SeletorDeIlustracao } from '@/components/estudio/SeletorDeIlustracao';
 import { Dica } from '@/components/ui/Dica';
 import { salvarPecaAction, excluirPecaAction } from '@/app/actions/estudio';
@@ -76,6 +77,7 @@ export function EditorDePeca({
   peca,
   assuntoInicial,
   fonteInicial,
+  noticiaInicial,
 }: {
   modelo: Modelo;
   produtos: ProdutoDoEstudio[];
@@ -83,6 +85,9 @@ export function EditorDePeca({
   assuntoInicial?: string;
   /** De onde veio a notícia. Só entra em modelo que tem o campo fonte. */
   fonteInicial?: string;
+  /** A notícia da pauta que originou a peça. Guardada em conteudo.noticia,
+   *  para a busca de imagens da matéria seguir funcionando depois de salvar. */
+  noticiaInicial?: string;
   peca?: {
     id: string;
     titulo: string;
@@ -101,7 +106,12 @@ export function EditorDePeca({
   const [conteudo, setConteudo] = useState<Record<string, string>>(
     peca?.conteudo ??
       (fonteInicial?.trim() && modelo.campos.some((c) => c.chave === 'fonte')
-        ? { fonte: fonteInicial.trim().slice(0, 80) }
+        ? {
+            fonte: fonteInicial.trim().slice(0, 80),
+            // Só um uuid: o valor vai parar numa consulta, e o que chega pela
+            // URL não é de confiança.
+            ...(noticiaInicial && /^[0-9a-f-]{36}$/i.test(noticiaInicial) ? { noticia: noticiaInicial } : {}),
+          }
         : {})
   );
   const [produtoId, setProdutoId] = useState<string | null>(peca?.product_id ?? null);
@@ -124,7 +134,7 @@ export function EditorDePeca({
   // Resultado da busca que a cadeia dispara quando o catálogo não tem a máquina.
   // chave muda a cada busca para o seletor remontar já aberto, em vez de um
   // efeito mandar abrir — estado derivado de props não precisa de efeito.
-  const [buscaDeImagem, setBuscaDeImagem] = useState<{ termo: string; pedido?: string; lista: Ilustracao[]; chave: number } | null>(null);
+  const [buscaDeImagem, setBuscaDeImagem] = useState<{ termo: string; pedido?: string; lista: Ilustracao[]; materia?: ImagemDaMateria[]; chave: number } | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // As imagens ficam em cache pela URL: redesenhar a cada tecla é o que dá a
@@ -451,19 +461,38 @@ export function EditorDePeca({
     // assunto: o acervo é catalogado em inglês, e as primeiras palavras de uma
     // manchete em português não acham nada.
     const termo = termoDaIA?.trim() || termoDaPeca(c, assunto);
-    if (termo.length < 2) return;
-    try {
-      const r = await fetch(`/api/estudio/ilustrar?q=${encodeURIComponent(termo)}`);
-      const d = await r.json();
-      if (!r.ok) return;
-      setBuscaDeImagem({ termo: d.termoUsado ?? termo, pedido: d.termoUsado && d.termoUsado !== termo ? termo : undefined, lista: d.ilustracoes ?? [], chave: Date.now() });
-      toast({
-        ok: true,
-        message: 'Nenhuma máquina do catálogo combina com este assunto — escolha uma imagem licenciada abaixo.',
-      });
-    } catch {
-      // A busca é conforto. Falhar não pode derrubar a peça que já foi escrita.
-    }
+    const noticia = c.noticia?.trim();
+    if (termo.length < 2 && !noticia) return;
+
+    // As duas buscas saem juntas e uma não segura a outra: a matéria pode estar
+    // bloqueada para leitura automática e o acervo responder, ou o contrário.
+    // `allSettled` e não `all` porque nenhuma delas pode derrubar a outra.
+    const [acervo, daMateria] = await Promise.allSettled([
+      termo.length >= 2
+        ? fetch(`/api/estudio/ilustrar?q=${encodeURIComponent(termo)}`).then((r) => r.json().then((d) => ({ ok: r.ok, d })))
+        : Promise.resolve(null),
+      noticia
+        ? fetch(`/api/estudio/materia?noticia=${encodeURIComponent(noticia)}`).then((r) => r.json().then((d) => ({ ok: r.ok, d })))
+        : Promise.resolve(null),
+    ]);
+
+    const a = acervo.status === 'fulfilled' && acervo.value?.ok ? acervo.value.d : null;
+    const m = daMateria.status === 'fulfilled' && daMateria.value?.ok ? daMateria.value.d : null;
+    if (!a && !m) return;
+
+    setBuscaDeImagem({
+      termo: a?.termoUsado ?? termo,
+      pedido: a?.termoUsado && a.termoUsado !== termo ? termo : undefined,
+      lista: a?.ilustracoes ?? [],
+      materia: m?.imagens,
+      chave: Date.now(),
+    });
+    toast({
+      ok: true,
+      message: m?.imagens?.length
+        ? 'Nenhuma máquina do catálogo combina — escolha uma imagem da matéria ou do acervo licenciado.'
+        : 'Nenhuma máquina do catálogo combina com este assunto — escolha uma imagem licenciada abaixo.',
+    });
   }
 
   /** A peça inteira, de uma vez.
@@ -668,6 +697,8 @@ export function EditorDePeca({
       daIA={Boolean(daIA[campo.chave])}
       termoDeBusca={termoDaPeca(conteudo, assunto)}
       credito={conteudo.imagemCredito ?? ''}
+      noticiaId={conteudo.noticia ?? ''}
+      fonte={conteudo.fonte ?? ''}
       buscaInicial={buscaDeImagem}
       onEscolherImagem={(url, cred) => {
         setConteudo((atual) => ({ ...atual, imagem: url, imagemCredito: cred }));
@@ -1074,6 +1105,8 @@ function CampoDoFormulario({
   daIA,
   termoDeBusca,
   credito,
+  noticiaId,
+  fonte,
   buscaInicial,
   onEscolherImagem,
 }: {
@@ -1090,7 +1123,9 @@ function CampoDoFormulario({
   daIA?: boolean;
   termoDeBusca: string;
   credito: string;
-  buscaInicial: { termo: string; pedido?: string; lista: Ilustracao[]; chave: number } | null;
+  noticiaId: string;
+  fonte: string;
+  buscaInicial: { termo: string; pedido?: string; lista: Ilustracao[]; materia?: ImagemDaMateria[]; chave: number } | null;
   onEscolherImagem: (url: string, credito: string) => void;
 }) {
   const classe =
@@ -1164,7 +1199,9 @@ function CampoDoFormulario({
       >
         <SeletorDeIlustracao
           key={buscaInicial?.chave ?? 'sem-busca'}
-          inicial={buscaInicial ? { termo: buscaInicial.termo, lista: buscaInicial.lista, pedido: buscaInicial.pedido } : undefined}
+          inicial={buscaInicial ? { termo: buscaInicial.termo, lista: buscaInicial.lista, pedido: buscaInicial.pedido, materia: buscaInicial.materia } : undefined}
+          noticiaId={noticiaId || undefined}
+          fonte={fonte || undefined}
           termoSugerido={termoDeBusca}
           valor={valor}
           credito={credito}

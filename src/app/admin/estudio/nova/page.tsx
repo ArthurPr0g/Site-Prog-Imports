@@ -11,9 +11,9 @@ export const metadata: Metadata = { title: 'Nova peça' };
 export default async function NovaPecaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ modelo?: string; assunto?: string; fonte?: string }>;
+  searchParams: Promise<{ modelo?: string; assunto?: string; fonte?: string; noticia?: string }>;
 }) {
-  const { modelo: codigo, assunto, fonte } = await searchParams;
+  const { modelo: codigo, assunto, fonte, noticia } = await searchParams;
   const modelo = codigo ? modeloPorCodigo(codigo) : undefined;
   if (!modelo) notFound();
 
@@ -37,7 +37,7 @@ export default async function NovaPecaPage({
       {/* `assunto` chega da pauta: o dono clicou em produzir numa notícia, e o
           editor abre com o campo preenchido para ele só conferir e mandar
           escrever. */}
-      <EditorDePeca modelo={modelo} produtos={produtos} assuntoInicial={assunto} fonteInicial={fonte} />
+      <EditorDePeca modelo={modelo} produtos={produtos} assuntoInicial={assunto} fonteInicial={fonte} noticiaInicial={noticia} />
     </div>
   );
 }

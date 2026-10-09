@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { buscarComRecuo } from '@/lib/estudio/ilustracao';
+import { AGENTE_DO_ESTUDIO, imagensDaMateria, urlSegura } from '@/lib/estudio/materia';
 
 // Ilustração de fora: buscar e adotar.
 //
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
   const dono = await requireAdmin();
   if (!dono) return NextResponse.json({ erro: 'Só o gerenciamento usa o Estúdio.' }, { status: 403 });
 
-  let corpo: { url?: string; credito?: string };
+  let corpo: { url?: string; credito?: string; noticia?: string };
   try {
     corpo = await req.json();
   } catch {
@@ -53,22 +54,38 @@ export async function POST(req: NextRequest) {
   }
 
   const origem = String(corpo.url ?? '').trim();
-  // Só https, e só o que o próprio acervo serve. A URL chega do navegador, e
-  // aceitar qualquer endereço aqui transformaria esta rota num buscador que
-  // alcança a rede interna em nome do servidor.
-  let endereco: URL;
-  try {
-    endereco = new URL(origem);
-  } catch {
-    return NextResponse.json({ erro: 'Endereço inválido.' }, { status: 400 });
+  // A URL chega do navegador, e aceitar qualquer endereço aqui transformaria
+  // esta rota num buscador que alcança o que não devia, em nome do servidor.
+  // https com nome de domínio de verdade é o mínimo; veja `urlSegura`.
+  const endereco = urlSegura(origem);
+  if (!endereco) {
+    return NextResponse.json({ erro: 'Endereço inválido. Só aceito https com nome de domínio.' }, { status: 400 });
   }
-  if (endereco.protocol !== 'https:') {
-    return NextResponse.json({ erro: 'Só aceito endereço https.' }, { status: 400 });
+
+  // Imagem de matéria: só vale se estiver na lista que o servidor mesmo extraiu
+  // dessa matéria. O endereço da matéria vem do banco, e a imagem tem de estar
+  // nela — sem isso a rota baixaria o que o navegador mandar.
+  let referer: string | undefined;
+  if (corpo.noticia) {
+    const id = String(corpo.noticia);
+    if (!/^[0-9a-f-]{36}$/i.test(id)) {
+      return NextResponse.json({ erro: 'Notícia inválida.' }, { status: 400 });
+    }
+    const supa = await createClient();
+    const { data: noticia } = await supa.from('studio_topics').select('url').eq('id', id).maybeSingle();
+    if (!noticia) return NextResponse.json({ erro: 'Essa notícia não está mais na pauta.' }, { status: 404 });
+
+    const { lista } = await imagensDaMateria(noticia.url);
+    if (!lista.some((i) => i.url === endereco.toString())) {
+      return NextResponse.json({ erro: 'Essa imagem não é da matéria.' }, { status: 400 });
+    }
+    // Alguns servidores de imagem só respondem a quem vem da página da matéria.
+    referer = noticia.url;
   }
 
   try {
     const baixada = await fetch(endereco.toString(), {
-      headers: { accept: 'image/*' },
+      headers: { accept: 'image/*', 'user-agent': AGENTE_DO_ESTUDIO, ...(referer ? { referer } : {}) },
       cache: 'no-store',
       signal: AbortSignal.timeout(30000),
     });
