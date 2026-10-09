@@ -12,6 +12,7 @@ import {
   MARGEM,
   alturaDoTitulo,
   quebrar,
+  tamanhoQueCabeEmLinhas,
   brilho,
   linhasDoTitulo,
   etiqueta,
@@ -555,10 +556,14 @@ export const desenhar3F: Desenhista = ({ ctx, largura, altura, conteudo, imagens
     paragrafo(ctx, apoio, MARGEM, topo, 34, { largura: larguraUtil, maxLinhas: 3, cor: COR.prata });
   }
 
+  // O corpo encolhe até a manchete caber em três linhas. Manchete é frase
+  // inteira, e cortada no meio de uma afirmação — "…pode…" — numa notícia vira
+  // outra notícia. Seis a dez por cento de diferença ninguém vê.
   const manchete = campo(conteudo, 'manchete', 'Manchete da notícia');
-  const alturaManchete = alturaDoTitulo(ctx, manchete, larguraUtil, 88, 3);
+  const corpo = tamanhoQueCabeEmLinhas(ctx, manchete, larguraUtil, 88, 3);
+  const alturaManchete = alturaDoTitulo(ctx, manchete, larguraUtil, corpo, 3);
   const topoManchete = topo - 28 - alturaManchete;
-  titulo(ctx, manchete, MARGEM, topoManchete, 88, { largura: larguraUtil, maxLinhas: 3 });
+  titulo(ctx, manchete, MARGEM, topoManchete, corpo, { largura: larguraUtil, maxLinhas: 3 });
 
   const linha = campo(conteudo, 'linha');
   if (linha) rotulo(ctx, linha, MARGEM, topoManchete - 22, 24, COR.ouro);

@@ -47,7 +47,7 @@ O QUE NÃO INVENTAR
 - RUMOR NÃO É FATO. Se o assunto vem de relato, vazamento ou rumor — sinais: "diz relatório", "segundo", "rumor", "teria", "deve", "pode", "reportedly" —, escreva como relato: "deve chegar", "segundo relatos", "pode ganhar". Nunca como data ou recurso confirmado. Não cite o veículo se o assunto não citar. Prometer um lançamento que a fabricante não confirmou é a promessa que alguém cobra depois.
 
 COMO ESCREVER CADA CAMPO
-- Respeite o limite de palavras quando ele vier. Limite é teto, não meta: título bom costuma ser mais curto que o teto.
+- Respeite o limite de palavras quando ele vier. Limite é teto, não meta: título bom costuma ser mais curto que o teto. O limite é exato, não aproximado: conte as palavras antes de devolver — 13 palavras num limite de 12 é erro, e a arte corta a frase.
 - Rótulo e etiqueta são de uma linha, sem ponto final.
 - Título carrega a ideia inteira; subtítulo explica, não repete.
 - Chamada para ação é verbo: "Fale no WhatsApp", "Veja no site". Não "clique aqui".

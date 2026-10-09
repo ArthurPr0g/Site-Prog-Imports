@@ -258,6 +258,30 @@ export function tamanhoQueCabe(
   return minimo;
 }
 
+/** O maior tamanho, até `tamanho`, em que o título cabe em `maxLinhas`.
+ *
+ *  Para o título que quebra sozinho, em frase corrida — a manchete de uma
+ *  notícia. É o par de `tamanhoQueCabe`, que serve à capa de quebra escrita à
+ *  mão. Encolher 10% é invisível; a frase sair cortada no meio de uma
+ *  afirmação, numa notícia, é o pior corte possível: "…pode…" depois de
+ *  "Relatório diz que MacBook Pro com touchscreen". */
+export function tamanhoQueCabeEmLinhas(
+  ctx: Ctx,
+  texto: string,
+  largura: number,
+  tamanho: number,
+  maxLinhas: number,
+  piso = 0.72
+): number {
+  const minimo = Math.round(tamanho * piso);
+  for (let t = tamanho; t >= minimo; t -= 2) {
+    // Mede com folga de linhas para contar o que de fato quebraria, em vez de
+    // receber o texto já cortado e achar que coube.
+    if (linhasDoTitulo(ctx, texto, largura, t, maxLinhas + 6).length <= maxLinhas) return t;
+  }
+  return minimo;
+}
+
 /** Título do playbook: Archivo 800, expandido, entrelinha .92, tracking −3.5%.
  *  Devolve a altura ocupada, para quem desenha empilhar o que vem depois. */
 export function titulo(
