@@ -2,19 +2,26 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, Loader2, Save, Trash2, Video, Wand2 } from 'lucide-react';
+import { Download, Loader2, Save, Sparkles, Trash2, Video, Wand2 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { DIMENSOES, type Modelo, type Campo } from '@/lib/estudio/modelos';
 import { carregarImagens, desenharPeca } from '@/lib/estudio/desenhistas';
+import { cortesDoDesenho, zerarCortes } from '@/lib/estudio/marca';
 import type { Imagens } from '@/lib/estudio/desenhistas/tipos';
-import { aplicarSugestoes, sugestoesDoProduto, type ProdutoDoEstudio } from '@/lib/estudio/produto';
+import {
+  aplicarSugestoes,
+  sugestoesDoProduto,
+  tituloDaArte,
+  type ProdutoDoEstudio,
+} from '@/lib/estudio/produto';
+import { modeloEscolheOProduto } from '@/lib/estudio/redacao';
 import { salvarPecaAction, excluirPecaAction } from '@/app/actions/estudio';
 import { gravarPeca } from '@/lib/estudio/video';
 import { SeletorDeIcone } from '@/components/estudio/SeletorDeIcone';
 import { PublicarNoInstagram } from '@/components/estudio/PublicarNoInstagram';
 import { PreviaDoInstagram } from '@/components/estudio/PreviaDoInstagram';
 import { RespostaDoDirect } from '@/components/estudio/RespostaDoDirect';
-import { palavraChaveDa } from '@/lib/estudio/direct';
+import { mensagemPadrao, palavraChaveDa } from '@/lib/estudio/direct';
 import type { Ctx } from '@/lib/estudio/marca';
 import { formatBRL } from '@/lib/format';
 
@@ -35,6 +42,20 @@ function descreverProduto(p: ProdutoDoEstudio): string {
   if (typeof p.stock === 'number' && p.stock > 0) linhas.push(`Em estoque: ${p.stock}`);
   return linhas.join('\n');
 }
+
+/** O que a redação devolve já mesclado, para a etapa seguinte usar na hora. */
+type Redacao = {
+  ok: boolean;
+  conteudo?: Record<string, string>;
+  produto?: ProdutoDoEstudio | null;
+};
+
+/** Sobrescritas para quem é chamado dentro da cadeia, antes de o estado virar. */
+type ContextoDaPeca = {
+  silencioso?: boolean;
+  conteudo?: Record<string, string>;
+  produto?: ProdutoDoEstudio | null;
+};
 
 const HALOS = [
   { valor: 'roxo', rotulo: 'Roxo' },
@@ -82,6 +103,8 @@ export function EditorDePeca({
   const [gravando, setGravando] = useState(false);
   const [previa, setPrevia] = useState<string | null>(null);
   const [escrevendoLegenda, setEscrevendoLegenda] = useState(false);
+  const [gerando, setGerando] = useState(false);
+  const [cortado, setCortado] = useState<string[]>([]);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // As imagens ficam em cache pela URL: redesenhar a cada tecla é o que dá a
@@ -132,7 +155,12 @@ export function EditorDePeca({
       cacheRef.current.set(chaveDasImagens, imagens);
     }
 
+    // Quem sabe que o texto não coube é quem quebrou as linhas. O desenhista
+    // anota, e a tela lê depois do traço: a reticência aparece na arte, mas é
+    // fácil não reparar nela numa prévia reduzida a um terço.
+    zerarCortes();
     await desenharPeca(ctx, modelo.codigo, conteudo, imagens, slide);
+    setCortado(cortesDoDesenho());
     // A mesma arte, reduzida, alimenta a prévia do telefone. JPEG em 0.86
     // porque é miniatura: PNG de 1080×1350 a cada tecla digitada pesaria mais
     // que o desenho inteiro.
@@ -146,6 +174,23 @@ export function EditorDePeca({
     const t = setTimeout(() => void redesenhar(), 120);
     return () => clearTimeout(t);
   }, [redesenhar]);
+
+  // Vindo da pauta, a peça se escreve sozinha ao abrir.
+  //
+  // Clicar em "Produzir" numa notícia já é o pedido; chegar numa tela vazia
+  // com o assunto preenchido e ter de clicar em "Escrever" é pedir duas vezes.
+  // Só em peça nova e só uma vez — reabrir uma peça salva não pode reescrever
+  // o que o dono revisou.
+  const jaGerouSozinho = useRef(false);
+  useEffect(() => {
+    if (jaGerouSozinho.current || peca?.id || !assuntoInicial?.trim()) return;
+    jaGerouSozinho.current = true;
+    void gerarPeca(true);
+    // Lista vazia de propósito: o gatilho é ter chegado aqui com um assunto,
+    // e reexecutar quando o conteúdo mudasse reescreveria por cima do que o
+    // dono acabou de corrigir. A trava em `jaGerouSozinho` cobre o resto.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function mudar(chave: string, valor: string) {
     setConteudo((atual) => ({ ...atual, [chave]: valor }));
@@ -171,27 +216,72 @@ export function EditorDePeca({
    *  a geração anterior escreveu é atualizado; o que o dono digitou à mão fica.
    *  Sem isso, pedir para reescrever apagaria a correção que ele acabou de
    *  fazer — e aí ninguém pede duas vezes. */
-  async function redigir() {
-    if (redigindo || assunto.trim().length < 3) return;
+  async function redigir(silencioso = false): Promise<Redacao> {
+    if (redigindo || assunto.trim().length < 3) return { ok: false };
     setRedigindo(true);
     try {
       const r = await fetch('/api/estudio/redigir', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ modelo: modelo.codigo, assunto }),
+        body: JSON.stringify({
+          modelo: modelo.codigo,
+          assunto,
+          // A máquina já escolhida vai junto: sem ela a escrita acontecia às
+          // cegas e podia produzir um título sobre um notebook enquanto a
+          // ficha, vinda do cadastro, falava de outro.
+          produtoEscolhido: produto ? descreverProduto(produto) : '',
+        }),
       });
       const dados = await r.json();
       if (!r.ok) {
         toast({ ok: false, message: dados?.erro ?? 'Não consegui redigir agora.' });
-        return;
+        return { ok: false };
       }
+
       const campos: Record<string, string> = dados.campos ?? {};
+
+      // O resultado é calculado aqui e devolvido, em vez de só ir para o
+      // estado. Quem encadeia — escrever o texto, depois a legenda, depois a
+      // mensagem de direct — precisa do valor **agora**; o estado do React só
+      // chega no próximo render, e ler dali entregaria a peça anterior para a
+      // legenda da peça nova.
+      let base = conteudo;
+      let novoProduto = produto;
+
+      const escolhido = dados.produtoId
+        ? (produtos.find((p) => p.id === dados.produtoId) ?? null)
+        : null;
+
+      // A máquina entra antes do texto: as duas fontes são mescladas pela
+      // mesma regra, e na ordem inversa o cadastro sobrescreveria o que acabou
+      // de ser escrito sobre ele.
+      if (escolhido && escolhido.id !== produtoId) {
+        const sugestoes = sugestoesDoProduto(escolhido);
+        const anterioresDoProduto = sugestoesRef.current;
+        sugestoesRef.current = sugestoes;
+        base = aplicarSugestoes(base, sugestoes, anterioresDoProduto);
+        novoProduto = escolhido;
+        setProdutoId(escolhido.id);
+      }
+
       const anteriores = redacaoRef.current;
       redacaoRef.current = campos;
-      setConteudo((atual) => aplicarSugestoes(atual, campos, anteriores));
-      toast({ ok: true, message: `${Object.keys(campos).length} campos escritos` });
+      const final = aplicarSugestoes(base, campos, anteriores);
+      setConteudo(final);
+
+      if (!silencioso) {
+        const quantos = Object.keys(campos).length;
+        toast({
+          ok: true,
+          message: escolhido
+            ? `${quantos} campos escritos · ${tituloDaArte(escolhido)}`
+            : `${quantos} campos escritos`,
+        });
+      }
+      return { ok: true, conteudo: final, produto: novoProduto };
     } catch {
       toast({ ok: false, message: 'Não consegui falar com o servidor.' });
+      return { ok: false };
     } finally {
       setRedigindo(false);
     }
@@ -203,9 +293,17 @@ export function EditorDePeca({
    *  texto só, e não dá para saber que parte dele o dono reescreveu. Então o
    *  botão avisa antes de trocar — perder uma legenda revisada por um clique
    *  é o tipo de coisa que faz ninguém clicar de novo. */
-  async function escreverLegenda() {
-    if (escrevendoLegenda) return;
-    if (legenda.trim() && !confirm('Isto substitui a legenda que está escrita. Continuar?')) return;
+  async function escreverLegenda(sobre: ContextoDaPeca = {}): Promise<boolean> {
+    if (escrevendoLegenda) return false;
+    // A pergunta só existe no clique avulso. Dentro da cadeia a legenda ainda
+    // não foi revisada por ninguém — perguntar ali seria pedir confirmação
+    // para substituir um texto que acabou de nascer.
+    if (!sobre.silencioso && legenda.trim() && !confirm('Isto substitui a legenda que está escrita. Continuar?')) {
+      return false;
+    }
+
+    const conteudoAtual = sobre.conteudo ?? conteudo;
+    const produtoAtual = sobre.produto !== undefined ? sobre.produto : produto;
 
     setEscrevendoLegenda(true);
     try {
@@ -215,21 +313,61 @@ export function EditorDePeca({
         body: JSON.stringify({
           modelo: modelo.codigo,
           assunto,
-          conteudo,
-          produto: produto ? descreverProduto(produto) : '',
+          conteudo: conteudoAtual,
+          produto: produtoAtual ? descreverProduto(produtoAtual) : '',
         }),
       });
       const dados = await r.json();
       if (!r.ok) {
         toast({ ok: false, message: dados?.erro ?? 'Não consegui escrever a legenda agora.' });
-        return;
+        return false;
       }
       setLegenda(dados.legenda);
-      toast({ ok: true, message: 'Legenda escrita. Confira os números antes de publicar.' });
+      if (!sobre.silencioso) {
+        toast({ ok: true, message: 'Legenda escrita. Confira os números antes de publicar.' });
+      }
+      return true;
     } catch {
       toast({ ok: false, message: 'Não consegui falar com o servidor.' });
+      return false;
     } finally {
       setEscrevendoLegenda(false);
+    }
+  }
+
+  /** A peça inteira, de uma vez.
+   *
+   *  Era o que faltava. Vindo da pauta, o caminho tinha quatro cliques em
+   *  ordem obrigatória — escrever, escolher produto, escrever legenda, gerar
+   *  mensagem — e cada um esperava o anterior. Ordem obrigatória que a pessoa
+   *  precisa lembrar é trabalho do programa, não do dono.
+   *
+   *  Em sequência e não em paralelo porque cada etapa é insumo da seguinte: a
+   *  legenda fala do que o texto disse, e a mensagem de direct leva a máquina
+   *  que a redação escolheu. */
+  async function gerarPeca(silencioso = false) {
+    if (gerando) return;
+    setGerando(true);
+    try {
+      const escrita = await redigir(true);
+      if (!escrita.ok) return;
+
+      await escreverLegenda({
+        silencioso: true,
+        conteudo: escrita.conteudo,
+        produto: escrita.produto,
+      });
+
+      const palavra = palavraChaveDa(escrita.conteudo ?? {}, '');
+      setRespostaDireta(
+        mensagemPadrao({ palavra: palavra || 'QUERO', produto: escrita.produto ?? null })
+      );
+
+      if (!silencioso) {
+        toast({ ok: true, message: 'Peça escrita. Confira os números antes de publicar.' });
+      }
+    } finally {
+      setGerando(false);
     }
   }
 
@@ -348,6 +486,21 @@ export function EditorDePeca({
 
   const camposDoSlide = modelo.campos.filter((c) => !c.slide || c.slide === slide);
 
+  /** Nesta peça a máquina é cenário, e quem escolhe é a redação. */
+  const escolhaAutomatica = modeloEscolheOProduto(modelo);
+
+  /** Qualquer coisa rodando. Um só estado para travar os três botões: dois
+   *  pedidos simultâneos para a mesma peça produziriam duas redações
+   *  diferentes brigando pelo mesmo formulário. */
+  const ocupado = gerando || redigindo || escrevendoLegenda;
+
+  /** Obrigatórios ainda vazios, em todos os slides.
+   *
+   *  Em todos e não só no visível: num carrossel de cinco slides, o campo que
+   *  falta costuma estar no slide que não está aberto — e descobrir isso
+   *  depois de publicar é tarde. */
+  const faltando = modelo.campos.filter((c) => c.obrigatorio && !conteudo[c.chave]?.trim());
+
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
       {/* ------------------------------------------------------- formulário */}
@@ -381,31 +534,52 @@ export function EditorDePeca({
               tela poderia cometer. */}
           <Rotulo
             texto="Escrever a partir de um assunto"
-            ajuda="Uma linha basta. O que você já tiver digitado à mão não é sobrescrito."
+            ajuda={
+              escolhaAutomatica
+                ? 'Uma linha basta. A peça sai escrita, com a máquina do catálogo escolhida pelo texto, legenda e resposta de direct. O que você digitou à mão não é sobrescrito.'
+                : 'Uma linha basta. A peça sai escrita, com legenda e resposta de direct. Escolha a máquina abaixo — nesta peça ela é a decisão, não o cenário.'
+            }
           >
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <input
                 value={assunto}
                 onChange={(e) => setAssunto(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    void redigir();
+                    void gerarPeca();
                   }
                 }}
                 placeholder="Ex.: por que importar dos EUA sai mais barato que comprar aqui"
                 className="w-full rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px]"
               />
               <button
-                onClick={() => void redigir()}
-                disabled={redigindo || assunto.trim().length < 3}
-                className="flex flex-shrink-0 items-center gap-1.5 rounded-control bg-surface-light px-4 text-[13px] font-extrabold text-ink transition-all hover:bg-surface-light-alt disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => void gerarPeca()}
+                disabled={ocupado || assunto.trim().length < 3}
+                title="Escreve os campos, a legenda e a resposta de direct"
+                className="flex flex-shrink-0 items-center justify-center gap-1.5 rounded-control bg-surface-light px-4 py-2.5 text-[13px] font-extrabold text-ink transition-all hover:bg-surface-light-alt disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {redigindo ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />}
-                Escrever
+                {ocupado ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                {gerando ? 'Escrevendo…' : 'Gerar peça'}
+              </button>
+              <button
+                onClick={() => void redigir()}
+                disabled={ocupado || assunto.trim().length < 3}
+                title="Só os campos da arte, sem mexer na legenda"
+                className="flex flex-shrink-0 items-center justify-center gap-1.5 rounded-control border border-border-strong px-3.5 py-2.5 text-[13px] font-extrabold text-fg-secondary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {redigindo && !gerando ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />}
+                Só a arte
               </button>
             </div>
           </Rotulo>
+
+          {faltando.length > 0 && (
+            <div className="mb-4 rounded-control border border-warning/40 bg-warning/10 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-warning">
+              Falta preencher: <b>{faltando.map((c) => c.rotulo).join(', ')}</b>. O playbook não
+              aceita a peça sem isso, e o botão de publicar fica travado até preencher.
+            </div>
+          )}
 
           {modelo.slides > 1 && (
             <div className="mb-4">
@@ -441,6 +615,7 @@ export function EditorDePeca({
               }
               produtoEscolhido={campo.chave === 'produto' ? (produtoId ?? '') : undefined}
               codigoDoModelo={modelo.codigo}
+              escolhaAutomatica={escolhaAutomatica}
             />
           ))}
         </div>
@@ -502,6 +677,13 @@ export function EditorDePeca({
             />
           </div>
 
+          {cortado.length > 0 && (
+            <div className="mt-3 rounded-control border border-warning/40 bg-warning/10 px-3.5 py-2.5 text-[12px] leading-relaxed text-warning">
+              <b>Não coube e saiu com reticência:</b> {cortado.map((c) => `“${c}”`).join(' · ')}.
+              Encurte o texto — aumentar o número de linhas empurraria o produto e o preço.
+            </div>
+          )}
+
           <div className="mt-3 text-[12px] leading-relaxed text-fg-tertiary">
             O arquivo baixa em {largura}×{altura}. A prévia aqui é reduzida só para caber na tela.
           </div>
@@ -534,8 +716,8 @@ export function EditorDePeca({
           </div>
           {modelo.animado && (
             <div className="mt-2 text-[12px] leading-relaxed text-fg-tertiary">
-              O vídeo dura 5 segundos e segue os tempos do playbook — produto em 900ms, título em
-              420ms com 80ms entre as linhas, preço depois de um respiro de 200ms. A gravação roda
+              O vídeo dura 5 segundos e segue os tempos do playbook — produto em 1100ms, título em
+              560ms com 90ms entre as linhas, preço depois de um respiro de 200ms. A gravação roda
               em tempo real, então a prévia anima enquanto grava.
             </div>
           )}
@@ -546,6 +728,11 @@ export function EditorDePeca({
             slides={modelo.slides}
             legenda={legenda}
             exportar={exportarJpeg}
+            impedimento={
+              faltando.length > 0
+                ? `Falta preencher ${faltando.map((c) => c.rotulo).join(', ')}.`
+                : undefined
+            }
           />
 
           <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
@@ -594,15 +781,29 @@ export function EditorDePeca({
 function Rotulo({
   texto,
   ajuda,
+  obrigatorio,
+  vazio,
   children,
 }: {
   texto: string;
   ajuda?: string;
+  obrigatorio?: boolean;
+  vazio?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div className="mb-4">
-      <div className="mb-1.5 text-[12.5px] font-bold">{texto}</div>
+      <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-bold">
+        {texto}
+        {/* Ponto, e não asterisco: o asterisco some no meio de quinze campos.
+            Ele acende quando o campo obrigatório está vazio. */}
+        {obrigatorio && (
+          <span
+            title={vazio ? 'Obrigatório e ainda vazio' : 'Obrigatório'}
+            className={`inline-block h-1.5 w-1.5 rounded-full ${vazio ? 'bg-warning' : 'bg-border-strong'}`}
+          />
+        )}
+      </div>
       {ajuda && <div className="mb-1.5 text-[12px] leading-relaxed text-fg-tertiary">{ajuda}</div>}
       {children}
     </div>
@@ -616,6 +817,7 @@ function CampoDoFormulario({
   onChange,
   produtoEscolhido,
   codigoDoModelo,
+  escolhaAutomatica,
 }: {
   campo: Campo;
   valor: string;
@@ -624,6 +826,8 @@ function CampoDoFormulario({
   produtoEscolhido?: string;
   /** O seletor de ícone desenha a capa na direção deste modelo. */
   codigoDoModelo: string;
+  /** Nesta peça a máquina é cenário e quem escolhe é a redação. */
+  escolhaAutomatica?: boolean;
 }) {
   const classe =
     'w-full rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px]';
@@ -632,16 +836,28 @@ function CampoDoFormulario({
   // design: no grid do perfil a peça aparece com 3cm de largura.
   const palavras = valor.trim() ? valor.trim().split(/\s+/).length : 0;
   const passou = campo.maxPalavras ? palavras > campo.maxPalavras : false;
+  const vazio = !valor.trim();
 
   if (campo.tipo === 'produto') {
+    // Em peça onde a máquina é cenário, o seletor deixa de pedir uma decisão:
+    // ele vira "a IA escolhe", com a opção de trocar. Pedir escolha onde não
+    // há escolha a fazer é o que fazia o fluxo parecer manual.
+    const automatico = escolhaAutomatica && campo.chave === 'produto';
     return (
-      <Rotulo texto={campo.rotulo} ajuda={campo.ajuda}>
+      <Rotulo
+        texto={automatico ? 'Máquina que ilustra' : campo.rotulo}
+        ajuda={
+          automatico
+            ? 'Nesta peça o produto é cenário, não o assunto — a redação escolhe pelo texto. Troque só se quiser outra.'
+            : campo.ajuda
+        }
+      >
         <select
           value={produtoEscolhido ?? valor}
           onChange={(e) => onChange(e.target.value)}
           className={classe}
         >
-          <option value="">— nenhum —</option>
+          <option value="">{automatico ? '— a IA escolhe —' : '— nenhum —'}</option>
           {produtos.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -668,7 +884,7 @@ function CampoDoFormulario({
 
   if (campo.tipo === 'icone') {
     return (
-      <Rotulo texto={campo.rotulo} ajuda={campo.ajuda}>
+      <Rotulo texto={campo.rotulo} ajuda={campo.ajuda} obrigatorio={campo.obrigatorio} vazio={vazio}>
         <SeletorDeIcone modelo={codigoDoModelo} valor={valor} onChange={onChange} />
       </Rotulo>
     );
@@ -676,14 +892,14 @@ function CampoDoFormulario({
 
   if (campo.tipo === 'textoLongo') {
     return (
-      <Rotulo texto={campo.rotulo} ajuda={campo.ajuda}>
+      <Rotulo texto={campo.rotulo} ajuda={campo.ajuda} obrigatorio={campo.obrigatorio} vazio={vazio}>
         <textarea value={valor} onChange={(e) => onChange(e.target.value)} rows={3} className={classe} />
       </Rotulo>
     );
   }
 
   return (
-    <Rotulo texto={campo.rotulo} ajuda={campo.ajuda}>
+    <Rotulo texto={campo.rotulo} ajuda={campo.ajuda} obrigatorio={campo.obrigatorio} vazio={vazio}>
       <input value={valor} onChange={(e) => onChange(e.target.value)} className={classe} />
       {campo.maxPalavras && (
         <div className={`mt-1 text-[12px] ${passou ? 'text-error' : 'text-fg-tertiary'}`}>

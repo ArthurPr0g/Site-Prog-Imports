@@ -48,8 +48,32 @@ COMO ESCREVER CADA CAMPO
 - Chamada para ação é verbo: "Fale no WhatsApp", "Veja no site". Não "clique aqui".
 - Campo que não faz sentido para o assunto volta como string vazia. Vazio é melhor que enchimento — o dono prefere preencher um campo a apagar uma frase inventada.`;
 
+/** Um produto do catálogo, do jeito que o modelo de linguagem precisa ver para
+ *  escolher: curto, com o que distingue uma máquina da outra. */
+export type ProdutoParaEscolha = {
+  id: string;
+  nome: string;
+  ficha: string;
+  preco: string;
+  estoque: number;
+};
+
+/** O modelo escolhe o produto? Só quando o produto é cenário.
+ *
+ *  Em peça de venda a máquina é a decisão comercial, e ela é do dono. Em peça
+ *  de conteúdo — prova social, capa de série, carrossel educativo — o produto
+ *  só ilustra, e escolher à mão é trabalho sem decisão. */
+export function modeloEscolheOProduto(modelo: Modelo): boolean {
+  const temCampoDeProduto = modelo.campos.some((c) => c.tipo === 'produto');
+  return temCampoDeProduto && !modelo.produtoEhOAssunto;
+}
+
 /** A instrução daquela peça, montada a partir dos campos declarados. */
-export function instrucaoDoModelo(modelo: Modelo, assunto: string): string {
+export function instrucaoDoModelo(
+  modelo: Modelo,
+  assunto: string,
+  contexto: { produtos?: ProdutoParaEscolha[]; produtoEscolhido?: string | null } = {}
+): string {
   const campos = camposRedigiveis(modelo);
   const lista = campos
     .map((c) => {
@@ -61,17 +85,39 @@ export function instrucaoDoModelo(modelo: Modelo, assunto: string): string {
     })
     .join('\n');
 
-  return `PEÇA: ${modelo.nome} (${modelo.descricao})
-FORMATO: ${modelo.formato}${modelo.slides > 1 ? `, ${modelo.slides} slides` : ''}
-SUPERFÍCIE: ${modelo.superficie === 'claro' ? 'clara (marfim)' : 'escura (ônix)'}
+  const partes = [
+    `PEÇA: ${modelo.nome} (${modelo.descricao})`,
+    `FORMATO: ${modelo.formato}${modelo.slides > 1 ? `, ${modelo.slides} slides` : ''}`,
+    `SUPERFÍCIE: ${modelo.superficie === 'claro' ? 'clara (marfim)' : 'escura (ônix)'}`,
+  ].join('\n');
 
-ASSUNTO QUE O DONO MANDOU:
-${assunto}
+  const blocos = [partes];
 
-CAMPOS A PREENCHER:
-${lista}
+  // O produto que o dono já escolheu entra como fato, não como sugestão: sem
+  // isto a escrita acontecia às cegas e podia produzir um título falando de
+  // uma máquina enquanto a ficha, vinda do cadastro, falava de outra.
+  if (contexto.produtoEscolhido) {
+    blocos.push(
+      `MÁQUINA DESTA PEÇA (já escolhida pelo dono — escreva sobre ela, não sobre outra):\n${contexto.produtoEscolhido}`
+    );
+  }
 
-Chame a ferramenta "preencher" com um valor para cada campo. Campo que não faz sentido para este assunto vai como string vazia.`;
+  if (contexto.produtos?.length) {
+    const catalogo = contexto.produtos
+      .map((p) => `- ${p.id} · ${p.nome} · ${p.ficha} · ${p.preco}${p.estoque > 0 ? ' · em estoque' : ''}`)
+      .join('\n');
+    blocos.push(
+      `CATÁLOGO DA LOJA — escolha UMA máquina para ilustrar esta peça:\n${catalogo}\n\nNesta peça o produto é cenário, não o assunto: escolha a que mais combina com o texto que você vai escrever. Prefira a que está em estoque. Devolva o id exato em "produtoId". Se nenhuma combinar, devolva "produtoId" vazio.`
+    );
+  }
+
+  blocos.push(`ASSUNTO QUE O DONO MANDOU:\n${assunto}`);
+  blocos.push(`CAMPOS A PREENCHER:\n${lista}`);
+  blocos.push(
+    'Chame a ferramenta "preencher" com um valor para cada campo. Campo que não faz sentido para este assunto vai como string vazia.'
+  );
+
+  return blocos.join('\n\n');
 }
 
 /** O esquema da ferramenta, montado dos campos do modelo.
@@ -90,11 +136,33 @@ export function ferramentaDoModelo(modelo: Modelo) {
     if (c.ajuda) partes.push(c.ajuda);
     propriedades[c.chave] = { type: 'string', description: partes.join(' — ') };
   }
+
+  // `produtoId` entra no mesmo esquema, e não numa segunda chamada: a escolha
+  // da máquina e o texto que fala dela são a mesma decisão. Separar em duas
+  // chamadas deixaria o texto ser escrito antes de a máquina existir — que é
+  // exatamente o defeito que isto veio corrigir.
+  if (modeloEscolheOProduto(modelo)) {
+    propriedades.produtoId = {
+      type: 'string',
+      description: 'O id, exatamente como veio no catálogo, da máquina que ilustra esta peça. Vazio se nenhuma combinar.',
+    };
+  }
+
   return {
     name: 'preencher',
     description: 'Preenche os campos de texto da peça.',
     input_schema: { type: 'object' as const, properties: propriedades },
   };
+}
+
+/** O id do produto que a resposta escolheu, conferido contra o catálogo.
+ *
+ *  Conferir não é zelo: id inventado viraria `product_id` apontando para
+ *  nada, e a peça salvaria com uma referência quebrada. */
+export function produtoEscolhido(bruto: unknown, idsValidos: Set<string>): string | null {
+  if (!bruto || typeof bruto !== 'object') return null;
+  const id = (bruto as Record<string, unknown>).produtoId;
+  return typeof id === 'string' && idsValidos.has(id) ? id : null;
 }
 
 /** Fica só com as chaves que o modelo declarou, e só com strings.

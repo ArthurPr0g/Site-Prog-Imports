@@ -111,14 +111,31 @@ export function espacamento(ctx: Ctx, valor: string): () => void {
   return () => { ctx.letterSpacing = anterior; };
 }
 
+/* O que não coube no último desenho.
+ *
+ *  A reticência avisa na arte, mas numa prévia reduzida a um terço é fácil
+ *  não reparar nela. Quem sabe do corte é quem quebrou as linhas, então ele
+ *  anota aqui e a tela lê depois do traço — sem o desenhista precisar
+ *  devolver nada, o que obrigaria a mudar a assinatura dos catorze modelos. */
+let cortesDoUltimoDesenho: string[] = [];
+
+export function zerarCortes(): void {
+  cortesDoUltimoDesenho = [];
+}
+
+export function cortesDoDesenho(): string[] {
+  return [...new Set(cortesDoUltimoDesenho)];
+}
+
 /** Marca que o texto não coube.
  *
  *  Reticência não é enfeite: é aviso. O que o corte silencioso produzia era
- *  uma peça bonita com a frase pela metade — "Menos que no" sem "Brasil" —, e
+ *  uma peça bonita com a frase pela metade — "Do site" sem "americano" —, e
  *  nada na tela dizia que faltava alguma coisa. Com a reticência o dono vê o
  *  problema na prévia e encurta o texto. Publicar com reticência é ruim;
  *  publicar sem saber que faltam palavras é pior. */
-function marcarCorte(linhas: string[]): string[] {
+function marcarCorte(linhas: string[], original: string): string[] {
+  cortesDoUltimoDesenho.push(original.replace(/\s+/g, ' ').trim().slice(0, 40));
   if (linhas.length === 0) return linhas;
   const ultima = linhas[linhas.length - 1].replace(/[\s.,;:—–-]+$/, '');
   return [...linhas.slice(0, -1), `${ultima}…`];
@@ -137,7 +154,7 @@ export function quebrar(
   // em lugar certo, e reflow automático estraga o ritmo da frase.
   if (texto.includes('\n')) {
     const escritas = texto.split('\n');
-    return escritas.length > maxLinhas ? marcarCorte(escritas.slice(0, maxLinhas)) : escritas;
+    return escritas.length > maxLinhas ? marcarCorte(escritas.slice(0, maxLinhas), texto) : escritas;
   }
 
   const palavras = texto.split(/\s+/).filter(Boolean);
@@ -167,7 +184,7 @@ export function quebrar(
     else sobrou = true;
   }
 
-  return sobrou ? marcarCorte(linhas) : linhas;
+  return sobrou ? marcarCorte(linhas, texto) : linhas;
 }
 
 /** A entrelinha dos títulos: apertada, para o bloco ocupar menos área. */

@@ -26,6 +26,7 @@ export function PublicarNoInstagram({
   slides,
   legenda,
   exportar,
+  impedimento,
 }: {
   pecaId?: string;
   formato: Formato;
@@ -33,6 +34,8 @@ export function PublicarNoInstagram({
   legenda: string;
   /** Devolve o slide pedido como JPEG. O Instagram não aceita PNG. */
   exportar: (slide: number) => Promise<Blob | null>;
+  /** Por que não dá para publicar agora. Vazio quando dá. */
+  impedimento?: string;
 }) {
   const toast = useToast();
   const [estado, setEstado] = useState<EstadoDoInstagram | null>(null);
@@ -111,15 +114,27 @@ export function PublicarNoInstagram({
   return (
     <div className="mt-3">
       {!aberto ? (
-        <button
-          onClick={() => setAberto(true)}
-          disabled={!pecaId}
-          title={pecaId ? undefined : 'Salve a peça antes de publicar.'}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-control border border-border-strong px-4 py-2.5 text-[13.5px] font-extrabold text-fg-secondary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Share2 size={15} />
-          Publicar no Instagram
-        </button>
+        <>
+          <button
+            onClick={() => setAberto(true)}
+            disabled={!pecaId || Boolean(impedimento)}
+            title={impedimento ?? (pecaId ? undefined : 'Salve a peça antes de publicar.')}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-control border border-border-strong px-4 py-2.5 text-[13.5px] font-extrabold text-fg-secondary transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Share2 size={15} />
+            Publicar no Instagram
+          </button>
+          {/* O motivo fica escrito, e não só no title: botão apagado sem
+              explicação faz a pessoa clicar três vezes e desistir. */}
+          {impedimento && (
+            <div className="mt-1.5 text-center text-[11.5px] text-warning">{impedimento}</div>
+          )}
+          {!impedimento && !pecaId && (
+            <div className="mt-1.5 text-center text-[11.5px] text-fg-muted">
+              Salve a peça antes de publicar.
+            </div>
+          )}
+        </>
       ) : (
         <div className="rounded-control border border-border-strong bg-input-alt p-4">
           <div className="mb-3 text-[13px] font-extrabold">Confirmar publicação</div>

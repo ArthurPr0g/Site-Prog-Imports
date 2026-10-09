@@ -38,6 +38,17 @@ export type Modelo = {
   codigo: string;
   /** Tem roteiro de motion escrito. Modelo sem isso so exporta PNG. */
   animado?: boolean;
+  /** O produto é o assunto da peça, não o cenário.
+   *
+   *  Quando é, a escolha é do dono: a peça existe para vender aquela máquina,
+   *  e deixar a máquina ser escolhida por semelhança de texto é como deixar a
+   *  vitrine ser arrumada por quem não sabe o que está em estoque.
+   *
+   *  Quando não é — prova social, capa de série, carrossel educativo — o
+   *  produto entra como ilustração, e aí escolher à mão é trabalho sem
+   *  decisão: a peça fala de importação, não daquele notebook. Nesses, a
+   *  escrita por assunto escolhe sozinha. */
+  produtoEhOAssunto?: boolean;
   nome: string;
   secao: string;
   formato: Formato;
@@ -65,6 +76,7 @@ const CAMPOS_DE_PRODUTO: Campo[] = [
 export const MODELOS: Modelo[] = [
   {
     codigo: '3a',
+    produtoEhOAssunto: true,
     animado: true,
     nome: 'Produto — escuro',
     secao: '03 · Posts de feed',
@@ -86,6 +98,7 @@ export const MODELOS: Modelo[] = [
   },
   {
     codigo: '3b',
+    produtoEhOAssunto: true,
     nome: 'Produto — claro',
     secao: '03 · Posts de feed',
     formato: 'feed',
@@ -107,6 +120,7 @@ export const MODELOS: Modelo[] = [
   },
   {
     codigo: '3c',
+    produtoEhOAssunto: true,
     animado: true,
     nome: 'Oferta',
     secao: '03 · Posts de feed',
@@ -199,6 +213,7 @@ export const MODELOS: Modelo[] = [
   },
   {
     codigo: '4b',
+    produtoEhOAssunto: true,
     nome: 'Carrossel de lançamento',
     secao: '04 · Carrosséis',
     formato: 'carrossel',
@@ -221,6 +236,7 @@ export const MODELOS: Modelo[] = [
   },
   {
     codigo: '5a',
+    produtoEhOAssunto: true,
     animado: true,
     nome: 'Story de venda',
     secao: '05 · Stories',
@@ -239,6 +255,7 @@ export const MODELOS: Modelo[] = [
   },
   {
     codigo: '5b',
+    produtoEhOAssunto: true,
     nome: 'Story de enquete',
     secao: '05 · Stories',
     formato: 'story',
