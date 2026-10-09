@@ -29,7 +29,7 @@ export function SeletorDeIlustracao({
   /** Resultado de uma busca já feita — a cadeia de geração a dispara quando o
    *  catálogo não tem a máquina. Quem monta este componente troca a key para
    *  ele nascer aberto, em vez de um efeito mandar abrir. */
-  inicial?: { termo: string; lista: Ilustracao[] };
+  inicial?: { termo: string; lista: Ilustracao[]; pedido?: string };
   valor: string;
   credito: string;
   onEscolher: (url: string, credito: string) => void;
@@ -40,6 +40,9 @@ export function SeletorDeIlustracao({
   const [buscando, setBuscando] = useState(false);
   const [adotando, setAdotando] = useState<string | null>(null);
   const [achadas, setAchadas] = useState<Ilustracao[] | null>(inicial?.lista ?? null);
+  // Quando a busca recuou para um termo mais curto, o termo pedido fica aqui
+  // para a tela dizer o que está mostrando em vez de fingir que achou o pedido.
+  const [pedido, setPedido] = useState<string | null>(inicial?.pedido ?? null);
 
   async function buscar() {
     const q = (termo.trim() || termoSugerido).trim();
@@ -54,6 +57,8 @@ export function SeletorDeIlustracao({
         return;
       }
       setAchadas(d.ilustracoes ?? []);
+      setPedido(d.termoUsado && d.termoUsado !== q ? q : null);
+      if (d.termoUsado) setTermo(d.termoUsado);
     } catch {
       toast({ ok: false, message: 'Não consegui falar com o servidor.' });
     } finally {
@@ -164,6 +169,14 @@ export function SeletorDeIlustracao({
             <div className="py-6 text-center text-[12.5px] leading-relaxed text-fg-tertiary">
               Nada licenciado para uso comercial nesse termo, nesse tamanho. Tente em inglês, ou mais
               genérico — &quot;gaming laptop&quot; acha o que &quot;Legion 9i 2026&quot; não acha.
+            </div>
+          )}
+
+          {pedido && achadas && achadas.length > 0 && (
+            <div className="mb-2.5 rounded-control border border-border-strong px-3 py-2 text-[11.5px] leading-relaxed text-fg-tertiary">
+              Nada licenciado para <b className="text-fg-secondary">“{pedido}”</b> — provavelmente é
+              um aparelho novo demais. Mostrando <b className="text-fg-secondary">“{termo}”</b>, que é
+              a máquina mais próxima: confira se a foto serve à notícia antes de usar.
             </div>
           )}
 

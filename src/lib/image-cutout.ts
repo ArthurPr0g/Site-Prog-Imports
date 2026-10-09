@@ -21,6 +21,24 @@ const TOLERANCIA_DURA = 30;
  *  serrilhada: foto tem antialiasing, e um corte binário deixaria degraus
  *  brancos ao redor do produto. */
 const TOLERANCIA_SUAVE = 70;
+
+/** Fundo escuro pede tolerância apertada.
+ *
+ *  Com fundo claro, o produto escuro está longe do fundo em cor e uma
+ *  tolerância larga só serve para a borda sair macia. Com fundo escuro — o
+ *  cartão da loja é 17,17,19 — o produto escuro mora na mesma faixa: a tampa de
+ *  um notebook preto fica a uns 30 de distância do fundo, bem dentro de 70. O
+ *  preenchimento a partir da borda atravessava a tampa e entrava na tela, e o
+ *  que sobrava era o logo branco flutuando sozinho.
+ *
+ *  Medido nas 23 fotos do catálogo antes de mudar: com 30/70, seis tinham
+ *  entre 6% e 51% do que sobrou solto em pedaços (Legion i9, Galaxy Book4,
+ *  Predator, Alienware M15 e M16, Nitro V15); com 10/28, nenhuma, e as demais
+ *  variaram no máximo 0,02 de área. */
+const TOLERANCIA_DURA_ESCURO = 10;
+const TOLERANCIA_SUAVE_ESCURO = 28;
+/** Abaixo desta luminância (0 a 255) o fundo conta como escuro. */
+const LUMINANCIA_ESCURA = 90;
 /** Divergência máxima entre os cantos para o fundo ser considerado liso. */
 const DIVERGENCIA_MAXIMA = 34;
 /** Lado máximo processado. Acima disso a imagem é reduzida antes: o custo do
@@ -83,6 +101,11 @@ export function recortarProduto(img: HTMLImageElement): HTMLCanvasElement | null
   // pedaço do cenário e às vezes do produto.
   if (divergencia > DIVERGENCIA_MAXIMA) return null;
 
+  const luminancia = 0.299 * fundo[0] + 0.587 * fundo[1] + 0.114 * fundo[2];
+  const escuro = luminancia < LUMINANCIA_ESCURA;
+  const toleranciaDura = escuro ? TOLERANCIA_DURA_ESCURO : TOLERANCIA_DURA;
+  const toleranciaSuave = escuro ? TOLERANCIA_SUAVE_ESCURO : TOLERANCIA_SUAVE;
+
   // --- preenchimento a partir da borda --------------------------------------
   const visitado = new Uint8Array(w * h);
   const pilha: number[] = [];
@@ -100,16 +123,16 @@ export function recortarProduto(img: HTMLImageElement): HTMLCanvasElement | null
 
     const i = p * 4;
     const d = distancia(px[i], px[i + 1], px[i + 2], fundo[0], fundo[1], fundo[2]);
-    if (d >= TOLERANCIA_SUAVE) continue;
+    if (d >= toleranciaSuave) continue;
 
     visitado[p] = 1;
 
-    if (d <= TOLERANCIA_DURA) {
+    if (d <= toleranciaDura) {
       px[i + 3] = 0;
     } else {
       // Rampa: quanto mais longe do fundo, mais opaco. Aqui a expansão para —
       // esta é a borda do produto, e atravessá-la comeria o contorno.
-      px[i + 3] = Math.round(((d - TOLERANCIA_DURA) / (TOLERANCIA_SUAVE - TOLERANCIA_DURA)) * 255);
+      px[i + 3] = Math.round(((d - toleranciaDura) / (toleranciaSuave - toleranciaDura)) * 255);
       continue;
     }
 

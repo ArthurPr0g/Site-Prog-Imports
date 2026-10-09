@@ -150,6 +150,31 @@ export async function buscarIlustracoes(termo: string, quantas = 12): Promise<Re
   }
 }
 
+/** Busca e, se não achar nada, recua para um termo mais curto.
+ *
+ *  "Surface Laptop Ultra" é um aparelho novo e não tem foto livre; "Surface
+ *  Laptop" tem. O recuo tira a última palavra por vez e para em duas: uma só
+ *  ("laptop") traz qualquer coisa, e foto de qualquer coisa não ilustra
+ *  notícia nenhuma. O termo realmente usado volta junto, porque a tela precisa
+ *  dizer o que está mostrando — mostrar "Surface Laptop" como se fosse o que
+ *  foi pedido seria enganar. */
+export async function buscarComRecuo(
+  termo: string,
+  quantas = 12
+): Promise<ResultadoDaBusca & { termoUsado: string }> {
+  let palavras = termo.trim().split(/\s+/).filter(Boolean);
+  let ultimo: ResultadoDaBusca = { lista: [] };
+
+  while (palavras.length > 0) {
+    const tentativa = palavras.join(' ');
+    ultimo = await buscarIlustracoes(tentativa, quantas);
+    if (ultimo.erro || ultimo.lista.length > 0) return { ...ultimo, termoUsado: tentativa };
+    if (palavras.length <= 2) break;
+    palavras = palavras.slice(0, -1);
+  }
+  return { ...ultimo, termoUsado: palavras.join(' ') };
+}
+
 /** Põe o crédito na legenda, tirando o da imagem anterior.
  *
  *  A ordem em que o dono faz as coisas não pode decidir se o crédito vai: ele

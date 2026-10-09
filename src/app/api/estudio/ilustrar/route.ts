@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { buscarIlustracoes } from '@/lib/estudio/ilustracao';
+import { buscarComRecuo } from '@/lib/estudio/ilustracao';
 
 // Ilustração de fora: buscar e adotar.
 //
@@ -34,11 +34,11 @@ export async function GET(req: NextRequest) {
   const termo = req.nextUrl.searchParams.get('q')?.trim() ?? '';
   if (termo.length < 2) return NextResponse.json({ erro: 'Escreva o que procurar.' }, { status: 400 });
 
-  const { lista, erro } = await buscarIlustracoes(termo);
+  const { lista, erro, termoUsado } = await buscarComRecuo(termo);
   // Falha de busca e busca sem resultado voltam diferentes: a tela diz coisas
   // distintas para cada uma, e a primeira não é afirmação sobre o acervo.
   if (erro) return NextResponse.json({ erro, ilustracoes: [] }, { status: 502 });
-  return NextResponse.json({ ilustracoes: lista });
+  return NextResponse.json({ ilustracoes: lista, termoUsado });
 }
 
 export async function POST(req: NextRequest) {

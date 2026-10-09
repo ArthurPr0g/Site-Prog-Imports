@@ -124,7 +124,7 @@ export function EditorDePeca({
   // Resultado da busca que a cadeia dispara quando o catálogo não tem a máquina.
   // chave muda a cada busca para o seletor remontar já aberto, em vez de um
   // efeito mandar abrir — estado derivado de props não precisa de efeito.
-  const [buscaDeImagem, setBuscaDeImagem] = useState<{ termo: string; lista: Ilustracao[]; chave: number } | null>(null);
+  const [buscaDeImagem, setBuscaDeImagem] = useState<{ termo: string; pedido?: string; lista: Ilustracao[]; chave: number } | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // As imagens ficam em cache pela URL: redesenhar a cada tecla é o que dá a
@@ -456,7 +456,7 @@ export function EditorDePeca({
       const r = await fetch(`/api/estudio/ilustrar?q=${encodeURIComponent(termo)}`);
       const d = await r.json();
       if (!r.ok) return;
-      setBuscaDeImagem({ termo, lista: d.ilustracoes ?? [], chave: Date.now() });
+      setBuscaDeImagem({ termo: d.termoUsado ?? termo, pedido: d.termoUsado && d.termoUsado !== termo ? termo : undefined, lista: d.ilustracoes ?? [], chave: Date.now() });
       toast({
         ok: true,
         message: 'Nenhuma máquina do catálogo combina com este assunto — escolha uma imagem licenciada abaixo.',
@@ -1090,7 +1090,7 @@ function CampoDoFormulario({
   daIA?: boolean;
   termoDeBusca: string;
   credito: string;
-  buscaInicial: { termo: string; lista: Ilustracao[]; chave: number } | null;
+  buscaInicial: { termo: string; pedido?: string; lista: Ilustracao[]; chave: number } | null;
   onEscolherImagem: (url: string, credito: string) => void;
 }) {
   const classe =
@@ -1164,7 +1164,7 @@ function CampoDoFormulario({
       >
         <SeletorDeIlustracao
           key={buscaInicial?.chave ?? 'sem-busca'}
-          inicial={buscaInicial ? { termo: buscaInicial.termo, lista: buscaInicial.lista } : undefined}
+          inicial={buscaInicial ? { termo: buscaInicial.termo, lista: buscaInicial.lista, pedido: buscaInicial.pedido } : undefined}
           termoSugerido={termoDeBusca}
           valor={valor}
           credito={credito}

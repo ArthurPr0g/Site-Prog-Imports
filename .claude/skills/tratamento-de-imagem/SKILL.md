@@ -67,6 +67,39 @@ que aparecem no log:
 o chassi ou deixa halo. Mantenha o fundo original e deixe a moldura do site
 separar.
 
+### O recorte do navegador, no Estúdio
+
+O Estúdio recorta a foto do catálogo na hora de desenhar a peça
+(`src/lib/image-cutout.ts`), e as fotos do catálogo têm o cartão da loja como
+fundo: `17,17,19`. Ou seja, **todo produto escuro está sobre fundo escuro** — o
+caso que o parágrafo acima manda não recortar, e que o código recortava mesmo
+assim.
+
+O sintoma foi um logo branco do Legion flutuando no ar, sem a tampa. A causa: o
+preenchimento a partir da borda come todo pixel a menos de 70 de distância do
+fundo, e a tampa de um notebook preto fica a uns 30. Ele atravessava a tampa,
+entrava na tela e abria buracos na arte exibida nela.
+
+Nenhuma tolerância serve para claro e escuro ao mesmo tempo, então ela depende
+da luminância do fundo: abaixo de 90, `10/28`; acima, `30/70`.
+
+**Como isto foi provado, e como provar de novo ao mexer no recorte:**
+
+1. **Meça todas as fotos, não só a que reclamaram.** A queixa era um notebook; o
+   problema era seis de vinte e três, e os outros cinco só apareceram na medição.
+2. **A métrica é pedaço solto.** Depois do recorte, conte as ilhas de pixel
+   opaco: a fração que está fora da maior ilha denuncia produto comido por
+   dentro. Com `30/70`, seis fotos tinham de 6% a 51% solto; com `10/28`, zero.
+3. **Olhe a folha de contato sobre magenta**, antes e depois, lado a lado.
+   Número bom não prova recorte bonito — foi a folha que mostrou que o defeito
+   abria buracos na *tela* dos notebooks, e não só tirava a tampa.
+4. **Confira que as boas não mudaram.** As que já estavam certas variaram no
+   máximo 0,02 de área.
+
+Se uma foto nova for recusada ou sair com pedaço solto, o conserto é no
+`recortarProduto`, não na foto: o fundo do catálogo é padrão, e uma foto que o
+quebra é um defeito do algoritmo que as próximas vão repetir.
+
 ### Foto com placa: como descobrir antes de estragar
 
 PNG com transparência **não** quer dizer produto recortado. Várias fotos de
