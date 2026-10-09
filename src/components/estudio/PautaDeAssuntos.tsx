@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ChevronDown, Loader2, RefreshCw, X } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { atualizarAssuntosAction, mudarStatusDoAssuntoAction } from '@/app/actions/assuntos';
@@ -50,7 +51,9 @@ function quando(iso: string | null): string {
 
 export function PautaDeAssuntos({ assuntos }: { assuntos: AssuntoNaPauta[] }) {
   const toast = useToast();
+  const router = useRouter();
   const [buscando, setBuscando] = useState(false);
+  const [traduzindo, setTraduzindo] = useState(false);
   const [modelo, setModelo] = useState<Record<string, string>>({});
   const [saindo, setSaindo] = useState<Record<string, boolean>>({});
 
@@ -80,13 +83,40 @@ export function PautaDeAssuntos({ assuntos }: { assuntos: AssuntoNaPauta[] }) {
     });
   }
 
+  /** Traduz em lotes, até a janela visível estar em português.
+   *
+   *  O laço tem teto: a rota devolve quantos faltam, mas confiar só nisso
+   *  deixaria a tela girando para sempre se algum lote falhasse em silêncio
+   *  e o número não baixasse. */
+  async function traduzir() {
+    for (let volta = 0; volta < 4; volta++) {
+      setTraduzindo(true);
+      try {
+        const r = await fetch('/api/estudio/traduzir', { method: 'POST' });
+        const d = await r.json();
+        if (!r.ok) {
+          toast({ ok: false, message: d?.erro ?? 'Não consegui traduzir a pauta.' });
+          return;
+        }
+        router.refresh();
+        if (!d.restantes) return;
+      } catch {
+        toast({ ok: false, message: 'Não consegui falar com o servidor para traduzir.' });
+        return;
+      } finally {
+        setTraduzindo(false);
+      }
+    }
+  }
+
   async function atualizar() {
     setBuscando(true);
     const r = await atualizarAssuntosAction();
     toast(r);
+    setBuscando(false);
     // Buscar e não poder ver o que chegou seria estranho.
     if (r.ok && !aberta) dobrar();
-    setBuscando(false);
+    if (r.ok) await traduzir();
   }
 
   async function descartar(id: string) {
@@ -130,11 +160,15 @@ export function PautaDeAssuntos({ assuntos }: { assuntos: AssuntoNaPauta[] }) {
         </button>
         <button
           onClick={() => void atualizar()}
-          disabled={buscando}
+          disabled={buscando || traduzindo}
           className="inline-flex flex-shrink-0 items-center gap-2 rounded-control bg-surface-light px-4 py-2.5 text-[13px] font-extrabold text-ink transition-all hover:bg-surface-light-alt disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {buscando ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
-          Atualizar assuntos
+          {buscando || traduzindo ? (
+            <Loader2 size={15} className="animate-spin" />
+          ) : (
+            <RefreshCw size={15} />
+          )}
+          {traduzindo ? 'Traduzindo…' : 'Atualizar assuntos'}
         </button>
       </div>
 
