@@ -15,7 +15,7 @@ export default async function PecaPage({ params }: { params: Promise<{ id: strin
 
   const { data } = await supabase
     .from('studio_pieces')
-    .select('id, modelo, titulo, conteudo, product_id, legenda, status')
+    .select('id, modelo, titulo, conteudo, product_id, legenda, resposta_direta, status')
     .eq('id', id)
     .maybeSingle();
 
@@ -49,6 +49,7 @@ export default async function PecaPage({ params }: { params: Promise<{ id: strin
           conteudo: (data.conteudo ?? {}) as Record<string, string>,
           product_id: data.product_id,
           legenda: data.legenda,
+          resposta_direta: data.resposta_direta ?? '',
           status: data.status,
         }}
       />

@@ -39,7 +39,7 @@ export default async function EstudioPage() {
   // mesa: pauta que acumula o que já foi resolvido deixa de ser pauta.
   const { data: pauta } = await supabase
     .from('studio_topics')
-    .select('id, titulo, resumo, fonte, url, publicado_em, relevancia, marcas')
+    .select('id, titulo, resumo, titulo_pt, resumo_pt, fonte, url, publicado_em, relevancia, marcas')
     .eq('status', 'novo')
     .order('relevancia', { ascending: false })
     .order('publicado_em', { ascending: false, nullsFirst: false })

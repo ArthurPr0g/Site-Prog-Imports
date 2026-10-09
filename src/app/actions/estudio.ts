@@ -13,6 +13,8 @@ export type PecaInput = {
   conteudo: Record<string, string>;
   productId: string | null;
   legenda: string;
+  /** A mensagem de direct para quem comentar a palavra-chave da peça. */
+  respostaDireta?: string;
   status: 'Rascunho' | 'Pronta' | 'Publicada';
 };
 
@@ -44,6 +46,7 @@ export async function salvarPecaAction(entrada: PecaInput): Promise<ActionResult
     conteudo: entrada.conteudo,
     product_id: entrada.productId,
     legenda: entrada.legenda,
+    resposta_direta: entrada.respostaDireta ?? '',
     status: entrada.status,
     updated_at: new Date().toISOString(),
   };

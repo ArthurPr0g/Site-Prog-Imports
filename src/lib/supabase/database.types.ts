@@ -1563,6 +1563,7 @@ export type Database = {
           modelo: string
           position: number
           product_id: string | null
+          resposta_direta: string
           status: string
           titulo: string
           updated_at: string
@@ -1576,6 +1577,7 @@ export type Database = {
           modelo: string
           position?: number
           product_id?: string | null
+          resposta_direta?: string
           status?: string
           titulo: string
           updated_at?: string
@@ -1589,6 +1591,7 @@ export type Database = {
           modelo?: string
           position?: number
           product_id?: string | null
+          resposta_direta?: string
           status?: string
           titulo?: string
           updated_at?: string
@@ -1659,8 +1662,10 @@ export type Database = {
           publicado_em: string | null
           relevancia: number
           resumo: string
+          resumo_pt: string | null
           status: string
           titulo: string
+          titulo_pt: string | null
           url: string
         }
         Insert: {
@@ -1671,8 +1676,10 @@ export type Database = {
           publicado_em?: string | null
           relevancia?: number
           resumo?: string
+          resumo_pt?: string | null
           status?: string
           titulo: string
+          titulo_pt?: string | null
           url: string
         }
         Update: {
@@ -1683,8 +1690,10 @@ export type Database = {
           publicado_em?: string | null
           relevancia?: number
           resumo?: string
+          resumo_pt?: string | null
           status?: string
           titulo?: string
+          titulo_pt?: string | null
           url?: string
         }
         Relationships: []

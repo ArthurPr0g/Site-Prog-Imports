@@ -13,6 +13,8 @@ import { gravarPeca } from '@/lib/estudio/video';
 import { SeletorDeIcone } from '@/components/estudio/SeletorDeIcone';
 import { PublicarNoInstagram } from '@/components/estudio/PublicarNoInstagram';
 import { PreviaDoInstagram } from '@/components/estudio/PreviaDoInstagram';
+import { RespostaDoDirect } from '@/components/estudio/RespostaDoDirect';
+import { palavraChaveDa } from '@/lib/estudio/direct';
 import type { Ctx } from '@/lib/estudio/marca';
 import { formatBRL } from '@/lib/format';
 
@@ -58,6 +60,7 @@ export function EditorDePeca({
     conteudo: Record<string, string>;
     product_id: string | null;
     legenda: string;
+    resposta_direta?: string;
     status: string;
   };
 }) {
@@ -69,6 +72,7 @@ export function EditorDePeca({
   const [conteudo, setConteudo] = useState<Record<string, string>>(peca?.conteudo ?? {});
   const [produtoId, setProdutoId] = useState<string | null>(peca?.product_id ?? null);
   const [legenda, setLegenda] = useState(peca?.legenda ?? '');
+  const [respostaDireta, setRespostaDireta] = useState(peca?.resposta_direta ?? '');
   const [status, setStatus] = useState(peca?.status ?? 'Rascunho');
   const [slide, setSlide] = useState(1);
   const [assunto, setAssunto] = useState(assuntoInicial ?? '');
@@ -104,6 +108,8 @@ export function EditorDePeca({
     () => produtos.find((p) => p.id === conteudo.produtoB) ?? null,
     [produtos, conteudo.produtoB]
   );
+
+  const palavraChave = useMemo(() => palavraChaveDa(conteudo, legenda), [conteudo, legenda]);
 
   const chaveDasImagens = [produto?.capa, produtoA?.capa, produtoB?.capa, conteudo.imagem]
     .map((s) => s ?? '')
@@ -323,6 +329,7 @@ export function EditorDePeca({
       conteudo,
       productId: produtoId,
       legenda,
+      respostaDireta,
       status: status as 'Rascunho' | 'Pronta' | 'Publicada',
     });
     setSalvando(false);
@@ -469,6 +476,13 @@ export function EditorDePeca({
             {legenda.trim() ? `${legenda.trim().split(/\s+/).length} palavras` : 'Vazia'}
           </div>
         </div>
+
+        <RespostaDoDirect
+          palavraDetectada={palavraChave}
+          produto={produto}
+          valor={respostaDireta}
+          onChange={setRespostaDireta}
+        />
       </div>
 
       {/* ---------------------------------------------------------- preview */}
