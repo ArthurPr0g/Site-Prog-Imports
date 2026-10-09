@@ -73,8 +73,15 @@ export function mensagemPadrao({
   }
 
   const preco = produto.promo_price ?? produto.price;
+
+  // A ficha só entra com o que o nome ainda não disse. No catálogo da loja o
+  // nome costuma trazer tudo — "Alienware Area-51 16" — RTX 5080 · Core Ultra
+  // 9 · 32GB · 2TB" — e repetir embaixo faz a mensagem parecer automática,
+  // que é justamente o que ela não pode parecer no direct de um cliente.
+  const nomeNormalizado = produto.name.toLowerCase();
   const ficha = [produto.cpu, produto.gpu, produto.ram, produto.storage]
-    .filter(Boolean)
+    .filter((item): item is string => Boolean(item))
+    .filter((item) => !nomeNormalizado.includes(item.toLowerCase()))
     .join(' · ');
 
   const linhas = [`Oi! Vi seu "${chave}" no post.`, ''];
