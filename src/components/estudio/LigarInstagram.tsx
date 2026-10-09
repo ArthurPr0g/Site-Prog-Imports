@@ -155,8 +155,9 @@ export function LigarInstagram({
           responde erro 514, sem configuração que resolva.
         </p>
         <p>
-          <b className="text-fg-secondary">Cinquenta publicações por dia.</b> Longe do que a loja
-          usa, mas é o teto da conta.
+          <b className="text-fg-secondary">Existe um teto diário por conta.</b> O número é da Meta e
+          muda sem aviso, então o sistema não o chuta: pergunta à API e mostra quanto ainda cabe, ali
+          na hora de confirmar.
         </p>
       </div>
     </div>

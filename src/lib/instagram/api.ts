@@ -209,9 +209,13 @@ export async function tokenLongo(
 
 /** Quantas publicações ainda cabem nas próximas 24 horas.
  *
- *  O limite é 50 por dia por conta. Longe de ser um problema para uma loja,
- *  mas é a única checagem que distingue "a API recusou" de "você já postou
- *  demais hoje". */
+ *  O teto vem da API e não está cravado aqui: a documentação diz 50, e a conta
+ *  da loja respondeu 100. Número de terceiro que muda sem aviso é número para
+ *  perguntar, não para repetir — o 50 abaixo só serve se a resposta vier sem o
+ *  campo.
+ *
+ *  Vale a chamada porque é o que distingue "a API recusou" de "você já postou
+ *  demais hoje", que são dois problemas com soluções opostas. */
 export async function cotaRestante({ conta, token }: Credenciais): Promise<number | null> {
   try {
     const dados = await chamar<{ data?: { quota_usage?: number; config?: { quota_total?: number } }[] }>(
