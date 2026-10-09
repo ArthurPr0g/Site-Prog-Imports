@@ -10,6 +10,8 @@ import {
   COR,
   ENTRELINHA_TITULO,
   MARGEM,
+  alturaDoTitulo,
+  quebrar,
   brilho,
   linhasDoTitulo,
   etiqueta,
@@ -460,6 +462,107 @@ export const desenhar3E: Desenhista = ({ ctx, largura, altura, conteudo, imagens
   if (sub) paragrafo(ctx, sub, MARGEM, base + 70 + alturaTitulo + 24, 40, { largura: largura - MARGEM * 2, maxLinhas: 2 });
 };
 
+/* ------------------------------------------------------------- 3F · notícia */
+
+/** Onde acaba a zona da imagem e começa a do texto. */
+const FIM_DA_IMAGEM = 800;
+
+/** Post de notícia: a imagem conta a notícia, o texto diz o que ela significa.
+ *
+ *  Nasceu de um defeito. A pauta mandava a notícia para modelos de venda e de
+ *  guia — o 4A virava "Como funciona a importação" e o 5A saía sem imagem, com
+ *  a frase da notícia na linha de ficha técnica. Nenhum tinha a imagem como
+ *  protagonista nem um lugar para a fonte.
+ *
+ *  A imagem chega de dois jeitos e o desenho muda com ela. Recorte do
+ *  catálogo (canvas): salta sobre o halo, com sombra de contato, como nos
+ *  outros modelos. Foto inteira de fora (img): vira o fundo da zona de cima,
+ *  e um degradê leva ao onyx para o texto ler por cima. Sem imagem nenhuma
+ *  entra o globo da marca — melhor um desenho que parece de propósito que um
+ *  buraco. */
+export const desenhar3F: Desenhista = ({ ctx, largura, altura, conteudo, imagens }) => {
+  preencher(ctx, COR.onix, largura, altura);
+
+  const imagem = imagens.produto;
+  const ehRecorte = typeof HTMLCanvasElement !== 'undefined' && imagem instanceof HTMLCanvasElement;
+
+  if (imagem && ehRecorte) {
+    brilho(ctx, largura / 2, 430, 660, halo(conteudo, 'halo'), 0.5);
+    sombraDeContato(ctx, 540, 660, 720, 70, 0.75);
+    produto(ctx, imagem, { x: 90, y: 150, largura: 900, altura: 520 }, { rotacao: -6, desfoque: 50 });
+  } else if (imagem) {
+    // Foto inteira, cortada para cobrir a zona de cima sem esticar.
+    const escala = Math.max(largura / imagem.width, FIM_DA_IMAGEM / imagem.height);
+    const l = imagem.width * escala;
+    const a = imagem.height * escala;
+    ctx.drawImage(imagem, (largura - l) / 2, (FIM_DA_IMAGEM - a) / 2, l, a);
+  } else {
+    brilho(ctx, largura / 2, 420, 700, halo(conteudo, 'halo'), 0.5);
+    if (imagens.icone) {
+      ctx.save();
+      ctx.globalAlpha = 0.92;
+      ctx.drawImage(imagens.icone, 340, 220, 400, 400);
+      ctx.restore();
+    }
+  }
+
+  // Do meio da imagem ao onyx. Mais cedo e mais forte na foto, que é clara e
+  // brigaria com a manchete; no recorte, que já está sobre fundo escuro, só
+  // limpa o pé da imagem.
+  const inicioDoFade = imagem && !ehRecorte ? 380 : 520;
+  const fade = ctx.createLinearGradient(0, inicioDoFade, 0, FIM_DA_IMAGEM);
+  fade.addColorStop(0, `${COR.onix}00`);
+  fade.addColorStop(0.6, `${COR.onix}E6`);
+  fade.addColorStop(1, COR.onix);
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, inicioDoFade, largura, FIM_DA_IMAGEM - inicioDoFade);
+  ctx.fillStyle = COR.onix;
+  ctx.fillRect(0, FIM_DA_IMAGEM, largura, altura - FIM_DA_IMAGEM);
+
+  // O topo precisa ler sobre foto clara.
+  if (imagem && !ehRecorte) {
+    const topo = ctx.createLinearGradient(0, 0, 0, 240);
+    topo.addColorStop(0, `${COR.onix}CC`);
+    topo.addColorStop(1, `${COR.onix}00`);
+    ctx.fillStyle = topo;
+    ctx.fillRect(0, 0, largura, 240);
+  }
+
+  lockup(ctx, imagens.icone ?? null, MARGEM, MARGEM, 64);
+  const tag = campo(conteudo, 'tag');
+  if (tag) etiqueta(ctx, tag, largura - MARGEM, MARGEM + 6, { alinhamento: 'direita' });
+
+  // A pilha de texto é ancorada na base e cresce para cima — a fonte fica
+  // sempre na mesma linha, qualquer que seja o tamanho da manchete.
+  const larguraUtil = largura - MARGEM * 2;
+  const base = altura - MARGEM;
+
+  const fonteBruta = campo(conteudo, 'fonte');
+  const fonte = fonteBruta ? (/^fonte/i.test(fonteBruta) ? fonteBruta : `Fonte: ${fonteBruta}`) : '';
+  let piso = base;
+  if (fonte) {
+    rotulo(ctx, fonte, MARGEM, base, 22, COR.prataEscura);
+    regua(ctx, MARGEM, base - 52, larguraUtil, COR.grafiteClaro);
+    piso = base - 52;
+  }
+
+  let topo = piso;
+  const apoio = campo(conteudo, 'apoio');
+  if (apoio) {
+    ctx.font = fonteTexto(34);
+    const alturaApoio = quebrar(ctx, apoio, larguraUtil, 3).length * 34 * 1.4;
+    topo = piso - 28 - alturaApoio;
+    paragrafo(ctx, apoio, MARGEM, topo, 34, { largura: larguraUtil, maxLinhas: 3, cor: COR.prata });
+  }
+
+  const manchete = campo(conteudo, 'manchete', 'Manchete da notícia');
+  const alturaManchete = alturaDoTitulo(ctx, manchete, larguraUtil, 88, 3);
+  const topoManchete = topo - 28 - alturaManchete;
+  titulo(ctx, manchete, MARGEM, topoManchete, 88, { largura: larguraUtil, maxLinhas: 3 });
+
+  const linha = campo(conteudo, 'linha');
+  if (linha) rotulo(ctx, linha, MARGEM, topoManchete - 22, 24, COR.ouro);
+};
 /* ------------------------------------------------------------------ apoio */
 
 /** Altura que um título vai ocupar, para ancorar a pilha no rodapé.
@@ -562,5 +665,6 @@ export const DESENHISTAS_DE_FEED: Record<string, Desenhista> = {
   '3c': desenhar3C,
   '3d': desenhar3D,
   '3e': desenhar3E,
+  '3f': desenhar3F,
 };
 

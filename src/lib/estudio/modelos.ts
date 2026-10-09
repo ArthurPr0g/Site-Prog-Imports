@@ -30,6 +30,9 @@ export type Campo = {
   obrigatorio?: boolean;
   /** Em carrossel, de qual slide é o campo. */
   slide?: number;
+  /** Preenchido pelo sistema, nunca pela redação. A fonte de uma notícia vem da
+   *  pauta; deixar a IA escrevê-la seria inventar de onde a informação veio. */
+  naoRedigir?: boolean;
 };
 
 export type Formato = 'feed' | 'story' | 'carrossel' | 'destaque';
@@ -200,6 +203,29 @@ export const MODELOS: Modelo[] = [
     ],
   },
   {
+    codigo: '3f',
+    nome: 'Notícia',
+    secao: '03 · Posts de feed',
+    formato: 'feed',
+    slides: 1,
+    superficie: 'escuro',
+    descricao: 'Notícia do setor: a imagem é a protagonista, a manchete diz o que aconteceu e uma linha diz o que isso muda para quem importa.',
+    campos: [
+      // O produto é cenário: a notícia é o assunto, e a imagem da máquina só a
+      // ilustra. A redação escolhe no catálogo; quando a loja não tem a máquina
+      // da notícia, entra foto licenciada de fora, com crédito.
+      ...CAMPOS_DE_PRODUTO,
+      CAMPO_DE_IMAGEM_DE_FORA,
+      // Chaves próprias, nenhuma que o cadastro de produto preencha: `titulo`,
+      // `etiqueta` e `sobretitulo` receberiam o nome e a condição da máquina e
+      // bloqueariam a manchete — o defeito que já custou o 3D, o 3C e o 3E.
+      { chave: 'tag', rotulo: 'Selo do topo', tipo: 'rotulo', ajuda: 'NOTÍCIA, LANÇAMENTO ou RUMOR. Use RUMOR sempre que a fonte disser que a empresa não confirmou.' },
+      { chave: 'linha', rotulo: 'Linha acima da manchete', tipo: 'rotulo', ajuda: 'Marca · linha. Ex.: APPLE · MACBOOK PRO.' },
+      { chave: 'manchete', rotulo: 'Manchete', tipo: 'texto', maxPalavras: 12, obrigatorio: true, ajuda: 'O que aconteceu, numa frase. Se for rumor, a manchete diz que é rumor.' },
+      { chave: 'apoio', rotulo: 'O que isso muda para quem importa', tipo: 'textoLongo', ajuda: 'Uma ou duas frases, no ângulo de quem compra tecnologia dos EUA. Sem prometer produto, preço ou prazo.' },
+      { chave: 'fonte', rotulo: 'Fonte', tipo: 'texto', naoRedigir: true, ajuda: 'Vem da pauta. Notícia sem fonte é boato — não apague.' },
+    ],
+  },  {
     codigo: '4a',
     nome: 'Carrossel educativo',
     secao: '04 · Carrosséis',

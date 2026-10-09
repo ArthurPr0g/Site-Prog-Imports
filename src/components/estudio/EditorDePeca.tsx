@@ -73,11 +73,14 @@ export function EditorDePeca({
   produtos,
   peca,
   assuntoInicial,
+  fonteInicial,
 }: {
   modelo: Modelo;
   produtos: ProdutoDoEstudio[];
   /** Vem da pauta, quando a peça nasceu de uma notícia. */
   assuntoInicial?: string;
+  /** De onde veio a notícia. Só entra em modelo que tem o campo fonte. */
+  fonteInicial?: string;
   peca?: {
     id: string;
     titulo: string;
@@ -93,7 +96,12 @@ export function EditorDePeca({
   const { largura, altura } = DIMENSOES[modelo.formato];
 
   const [titulo, setTitulo] = useState(peca?.titulo ?? '');
-  const [conteudo, setConteudo] = useState<Record<string, string>>(peca?.conteudo ?? {});
+  const [conteudo, setConteudo] = useState<Record<string, string>>(
+    peca?.conteudo ??
+      (fonteInicial?.trim() && modelo.campos.some((c) => c.chave === 'fonte')
+        ? { fonte: fonteInicial.trim().slice(0, 80) }
+        : {})
+  );
   const [produtoId, setProdutoId] = useState<string | null>(peca?.product_id ?? null);
   const [legenda, setLegenda] = useState(peca?.legenda ?? '');
   const [respostaDireta, setRespostaDireta] = useState(peca?.resposta_direta ?? '');
@@ -411,7 +419,18 @@ export function EditorDePeca({
       // na publicação, e a legenda é onde a publicação tem texto. Entra depois
       // das hashtags, numa linha só, para não disputar com o gancho.
       const creditoDaFoto = conteudoAtual.imagemCredito?.trim();
-      setLegenda(creditoDaFoto ? `${dados.legenda}\n\n${creditoDaFoto}` : dados.legenda);
+
+      // A fonte da notícia também vai na legenda: notícia sem fonte é boato, e
+      // a arte sozinha some quando o post é compartilhado como texto.
+      const fonteBruta = conteudoAtual.fonte?.trim();
+      const fonteDaNoticia = fonteBruta
+        ? /^fonte/i.test(fonteBruta)
+          ? fonteBruta
+          : `Fonte: ${fonteBruta}`
+        : '';
+
+      const rodape = [fonteDaNoticia, creditoDaFoto].filter(Boolean).join('\n');
+      setLegenda(rodape ? `${dados.legenda}\n\n${rodape}` : dados.legenda);
 
       if (!sobre.silencioso) {
         toast({ ok: true, message: 'Legenda escrita. Confira os números antes de publicar.' });

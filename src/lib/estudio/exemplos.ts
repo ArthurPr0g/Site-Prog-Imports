@@ -58,6 +58,14 @@ export const EXEMPLOS: Record<string, Record<string, string>> = {
     marcaDagua: '51',
     halo: 'rubi',
   },
+  '3f': {
+    tag: 'Rumor',
+    linha: 'APPLE · MACBOOK PRO',
+    manchete: 'MacBook Pro com touchscreen chega em 27 de outubro, diz relatório',
+    apoio: 'A Apple ainda não confirmou. Se vier, é a maior mudança na linha em anos — e quem importa sai na frente.',
+    fonte: '9to5Mac',
+    halo: 'roxo',
+  },
   '4a': {
     titulo: 'Como importar\nsem susto',
     subtitulo: 'O caminho inteiro, do pedido à sua porta.',

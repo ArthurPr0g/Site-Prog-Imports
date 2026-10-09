@@ -22,7 +22,10 @@ import type { Modelo, Campo } from '@/lib/estudio/modelos';
 const TIPOS_REDIGIVEIS = new Set(['texto', 'textoLongo', 'rotulo', 'numero']);
 
 export function camposRedigiveis(modelo: Modelo): Campo[] {
-  return modelo.campos.filter((c) => TIPOS_REDIGIVEIS.has(c.tipo));
+  // `naoRedigir` existe para o que tem fonte e não pode ser opinião da IA: a
+  // fonte de uma notícia vem da pauta, e uma redação que a escrevesse estaria
+  // inventando de onde a informação veio.
+  return modelo.campos.filter((c) => TIPOS_REDIGIVEIS.has(c.tipo) && !c.naoRedigir);
 }
 
 /** O tom da marca, em regras verificáveis.
@@ -173,6 +176,18 @@ export function produtoEscolhido(bruto: unknown, idsValidos: Set<string>): strin
  *  número no lugar de string e objeto aninhado são todos possíveis. Peneirar
  *  aqui é o que impede uma resposta torta de virar campo fantasma no formulário
  *  ou `[object Object]` desenhado na arte. */
+/** Troca o `\n` escrito como texto por quebra de linha de verdade.
+ *
+ *  O modelo de linguagem às vezes devolve a quebra como os dois caracteres
+ *  barra e n — a ajuda do campo diz "quebre com Enter", e dentro de uma string
+ *  JSON a resposta escapa o Enter. O resultado desenhado na arte era
+ *  "Como funciona\na importação", com a barra e o n visíveis, e o texto nem
+ *  quebrava. Normalizar aqui, na entrada, em vez de confiar que a próxima
+ *  resposta venha certa. */
+export function semEscapes(texto: string): string {
+  return texto.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\t/g, ' ');
+}
+
 export function peneirar(bruto: unknown, modelo: Modelo): Record<string, string> {
   if (!bruto || typeof bruto !== 'object') return {};
   const permitidas = new Set(camposRedigiveis(modelo).map((c) => c.chave));
@@ -180,7 +195,7 @@ export function peneirar(bruto: unknown, modelo: Modelo): Record<string, string>
   for (const [chave, valor] of Object.entries(bruto as Record<string, unknown>)) {
     if (!permitidas.has(chave)) continue;
     if (typeof valor !== 'string') continue;
-    const limpo = valor.trim();
+    const limpo = semEscapes(valor).trim();
     if (limpo) saida[chave] = limpo;
   }
   return saida;
@@ -303,7 +318,7 @@ export const FERRAMENTA_DA_LEGENDA = {
 };
 
 function texto(valor: unknown): string {
-  return typeof valor === 'string' ? valor.trim() : '';
+  return typeof valor === 'string' ? semEscapes(valor).trim() : '';
 }
 
 /** Normaliza uma hashtag: sem cerquilha, sem espaço, sem acento.

@@ -90,7 +90,28 @@ function endereco(bloco: string): string {
   return rss || (atom ? atom[1] : '');
 }
 
-function pontuar(texto: string): { relevancia: number; marcas: string[] } {
+/** O que nunca vira post, por mais que cite a marca.
+ *
+ *  Podcast, newsletter e roteiro de ofertas citam Apple e iPhone o tempo todo e
+ *  passavam no corte: seis itens quase iguais de "ofertas de AirPods" e três
+ *  "9to5Mac Daily" lotavam a pauta. Oferta americana também não serve a quem
+ *  importa — o preço é de lá e a loja não vende acessório. O corte por
+ *  relevância não resolve, porque o problema não é pouca marca, é o formato. */
+const RUIDO =
+  /\b(daily|podcast|newsletter|weekly|roundup|recap|deals?|discounts?|coupons?|prime day|black friday|cyber monday|giveaway|how to watch|live ?blog)\b/i;
+
+/** Software e serviço: a loja vende máquina, não app. Desconta em vez de
+ *  excluir, porque "iPhone 18 chega com iOS 27" ainda é notícia de hardware. */
+const SOFTWARE =
+  /\b(ios|ipados|macos|watchos|visionos|beta|update|siri|icloud|apps?|app store|chatgpt|ai model|subscription|streaming)\b/i;
+
+/** Título e resumo chegam separados de propósito: o ruído e o software se
+ *  julgam pela manchete. O resumo de um lançamento legítimo diz "on sale
+ *  October 27" e barraria notícia que a loja quer. */
+function pontuar(titulo: string, resumo: string): { relevancia: number; marcas: string[] } {
+  if (RUIDO.test(titulo)) return { relevancia: 0, marcas: [] };
+
+  const texto = `${titulo} ${resumo}`;
   const marcas = new Set<string>();
   let relevancia = 0;
   for (const s of SINAIS) {
@@ -100,6 +121,9 @@ function pontuar(texto: string): { relevancia: number; marcas: string[] } {
     }
   }
   if (relevancia > 0 && NOVIDADE.test(texto)) relevancia += 2;
+  // Software vem depois da novidade: "Meta lança app para iPad" soma marca e
+  // "lança", e é justamente o que não é produto da loja.
+  if (SOFTWARE.test(titulo)) relevancia -= 3;
   return { relevancia, marcas: [...marcas] };
 }
 
@@ -129,7 +153,7 @@ async function lerFonte(fonte: (typeof FONTES)[number]): Promise<Assunto[]> {
 
       const data = limpar(tag(bloco, 'pubDate') || tag(bloco, 'published') || tag(bloco, 'updated'));
       const quando = data ? new Date(data) : null;
-      const { relevancia, marcas } = pontuar(`${titulo} ${resumo}`);
+      const { relevancia, marcas } = pontuar(titulo, resumo);
 
       return {
         titulo: titulo.slice(0, 300),

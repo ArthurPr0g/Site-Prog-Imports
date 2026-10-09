@@ -74,10 +74,8 @@ function assinarDobra(avisar: () => void): () => void {
  *  pauta num formulário. Notícia vira capa de Reels, carrossel de explicação,
  *  story ou post de oferta — os outros modelos existem para outras ocasiões. */
 const MODELOS = [
-  { codigo: '4a', rotulo: 'Carrossel' },
+  { codigo: '3f', rotulo: 'Notícia' },
   { codigo: '3e', rotulo: 'Capa de Reels' },
-  { codigo: '5a', rotulo: 'Story' },
-  { codigo: '3c', rotulo: 'Oferta' },
 ];
 
 function quando(iso: string | null): string {
@@ -276,7 +274,7 @@ export function PautaDeAssuntos({ assuntos }: { assuntos: AssuntoNaPauta[] }) {
                   // O título em português vai para o editor: a peça é escrita
                   // em português, e mandar a manchete em inglês faria o
                   // redator traduzir de novo, com outra escolha de palavras.
-                  href={`/admin/estudio/nova?modelo=${modelo[a.id] ?? MODELOS[0].codigo}&assunto=${encodeURIComponent(a.titulo_pt || a.titulo)}`}
+                  href={`/admin/estudio/nova?modelo=${modelo[a.id] ?? MODELOS[0].codigo}&assunto=${encodeURIComponent(a.titulo_pt || a.titulo)}&fonte=${encodeURIComponent(a.fonte)}`}
                   onClick={() => void mudarStatusDoAssuntoAction(a.id, 'produzido')}
                   className="rounded-control border border-ouro/40 px-3.5 py-1.5 text-[12px] font-extrabold text-ouro transition-colors hover:bg-ouro hover:text-ink"
                 >
