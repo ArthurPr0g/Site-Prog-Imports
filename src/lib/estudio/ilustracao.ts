@@ -60,6 +60,18 @@ type RespostaDaBusca = {
  *  mil custa mais caro que não publicar. */
 const LARGURA_MINIMA = 1080;
 
+/** O nome da licença como se escreve: "CC BY-SA 4.0", "CC0 1.0".
+ *
+ *  A API devolve só o sufixo (`by-sa`, `cc0`, `pdm`), e prefixar tudo com "CC"
+ *  produzia "CC CC0 1.0" — o tipo de erro que, num crédito público, faz a
+ *  atribuição parecer feita por quem não leu o que estava copiando. */
+function nomeDaLicenca(licenca: string, versao?: string): string {
+  const sigla = licenca.trim().toUpperCase();
+  if (!sigla) return 'Licença não informada';
+  const base = sigla.startsWith('CC') || sigla === 'PDM' ? sigla : `CC ${sigla}`;
+  return `${base}${versao ? ` ${versao}` : ''}`;
+}
+
 function credito(autor: string, licenca: string, fonte: string): string {
   const quem = autor.trim() || 'autor não identificado';
   const onde = fonte === 'wikimedia' ? 'Wikimedia Commons' : fonte || 'internet';
@@ -115,7 +127,7 @@ export async function buscarIlustracoes(termo: string, quantas = 12): Promise<Re
       .filter((r) => r.url && (r.width ?? 0) >= LARGURA_MINIMA)
       .slice(0, quantas)
       .map((r) => {
-        const licenca = `CC ${(r.license ?? '').toUpperCase()}${r.license_version ? ` ${r.license_version}` : ''}`.trim();
+        const licenca = nomeDaLicenca(r.license ?? '', r.license_version);
         const autor = r.creator ?? '';
         const fonte = r.source ?? '';
         return {
