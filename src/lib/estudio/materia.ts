@@ -86,9 +86,17 @@ const NAO_E_CONTEUDO =
   /(logo|avatar|gravatar|sprite|icon|badge|emoji|pixel|spacer|1x1|\/ads?\/|banner|promo|author|profile|placeholder|loading|blank|newsletter|subscribe)/i;
 
 function normalizar(u: URL): string {
-  // Sem o sufixo de tamanho do WordPress (-1024x683) e sem a query: é a mesma
-  // foto em tamanhos diferentes, e mostrar quatro vezes não ajuda ninguém.
-  return `${u.hostname}${u.pathname.replace(/-\d+x\d+(?=\.\w+$)/, '')}`.toLowerCase();
+  // A mesma foto em tamanhos e formatos diferentes é uma foto só, e mostrar
+  // quatro vezes não ajuda ninguém. Três jeitos de variar o nome, todos vistos
+  // nas matérias de verdade:
+  //   WordPress   foto-1024x683.jpg
+  //   Future/TH   foto-1920-80.jpg  e  foto-1200-80.jpg
+  //   conversão   foto.jpg  e  foto.jpg.webp
+  const caminho = u.pathname
+    .replace(/\.(webp|avif)$/i, '')
+    .replace(/-\d+x\d+(?=\.\w+$)/, '')
+    .replace(/-\d{3,4}-\d{2,3}(?=\.\w+$)/, '');
+  return `${u.hostname}${caminho}`.toLowerCase();
 }
 
 /** Lê o HTML da matéria e devolve as imagens que servem a um post. */
@@ -152,14 +160,20 @@ export async function imagensDaMateria(endereco: string): Promise<{ lista: Image
 
   // 2) As do corpo. Só dentro de <article> quando ele existe: o resto da página
   // são relacionadas, barra lateral e publicidade, que não são desta notícia.
-  const ini = html.search(/<article\b/i);
-  const fim = html.toLowerCase().lastIndexOf('</article>');
-  const corpo = ini >= 0 && fim > ini ? html.slice(ini, fim) : html;
+  //
+  // O maior, e não "do primeiro ao último": no 9to5Mac o primeiro <article> da
+  // página é a lista de matérias relacionadas, com 7,8KB de miniaturas e
+  // avatares. O corpo da notícia é o bloco mais longo.
+  const blocos = [...html.matchAll(/<article\b[\s\S]*?<\/article>/gi)].map((m) => m[0]);
+  const corpo = blocos.length ? blocos.reduce((a, b) => (b.length > a.length ? b : a)) : html;
 
   for (const m of corpo.matchAll(/<(img|source)\b[^>]*>/gi)) {
     const a = atributos(m[0]);
-    const srcset = a.srcset || a['data-srcset'] || '';
-    const fonte = (srcset && maiorDoSrcset(srcset)) || a['data-src'] || a['data-lazy-src'] || a.src || '';
+    // Miniatura de matéria relacionada e avatar de comentarista se reconhecem
+    // pela classe, antes de qualquer medida.
+    if (/(wp-post-image|avatar|related|thumbnail|author|comment)/i.test(a.class ?? '')) continue;
+    const srcset = a.srcset || a['data-srcset'] || a['data-lazy-srcset'] || '';
+    const fonte = (srcset && maiorDoSrcset(srcset)) || a['data-src'] || a['data-lazy-src'] || a['data-original'] || a.src || '';
     aceitar(fonte, 'artigo', a.alt ?? '', Number(a.width) || 0, Number(a.height) || 0);
     if (saida.length >= 12) break;
   }
