@@ -45,13 +45,18 @@ primeira versão tinha três elementos entrando entre 300 e 420ms e depois meio
 segundo de nada: a peça chegava em blocos, com buracos no meio, que é o que faz
 a animação parecer um slideshow apressado.
 
+Essa regra vale para a varredura de brilho também, e foi onde ela escapou: o
+brilho ficou em 1900ms enquanto o CTA entrava em 1560, abrindo 340ms em que a
+peça estava inteira e parada esperando a luz. Conferir o vão é somar a lista,
+não confiar na leitura.
+
 **O brilho no ouro é um por peça.** Dois já viram enfeite, e o ouro é justamente
 o elemento que o playbook mais racionou — no máximo dois elementos dourados por
 arte parada, uma varredura de brilho por peça animada.
 
-O stagger de 80ms entre linhas é o que dá a leitura em cascata. Abaixo disso as
-linhas parecem entrar juntas e o olho não acompanha a ordem; acima, a peça fica
-lenta.
+O stagger de 90ms entre linhas é o que dá a leitura em cascata. Abaixo de 80 as
+linhas parecem entrar juntas e o olho não acompanha a ordem; acima de 100, a
+peça fica lenta.
 
 ## Estrutura de Reels · 20 a 35 s
 
@@ -72,16 +77,25 @@ construíram.
 
 ## O que anima
 
-Na peça gráfica gerada pelo Estúdio:
+Na peça gráfica gerada pelo Estúdio — os números são os da tabela acima, não os
+do rascunho do playbook:
 
-- **Título**: sobe 60px com fade, 420ms, stagger de 80ms entre linhas.
-- **Produto**: zoom de 1.14 para 1 em 900ms, começando junto com o título.
-- **Preço**: entra por último, 240ms, depois de 200ms de silêncio.
-- **Barra e rótulos**: escala horizontal a partir da esquerda, 240ms.
-- **Ouro**: uma varredura de brilho atravessando o elemento dourado.
+- **Título**: sobe 60px com fade, 560ms, stagger de 90ms entre linhas.
+- **Produto**: zoom de 1.08 para 1 em 1100ms, começando antes do título.
+- **Preço**: entra por último, 380ms, depois de 200ms de silêncio.
+- **Barra e rótulos**: escala horizontal a partir da esquerda, 520ms.
+- **Ouro**: uma varredura de brilho atravessando o elemento dourado, 1100ms.
+
+**Zoom de 1.08, e não de 1.14.** Com 14% o produto chega grande o bastante para
+o olho ler duas coisas — uma entrada e um recuo. Com 8% ele lê uma.
 
 **O produto não gira e não flutua em loop.** A flutuação existe no playbook
 apenas em peça de catálogo sem texto; em peça de venda ela distrai do preço.
+
+**Se um elemento entra com escala, o rastro entra com a mesma escala.** As
+cópias do rastro desenhadas em tamanho final enquanto o elemento ainda está
+menor produzem um rastro maior que quem o produziu — a única coisa que um
+rastro não pode ser.
 
 ## O que mantém a peça viva depois do roteiro
 

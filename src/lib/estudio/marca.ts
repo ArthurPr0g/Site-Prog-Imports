@@ -111,7 +111,22 @@ export function espacamento(ctx: Ctx, valor: string): () => void {
   return () => { ctx.letterSpacing = anterior; };
 }
 
-/** Quebra o texto em até `maxLinhas`, medindo na fonte que já está no contexto. */
+/** Marca que o texto não coube.
+ *
+ *  Reticência não é enfeite: é aviso. O que o corte silencioso produzia era
+ *  uma peça bonita com a frase pela metade — "Menos que no" sem "Brasil" —, e
+ *  nada na tela dizia que faltava alguma coisa. Com a reticência o dono vê o
+ *  problema na prévia e encurta o texto. Publicar com reticência é ruim;
+ *  publicar sem saber que faltam palavras é pior. */
+function marcarCorte(linhas: string[]): string[] {
+  if (linhas.length === 0) return linhas;
+  const ultima = linhas[linhas.length - 1].replace(/[\s.,;:—–-]+$/, '');
+  return [...linhas.slice(0, -1), `${ultima}…`];
+}
+
+/** Quebra o texto em até `maxLinhas`, medindo na fonte que já está no contexto.
+ *
+ *  Quando não cabe, a última linha ganha reticência em vez de o resto sumir. */
 export function quebrar(
   ctx: Ctx,
   texto: string,
@@ -120,19 +135,39 @@ export function quebrar(
 ): string[] {
   // A quebra explícita do autor manda: título de post é escrito para quebrar
   // em lugar certo, e reflow automático estraga o ritmo da frase.
-  if (texto.includes('\n')) return texto.split('\n').slice(0, maxLinhas);
+  if (texto.includes('\n')) {
+    const escritas = texto.split('\n');
+    return escritas.length > maxLinhas ? marcarCorte(escritas.slice(0, maxLinhas)) : escritas;
+  }
 
   const palavras = texto.split(/\s+/).filter(Boolean);
   const linhas: string[] = [];
   let atual = '';
+  let sobrou = false;
+
   for (const p of palavras) {
     const tentativa = atual ? `${atual} ${p}` : p;
-    if (ctx.measureText(tentativa).width <= largura || !atual) atual = tentativa;
-    else { linhas.push(atual); atual = p; }
-    if (linhas.length === maxLinhas) break;
+    // `!atual` deixa passar a palavra que sozinha já é mais larga que a caixa:
+    // quebrar dentro dela seria pior que deixar vazar.
+    if (ctx.measureText(tentativa).width <= largura || !atual) {
+      atual = tentativa;
+      continue;
+    }
+    linhas.push(atual);
+    atual = p;
+    if (linhas.length === maxLinhas) {
+      sobrou = true;
+      atual = '';
+      break;
+    }
   }
-  if (atual && linhas.length < maxLinhas) linhas.push(atual);
-  return linhas;
+
+  if (atual) {
+    if (linhas.length < maxLinhas) linhas.push(atual);
+    else sobrou = true;
+  }
+
+  return sobrou ? marcarCorte(linhas) : linhas;
 }
 
 /** Título do playbook: Archivo 800, expandido, entrelinha .92, tracking −3.5%.
@@ -394,15 +429,26 @@ export function lockup(
   ctx.fillStyle = corProg;
   ctx.textBaseline = 'alphabetic';
   ctx.fillText('PROG', cursor, y + altura * 0.44);
+  // Medido aqui, com a fonte e o espaçamento desta palavra ainda no contexto.
+  const larguraProg = ctx.measureText('PROG').width;
   soltar1();
 
   ctx.font = fonteTitulo(Math.round(altura * 0.19), 700);
   const soltar2 = espacamento(ctx, `${(altura * 0.1).toFixed(2)}px`);
   ctx.fillStyle = corImports;
   ctx.fillText('IMPORTS', cursor, y + altura * 0.82);
+  const larguraImports = ctx.measureText('IMPORTS').width;
   soltar2();
 
-  return cursor + ctx.measureText('IMPORTS').width;
+  // A borda direita é a da palavra mais larga — as duas nascem no mesmo
+  // cursor, e qual delas vence depende da fonte carregada.
+  //
+  // Antes isto media "IMPORTS" **depois** de soltar o espaçamento e sem
+  // considerar o PROG: devolvia 210 onde o desenho terminava em 255. Quem usa
+  // o retorno para encostar um rótulo ao lado (o 4A e o 4B) colocava o rótulo
+  // 45px cedo demais, e o G de GUIA encavalava no G de PROG. Medir fora do
+  // estado em que se desenhou é medir outra coisa.
+  return cursor + Math.max(larguraProg, larguraImports);
 }
 
 /** Caixa com contorno fino — "EXCLUSIVO EUA", "NOVO · LACRADO". */

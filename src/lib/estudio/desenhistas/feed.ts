@@ -101,8 +101,14 @@ export const desenhar3A: Desenhista = ({ ctx, largura, altura, conteudo, imagens
   const parcela = campo(conteudo, 'parcela');
   const ficha = campo(conteudo, 'specs');
 
+  // Medido com o mesmo espaçamento com que o preço é pintado: sem isso a
+  // caixa da varredura nascia larga demais e o degradê do ouro começava fora
+  // do algarismo. A folga de 6% é para a sombra da fonte, não para erro de
+  // medida.
   ctx.font = fonteTitulo(68);
-  const larguraPreco = ctx.measureText(preco).width * 1.1;
+  const soltarMedida = espacamento(ctx, '-1.4px');
+  const larguraPreco = ctx.measureText(preco).width * 1.06;
+  soltarMedida();
   if (preco) {
     // A mesma função pinta o preço na arte e na camada da varredura. É por isso
     // que ela recebe o contexto em vez de fechar sobre ele: a luz é recortada

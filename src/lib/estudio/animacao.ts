@@ -87,8 +87,11 @@ export const ROTEIRO = {
   precoDe: 1180,
   preco: 1280,
   parcela: 1400,
-  brilho: 1900,
   cta: 1560,
+  // 1840 e não 1900: a regra acima é de vão máximo de 300ms, e 1900 abria 340
+  // depois do CTA — a peça ficava montada e parada antes de a luz chegar. Em
+  // ordem cronológica também, que é como o roteiro se lê.
+  brilho: 1840,
 } as const;
 
 /** Duração total. Fica acima do fim do roteiro de propósito: a peça precisa
@@ -214,12 +217,25 @@ export function animador(t: number | undefined): Animador {
       // o deslocamento parecer deslocamento. Sem isso o elemento se teletransporta
       // de posição em posição e o olho lê cada quadro como um salto — é o mesmo
       // motivo pelo qual uma câmera de verdade tem obturador.
+      // A escala do instante, compartilhada pelo elemento e pelas cópias do
+      // rastro. Antes as cópias desenhavam sempre em tamanho final enquanto o
+      // elemento ainda estava menor: o rastro saía maior que quem o produziu,
+      // que é a única coisa que um rastro não pode ser.
+      const aplicarEscala = (c: Ctx) => {
+        if (escala === 1 || !ancora) return;
+        const e = escala + (1 - escala) * p;
+        c.translate(ancora.x, ancora.y);
+        c.scale(e, e);
+        c.translate(-ancora.x, -ancora.y);
+      };
+
       const smear = subida * (1 - fase(t - 16, comeco, duracao)) - deslocamento;
       if (Math.abs(smear) > 5) {
         for (const [fracao, forca] of [[0.66, 0.1], [0.33, 0.18]] as const) {
           ctx.save();
           ctx.globalAlpha = opacidade * forca;
           ctx.translate(0, deslocamento + smear * fracao);
+          aplicarEscala(ctx);
           desenhar();
           ctx.restore();
         }
@@ -228,12 +244,7 @@ export function animador(t: number | undefined): Animador {
       ctx.save();
       ctx.globalAlpha = opacidade;
       ctx.translate(0, deslocamento);
-      if (escala !== 1 && ancora) {
-        const e = escala + (1 - escala) * p;
-        ctx.translate(ancora.x, ancora.y);
-        ctx.scale(e, e);
-        ctx.translate(-ancora.x, -ancora.y);
-      }
+      aplicarEscala(ctx);
       desenhar();
       ctx.restore();
     },

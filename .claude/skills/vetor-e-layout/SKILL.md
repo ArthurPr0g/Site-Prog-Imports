@@ -51,6 +51,41 @@ metálico; sombra por cima suja.
 No escuro, "PROG" sai em `#D9B66E` e "IMPORTS" em prata. No claro, bronze
 `#8C6A2F` e cinza — ouro claro sobre marfim não tem contraste suficiente.
 
+## Medir texto no mesmo estado em que ele é desenhado
+
+`measureText` responde sobre o contexto **agora**: a fonte que está posta, o
+`letterSpacing` que está ativo, o `fontStretch` que está ligado. Medir depois de
+desfazer qualquer um dos três é medir outra palavra.
+
+O caso que isto custou: `lockup()` devolvia a borda direita medindo "IMPORTS"
+**depois** de soltar o espaçamento, e sem olhar para "PROG", que é maior.
+Devolvia 210px onde o desenho terminava em 255. O 4A e o 4B usam esse retorno
+para encostar um rótulo ao lado do logo — e o rótulo entrava 45px cedo, com o
+G de "GUIA" encavalando no G de "PROG". O comentário no código dizia que o
+número fixo anterior colidia; o cálculo que o substituiu colidia também, menos.
+
+Três regras que saem daí:
+
+- Meça **dentro** do bloco que desenha, antes de qualquer `soltar()` ou
+  `restore()`.
+- Quando um bloco tem duas palavras empilhadas, a borda é a **maior das duas**,
+  cada uma medida com a sua fonte.
+- Quando uma função devolve uma coordenada, **confira o número contra o
+  desenho** — redesenhe as partes em canvas separados e compare as caixas de
+  tinta. Dois retângulos que se cruzam é prova; olhar a miniatura e achar que
+  está apertado, não.
+
+## Texto que não cabe tem de aparecer
+
+`quebrar()` corta no limite de linhas. Até esta revisão o resto sumia calado: a
+peça saía bonita com a frase pela metade, e nada na tela dizia que faltava
+palavra. Agora a última linha recebe reticência — publicar com reticência é
+ruim, publicar sem saber que faltam palavras é pior.
+
+Se a reticência apareceu na prévia, o conserto é **encurtar o texto**, não
+aumentar `maxLinhas`: o limite de linhas existe porque o bloco tem altura
+reservada, e crescer empurra o produto ou o preço.
+
 ## Grid
 
 Feed 1080×1350, margem de **72px** em todos os lados. Story 1080×1920.
