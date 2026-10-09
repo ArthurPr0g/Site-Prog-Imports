@@ -54,14 +54,24 @@ export default async function EstudioPage() {
         title="Estúdio"
         subtitle="Peças de Instagram no padrão do playbook — arte em 1080, pronta para baixar"
         action={
-          <Dica texto="Liga a conta do Instagram da loja ao Estúdio. É daqui que o botão Publicar passa a funcionar, e onde você renova o token a cada 60 dias.">
-            <Link
-              href="/admin/estudio/instagram"
-              className="rounded-control border border-border-strong px-4 py-2 text-[13px] font-extrabold text-fg-secondary hover:border-accent hover:text-accent"
-            >
-              Instagram
-            </Link>
-          </Dica>
+          <>
+            <Dica texto="Acompanha os posts publicados: quem comentou a palavra-chave e espera o direct (com a mensagem pronta para copiar), curtidas, comentários e gráficos de desempenho.">
+              <Link
+                href="/admin/estudio/painel"
+                className="rounded-control bg-fg px-4 py-2 text-[13px] font-extrabold text-page hover:opacity-90"
+              >
+                Painel
+              </Link>
+            </Dica>
+            <Dica texto="Liga a conta do Instagram da loja ao Estúdio. É daqui que o botão Publicar passa a funcionar, e onde você renova o token a cada 60 dias.">
+              <Link
+                href="/admin/estudio/instagram"
+                className="rounded-control border border-border-strong px-4 py-2 text-[13px] font-extrabold text-fg-secondary hover:border-accent hover:text-accent"
+              >
+                Instagram
+              </Link>
+            </Dica>
+          </>
         }
       />
 

@@ -79,6 +79,15 @@ export function LigarInstagram({
           troca por um de <b>60 dias</b> e descobre o número da conta do Instagram. Nada disso fica
           gravado — você copia e cadastra na Vercel.
         </div>
+        <div className="mb-4 rounded-xl border border-border bg-card-dark px-4 py-3 text-[12.5px] leading-relaxed text-fg-tertiary">
+          No Explorer, antes de gerar, marque as permissões:{' '}
+          <span className="font-mono text-[11.5px] text-fg-secondary">
+            instagram_basic, instagram_content_publish, instagram_manage_insights, pages_show_list,
+            pages_read_engagement
+          </span>
+          . A <span className="font-mono text-[11.5px]">instagram_manage_insights</span> é a que libera alcance,
+          salvamentos e compartilhamentos no Painel.
+        </div>
 
         <div className="mb-2 text-[12.5px] font-bold">Token curto</div>
         <div className="flex flex-col gap-2 sm:flex-row">

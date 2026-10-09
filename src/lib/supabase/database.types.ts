@@ -1653,6 +1653,101 @@ export type Database = {
           },
         ]
       }
+      studio_perfil_diario: {
+        Row: {
+          atualizado_em: string
+          dia: string
+          posts: number
+          seguidores: number
+          seguindo: number
+        }
+        Insert: {
+          atualizado_em?: string
+          dia: string
+          posts?: number
+          seguidores: number
+          seguindo?: number
+        }
+        Update: {
+          atualizado_em?: string
+          dia?: string
+          posts?: number
+          seguidores?: number
+          seguindo?: number
+        }
+        Relationships: []
+      }
+      studio_posts: {
+        Row: {
+          atualizado_em: string
+          comentarios_lidos: number
+          media_id: string
+          palavra: string
+          piece_id: string | null
+          resposta: string
+        }
+        Insert: {
+          atualizado_em?: string
+          comentarios_lidos?: number
+          media_id: string
+          palavra?: string
+          piece_id?: string | null
+          resposta?: string
+        }
+        Update: {
+          atualizado_em?: string
+          comentarios_lidos?: number
+          media_id?: string
+          palavra?: string
+          piece_id?: string | null
+          resposta?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_posts_piece_id_fkey"
+            columns: ["piece_id"]
+            isOneToOne: false
+            referencedRelation: "studio_pieces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      studio_respostas: {
+        Row: {
+          comentado_em: string
+          comment_id: string
+          created_at: string
+          id: string
+          media_id: string
+          palavra: string
+          respondido_em: string | null
+          texto: string
+          usuario: string
+        }
+        Insert: {
+          comentado_em: string
+          comment_id: string
+          created_at?: string
+          id?: string
+          media_id: string
+          palavra?: string
+          respondido_em?: string | null
+          texto?: string
+          usuario: string
+        }
+        Update: {
+          comentado_em?: string
+          comment_id?: string
+          created_at?: string
+          id?: string
+          media_id?: string
+          palavra?: string
+          respondido_em?: string | null
+          texto?: string
+          usuario?: string
+        }
+        Relationships: []
+      }
       studio_topics: {
         Row: {
           created_at: string

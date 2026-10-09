@@ -207,6 +207,13 @@ export async function publicarPecaAction(formData: FormData): Promise<ResultadoD
     // publicada esconderia dela o fato de que ainda não foi ao feed.
     if (tipo !== 'story') {
       await supabase.from('studio_pieces').update({ status: 'Publicada' }).eq('id', pecaId);
+      // O post nasce ligado à peça no Painel: é dela que saem a palavra-chave
+      // e a mensagem de direct quando os pedidos começarem a chegar.
+      if (publicacao.mediaId) {
+        await supabase
+          .from('studio_posts')
+          .upsert({ media_id: publicacao.mediaId, piece_id: pecaId }, { onConflict: 'media_id', ignoreDuplicates: true });
+      }
     }
 
     revalidatePath('/admin/estudio');
