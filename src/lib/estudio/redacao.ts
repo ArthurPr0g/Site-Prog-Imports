@@ -120,3 +120,153 @@ export function peneirar(bruto: unknown, modelo: Modelo): Record<string, string>
 // chave do texto. Saiu junto com a tentativa de pedir JSON em prosa: com
 // ferramenta, o que volta já é objeto, e peneirar continua necessário porque o
 // esquema garante o formato e não o conteúdo.
+
+/* ----------------------------------------------------------------- legenda */
+
+// A legenda é outro ofício, e por isso tem voz própria.
+//
+// A arte não aceita emoji, hashtag nem markdown: o texto vai para um canvas, e
+// cerquilha aparece desenhada. A legenda é o contrário — ela vive no campo de
+// texto do aplicativo, e sem hashtag ninguém de fora do perfil encontra o
+// post. Usar o mesmo prompt para as duas coisas produziria ou arte suja ou
+// legenda muda.
+//
+// A estrutura não é pedida em prosa: a ferramenta devolve gancho, fatos,
+// chamada e hashtags em campos separados, e a montagem acontece aqui. Assim
+// "três fatos" é contagem de array, não uma recomendação que o modelo segue na
+// maioria das vezes.
+
+export const VOZ_DA_LEGENDA = `Você escreve as legendas de Instagram da Prog Imports, uma loja brasileira que importa tecnologia dos Estados Unidos — MacBooks, iPhones, iPads, notebooks gamer e de trabalho, monitores e periféricos.
+
+O TOM
+- Português do Brasil, direto, adulto. Quem lê está considerando gastar vários milhares de reais e já pesquisou antes de chegar aqui.
+- Frase curta, uma ideia por linha. Nada de "incrível", "imperdível", "corra", "não perca", "garanta já".
+- Emoji: no máximo um, e só se ele substituir uma palavra. Legenda de loja séria não é enfeitada.
+- Nunca escreva em CAIXA ALTA para dar ênfase.
+
+O QUE NÃO INVENTAR — esta é a regra que importa
+- Preço, parcela, desconto, prazo, frete, garantia e especificação técnica só entram se vierem nos DADOS CONFERIDOS abaixo. Eles saem do cadastro do produto. Inventar um preço numa legenda é pior que inventar numa arte: a legenda é o que o cliente copia e cobra depois.
+- Se não houver número conferido para um fato, escreva um fato sem número em vez de estimar.
+- Não prometa estoque nem data de entrega que não esteja nos dados.
+
+A FORMA (do playbook)
+- Gancho: a primeira linha, no máximo 8 palavras. É a única que aparece antes do "mais" — ela precisa funcionar sozinha.
+- Fatos: exatamente três linhas. Cada uma com um motivo concreto; use número sempre que houver um conferido.
+- Chamada: uma linha, começando por verbo — "Chame no WhatsApp", "Veja no site". Nunca "clique aqui" nem "link na bio" sem o verbo.
+- Hashtags: de 3 a 5, de nicho. #macbookprom4 e #notebookgamerimportado encontram cliente; #tecnologia e #promocao não encontram ninguém. Sem a cerquilha na resposta: devolva só a palavra.`;
+
+export type LegendaEscrita = {
+  gancho: string;
+  fatos: string[];
+  chamada: string;
+  hashtags: string[];
+};
+
+/** A instrução da legenda.
+ *
+ *  Recebe os campos que já estão na arte porque legenda e arte são lidas
+ *  juntas: repetir o título em prosa desperdiça a única linha que aparece
+ *  antes do "mais", e contradizê-lo é pior. E recebe os dados do produto
+ *  separados, rotulados como conferidos — é o que torna possível citar preço
+ *  sem abrir a porta para inventá-lo. */
+export function instrucaoDaLegenda(
+  modelo: Modelo,
+  entrada: { assunto?: string; conteudo: Record<string, string>; produto?: string | null }
+): string {
+  const naArte = camposRedigiveis(modelo)
+    .map((c) => ({ c, valor: entrada.conteudo[c.chave]?.trim() }))
+    .filter((x) => x.valor)
+    .map((x) => `- ${x.c.rotulo}: ${x.valor}`)
+    .join('\n');
+
+  // Só os campos com fonte: preço veio do cadastro, não da redação.
+  const conferidos = modelo.campos
+    .filter((c) => c.tipo === 'preco' || c.tipo === 'numero')
+    .map((c) => ({ c, valor: entrada.conteudo[c.chave]?.trim() }))
+    .filter((x) => x.valor)
+    .map((x) => `- ${x.c.rotulo}: ${x.valor}`)
+    .join('\n');
+
+  const partes = [
+    `PEÇA: ${modelo.nome} (${modelo.formato}${modelo.slides > 1 ? `, ${modelo.slides} slides` : ''})`,
+  ];
+  if (entrada.produto) partes.push(`PRODUTO DO CATÁLOGO:\n${entrada.produto}`);
+  if (conferidos) partes.push(`DADOS CONFERIDOS (pode citar; nada além disto):\n${conferidos}`);
+  if (naArte) partes.push(`JÁ ESCRITO NA ARTE (não repita literalmente):\n${naArte}`);
+  if (entrada.assunto?.trim()) partes.push(`ASSUNTO:\n${entrada.assunto.trim()}`);
+
+  partes.push(
+    'Chame a ferramenta "escrever_legenda". Se não houver dado conferido para sustentar um fato, escreva o fato sem número — não estime.'
+  );
+
+  return partes.join('\n\n');
+}
+
+export const FERRAMENTA_DA_LEGENDA = {
+  name: 'escrever_legenda',
+  description: 'Escreve a legenda do post no formato do playbook.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      gancho: {
+        type: 'string' as const,
+        description: 'A primeira linha, no máximo 8 palavras. É a única que aparece antes do "mais".',
+      },
+      fatos: {
+        type: 'array' as const,
+        items: { type: 'string' as const },
+        description: 'Exatamente três linhas, uma por motivo concreto. Número só se for conferido.',
+      },
+      chamada: {
+        type: 'string' as const,
+        description: 'Uma linha começando por verbo.',
+      },
+      hashtags: {
+        type: 'array' as const,
+        items: { type: 'string' as const },
+        description: 'De 3 a 5 hashtags de nicho, sem a cerquilha.',
+      },
+    },
+    required: ['gancho', 'fatos', 'chamada', 'hashtags'],
+  },
+};
+
+function texto(valor: unknown): string {
+  return typeof valor === 'string' ? valor.trim() : '';
+}
+
+/** Normaliza uma hashtag: sem cerquilha, sem espaço, sem acento.
+ *
+ *  Acento em hashtag funciona no Instagram, mas divide a audiência entre duas
+ *  grafias da mesma palavra — e a busca não junta as duas. */
+function hashtag(bruta: unknown): string {
+  return texto(bruta)
+    .replace(/^#+/, '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-zA-Z0-9_]/g, '')
+    .toLowerCase();
+}
+
+/** Monta a legenda final a partir do que a ferramenta devolveu.
+ *
+ *  Devolve string vazia quando falta o gancho: legenda sem primeira linha não
+ *  é legenda pela metade, é a parte que não funciona. */
+export function montarLegenda(bruto: unknown): string {
+  if (!bruto || typeof bruto !== 'object') return '';
+  const dados = bruto as Partial<Record<keyof LegendaEscrita, unknown>>;
+
+  const gancho = texto(dados.gancho);
+  if (!gancho) return '';
+
+  const fatos = (Array.isArray(dados.fatos) ? dados.fatos : []).map(texto).filter(Boolean).slice(0, 3);
+  const chamada = texto(dados.chamada);
+  const tags = [...new Set((Array.isArray(dados.hashtags) ? dados.hashtags : []).map(hashtag).filter(Boolean))].slice(0, 5);
+
+  const blocos = [gancho];
+  if (fatos.length) blocos.push(fatos.join('\n'));
+  if (chamada) blocos.push(chamada);
+  if (tags.length) blocos.push(tags.map((t) => `#${t}`).join(' '));
+
+  return blocos.join('\n\n');
+}

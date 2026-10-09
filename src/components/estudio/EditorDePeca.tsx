@@ -12,7 +12,27 @@ import { salvarPecaAction, excluirPecaAction } from '@/app/actions/estudio';
 import { gravarPeca } from '@/lib/estudio/video';
 import { SeletorDeIcone } from '@/components/estudio/SeletorDeIcone';
 import { PublicarNoInstagram } from '@/components/estudio/PublicarNoInstagram';
+import { PreviaDoInstagram } from '@/components/estudio/PreviaDoInstagram';
 import type { Ctx } from '@/lib/estudio/marca';
+import { formatBRL } from '@/lib/format';
+
+/** O produto escolhido, em texto, para a redação da legenda.
+ *
+ *  Preço formatado em reais, e não o número cru do banco: mandar `10999` faz o
+ *  modelo escrever "10999 reais" numa legenda que vai para o ar. E só o que
+ *  está no cadastro — o que não existe não vira linha, para não convidar a
+ *  preencher a lacuna. */
+function descreverProduto(p: ProdutoDoEstudio): string {
+  const linhas = [`Nome: ${p.name}`];
+  const preco = p.promo_price ?? p.price;
+  if (preco) linhas.push(`Preço: ${formatBRL(preco)}`);
+  if (p.promo_price && p.price > p.promo_price) linhas.push(`Preço anterior: ${formatBRL(p.price)}`);
+  const ficha = [p.cpu, p.gpu, p.ram, p.storage, p.screen_type].filter(Boolean).join(' · ');
+  if (ficha) linhas.push(`Ficha: ${ficha}`);
+  if (p.condition) linhas.push(`Condição: ${p.condition}`);
+  if (typeof p.stock === 'number' && p.stock > 0) linhas.push(`Em estoque: ${p.stock}`);
+  return linhas.join('\n');
+}
 
 const HALOS = [
   { valor: 'roxo', rotulo: 'Roxo' },
@@ -56,6 +76,8 @@ export function EditorDePeca({
   const [salvando, setSalvando] = useState(false);
   const [desenhando, setDesenhando] = useState(true);
   const [gravando, setGravando] = useState(false);
+  const [previa, setPrevia] = useState<string | null>(null);
+  const [escrevendoLegenda, setEscrevendoLegenda] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // As imagens ficam em cache pela URL: redesenhar a cada tecla é o que dá a
@@ -105,6 +127,10 @@ export function EditorDePeca({
     }
 
     await desenharPeca(ctx, modelo.codigo, conteudo, imagens, slide);
+    // A mesma arte, reduzida, alimenta a prévia do telefone. JPEG em 0.86
+    // porque é miniatura: PNG de 1080×1350 a cada tecla digitada pesaria mais
+    // que o desenho inteiro.
+    setPrevia(canvas!.toDataURL('image/jpeg', 0.86));
     setDesenhando(false);
   }, [chaveDasImagens, conteudo, modelo.codigo, produto, produtoA, produtoB, slide]);
 
@@ -162,6 +188,42 @@ export function EditorDePeca({
       toast({ ok: false, message: 'Não consegui falar com o servidor.' });
     } finally {
       setRedigindo(false);
+    }
+  }
+
+  /** Escreve a legenda a partir do que a peça já tem.
+   *
+   *  Ao contrário dos campos da arte, aqui não há mesclagem: a legenda é um
+   *  texto só, e não dá para saber que parte dele o dono reescreveu. Então o
+   *  botão avisa antes de trocar — perder uma legenda revisada por um clique
+   *  é o tipo de coisa que faz ninguém clicar de novo. */
+  async function escreverLegenda() {
+    if (escrevendoLegenda) return;
+    if (legenda.trim() && !confirm('Isto substitui a legenda que está escrita. Continuar?')) return;
+
+    setEscrevendoLegenda(true);
+    try {
+      const r = await fetch('/api/estudio/legenda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          modelo: modelo.codigo,
+          assunto,
+          conteudo,
+          produto: produto ? descreverProduto(produto) : '',
+        }),
+      });
+      const dados = await r.json();
+      if (!r.ok) {
+        toast({ ok: false, message: dados?.erro ?? 'Não consegui escrever a legenda agora.' });
+        return;
+      }
+      setLegenda(dados.legenda);
+      toast({ ok: true, message: 'Legenda escrita. Confira os números antes de publicar.' });
+    } catch {
+      toast({ ok: false, message: 'Não consegui falar com o servidor.' });
+    } finally {
+      setEscrevendoLegenda(false);
     }
   }
 
@@ -377,18 +439,33 @@ export function EditorDePeca({
         </div>
 
         <div className="rounded-[18px] border border-border bg-card p-6">
-          <Rotulo
-            texto="Legenda"
-            ajuda="L1 gancho até 8 palavras · L2–4 três fatos com número · L5 CTA com palavra-chave · 3 a 5 hashtags de nicho."
-          >
-            <textarea
-              value={legenda}
-              onChange={(e) => setLegenda(e.target.value)}
-              rows={6}
-              className="w-full rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px] leading-relaxed"
-            />
-          </Rotulo>
-          <div className="text-[12px] text-fg-tertiary">
+          <div className="mb-1.5 flex items-center justify-between gap-3">
+            <div className="text-[12.5px] font-bold">Legenda</div>
+            <button
+              onClick={() => void escreverLegenda()}
+              disabled={escrevendoLegenda}
+              className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-control border border-border-strong px-3 py-1.5 text-[12px] font-extrabold text-fg-secondary transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+            >
+              {escrevendoLegenda ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Wand2 size={13} />
+              )}
+              Escrever legenda
+            </button>
+          </div>
+          <div className="mb-1.5 text-[12px] leading-relaxed text-fg-tertiary">
+            L1 gancho até 8 palavras · L2–4 três fatos com número · L5 CTA com palavra-chave · 3 a 5
+            hashtags de nicho. Preço e parcela só entram se já estiverem na peça — o texto não
+            inventa número.
+          </div>
+          <textarea
+            value={legenda}
+            onChange={(e) => setLegenda(e.target.value)}
+            rows={8}
+            className="w-full rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px] leading-relaxed"
+          />
+          <div className="mt-1.5 text-[12px] text-fg-tertiary">
             {legenda.trim() ? `${legenda.trim().split(/\s+/).length} palavras` : 'Vazia'}
           </div>
         </div>
@@ -486,6 +563,15 @@ export function EditorDePeca({
             )}
           </div>
         </div>
+
+        <PreviaDoInstagram
+          imagem={previa}
+          formato={modelo.formato}
+          slides={modelo.slides}
+          slideAtual={slide}
+          legenda={legenda}
+          nomeDoDestaque={conteudo.nome}
+        />
       </div>
     </div>
   );
