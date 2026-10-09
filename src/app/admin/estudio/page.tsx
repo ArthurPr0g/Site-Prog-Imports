@@ -52,6 +52,14 @@ export default async function EstudioPage() {
         area="estudio"
         title="Estúdio"
         subtitle="Peças de Instagram no padrão do playbook — arte em 1080, pronta para baixar"
+        action={
+          <Link
+            href="/admin/estudio/instagram"
+            className="rounded-control border border-border-strong px-4 py-2 text-[13px] font-extrabold text-fg-secondary hover:border-accent hover:text-accent"
+          >
+            Instagram
+          </Link>
+        }
       />
 
       <div className="mb-7 rounded-[18px] border border-border bg-card p-6">

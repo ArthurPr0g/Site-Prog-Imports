@@ -33,6 +33,10 @@ NEXT_PUBLIC_INSTAGRAM_HANDLE=Prog.imports
 NEXT_PUBLIC_FRETE_GRATIS_MIN=5000
 NEXT_PUBLIC_FRETE_PADRAO=49.90
 ANTHROPIC_API_KEY=
+META_APP_ID=
+META_APP_SECRET=
+INSTAGRAM_CONTA_ID=
+INSTAGRAM_TOKEN=
 ```
 
 ### Identidade da loja (opcional)
@@ -55,6 +59,10 @@ hexadecimal é ignorado e cai no padrão. Como são lidas no servidor, mudar a c
 não exige rebuild — basta redeploy.
 
 `ANTHROPIC_API_KEY` alimenta o assistente de compras (`/api/assistant`) e é a única variável **sem** o prefixo `NEXT_PUBLIC_` — ela nunca deve chegar ao browser. Sem ela a rota responde 503 e o chat flutuante mostra "Assistente indisponível no momento"; o resto do site continua funcionando normalmente.
+
+As quatro variáveis do Meta ligam o Estúdio ao Instagram da loja e também nunca levam `NEXT_PUBLIC_`. `META_APP_ID` e `META_APP_SECRET` saem do app em developers.facebook.com (Configurações → Informação básica) e servem para trocar o token curto do Graph API Explorer por um de 60 dias; `INSTAGRAM_CONTA_ID` e `INSTAGRAM_TOKEN` são o resultado dessa troca e saem prontos na tela `/admin/estudio/instagram`. Sem as duas últimas, o Estúdio continua desenhando e exportando normalmente — só o botão de publicar fica escondido, com um atalho para a tela de configuração.
+
+O token vence em 60 dias. Quando vencer, a publicação falha com a mensagem da própria Meta; refazer é repetir o passo da tela de configuração com um token novo do Explorer.
 
 O projeto Supabase já está criado e as migrations (`supabase/migrations/*.sql`) já foram aplicadas nele diretamente via MCP — não é necessário rodar `supabase db push` a menos que você aponte para um novo projeto.
 

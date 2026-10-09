@@ -11,6 +11,7 @@ import { aplicarSugestoes, sugestoesDoProduto, type ProdutoDoEstudio } from '@/l
 import { salvarPecaAction, excluirPecaAction } from '@/app/actions/estudio';
 import { gravarPeca } from '@/lib/estudio/video';
 import { SeletorDeIcone } from '@/components/estudio/SeletorDeIcone';
+import { PublicarNoInstagram } from '@/components/estudio/PublicarNoInstagram';
 import type { Ctx } from '@/lib/estudio/marca';
 
 const HALOS = [
@@ -193,6 +194,22 @@ export function EditorDePeca({
       baixar();
       await new Promise((r) => setTimeout(r, 200));
     }
+  }
+
+  /** O slide pedido, em JPEG, para a publicação.
+   *
+   *  JPEG porque a API do Instagram só aceita isso em imagem — PNG volta
+   *  recusado no contêiner. E a troca de slide repete a espera do download em
+   *  lote: o canvas é redesenhado por efeito, então exportar antes dela
+   *  entregaria o desenho do slide anterior. */
+  async function exportarJpeg(n: number): Promise<Blob | null> {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    if (n !== slide) {
+      setSlide(n);
+      await new Promise((r) => setTimeout(r, 450));
+    }
+    return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
   }
 
   async function baixarVideo() {
@@ -431,6 +448,14 @@ export function EditorDePeca({
               em tempo real, então a prévia anima enquanto grava.
             </div>
           )}
+
+          <PublicarNoInstagram
+            pecaId={peca?.id}
+            formato={modelo.formato}
+            slides={modelo.slides}
+            legenda={legenda}
+            exportar={exportarJpeg}
+          />
 
           <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
             <select

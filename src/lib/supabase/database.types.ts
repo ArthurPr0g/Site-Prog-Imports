@@ -1603,6 +1603,53 @@ export type Database = {
           },
         ]
       }
+      studio_publications: {
+        Row: {
+          created_at: string
+          erro: string | null
+          id: string
+          imagens: string[]
+          legenda: string
+          media_id: string | null
+          permalink: string | null
+          piece_id: string
+          status: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          erro?: string | null
+          id?: string
+          imagens?: string[]
+          legenda?: string
+          media_id?: string | null
+          permalink?: string | null
+          piece_id: string
+          status?: string
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          erro?: string | null
+          id?: string
+          imagens?: string[]
+          legenda?: string
+          media_id?: string | null
+          permalink?: string | null
+          piece_id?: string
+          status?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_publications_piece_id_fkey"
+            columns: ["piece_id"]
+            isOneToOne: false
+            referencedRelation: "studio_pieces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       studio_topics: {
         Row: {
           created_at: string
