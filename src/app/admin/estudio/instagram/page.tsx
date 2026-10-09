@@ -10,8 +10,17 @@ export default function InstagramDoEstudioPage() {
   // Só a presença das variáveis atravessa para o cliente. O valor fica no
   // servidor: token de publicação não tem por que chegar ao navegador, nem
   // mesmo na tela que o configura.
+  //
+  // Uma por uma, e não em bloco: dizer "faltam as duas" quando só falta uma
+  // manda procurar o que já está lá.
+  const presentes = {
+    META_APP_ID: Boolean(process.env.META_APP_ID?.trim()),
+    META_APP_SECRET: Boolean(process.env.META_APP_SECRET?.trim()),
+    INSTAGRAM_CONTA_ID: Boolean(process.env.INSTAGRAM_CONTA_ID?.trim()),
+    INSTAGRAM_TOKEN: Boolean(process.env.INSTAGRAM_TOKEN?.trim()),
+  };
   const configurado = Boolean(credenciais());
-  const temApp = Boolean(process.env.META_APP_ID && process.env.META_APP_SECRET);
+  const temApp = presentes.META_APP_ID && presentes.META_APP_SECRET;
 
   return (
     <div>
@@ -28,7 +37,7 @@ export default function InstagramDoEstudioPage() {
           </Link>
         }
       />
-      <LigarInstagram configurado={configurado} temApp={temApp} />
+      <LigarInstagram configurado={configurado} temApp={temApp} presentes={presentes} />
     </div>
   );
 }

@@ -16,9 +16,12 @@ import type { ContaEncontrada } from '@/lib/instagram/api';
 export function LigarInstagram({
   configurado,
   temApp,
+  presentes,
 }: {
   configurado: boolean;
   temApp: boolean;
+  /** Quais variáveis existem no ambiente. Só a presença, nunca o valor. */
+  presentes: Record<string, boolean>;
 }) {
   const toast = useToast();
   const [curto, setCurto] = useState('');
@@ -41,24 +44,31 @@ export function LigarInstagram({
   return (
     <div className="flex max-w-3xl flex-col gap-5">
       <div className="rounded-[18px] border border-border bg-card p-6">
-        <div className="mb-4 font-display text-lg font-bold">Situação</div>
+        <div className="mb-1 font-display text-lg font-bold">Situação</div>
+        <div className="mb-3 text-[13px] text-fg-tertiary">
+          {configurado
+            ? 'Tudo no lugar — o botão de publicar já aparece nas peças.'
+            : 'O que falta está marcado abaixo. Variável nova só vale depois de um novo deploy.'}
+        </div>
         <Linha
-          pronto={temApp}
-          titulo="App do Meta"
-          detalhe={
-            temApp
-              ? 'META_APP_ID e META_APP_SECRET estão no ambiente.'
-              : 'Faltam META_APP_ID e META_APP_SECRET. Pegue os dois em developers.facebook.com → seu app → Configurações → Informação básica, e cadastre na Vercel.'
-          }
+          pronto={presentes.META_APP_ID}
+          titulo="META_APP_ID"
+          detalhe="O número do app, em developers.facebook.com → Configurações → Informação básica. Não é segredo."
         />
         <Linha
-          pronto={configurado}
-          titulo="Conta ligada"
-          detalhe={
-            configurado
-              ? 'INSTAGRAM_CONTA_ID e INSTAGRAM_TOKEN estão no ambiente. O botão de publicar já aparece nas peças.'
-              : 'Faltam INSTAGRAM_CONTA_ID e INSTAGRAM_TOKEN. Use o passo abaixo para descobrir os dois.'
-          }
+          pronto={presentes.META_APP_SECRET}
+          titulo="META_APP_SECRET"
+          detalhe="Na mesma tela, em Chave Secreta do App. É segredo: vai direto para a Vercel, sem passar por mais lugar nenhum."
+        />
+        <Linha
+          pronto={presentes.INSTAGRAM_CONTA_ID}
+          titulo="INSTAGRAM_CONTA_ID"
+          detalhe="O número da conta do Instagram. Sai pronto no passo abaixo."
+        />
+        <Linha
+          pronto={presentes.INSTAGRAM_TOKEN}
+          titulo="INSTAGRAM_TOKEN"
+          detalhe="O token de 60 dias. Sai pronto no passo abaixo."
         />
       </div>
 
@@ -94,6 +104,12 @@ export function LigarInstagram({
           O campo é de senha de propósito: token de publicação é segredo, e segredo não fica legível
           na tela enquanto alguém passa atrás de você.
         </div>
+        {!temApp && (
+          <div className="mt-3 rounded-control border border-dashed border-border-strong px-3.5 py-2.5 text-[12px] leading-relaxed text-fg-tertiary">
+            O botão só liga depois que META_APP_ID e META_APP_SECRET estiverem no ambiente — a troca
+            do token é assinada com os dois.
+          </div>
+        )}
       </div>
 
       {token && (

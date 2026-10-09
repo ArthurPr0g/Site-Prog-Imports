@@ -90,33 +90,99 @@ export type ContaEncontrada = {
   usuario: string;
 };
 
-/** Acha a conta do Instagram ligada a cada Página que o token alcança.
+/** Acha a conta do Instagram que o token pode publicar.
  *
- *  É o primeiro passo da configuração: o id do Instagram não é o @ nem aparece
- *  no aplicativo, e sem ele nenhuma outra chamada funciona. Uma Página sem
- *  Instagram conectado simplesmente não aparece na lista — e essa ausência é a
- *  resposta mais útil que esta função dá, porque é o erro de configuração mais
- *  comum. */
-export async function contasDisponiveis(token: string): Promise<ContaEncontrada[]> {
-  const dados = await chamar<{
-    data?: {
-      id: string;
-      name: string;
-      instagram_business_account?: { id: string; username?: string };
-    }[];
-  }>('/me/accounts', {
-    token,
-    parametros: { fields: 'id,name,instagram_business_account{id,username}', limit: '50' },
-  });
+ *  Procura por dois caminhos, e os dois são necessários.
+ *
+ *  O primeiro é `/me/accounts`, a lista das Páginas do usuário — o caminho de
+ *  sempre, e o que funciona quando a Página tem um cargo atribuído direto à
+ *  pessoa.
+ *
+ *  O segundo existe porque o Login do Facebook para Empresas não registra
+ *  acesso a "tudo que a pessoa administra": ele registra **alvos** por
+ *  permissão. Nesse desenho, `/me/accounts` pode voltar `{"data":[]}` com a
+ *  autorização inteiramente correta — a Página está liberada, só não está
+ *  listada. Conferido na própria conta da loja: a lista vinha vazia enquanto
+ *  a Página respondia normalmente quando consultada pelo id. Quem sabe os ids
+ *  é o `debug_token`, no campo `granular_scopes`.
+ *
+ *  Por isso a função não falha quando o primeiro caminho vem vazio: ela
+ *  pergunta ao segundo. Tratar a lista vazia como "não tem conta conectada"
+ *  mandaria o dono reconfigurar uma coisa que já estava certa. */
+export async function contasDisponiveis(
+  token: string,
+  /** `{app-id}|{app-secret}`. Sem ele, o debug roda com o próprio token do
+   *  usuário, o que só funciona para quem é administrador do app. */
+  tokenDoApp?: string
+): Promise<ContaEncontrada[]> {
+  const achadas = new Map<string, ContaEncontrada>();
 
-  return (dados.data ?? [])
-    .filter((p) => p.instagram_business_account?.id)
-    .map((p) => ({
-      pagina: p.name,
-      paginaId: p.id,
-      contaId: p.instagram_business_account!.id,
-      usuario: p.instagram_business_account!.username ?? '',
-    }));
+  try {
+    const dados = await chamar<{
+      data?: {
+        id: string;
+        name: string;
+        instagram_business_account?: { id: string; username?: string };
+      }[];
+    }>('/me/accounts', {
+      token,
+      parametros: { fields: 'id,name,instagram_business_account{id,username}', limit: '50' },
+    });
+
+    for (const p of dados.data ?? []) {
+      const conta = p.instagram_business_account;
+      if (!conta?.id) continue;
+      achadas.set(conta.id, {
+        pagina: p.name,
+        paginaId: p.id,
+        contaId: conta.id,
+        usuario: conta.username ?? '',
+      });
+    }
+  } catch {
+    // Seguir para o segundo caminho: ele cobre justamente os casos em que
+    // este falha.
+  }
+
+  try {
+    const debug = await chamar<{
+      data?: { granular_scopes?: { scope: string; target_ids?: string[] }[] };
+    }>('/debug_token', {
+      token: tokenDoApp ?? token,
+      parametros: { input_token: token },
+    });
+
+    const escopos = debug.data?.granular_scopes ?? [];
+    const alvo = (nome: string) => escopos.find((e) => e.scope === nome)?.target_ids ?? [];
+    const contas = new Set([...alvo('instagram_content_publish'), ...alvo('instagram_basic')]);
+    const paginaId = alvo('pages_show_list')[0] ?? alvo('pages_read_engagement')[0] ?? '';
+
+    let pagina = '';
+    if (paginaId) {
+      try {
+        pagina = (await chamar<{ name?: string }>(`/${paginaId}`, { token, parametros: { fields: 'name' } })).name ?? '';
+      } catch {
+        pagina = '';
+      }
+    }
+
+    for (const contaId of contas) {
+      if (achadas.has(contaId)) continue;
+      let usuario = '';
+      try {
+        usuario =
+          (await chamar<{ username?: string }>(`/${contaId}`, { token, parametros: { fields: 'username' } }))
+            .username ?? '';
+      } catch {
+        usuario = '';
+      }
+      achadas.set(contaId, { pagina, paginaId, contaId, usuario });
+    }
+  } catch {
+    // Os dois caminhos falharam: a lista vazia vira o erro na tela.
+  }
+
+  return [...achadas.values()];
 }
 
 /** Troca um token de hora por um de sessenta dias.

@@ -84,12 +84,12 @@ export async function configurarInstagramAction(
 
   try {
     const { token, expiraEm } = await tokenLongo(curto, appId, appSecret);
-    const contas = await contasDisponiveis(token);
+    const contas = await contasDisponiveis(token, `${appId}|${appSecret}`);
 
     if (contas.length === 0) {
       return {
         ...errResult(
-          'O token funcionou, mas nenhuma Página alcançada tem conta do Instagram conectada. Conecte o @progimports a uma Página no aplicativo do Instagram (Editar perfil → Página) e gere o token de novo.'
+          'O token funcionou, mas nenhuma conta do Instagram veio autorizada nele. No fluxo de login, marque a Página e a conta do Instagram da loja, e gere o token de novo.'
         ),
         token,
       };
