@@ -170,6 +170,77 @@ export function quebrar(
   return sobrou ? marcarCorte(linhas) : linhas;
 }
 
+/** A entrelinha dos títulos: apertada, para o bloco ocupar menos área. */
+export const ENTRELINHA_TITULO = 0.92;
+
+/** Põe o contexto exatamente no estado em que `titulo()` desenha, roda o que
+ *  for preciso e desfaz.
+ *
+ *  Existe porque medir fora desse estado é medir outra coisa. A largura do
+ *  título depende de três coisas ao mesmo tempo — a fonte, o `fontStretch` de
+ *  115% e o tracking negativo — e quem media só com `ctx.font` errava por uns
+ *  11% para cima: o `fontStretch` alarga 15% e o tracking devolve 3,5%. Onze
+ *  por cento é a diferença entre "cabe em uma linha" e "quebra em duas", e a
+ *  pilha inteira do rodapé é calculada em cima dessa contagem. */
+function noEstadoDoTitulo<T>(ctx: Ctx, tamanho: number, fazer: (fatorX: number) => T): T {
+  ctx.font = fonteTitulo(tamanho);
+  const soltar = espacamento(ctx, `${(-0.035 * tamanho).toFixed(2)}px`);
+  const { fatorX, desfazer } = comLarguraDeTitulo(ctx);
+  try {
+    return fazer(fatorX);
+  } finally {
+    desfazer();
+    soltar();
+  }
+}
+
+/** Em que linhas o título vai cair, medido como ele será desenhado. */
+export function linhasDoTitulo(
+  ctx: Ctx,
+  texto: string,
+  largura: number,
+  tamanho: number,
+  maxLinhas = 4
+): string[] {
+  return noEstadoDoTitulo(ctx, tamanho, (fatorX) => quebrar(ctx, texto, largura / fatorX, maxLinhas));
+}
+
+/** A altura que o título vai ocupar. É o número que a pilha do rodapé usa. */
+export function alturaDoTitulo(
+  ctx: Ctx,
+  texto: string,
+  largura: number,
+  tamanho: number,
+  maxLinhas = 4
+): number {
+  return linhasDoTitulo(ctx, texto, largura, tamanho, maxLinhas).length * tamanho * ENTRELINHA_TITULO;
+}
+
+/** A largura de uma linha de título no tamanho pedido. */
+export function larguraDoTitulo(ctx: Ctx, texto: string, tamanho: number): number {
+  return noEstadoDoTitulo(ctx, tamanho, (fatorX) => ctx.measureText(texto).width * fatorX);
+}
+
+/** O maior tamanho, até `tamanho`, em que todas as linhas cabem na largura.
+ *
+ *  Para capa, onde a quebra é escrita à mão e cada linha tem de caber inteira.
+ *  Encolher 6% é invisível; perder a última palavra da frase não é. O piso
+ *  existe para o texto absurdamente longo não virar corpo 8 — abaixo dele, a
+ *  reticência assume e o dono encurta o texto. */
+export function tamanhoQueCabe(
+  ctx: Ctx,
+  linhas: string[],
+  largura: number,
+  tamanho: number,
+  piso = 0.76
+): number {
+  const minimo = Math.round(tamanho * piso);
+  for (let t = tamanho; t >= minimo; t--) {
+    if (linhas.every((linha) => larguraDoTitulo(ctx, linha, t) <= largura)) return t;
+  }
+  return minimo;
+}
+
 /** Título do playbook: Archivo 800, expandido, entrelinha .92, tracking −3.5%.
  *  Devolve a altura ocupada, para quem desenha empilhar o que vem depois. */
 export function titulo(
@@ -181,21 +252,19 @@ export function titulo(
   opcoes: { largura?: number; cor?: string | CanvasGradient; maxLinhas?: number; alinhamento?: CanvasTextAlign } = {}
 ): number {
   const { largura = FEED.largura - MARGEM * 2, cor = COR.marfim, maxLinhas = 4, alinhamento = 'left' } = opcoes;
-  ctx.font = fonteTitulo(tamanho);
-  const soltar = espacamento(ctx, `${(-0.035 * tamanho).toFixed(2)}px`);
-  const { fatorX, desfazer } = comLarguraDeTitulo(ctx);
 
-  ctx.fillStyle = cor;
-  ctx.textAlign = alinhamento;
-  ctx.textBaseline = 'alphabetic';
-  const linhas = quebrar(ctx, texto, largura / fatorX, maxLinhas);
-  const entrelinha = tamanho * 0.92;
-  linhas.forEach((linha, i) => ctx.fillText(linha, x / fatorX, y + tamanho * 0.78 + i * entrelinha));
+  const linhas = noEstadoDoTitulo(ctx, tamanho, (fatorX) => {
+    ctx.fillStyle = cor;
+    ctx.textAlign = alinhamento;
+    ctx.textBaseline = 'alphabetic';
+    const quebradas = quebrar(ctx, texto, largura / fatorX, maxLinhas);
+    const entrelinha = tamanho * ENTRELINHA_TITULO;
+    quebradas.forEach((linha, i) => ctx.fillText(linha, x / fatorX, y + tamanho * 0.78 + i * entrelinha));
+    return quebradas;
+  });
 
-  desfazer();
-  soltar();
   ctx.textAlign = 'left';
-  return linhas.length * entrelinha;
+  return linhas.length * tamanho * ENTRELINHA_TITULO;
 }
 
 /** Rótulo mono em caixa-alta, +12% de tracking — specs, etapas, selos. */

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, Loader2, RefreshCw, X } from 'lucide-react';
@@ -27,6 +27,45 @@ export type AssuntoNaPauta = {
  *  Conveniência de quem está olhando, então vive no navegador dele e não no
  *  banco: é preferência de tela, não dado da loja. */
 const CHAVE_DA_DOBRA = 'prog.estudio.pauta.aberta';
+
+/* A dobra é estado de fora do React: mora no `localStorage`, que o servidor
+ * não tem. Ler no corpo de um efeito e chamar `setState` funcionava e
+ * provocava um render em cascata a cada visita — o próprio lint reclama.
+ * `useSyncExternalStore` é o caminho certo: o servidor responde "fechada", o
+ * navegador responde o que está guardado, e não há descompasso de hidratação.
+ *
+ * A cópia em memória é o que mantém o botão funcionando em janela anônima,
+ * onde gravar lança. */
+let dobraEmMemoria: boolean | null = null;
+const ouvintesDaDobra = new Set<() => void>();
+
+function lerDobra(): boolean {
+  if (dobraEmMemoria === null) {
+    try {
+      dobraEmMemoria = localStorage.getItem(CHAVE_DA_DOBRA) === '1';
+    } catch {
+      dobraEmMemoria = false;
+    }
+  }
+  return dobraEmMemoria;
+}
+
+function gravarDobra(valor: boolean): void {
+  dobraEmMemoria = valor;
+  try {
+    localStorage.setItem(CHAVE_DA_DOBRA, valor ? '1' : '0');
+  } catch {
+    // Não poder lembrar não impede abrir agora.
+  }
+  for (const avisar of ouvintesDaDobra) avisar();
+}
+
+function assinarDobra(avisar: () => void): () => void {
+  ouvintesDaDobra.add(avisar);
+  return () => {
+    ouvintesDaDobra.delete(avisar);
+  };
+}
 
 /** Os modelos que mais servem a uma notícia.
  *
@@ -58,36 +97,12 @@ export function PautaDeAssuntos({ assuntos }: { assuntos: AssuntoNaPauta[] }) {
   const [saindo, setSaindo] = useState<Record<string, boolean>>({});
 
   // Fechada por padrão: a pauta é consulta eventual, e vinte notícias abertas
-  // empurram as peças e os modelos para fora da tela em toda visita.
-  const [aberta, setAberta] = useState(false);
+  // empurram as peças e os modelos para fora da tela em toda visita. No
+  // servidor é sempre fechada; no navegador, o que ficou guardado.
+  const aberta = useSyncExternalStore(assinarDobra, lerDobra, () => false);
 
-  // Lida depois da primeira pintura, e não no estado inicial: o servidor não
-  // tem localStorage, e ler ali faria o HTML do servidor e o do navegador
-  // discordarem.
-  useEffect(() => {
-    try {
-      if (localStorage.getItem(CHAVE_DA_DOBRA) === '1') setAberta(true);
-    } catch {
-      // Janela anônima ou armazenamento bloqueado: fica fechada, que é o padrão.
-    }
-  }, []);
-
-  /** Abre e fecha, e lembra.
-   *
-   *  O valor novo é calculado fora do `setAberta`. Dentro, não: o React pode
-   *  chamar o atualizador mais de uma vez para a mesma interação, e com a
-   *  gravação lá dentro era isso que acontecia — dois cliques pelo preço de
-   *  um, a seção abria e fechava no mesmo instante e o navegador guardava
-   *  "fechada". Atualizador existe para calcular estado, não para ter
-   *  efeito. */
   function dobrar() {
-    const proxima = !aberta;
-    setAberta(proxima);
-    try {
-      localStorage.setItem(CHAVE_DA_DOBRA, proxima ? '1' : '0');
-    } catch {
-      // Não poder lembrar não impede abrir agora.
-    }
+    gravarDobra(!aberta);
   }
 
   /** Traduz em lotes, até a janela visível estar em português.

@@ -8,9 +8,12 @@
 
 import {
   COR,
+  ENTRELINHA_TITULO,
   MARGEM,
   brilho,
   caminhoArredondado,
+  larguraDoTitulo,
+  tamanhoQueCabe,
   espacamento,
   fonteMono,
   fonteTexto,
@@ -466,13 +469,21 @@ function tituloComUltimaLinhaEmOuro(
   largura: number
 ): number {
   const linhas = texto.split('\n').filter(Boolean);
-  const entrelinha = tamanho * 0.92;
+
+  // O corpo encolhe até a linha mais longa caber, em vez de a frase perder a
+  // última palavra. A capa do 4A é o caso que mostrou isto: "Do site
+  // americano" mede 992px em 118 e a caixa tem 936, então o "americano" sumia
+  // — sem aviso, porque a quebra cortava calada. Em 111 cabe, e seis por cento
+  // de diferença ninguém vê. Perder a palavra, vê.
+  const corpo = tamanhoQueCabe(ctx, linhas, largura, tamanho);
+  const entrelinha = corpo * ENTRELINHA_TITULO;
+
   linhas.forEach((linha, i) => {
     const ultima = i === linhas.length - 1;
     const cor = ultima && linhas.length > 1
-      ? ouroMetal(ctx, x, y + i * entrelinha, Math.min(largura, tamanho * linha.length * 0.6), tamanho)
+      ? ouroMetal(ctx, x, y + i * entrelinha, Math.min(largura, larguraDoTitulo(ctx, linha, corpo)), corpo)
       : COR.marfim;
-    titulo(ctx, linha, x, y + i * entrelinha, tamanho, { largura, cor, maxLinhas: 1 });
+    titulo(ctx, linha, x, y + i * entrelinha, corpo, { largura, cor, maxLinhas: 1 });
   });
   return linhas.length * entrelinha;
 }

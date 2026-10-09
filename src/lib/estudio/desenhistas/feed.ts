@@ -8,8 +8,10 @@
 
 import {
   COR,
+  ENTRELINHA_TITULO,
   MARGEM,
   brilho,
+  linhasDoTitulo,
   etiqueta,
   fonteMono,
   fonteTexto,
@@ -460,28 +462,22 @@ export const desenhar3E: Desenhista = ({ ctx, largura, altura, conteudo, imagens
 
 /* ------------------------------------------------------------------ apoio */
 
-/** Altura que um título vai ocupar, para ancorar a pilha no rodapé. */
+/** Altura que um título vai ocupar, para ancorar a pilha no rodapé.
+ *
+ *  Delega a contagem de linhas para quem desenha. Esta função tinha a sua
+ *  própria conta — `measureText` sem `fontStretch` e com um `* 1.15` de
+ *  correção, sem o tracking negativo — e por isso discordava do desenho em
+ *  uns 3,5%. Perto do limite, discordar significa contar uma linha a menos
+ *  que a desenhada, e a pilha inteira do rodapé sobe em cima do título. */
 function medirTitulo(
   ctx: Cena['ctx'],
   texto: string,
   largura: number,
   tamanho: number,
   maxLinhas = 2,
-  entrelinha = 0.92
+  entrelinha = ENTRELINHA_TITULO
 ): number {
-  ctx.font = fonteTitulo(tamanho);
-  if (texto.includes('\n')) {
-    return Math.min(texto.split('\n').length, maxLinhas) * tamanho * entrelinha;
-  }
-  const palavras = texto.split(/\s+/).filter(Boolean);
-  let linhas = 1;
-  let atual = '';
-  for (const p of palavras) {
-    const tentativa = atual ? `${atual} ${p}` : p;
-    if (ctx.measureText(tentativa).width * 1.15 <= largura || !atual) atual = tentativa;
-    else { linhas++; atual = p; }
-    if (linhas === maxLinhas) break;
-  }
+  const linhas = linhasDoTitulo(ctx, texto, largura, tamanho, maxLinhas).length;
   return linhas * tamanho * entrelinha;
 }
 
