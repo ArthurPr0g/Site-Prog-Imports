@@ -85,6 +85,23 @@ function maiorDoSrcset(srcset: string): string {
 const NAO_E_CONTEUDO =
   /(logo|avatar|gravatar|sprite|icon|badge|emoji|pixel|spacer|1x1|\/ads?\/|banner|promo|author|profile|placeholder|loading|blank|newsletter|subscribe)/i;
 
+/** A largura que o próprio endereço declara, quando declara.
+ *
+ *  Muita imagem não traz `width` na tag, mas diz o tamanho no nome ou na
+ *  query: `?w=290`, `?resize=1200,628`, `foto-290x145.jpg` (WordPress),
+ *  `foto-200-100.png` (Future, do Tom's Hardware). Sem ler isso, miniatura de
+ *  200px passava como imagem de matéria. */
+function larguraPeloEndereco(u: URL): number {
+  const q = u.searchParams;
+  const daQuery = Number(q.get('w') || q.get('width') || (q.get('resize') ?? '').split(',')[0] || 0);
+  if (daQuery) return daQuery;
+  const wordpress = u.pathname.match(/-(\d{2,4})x\d{2,4}\.\w+$/);
+  if (wordpress) return Number(wordpress[1]);
+  const future = u.pathname.match(/-(\d{2,4})-\d{2,3}\.\w+/);
+  if (future) return Number(future[1]);
+  return 0;
+}
+
 function normalizar(u: URL): string {
   // A mesma foto em tamanhos e formatos diferentes é uma foto só, e mostrar
   // quatro vezes não ajuda ninguém. Três jeitos de variar o nome, todos vistos
@@ -142,6 +159,8 @@ export async function imagensDaMateria(endereco: string): Promise<{ lista: Image
     // declarado tem de ser julgada depois de carregada, na tela.
     if (largura && largura < 480) return;
     if (altura && altura < 270) return;
+    const declarada = larguraPeloEndereco(u);
+    if (declarada && declarada < 480) return;
 
     const chave = normalizar(u);
     if (vistos.has(chave)) return;
