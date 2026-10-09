@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { credenciais } from '@/lib/instagram/api';
 import { comentariosDe, estadoDoToken, faltaPermissao, midias, perfil } from '@/lib/instagram/leitura';
+import { comentarioPede } from '@/lib/estudio/direct';
 
 // O que o token consegue ler, em números — nunca o token.
 //
@@ -10,12 +11,34 @@ import { comentariosDe, estadoDoToken, faltaPermissao, midias, perfil } from '@/
 
 export const maxDuration = 30;
 
-export async function GET() {
+export async function GET(req: Request) {
   const dono = await requireAdmin();
   if (!dono) return NextResponse.json({ erro: 'Só o gerenciamento usa o Estúdio.' }, { status: 403 });
 
   const c = credenciais();
   if (!c) return NextResponse.json({ configurado: false });
+
+  // ?post=<id>&palavra=QUERO — por que um post não gera pedidos. Só contagens e
+  // as palavras mais frequentes; nenhum nome de usuário sai daqui.
+  const url = new URL(req.url);
+  const post = url.searchParams.get('post') ?? '';
+  if (/^\d{5,40}$/.test(post)) {
+    const palavra = url.searchParams.get('palavra') ?? 'QUERO';
+    const ks = await comentariosDe(c, post, 500);
+    const frequencia = new Map<string, number>();
+    for (const k of ks) {
+      for (const w of k.texto.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').split(/[^\p{L}\p{N}]+/u)) {
+        if (w.length >= 3) frequencia.set(w, (frequencia.get(w) ?? 0) + 1);
+      }
+    }
+    return NextResponse.json({
+      lidos: ks.length,
+      semUsuario: ks.filter((k) => !k.usuario).length,
+      semTexto: ks.filter((k) => !k.texto).length,
+      pedem: ks.filter((k) => comentarioPede(k.texto, palavra)).length,
+      palavras: [...frequencia.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15),
+    });
+  }
 
   const token = await estadoDoToken();
   const saida: Record<string, unknown> = {
