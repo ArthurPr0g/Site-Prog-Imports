@@ -72,15 +72,22 @@ export function PautaDeAssuntos({ assuntos }: { assuntos: AssuntoNaPauta[] }) {
     }
   }, []);
 
+  /** Abre e fecha, e lembra.
+   *
+   *  O valor novo é calculado fora do `setAberta`. Dentro, não: o React pode
+   *  chamar o atualizador mais de uma vez para a mesma interação, e com a
+   *  gravação lá dentro era isso que acontecia — dois cliques pelo preço de
+   *  um, a seção abria e fechava no mesmo instante e o navegador guardava
+   *  "fechada". Atualizador existe para calcular estado, não para ter
+   *  efeito. */
   function dobrar() {
-    setAberta((a) => {
-      try {
-        localStorage.setItem(CHAVE_DA_DOBRA, a ? '0' : '1');
-      } catch {
-        // Não poder lembrar não impede abrir agora.
-      }
-      return !a;
-    });
+    const proxima = !aberta;
+    setAberta(proxima);
+    try {
+      localStorage.setItem(CHAVE_DA_DOBRA, proxima ? '1' : '0');
+    } catch {
+      // Não poder lembrar não impede abrir agora.
+    }
   }
 
   /** Traduz em lotes, até a janela visível estar em português.
