@@ -83,7 +83,9 @@ function haQuanto(iso: string, agora: number): string {
   const d = Math.floor(h / 24);
   if (d < 30) return `há ${d} ${d === 1 ? 'dia' : 'dias'}`;
   const m = Math.floor(d / 30);
-  return `há ${m} ${m === 1 ? 'mês' : 'meses'}`;
+  if (m < 12) return `há ${m} ${m === 1 ? 'mês' : 'meses'}`;
+  const a = Math.floor(d / 365);
+  return `há ${a} ${a === 1 ? 'ano' : 'anos'}`;
 }
 
 function primeiraLinha(legenda: string, max = 70): string {
