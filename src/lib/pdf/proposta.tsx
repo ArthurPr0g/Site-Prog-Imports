@@ -25,6 +25,7 @@ import {
   type ServicoDoContrato,
 } from '@/lib/contract';
 import { temDesconto, valorDoDesconto, aplicarDesconto, rotuloDoDesconto, type Desconto } from '@/lib/discount';
+import { totaisDoCombo, descricaoSemValorSeparado } from '@/lib/combo-servicos';
 
 export type DadosDaProposta = {
   numero: string;
@@ -204,6 +205,13 @@ function Dado({ rotulo, valor, s }: { rotulo: string; valor: string; s: ReturnTy
   );
 }
 
+/** A Helvetica embutida no PDF só tem os caracteres do Latin-1: o resto sai
+ *  trocado por outro glifo (o "⇄" do botão Site ⇄ Gestão virava "Ä"). Os que
+ *  aparecem nos textos do catálogo são trocados por um equivalente simples. */
+function paraPdf(texto: string): string {
+  return (texto ?? '').replace(/\s*⇄\s*/g, ' / ').replace(/[→⟶]/g, '->').replace(/[←⟵]/g, '<-');
+}
+
 export function PropostaDocument(d: DadosDaProposta) {
   const s = estilos(d.marca.accent);
   const temPlano = d.totalMensal > 0 && (d.mesesPlano ?? 0) > 0;
@@ -216,6 +224,13 @@ export function PropostaDocument(d: DadosDaProposta) {
   const descontoBrl = valorDoDesconto(d.totalUnico, d.desconto);
   const trabalho = aplicarDesconto(d.totalUnico, d.desconto);
   const comDesconto = temDesconto(d.desconto) && descontoBrl > 0;
+
+  // Combo: quanto o trabalho custaria separado e quanto o combo já tirou. Vai
+  // para a tabela de totais junto com o desconto manual, para o cliente ver
+  // os dois descontos e a economia somada.
+  const { separados, descontoCombo } = totaisDoCombo(d.itens);
+  const comCombo = descontoCombo > 0;
+  const economiaTotal = descontoCombo + (comDesconto ? descontoBrl : 0);
 
   const { primeira, segunda } = metadesDoPagamento(trabalho);
   const valorContrato = trabalho + d.totalMensal * meses;
@@ -329,8 +344,10 @@ export function PropostaDocument(d: DadosDaProposta) {
           {d.itens.map((item, i) => (
             <View key={i} style={s.tr}>
               <View style={s.colServico}>
-                <Text style={s.nomeServico}>{item.name}</Text>
-                {!!item.description && <Text style={s.descServico}>{item.description}</Text>}
+                <Text style={s.nomeServico}>{paraPdf(item.name)}</Text>
+                {!!item.description && (
+                  <Text style={s.descServico}>{paraPdf(descricaoSemValorSeparado(item.description))}</Text>
+                )}
               </View>
               <Text style={s.celulaPrazo}>
                 {item.billingType === 'mensal' ? 'contínuo' : formatPrazo(item.leadTimeDays)}
@@ -343,9 +360,23 @@ export function PropostaDocument(d: DadosDaProposta) {
           ))}
 
           <View style={s.totais}>
+            {comCombo && (
+              <>
+                <View style={s.linhaTotal}>
+                  <Text style={s.rotuloTotal}>Valor dos serviços separados</Text>
+                  <Text style={s.valorTotal}>{formatBRL(separados)}</Text>
+                </View>
+                <View style={s.linhaTotal}>
+                  <Text style={{ ...s.rotuloTotal, color: d.marca.accent }}>Desconto do combo</Text>
+                  <Text style={{ ...s.valorTotal, color: d.marca.accent }}>-{formatBRL(descontoCombo)}</Text>
+                </View>
+              </>
+            )}
             {d.totalUnico > 0 && (
               <View style={s.linhaTotal}>
-                <Text style={s.rotuloTotal}>{comDesconto ? 'Subtotal dos serviços' : 'Investimento inicial'}</Text>
+                <Text style={s.rotuloTotal}>
+                  {comDesconto ? (comCombo ? 'Subtotal com o combo' : 'Subtotal dos serviços') : 'Investimento inicial'}
+                </Text>
                 <Text style={s.valorTotal}>{formatBRL(d.totalUnico)}</Text>
               </View>
             )}
@@ -366,6 +397,12 @@ export function PropostaDocument(d: DadosDaProposta) {
                   <Text style={s.valorTotal}>{formatBRL(trabalho)}</Text>
                 </View>
               </>
+            )}
+            {comCombo && comDesconto && (
+              <View style={s.linhaTotal}>
+                <Text style={{ ...s.rotuloTotal, color: d.marca.accent }}>Economia total (combo + desconto)</Text>
+                <Text style={{ ...s.valorTotal, color: d.marca.accent }}>{formatBRL(economiaTotal)}</Text>
+              </View>
             )}
             {temPlano && (
               <>
