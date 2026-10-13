@@ -29,6 +29,8 @@ import { totaisDoCombo, descricaoSemValorSeparado } from '@/lib/combo-servicos';
 
 export type DadosDaProposta = {
   numero: string;
+  /** Título do arquivo no visualizador; o mesmo do nome do PDF baixado. */
+  nomeDoDocumento?: string;
   criadoEm: string;
   titulo: string;
   observacoes: string;
@@ -317,7 +319,7 @@ export function PropostaDocument(d: DadosDaProposta) {
   );
 
   return (
-    <Document title={`Proposta ${d.numero} — ${d.titulo}`} author={d.marca.nome}>
+    <Document title={d.nomeDoDocumento || `Proposta ${d.numero} — ${d.titulo}`} author={d.marca.nome}>
       <Page size="A4" style={s.pagina}>
         {/* O rodapé `fixed` vem PRIMEIRO na página: no fim dela, o react-pdf
             só o repetia a partir da página onde ele caía no fluxo, e as

@@ -6,24 +6,13 @@ import { requireAdmin } from '@/lib/auth';
 import { BRAND } from '@/lib/brand';
 import { totalizarItens, type BillingType, type ServiceOrderItem } from '@/lib/services';
 import { PropostaDocument } from '@/lib/pdf/proposta';
+import { nomeDaProposta, contentDispositionDoPdf } from '@/lib/pdf/nome-arquivo';
 import { montarEndereco } from '@/lib/contract';
 import type { Desconto } from '@/lib/discount';
 
 // react-pdf precisa do runtime Node: usa APIs de arquivo e fontes que o edge
 // não tem.
 export const runtime = 'nodejs';
-
-/** Nome de arquivo seguro: acentos e barras viram traço. Sem isso o navegador
- *  pode recusar o download ou salvar com o nome truncado. */
-function nomeDoArquivo(titulo: string, numero: string): string {
-  const limpo = titulo
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-zA-Z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60);
-  return `proposta-${numero}-${limpo || 'servicos'}.pdf`;
-}
 
 /** Logo em data URI. Falha aqui não impede a proposta de sair — um PDF sem logo
  *  ainda é entregável; um erro 500 na hora de mandar para o cliente, não. */
@@ -104,12 +93,15 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const totais = totalizarItens(itens);
 
   const cliente = q.customers;
+  const numero = q.id.slice(0, 8).toUpperCase();
+  const nomeDoPdf = nomeDaProposta({ numero, cliente: cliente?.name ?? '', itens, titulo: q.title });
 
   const buffer = await renderToBuffer(
     PropostaDocument({
       // Os 8 primeiros caracteres do uuid bastam para identificar a proposta e
       // cabem no cabeçalho; o id inteiro ficaria ilegível.
-      numero: q.id.slice(0, 8).toUpperCase(),
+      numero,
+      nomeDoDocumento: nomeDoPdf,
       criadoEm: q.created_at,
       titulo: q.title,
       observacoes: q.notes,
@@ -162,7 +154,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       'Content-Type': 'application/pdf',
       // inline: abre no visualizador do navegador, de onde dá para conferir
       // antes de mandar e salvar se estiver certo.
-      'Content-Disposition': `inline; filename="${nomeDoArquivo(q.title, q.id.slice(0, 8))}"`,
+      'Content-Disposition': contentDispositionDoPdf(nomeDoPdf),
       'Cache-Control': 'no-store',
     },
   });
