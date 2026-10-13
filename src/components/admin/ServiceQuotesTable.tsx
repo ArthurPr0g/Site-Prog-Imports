@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useTransition } from 'react';
 import Link from 'next/link';
-import { Pencil, Trash2, Plus, X, Search, ArrowRightCircle, FileDown, UserPlus } from 'lucide-react';
+import { Pencil, Trash2, Plus, X, Search, ArrowRightCircle, FileDown, UserPlus, MessageSquareText } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { formatBRL, parseNumeroBR, formatDateBR, formatNumeroInput } from '@/lib/format';
 import {
@@ -36,13 +36,15 @@ import {
   type ServiceQuoteInput,
 } from '@/app/actions/service-quotes';
 import { saveCustomerAction } from '@/app/actions/customers';
+import { nomeDaProposta } from '@/lib/pdf/nome-arquivo';
+import { mensagemDaProposta } from '@/lib/mensagem-proposta';
 import { AvisoAjusteAutomatico, useAjusteAutomatico } from '@/components/admin/AjusteAutomatico';
 import { classificarServico, modulosExtrasDoServico, modulosPresentes, NOME_DO_MODULO, type ModuloContrato } from '@/lib/contract';
 
 const inputClass =
   'rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px] outline-none focus:border-accent';
 
-const COLUNAS = 'grid grid-cols-[1.7fr_1fr_120px_100px_170px_100px] gap-2';
+const COLUNAS = 'grid grid-cols-[1.7fr_1fr_120px_100px_170px_170px] gap-2';
 
 const VERDE = '#4ade80';
 const CINZA = '#7a7a84';
@@ -61,6 +63,12 @@ function estiloDoStatus(status: ServiceQuoteStatus): { classe: string; style?: R
 function hojeISO(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Mesmo nome que o servidor dá ao PDF: vai no fim do link para o navegador
+ *  salvar com ele (ver api/orcamentos-servicos/[id]/pdf/[arquivo]). */
+function nomeDoPdf(q: ServiceQuote): string {
+  return nomeDaProposta({ numero: q.id.slice(0, 8).toUpperCase(), cliente: q.customerName, itens: q.items, titulo: q.title });
 }
 
 function itemVazio(): ServiceOrderItem {
@@ -203,6 +211,17 @@ export function ServiceQuotesTable({
       set('customerId', id);
       setClienteRapido(null);
     });
+  }
+
+  // Texto para mandar junto com o PDF (WhatsApp ou e-mail), com os mesmos
+  // números da proposta.
+  async function copiarMensagem(q: ServiceQuote) {
+    try {
+      await navigator.clipboard.writeText(mensagemDaProposta(q));
+      toast('Mensagem copiada. É só colar na conversa com o cliente.');
+    } catch {
+      toast({ ok: false, message: 'Não foi possível copiar. Verifique a permissão de área de transferência do navegador.' });
+    }
   }
 
   function excluir(q: ServiceQuote) {
@@ -417,7 +436,7 @@ export function ServiceQuotesTable({
                     conferir antes de mandar. Um fetch traria o arquivo para a
                     memória sem nada para olhar. */}
                 <a
-                  href={`/api/orcamentos-servicos/${q.id}/pdf`}
+                  href={`/api/orcamentos-servicos/${q.id}/pdf/${encodeURIComponent(`${nomeDoPdf(q)}.pdf`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   title={q.includeContract ? 'Gerar proposta + contrato (PDF)' : 'Gerar proposta (PDF)'}
@@ -426,6 +445,15 @@ export function ServiceQuotesTable({
                 >
                   <FileDown size={12} />
                 </a>
+                <button
+                  type="button"
+                  onClick={() => copiarMensagem(q)}
+                  title="Copiar mensagem para o cliente"
+                  aria-label={`Copiar mensagem para o cliente de ${q.title}`}
+                  className="grid h-7 w-7 place-items-center rounded-full border border-border-strong text-fg-tertiary hover:border-accent hover:text-accent"
+                >
+                  <MessageSquareText size={12} />
+                </button>
                 {convertivel && (
                   <button
                     onClick={() =>
