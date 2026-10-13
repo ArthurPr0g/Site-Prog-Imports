@@ -162,3 +162,43 @@ export function ajustarCombosEMensalidades(
   if (!combo && mensalidadesRemovidas.length === 0) return null;
   return { items, combo, mensalidadesRemovidas };
 }
+
+/* --------------------------------------------- o combo na proposta (PDF) */
+
+// Todo item de combo leva na descrição quanto os serviços custariam
+// separados: "(separados: R$ 5.594,00)" nos montados aqui e "(separados:
+// R$ 3.594)" nos do catálogo. É de lá que a proposta tira a linha "Valor dos
+// serviços separados" e o desconto do combo, inclusive em orçamentos antigos,
+// sem coluna nova no banco. Mensalidade de combo diz "separadas" e não entra:
+// o desconto do combo é sobre o trabalho.
+const SEPARADOS = /\s*\(separados:\s*R\$\s*([\d.]+(?:,\d{1,2})?)\)/i;
+
+/** Quanto os serviços de um item de combo custariam separados, ou null. */
+export function valorSeparadoDoCombo(item: Pick<ServiceOrderItem, 'description' | 'billingType'>): number | null {
+  if (item.billingType !== 'unico') return null;
+  const m = SEPARADOS.exec(item.description ?? '');
+  if (!m) return null;
+  const v = Number(m[1].replace(/\./g, '').replace(',', '.'));
+  return Number.isFinite(v) && v > 0 ? v : null;
+}
+
+/** A descrição sem o "(separados: R$ …)": na proposta o valor vai para a
+ *  tabela de totais, e repetir no texto só polui. */
+export function descricaoSemValorSeparado(descricao: string): string {
+  return (descricao ?? '').replace(SEPARADOS, '');
+}
+
+/** Totais do combo para a proposta: o trabalho como se fosse separado e
+ *  quanto o combo descontou. Itens que não são combo entram pelo valor. */
+export function totaisDoCombo(itens: Pick<ServiceOrderItem, 'description' | 'billingType' | 'amount'>[]) {
+  let separados = 0;
+  let comCombo = 0;
+  for (const i of itens) {
+    if (i.billingType !== 'unico') continue;
+    const s = valorSeparadoDoCombo(i);
+    separados += s ?? i.amount;
+    if (s) comCombo += s - i.amount;
+  }
+  const descontoCombo = Math.max(0, Math.round(comCombo * 100) / 100);
+  return { separados: Math.round(separados * 100) / 100, descontoCombo };
+}
