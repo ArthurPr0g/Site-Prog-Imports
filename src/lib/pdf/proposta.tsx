@@ -135,6 +135,18 @@ function estilos(accent: string) {
     },
     rotuloDestaque: { fontSize: 10.5, fontWeight: 'bold', textAlign: 'right', width: 190 },
     valorDestaque: { fontSize: 14, fontWeight: 'bold', color: accent, width: 100, textAlign: 'right' },
+    notaDestaque: { fontSize: 8.5, color: CINZA_CLARO, textAlign: 'right', marginTop: 2, width: 290, alignSelf: 'flex-end' },
+    // O que o cliente desembolsa no trabalho, em destaque leve, para o valor
+    // total do contrato (que soma as mensalidades) não parecer o pagamento.
+    pagamentos: {
+      marginTop: 6,
+      marginBottom: 6,
+      paddingTop: 6,
+      paddingBottom: 2,
+      borderTopWidth: 1,
+      borderTopColor: LINHA,
+    },
+    rotuloPagamento: { fontSize: 9.5, fontWeight: 'bold', color: '#1a1a1f', textAlign: 'right', width: 190 },
 
     caixa: {
       borderWidth: 1,
@@ -404,6 +416,18 @@ export function PropostaDocument(d: DadosDaProposta) {
                 <Text style={{ ...s.valorTotal, color: d.marca.accent }}>{formatBRL(economiaTotal)}</Text>
               </View>
             )}
+            {d.totalUnico > 0 && (
+              <View style={s.pagamentos}>
+                <View style={s.linhaTotal}>
+                  <Text style={s.rotuloPagamento}>Você paga na contratação (50%)</Text>
+                  <Text style={s.valorTotal}>{formatBRL(primeira)}</Text>
+                </View>
+                <View style={s.linhaTotal}>
+                  <Text style={s.rotuloPagamento}>Você paga na entrega (50%)</Text>
+                  <Text style={s.valorTotal}>{formatBRL(segunda)}</Text>
+                </View>
+              </View>
+            )}
             {temPlano && (
               <>
                 <View style={s.linhaTotal}>
@@ -420,6 +444,11 @@ export function PropostaDocument(d: DadosDaProposta) {
               <Text style={s.rotuloDestaque}>{temPlano ? 'Valor total do contrato' : 'Valor total'}</Text>
               <Text style={s.valorDestaque}>{formatBRL(valorContrato)}</Text>
             </View>
+            {temPlano && d.totalUnico > 0 && (
+              <Text style={s.notaDestaque}>
+                Investimento inicial + {meses} mensalidades de {formatBRL(d.totalMensal)}, pagas mês a mês.
+              </Text>
+            )}
           </View>
         </View>
 
