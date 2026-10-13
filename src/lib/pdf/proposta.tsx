@@ -29,6 +29,8 @@ import { totaisDoCombo, descricaoSemValorSeparado } from '@/lib/combo-servicos';
 
 export type DadosDaProposta = {
   numero: string;
+  /** Título do arquivo no visualizador; o mesmo do nome do PDF baixado. */
+  nomeDoDocumento?: string;
   criadoEm: string;
   titulo: string;
   observacoes: string;
@@ -317,7 +319,7 @@ export function PropostaDocument(d: DadosDaProposta) {
   );
 
   return (
-    <Document title={`Proposta ${d.numero} — ${d.titulo}`} author={d.marca.nome}>
+    <Document title={d.nomeDoDocumento || `Proposta ${d.numero} — ${d.titulo}`} author={d.marca.nome}>
       <Page size="A4" style={s.pagina}>
         {/* O rodapé `fixed` vem PRIMEIRO na página: no fim dela, o react-pdf
             só o repetia a partir da página onde ele caía no fluxo, e as
@@ -461,10 +463,12 @@ export function PropostaDocument(d: DadosDaProposta) {
             {d.totalUnico > 0 && (
               <>
                 <Text style={s.textoCaixa}>
-                  • 50% na contratação — {formatBRL(primeira)}, como sinal para início dos trabalhos.
+                  • 50% na contratação — {formatBRL(primeira)}, como sinal para início dos trabalhos. Pode ser
+                  dividido no cartão em até 2x sem juros.
                 </Text>
                 <Text style={s.textoCaixa}>
-                  • 50% na entrega — {formatBRL(segunda)}, na conclusão, antes da publicação.
+                  • 50% na entrega — {formatBRL(segunda)}, na conclusão, antes da publicação. Também pode ser
+                  dividido no cartão em até 2x sem juros.
                 </Text>
               </>
             )}
@@ -474,7 +478,8 @@ export function PropostaDocument(d: DadosDaProposta) {
               </Text>
             )}
             <Text style={{ ...s.textoCaixa, marginTop: 3, fontSize: 7.5, marginBottom: 0 }}>
-              À vista ou parcelado; no parcelamento podem incidir juros ou taxas da operadora de pagamento.
+              Pix, boleto ou cartão. No cartão, cada metade sai em até 2x sem juros; em mais parcelas podem
+              incidir juros ou taxas da operadora de pagamento.
             </Text>
           </View>
         </View>
