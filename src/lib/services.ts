@@ -398,10 +398,16 @@ export type ServiceQuoteIndicators = {
   valorEmAberto: number;
   valorAprovado: number;
   convertidos: number;
-  /** Trabalho dos orçamentos que viraram prestação, já com o desconto: é o
-   *  que de fato foi fechado. A mensalidade não entra. */
+  /** Os três valores são o CONTRATO inteiro, como no fim do PDF: trabalho já
+   *  com o desconto + mensalidade × meses do plano. */
   valorConvertido: number;
 };
+
+/** Valor do contrato de um orçamento, pelos totais gravados (iguais aos dos
+ *  itens): trabalho com desconto + todas as mensalidades do plano. */
+export function valorDoContratoDoOrcamento(q: ServiceQuote): number {
+  return aplicarDesconto(q.totalAmount, q.desconto) + q.monthlyAmount * (q.planMonths ?? 0);
+}
 
 /** Indicadores dos orçamentos.
  *
@@ -422,10 +428,10 @@ export function computeServiceQuoteIndicators(quotes: ServiceQuote[]): ServiceQu
   return {
     emAberto: emAberto.length,
     aprovados: aprovados.length,
-    valorEmAberto: emAberto.reduce((s, q) => s + q.totalAmount, 0),
-    valorAprovado: aprovados.reduce((s, q) => s + q.totalAmount, 0),
+    valorEmAberto: emAberto.reduce((s, q) => s + valorDoContratoDoOrcamento(q), 0),
+    valorAprovado: aprovados.reduce((s, q) => s + valorDoContratoDoOrcamento(q), 0),
     convertidos: convertidos.length,
-    valorConvertido: convertidos.reduce((s, q) => s + aplicarDesconto(q.totalAmount, q.desconto), 0),
+    valorConvertido: convertidos.reduce((s, q) => s + valorDoContratoDoOrcamento(q), 0),
   };
 }
 

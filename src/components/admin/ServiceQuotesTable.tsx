@@ -313,13 +313,13 @@ export function ServiceQuotesTable({
 
   const cards = [
     { rotulo: 'Em aberto', valor: String(ind.emAberto), nota: 'orçamentos' },
-    { rotulo: 'Valor em aberto', valor: formatBRL(ind.valorEmAberto), nota: 'ainda pode virar sim' },
+    { rotulo: 'Valor em aberto', valor: formatBRL(ind.valorEmAberto), nota: 'serviços + mensalidades, com desconto' },
     { rotulo: 'Aprovados', valor: String(ind.aprovados), nota: 'a converter' },
-    { rotulo: 'Valor aprovado', valor: formatBRL(ind.valorAprovado), nota: 'a converter' },
+    { rotulo: 'Valor aprovado', valor: formatBRL(ind.valorAprovado), nota: 'serviços + mensalidades, com desconto' },
     {
       rotulo: 'Valor convertido em prestação',
       valor: formatBRL(ind.valorConvertido),
-      nota: `${ind.convertidos} orçamento(s), com desconto`,
+      nota: `${ind.convertidos} orçamento(s) · serviços + mensalidades, com desconto`,
     },
   ];
 
