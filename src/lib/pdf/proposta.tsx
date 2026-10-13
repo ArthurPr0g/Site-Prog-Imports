@@ -364,7 +364,7 @@ export function PropostaDocument(d: DadosDaProposta) {
                 )}
               </View>
               <Text style={s.celulaPrazo}>
-                {item.billingType === 'mensal' ? 'contínuo' : formatPrazo(item.leadTimeDays)}
+                {item.billingType === 'mensal' ? (meses > 0 ? `${meses} meses` : 'mensal') : formatPrazo(item.leadTimeDays)}
               </Text>
               <View style={s.colValor}>
                 <Text style={s.valorServico}>{formatBRL(item.amount)}</Text>
