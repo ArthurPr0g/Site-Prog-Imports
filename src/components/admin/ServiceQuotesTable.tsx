@@ -297,6 +297,11 @@ export function ServiceQuotesTable({
     { rotulo: 'Valor em aberto', valor: formatBRL(ind.valorEmAberto), nota: 'ainda pode virar sim' },
     { rotulo: 'Aprovados', valor: String(ind.aprovados), nota: 'a converter' },
     { rotulo: 'Valor aprovado', valor: formatBRL(ind.valorAprovado), nota: 'a converter' },
+    {
+      rotulo: 'Valor convertido em prestação',
+      valor: formatBRL(ind.valorConvertido),
+      nota: `${ind.convertidos} orçamento(s), com desconto`,
+    },
   ];
 
   return (
@@ -319,14 +324,15 @@ export function ServiceQuotesTable({
         </button>
       </div>
 
-      <div className="mb-3.5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-3.5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {cards.map((c) => (
           <div key={c.rotulo} className="rounded-[18px] border border-border bg-card px-5 py-4">
-            <div className="mb-1 flex items-baseline gap-2">
-              <span className="text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{c.rotulo}</span>
-              <span className="text-[10.5px] text-fg-faded/70">{c.nota}</span>
+            {/* Título numa linha só e a nota abaixo do valor, como nos cards da Prestação. */}
+            <div className="mb-1 truncate whitespace-nowrap text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded" title={c.rotulo}>
+              {c.rotulo}
             </div>
             <div className="text-[22px] font-extrabold">{c.valor}</div>
+            <div className="mt-0.5 text-[11px] font-bold text-fg-faded">{c.nota}</div>
           </div>
         ))}
       </div>

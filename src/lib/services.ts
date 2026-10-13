@@ -397,6 +397,10 @@ export type ServiceQuoteIndicators = {
   aprovados: number;
   valorEmAberto: number;
   valorAprovado: number;
+  convertidos: number;
+  /** Trabalho dos orçamentos que viraram prestação, já com o desconto: é o
+   *  que de fato foi fechado. A mensalidade não entra. */
+  valorConvertido: number;
 };
 
 /** Indicadores dos orçamentos.
@@ -413,12 +417,15 @@ export function computeServiceQuoteIndicators(quotes: ServiceQuote[]): ServiceQu
     ['Em elaboração', 'Enviado', 'Aguardando Cliente'].includes(q.status)
   );
   const aprovados = quotes.filter((q) => q.status === 'Aprovado');
+  const convertidos = quotes.filter((q) => q.status === 'Convertido em Prestação');
 
   return {
     emAberto: emAberto.length,
     aprovados: aprovados.length,
     valorEmAberto: emAberto.reduce((s, q) => s + q.totalAmount, 0),
     valorAprovado: aprovados.reduce((s, q) => s + q.totalAmount, 0),
+    convertidos: convertidos.length,
+    valorConvertido: convertidos.reduce((s, q) => s + aplicarDesconto(q.totalAmount, q.desconto), 0),
   };
 }
 
