@@ -1388,6 +1388,24 @@ Claude). Dia 0 é o próprio início. Ao aplicar, a tela sugere o início da
 prestação e aceita outra data; as datas viram fixas na prestação. Assim um
 roteiro serve para qualquer prestação.
 
+**Vários modelos de uma vez, sem etapa repetida (pedido do dono, 2026-10-14).**
+A maioria das prestações vende mais de um serviço (site + sistema, loja +
+sistema). A janela aceita escolher vários modelos e `mesclarModelos`
+(`lib/atividades.ts`) junta os roteiros: etapa com o **mesmo título** (sem
+diferença de acento, caixa ou espaço) entra uma vez só, na **data mais
+tardia** entre os modelos — publicar e entregar só quando tudo está pronto —, e
+as observações de cada serviço são somadas ("Site: … · Gestão: …"). Etapa que a
+prestação já tem também não entra de novo. Por isso os modelos padrão usam
+títulos idênticos nas etapas comuns: "Contrato assinado e 50% de entrada
+confirmados", "Briefing com o cliente", "Receber materiais e acessos do
+cliente", "Registrar ou apontar o domínio", "Criar o projeto (GitHub, Vercel e
+Supabase)", "SEO: …", "Testes no celular e no computador", "Publicar no domínio
+oficial com SSL", "Treinamento do cliente" e "Entrega ao cliente e cobrança dos
+50% finais". Os 6 modelos iniciais (Site, Loja virtual, Sistema de gestão,
+Identidade visual, Dashboards Power BI, Mentoria Power BI) foram cadastrados por
+SQL com os prazos do catálogo de serviços internos. Site + Sistema de gestão dá
+19 atividades (24 menos 5 em comum); Loja + Sistema, 22.
+
 **Aplicar um modelo COPIA os itens.** Editar ou excluir o modelo depois não
 mexe nas atividades já criadas (FK `on delete set null`). Os itens do modelo
 são regravados inteiros ao salvar, porque são editados de uma vez na mesma tela.

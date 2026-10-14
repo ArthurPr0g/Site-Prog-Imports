@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
-import { somarDias, type ItemDeModelo } from '@/lib/atividades';
+import { mesclarModelos, somarDias, type ItemDeModelo } from '@/lib/atividades';
 import { hojeEmSaoPaulo } from '@/lib/data/painel';
 import { sincronizarFinanceiroDaPrestacao } from '@/lib/data/service-orders';
 import { revalidarDinheiro } from '@/lib/data/revalidate';
@@ -102,43 +102,54 @@ export async function excluirAtividadeAction(id: string): Promise<ActionResult> 
   return okResult('Atividade excluída.');
 }
 
-/** Copia o roteiro do modelo para a prestação. As datas contam a partir do
- *  `inicio` escolhido na tela (o início da prestação, por padrão). Copiar — e
- *  não ligar — é o que deixa editar o modelo depois sem mexer em quem já o usou. */
-export async function aplicarModeloAction(prestacaoId: string, modeloId: string, inicio: string): Promise<ActionResult> {
+/** Copia o roteiro de UM OU MAIS modelos para a prestação, mesclado sem etapa
+ *  repetida (`mesclarModelos`) e sem repetir o que a prestação já tem. As datas
+ *  contam a partir do `inicio` escolhido na tela (o início da prestação, por
+ *  padrão). Copiar — e não ligar — é o que deixa editar o modelo depois sem
+ *  mexer em quem já o usou. */
+export async function aplicarModelosAction(prestacaoId: string, modeloIds: string[], inicio: string): Promise<ActionResult> {
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  if (!modeloIds.length) return errResult('Escolha pelo menos um modelo.');
   const base = DATA.test(inicio) ? inicio : hojeEmSaoPaulo();
 
-  const { data: itens } = await supabase
-    .from('work_template_items')
-    .select('title, notes, day_offset, position')
-    .eq('template_id', modeloId)
-    .order('position');
-  if (!itens?.length) return errResult('Esse modelo ainda não tem atividades.');
+  const [{ data: linhas }, { data: atuais }] = await Promise.all([
+    supabase
+      .from('work_template_items')
+      .select('template_id, title, notes, day_offset, position')
+      .in('template_id', modeloIds)
+      .order('position'),
+    supabase.from('service_activities').select('title, position').eq('service_order_id', prestacaoId),
+  ]);
 
-  const { data: ultima } = await supabase
-    .from('service_activities')
-    .select('position')
-    .eq('service_order_id', prestacaoId)
-    .order('position', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const inicioPosicao = (ultima?.position ?? -1) + 1;
+  // Na ordem em que os modelos foram escolhidos: desempate de etapas no mesmo dia
+  const modelos = modeloIds.map((id) => ({
+    id,
+    itens: (linhas ?? [])
+      .filter((l) => l.template_id === id)
+      .map((l) => ({ titulo: l.title, notas: l.notes ?? '', dias: l.day_offset })),
+  }));
+  const itens = mesclarModelos(modelos, (atuais ?? []).map((a) => a.title));
+  if (!itens.length) {
+    return errResult(
+      (linhas ?? []).length ? 'Todas as atividades desses modelos já estão nesta prestação.' : 'Esses modelos ainda não têm atividades.'
+    );
+  }
 
+  const inicioPosicao = Math.max(-1, ...(atuais ?? []).map((a) => a.position)) + 1;
   const { error } = await supabase.from('service_activities').insert(
     itens.map((i, k) => ({
       service_order_id: prestacaoId,
-      template_id: modeloId,
-      title: i.title,
-      notes: i.notes,
-      due_date: somarDias(base, i.day_offset),
+      template_id: i.modeloId,
+      title: i.titulo,
+      notes: i.notas || null,
+      due_date: somarDias(base, i.dias),
       position: inicioPosicao + k,
     }))
   );
-  if (error) return errResult(friendlyDbError(error, 'Não foi possível aplicar o modelo.'));
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível aplicar os modelos.'));
   revalidarAtividades();
-  return okResult(`${itens.length} atividade${itens.length > 1 ? 's' : ''} adicionada${itens.length > 1 ? 's' : ''} do modelo.`);
+  return okResult(`${itens.length} atividade${itens.length > 1 ? 's' : ''} adicionada${itens.length > 1 ? 's' : ''}.`);
 }
 
 /** Finaliza a prestação depois que o dono confirmou que não falta mais nada.

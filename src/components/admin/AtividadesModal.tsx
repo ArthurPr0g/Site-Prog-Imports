@@ -6,6 +6,8 @@ import { useToast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
   dataCurta,
+  mesclarModelos,
+  somarDias,
   ordenarAtividades,
   quandoDaAtividade,
   situacao,
@@ -14,7 +16,7 @@ import {
   type Situacao,
 } from '@/lib/atividades';
 import {
-  aplicarModeloAction,
+  aplicarModelosAction,
   concluirPrestacaoAction,
   excluirAtividadeAction,
   marcarAtividadeAction,
@@ -62,7 +64,8 @@ export function AtividadesModal({
       prestacao.status !== 'Concluída' &&
       prestacao.status !== 'Cancelada'
   );
-  const [modeloId, setModeloId] = useState(modelos[0]?.id ?? '');
+  // Vários modelos de uma vez: a prestação costuma vender site + sistema, loja + sistema
+  const [escolhidos, setEscolhidos] = useState<string[]>([]);
   const [inicioModelo, setInicioModelo] = useState(prestacao.startDate || hoje);
   const novoRef = useRef<HTMLInputElement>(null);
 
@@ -70,7 +73,11 @@ export function AtividadesModal({
   const feitas = atividades.filter((a) => a.feita).length;
   const pct = atividades.length ? Math.round((feitas / atividades.length) * 100) : 0;
   const atrasadas = atividades.filter((a) => situacao(a, hoje) === 'atrasada').length;
-  const modelo = modelos.find((m) => m.id === modeloId);
+  // Prévia do que vai entrar: a mesma mesclagem que o servidor faz
+  const selecionados = escolhidos.map((id) => modelos.find((m) => m.id === id)).filter((m): m is Modelo => !!m);
+  const previa = mesclarModelos(selecionados, atividades.map((a) => a.titulo));
+  const totalBruto = selecionados.reduce((s, m) => s + m.itens.length, 0);
+  const alternar = (id: string) => setEscolhidos((e) => (e.includes(id) ? e.filter((x) => x !== id) : [...e, id]));
 
   function adicionar() {
     startTransition(async () => {
@@ -110,9 +117,13 @@ export function AtividadesModal({
     });
   }
 
-  function aplicarModelo() {
-    if (!modeloId) return;
-    startTransition(async () => toast(await aplicarModeloAction(prestacao.id, modeloId, inicioModelo)));
+  function aplicarModelos() {
+    if (!escolhidos.length) return;
+    startTransition(async () => {
+      const r = await aplicarModelosAction(prestacao.id, escolhidos, inicioModelo);
+      toast(r);
+      if (r.ok) setEscolhidos([]);
+    });
   }
 
   function finalizar() {
@@ -167,7 +178,7 @@ export function AtividadesModal({
         {/* Aplicar modelo */}
         <div className="mb-5 rounded-[14px] border border-dashed border-border-strong p-4">
           <div className="mb-2.5 flex items-center gap-2 text-[13px] font-extrabold">
-            <Wand2 size={15} className="text-accent" /> Usar um modelo de trabalho
+            <Wand2 size={15} className="text-accent" /> Usar modelos de trabalho
           </div>
           {modelos.length === 0 ? (
             <div className="text-[12.5px] text-fg-tertiary">
@@ -175,33 +186,62 @@ export function AtividadesModal({
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[1fr_160px_auto]">
-                <select value={modeloId} onChange={(e) => setModeloId(e.target.value)} className={inputClass}>
-                  {modelos.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.nome} · {m.itens.length} atividade{m.itens.length > 1 ? 's' : ''}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="date"
-                  value={inicioModelo}
-                  onChange={(e) => setInicioModelo(e.target.value)}
-                  title="As datas do roteiro contam a partir deste dia"
-                  className={inputClass}
-                />
+              <div className="mb-2 text-[12px] text-fg-tertiary">
+                Escolha um ou mais — por exemplo, Site + Sistema de gestão. As etapas em comum entram uma vez só.
+              </div>
+              <div className="mb-3 flex flex-wrap gap-2">
+                {modelos.map((m) => {
+                  const on = escolhidos.includes(m.id);
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => alternar(m.id)}
+                      aria-pressed={on}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-extrabold transition-colors ${
+                        on ? 'border-accent bg-accent/15 text-fg' : 'border-border-strong text-fg-secondary hover:border-accent/60'
+                      }`}
+                    >
+                      {on && <Check size={12} strokeWidth={3} className="text-accent" />}
+                      {m.nome}
+                      <span className="font-semibold text-fg-faded">{m.itens.length}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[1fr_auto]">
+                <label className="flex items-center gap-2.5 text-[12.5px] text-fg-tertiary">
+                  <span className="whitespace-nowrap">Início do roteiro</span>
+                  <input
+                    type="date"
+                    value={inicioModelo}
+                    onChange={(e) => setInicioModelo(e.target.value)}
+                    title="Dia 0 dos modelos: as datas contam a partir daqui"
+                    className={`w-full ${inputClass}`}
+                  />
+                </label>
                 <button
-                  onClick={aplicarModelo}
-                  disabled={pending || !modeloId}
+                  onClick={aplicarModelos}
+                  disabled={pending || !previa.length}
                   className="rounded-control bg-accent px-5 py-2.5 text-[13.5px] font-extrabold text-page disabled:opacity-60"
                 >
-                  Aplicar
+                  {previa.length ? `Adicionar ${previa.length} atividade${previa.length > 1 ? 's' : ''}` : 'Aplicar'}
                 </button>
               </div>
-              {modelo && (
-                <div className="mt-2 text-[11.5px] text-fg-tertiary">
-                  As datas contam a partir de {dataCurta(inicioModelo)}: {modelo.itens.slice(0, 3).map((i) => `${i.titulo} (dia ${i.dias})`).join(', ')}
-                  {modelo.itens.length > 3 ? '…' : ''}. Depois de aplicadas, as atividades podem ser editadas uma a uma.
+              {selecionados.length > 0 && (
+                <div className="mt-3 rounded-xl bg-card-dark p-3">
+                  <div className="mb-1.5 text-[11.5px] font-bold text-fg-tertiary">
+                    {previa.length} atividade{previa.length === 1 ? '' : 's'}
+                    {totalBruto > previa.length && ` · ${totalBruto - previa.length} repetida${totalBruto - previa.length > 1 ? 's' : ''} unida${totalBruto - previa.length > 1 ? 's' : ''} ou já na prestação`}
+                  </div>
+                  <div className="max-h-[180px] space-y-1 overflow-y-auto pr-1 text-[12px]">
+                    {previa.map((i) => (
+                      <div key={i.titulo} className="flex gap-2">
+                        <span className="w-[44px] flex-shrink-0 font-bold tabular-nums text-accent">{dataCurta(somarDias(inicioModelo, i.dias))}</span>
+                        <span className="min-w-0 truncate" title={i.notas || undefined}>{i.titulo}</span>
+                      </div>
+                    ))}
+                    {!previa.length && <div className="text-fg-tertiary">Todas as atividades desses modelos já estão nesta prestação.</div>}
+                  </div>
                 </div>
               )}
             </>

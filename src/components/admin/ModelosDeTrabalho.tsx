@@ -82,7 +82,8 @@ export function ModelosDeTrabalho({ modelos }: { modelos: Modelo[] }) {
             <p className="mb-5 text-[12.5px] leading-relaxed text-fg-tertiary">
               Um roteiro de atividades que você aplica numa prestação de uma vez. Cada atividade diz <b>em que dia</b> ela deve ser
               feita, contando do início da prestação: dia 0 é o próprio início, dia 5 é cinco dias depois. Mudar um modelo não mexe
-              nas prestações que já o usaram.
+              nas prestações que já o usaram. Etapas com <b>o mesmo nome</b> em modelos diferentes (como &quot;Briefing com o
+              cliente&quot;) viram uma só quando você aplica mais de um modelo na mesma prestação.
             </p>
 
             {!form && (
