@@ -1031,6 +1031,122 @@ export type Database = {
           },
         ]
       }
+      service_activities: {
+        Row: {
+          created_at: string
+          done: boolean
+          done_at: string | null
+          due_date: string
+          id: string
+          notes: string | null
+          position: number
+          service_order_id: string
+          template_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          done?: boolean
+          done_at?: string | null
+          due_date: string
+          id?: string
+          notes?: string | null
+          position?: number
+          service_order_id: string
+          template_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          done?: boolean
+          done_at?: string | null
+          due_date?: string
+          id?: string
+          notes?: string | null
+          position?: number
+          service_order_id?: string
+          template_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_activities_service_order_id_fkey"
+            columns: ["service_order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_activities_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "work_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_template_items: {
+        Row: {
+          day_offset: number
+          id: string
+          notes: string | null
+          position: number
+          template_id: string
+          title: string
+        }
+        Insert: {
+          day_offset?: number
+          id?: string
+          notes?: string | null
+          position?: number
+          template_id: string
+          title: string
+        }
+        Update: {
+          day_offset?: number
+          id?: string
+          notes?: string | null
+          position?: number
+          template_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "work_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       service_orders: {
         Row: {
           created_at: string

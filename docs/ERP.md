@@ -1370,6 +1370,39 @@ andamento. Sem pendência, mostra "Tudo em dia".
 
 ---
 
+## Atividades da prestação e modelos de trabalho — regras confirmadas (2026-10-14)
+
+**Onde:** pílula "Atividades x/y" embaixo do título de cada prestação abre a
+janela (`AtividadesModal`); "Modelos de trabalho" fica no cabeçalho da página
+(`ModelosDeTrabalho`); o Painel tem o cartão "Minhas atividades" e o alerta de
+atrasadas. Tabelas `service_activities`, `work_templates` e
+`work_template_items` (migração 0058), só para admin.
+
+**Decisões do dono:** toda atividade tem **data prevista** (é ela que define
+atrasada / hoje / programada); o responsável é **sempre o dono**, sem coluna de
+responsável; concluir a **última** atividade **pergunta** se ainda falta algo
+antes de oferecer finalizar a prestação — nunca finaliza sozinho.
+
+**Prazo no modelo = dias depois do início da prestação** (decisão delegada ao
+Claude). Dia 0 é o próprio início. Ao aplicar, a tela sugere o início da
+prestação e aceita outra data; as datas viram fixas na prestação. Assim um
+roteiro serve para qualquer prestação.
+
+**Aplicar um modelo COPIA os itens.** Editar ou excluir o modelo depois não
+mexe nas atividades já criadas (FK `on delete set null`). Os itens do modelo
+são regravados inteiros ao salvar, porque são editados de uma vez na mesma tela.
+
+**Finalizar a prestação** pela pergunta muda o status para Concluída e roda
+`sincronizarFinanceiroDaPrestacao`, porque o status entra no cálculo dos
+lançamentos. Concluir a última atividade pelo Painel leva à prestação com
+`?atividades=<id>&finalizar=1`, que abre a janela já com a pergunta.
+
+**Painel:** pendências de prestações não canceladas, com abas Atrasadas, Hoje,
+Próximos 7 dias e Todas; abre na primeira que tiver algo. O círculo conclui ali
+mesmo (some na hora e volta se o servidor recusar).
+
+---
+
 ## Em aberto
 
 ### Módulos que faltam
@@ -1382,23 +1415,6 @@ andamento. Sem pendência, mostra "Tudo em dia".
 
 3. **Aviso antes do fim do contrato** de plano mensal — ver a seção "Em aberto
    sobre planos", que tem o que falta decidir com o dono.
-12. **Atividades da prestação de serviço** (pedido do dono, 2026-10-14). Três
-    partes que dependem uma da outra:
-    - **Botão "Atividades" em cada prestação** (`/admin/prestacao-servico`):
-      lista do que fazer naquela prestação, com o que falta e o que já foi
-      feito. Adicionar, editar e excluir atividade.
-    - **Modelos de trabalho:** roteiros de atividades prontos (ex.: "Site
-      institucional"). Ao escolher um modelo na prestação, as atividades dele
-      entram de uma vez. O dono **cria e edita os modelos**, e mudar um modelo
-      não deve reescrever as atividades das prestações que já o usaram.
-    - **Seção no Painel** com as atividades programadas, as de hoje e as
-      atrasadas, cada uma levando à prestação de origem.
-
-    A decidir com o dono antes de construir: se a atividade tem **data prevista**
-    (sem ela não existe "atrasada" nem "programada") e se o modelo define o prazo
-    de cada atividade em **dias a partir do início** da prestação; se há
-    responsável ou é sempre o dono; e se concluir todas as atividades deve
-    sugerir marcar a prestação como Concluída.
 
 ### Dívidas técnicas
 

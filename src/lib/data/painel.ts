@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { atividadesPendentes, type AtividadeDoPainel } from '@/lib/data/atividades';
 
 // Dados do Painel (/admin). Vem tudo de uma vez e cru: a troca de período
 // (7 dias, 30, 90, 12 meses) acontece no navegador, sem ida ao servidor a cada
@@ -48,6 +49,8 @@ export type PainelDados = {
   clientes: number;
   produtosSemFoto: number;
   atividade: AtividadePainel[];
+  /** Atividades das prestações ainda por fazer (atrasadas, de hoje e programadas). */
+  tarefas: AtividadeDoPainel[];
 };
 
 /** Hoje no fuso da loja. A Vercel roda em UTC: depois das 21h o "hoje" do
@@ -63,7 +66,7 @@ export async function getPainel(): Promise<PainelDados> {
   const supabase = await createClient();
   const hoje = hojeEmSaoPaulo();
 
-  const [fin, ord, est, prest, cli, prod, orc] = await Promise.all([
+  const [fin, ord, est, prest, cli, prod, orc, tarefas] = await Promise.all([
     // Despesa paga com dinheiro do dono não saiu do caixa da loja (ver 0057)
     supabase
       .from('finance_entries')
@@ -84,6 +87,7 @@ export async function getPainel(): Promise<PainelDados> {
     supabase.from('customers').select('name, company, created_at').order('created_at', { ascending: false }),
     supabase.from('products').select('active, product_images(url)').eq('active', true),
     supabase.from('store_quotes').select('name, status, created_at, customers(name, company)').order('created_at', { ascending: false }).limit(5),
+    atividadesPendentes(),
   ]);
 
   const pedidos = ord.data ?? [];
@@ -186,6 +190,7 @@ export async function getPainel(): Promise<PainelDados> {
     clientes: clientes.length,
     produtosSemFoto: (prod.data ?? []).filter((p) => !(p.product_images ?? []).some((img) => img.url)).length,
     atividade,
+    tarefas,
   };
 }
 

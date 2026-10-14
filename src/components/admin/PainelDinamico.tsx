@@ -1,11 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/ui/Toast';
+import { marcarAtividadeAction } from '@/app/actions/atividades';
+import { dataCurta, quandoDaAtividade, situacao, somarDias as somarDiasAtv } from '@/lib/atividades';
+import type { AtividadeDoPainel } from '@/lib/data/atividades';
 import { AnimatePresence, animate, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  Check,
+  ListChecks,
   CalendarClock,
   ChevronRight,
   CircleCheck,
@@ -432,6 +439,11 @@ export function PainelDinamico({ dados }: { dados: PainelDados }) {
         </Cartao>
       </div>
 
+      {/* Atividades das prestações: o que fazer */}
+      <Cartao i={6}>
+        <MinhasAtividades tarefas={dados.tarefas} hoje={hoje} />
+      </Cartao>
+
       {/* Atividade, recebimentos e alertas */}
       <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-3">
         <Cartao i={6}>
@@ -475,6 +487,149 @@ export function PainelDinamico({ dados }: { dados: PainelDados }) {
           <Alertas dados={dados} atrasadas={aReceber.atrasadas.length} atrasado={aReceber.atrasado} />
         </Cartao>
       </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------ atividades */
+
+type Aba = 'atrasadas' | 'hoje' | 'semana' | 'todas';
+
+function MinhasAtividades({ tarefas, hoje }: { tarefas: AtividadeDoPainel[]; hoje: string }) {
+  const router = useRouter();
+  const toast = useToast();
+  const [pending, startTransition] = useTransition();
+  // Some na hora ao concluir, sem esperar a página recarregar
+  const [feitas, setFeitas] = useState<Set<string>>(new Set());
+
+  const vivas = tarefas.filter((t) => !feitas.has(t.id));
+  const fimSemana = somarDiasAtv(hoje, 7);
+  const grupos: Record<Aba, AtividadeDoPainel[]> = {
+    atrasadas: vivas.filter((t) => situacao(t, hoje) === 'atrasada'),
+    hoje: vivas.filter((t) => situacao(t, hoje) === 'hoje'),
+    semana: vivas.filter((t) => t.data > hoje && t.data <= fimSemana),
+    todas: vivas,
+  };
+  const padrao: Aba = grupos.atrasadas.length ? 'atrasadas' : grupos.hoje.length ? 'hoje' : grupos.semana.length ? 'semana' : 'todas';
+  const [aba, setAba] = useState<Aba | null>(null);
+  const atual = aba ?? padrao;
+  const lista = grupos[atual];
+
+  const ABAS: { id: Aba; rotulo: string; cor: string }[] = [
+    { id: 'atrasadas', rotulo: 'Atrasadas', cor: 'text-error' },
+    { id: 'hoje', rotulo: 'Hoje', cor: 'text-warning' },
+    { id: 'semana', rotulo: 'Próximos 7 dias', cor: 'text-info' },
+    { id: 'todas', rotulo: 'Todas', cor: 'text-fg-secondary' },
+  ];
+
+  function concluir(t: AtividadeDoPainel) {
+    setFeitas((s) => new Set(s).add(t.id));
+    startTransition(async () => {
+      const r = await marcarAtividadeAction(t.id, true);
+      if (!r.ok) {
+        setFeitas((s) => {
+          const n = new Set(s);
+          n.delete(t.id);
+          return n;
+        });
+        return toast(r);
+      }
+      // Era a última da prestação: leva até ela para perguntar se pode finalizar
+      if (r.todasFeitas) router.push(`/admin/prestacao-servico?atividades=${t.prestacaoId}&finalizar=1`);
+      else toast(r);
+    });
+  }
+
+  return (
+    <div>
+      <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <ListChecks size={16} className="text-accent" />
+          <Rotulo>Minhas atividades</Rotulo>
+        </div>
+        <div role="tablist" aria-label="Filtrar atividades" className="flex flex-wrap gap-1.5">
+          {ABAS.map((a) => (
+            <button
+              key={a.id}
+              role="tab"
+              aria-selected={atual === a.id}
+              onClick={() => setAba(a.id)}
+              className={`rounded-full border px-3 py-1.5 text-[12px] font-extrabold transition-colors ${
+                atual === a.id ? 'border-accent bg-accent/12 text-fg' : 'border-border text-fg-tertiary hover:text-fg'
+              }`}
+            >
+              {a.rotulo}
+              <span className={`ml-1.5 ${grupos[a.id].length ? a.cor : 'text-fg-faded'}`}>{grupos[a.id].length}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {tarefas.length === 0 ? (
+        <Vazio>
+          Nenhuma atividade cadastrada. Em{' '}
+          <Link href="/admin/prestacao-servico" className="font-bold text-accent hover:underline">
+            Prestação de Serviço
+          </Link>
+          , abra uma prestação em &quot;Atividades&quot; ou use um modelo de trabalho.
+        </Vazio>
+      ) : lista.length === 0 ? (
+        <Vazio>{atual === 'atrasadas' ? 'Nada atrasado. ' : 'Nada aqui. '}Tudo em dia nesta lista.</Vazio>
+      ) : (
+        <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2">
+          <AnimatePresence initial={false}>
+            {lista.slice(0, 10).map((t, i) => {
+              const s = situacao(t, hoje);
+              return (
+                <motion.div
+                  key={t.id}
+                  layout
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0, transition: { delay: i * 0.03 } }}
+                  exit={{ opacity: 0, x: 16, transition: { duration: 0.2 } }}
+                  className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${
+                    s === 'atrasada' ? 'border-error/30 bg-error/[.05]' : 'border-transparent bg-card-dark'
+                  }`}
+                >
+                  <Dica texto="Marcar como feita">
+                    <button
+                      onClick={() => concluir(t)}
+                      disabled={pending}
+                      aria-label={`Marcar ${t.titulo} como feita`}
+                      className="group grid h-6 w-6 flex-shrink-0 place-items-center rounded-full border-2 border-fg-faded transition-colors hover:border-success hover:bg-success/15"
+                    >
+                      <Check size={12} strokeWidth={3} className="text-success opacity-0 transition-opacity group-hover:opacity-100" />
+                    </button>
+                  </Dica>
+                  <Link href={`/admin/prestacao-servico?atividades=${t.prestacaoId}`} className="min-w-0 flex-1">
+                    <span className="block truncate text-[13.5px] font-bold hover:text-accent">{t.titulo}</span>
+                    <span className="block truncate text-[12px] text-fg-tertiary">
+                      {t.cliente && <span className="text-accent">{t.cliente} · </span>}
+                      {t.prestacao}
+                    </span>
+                  </Link>
+                  <span
+                    className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold ${
+                      s === 'atrasada' ? 'bg-error/12 text-error' : s === 'hoje' ? 'bg-warning/12 text-warning' : 'bg-info/12 text-info'
+                    }`}
+                  >
+                    {dataCurta(t.data)} · {quandoDaAtividade(t, hoje)}
+                  </span>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      )}
+      {lista.length > 10 && (
+        <div className="mt-3 text-[12px] text-fg-tertiary">
+          e mais {lista.length - 10}. Veja todas em{' '}
+          <Link href="/admin/prestacao-servico" className="font-bold text-accent hover:underline">
+            Prestação de Serviço
+          </Link>
+          .
+        </div>
+      )}
     </div>
   );
 }
@@ -786,6 +941,15 @@ function Alertas({ dados, atrasadas, atrasado }: { dados: PainelDados; atrasadas
       titulo: `${atrasadas} recebimento${atrasadas > 1 ? 's' : ''} atrasado${atrasadas > 1 ? 's' : ''}`,
       detalhe: `${formatBRL(atrasado)} para cobrar`,
       href: '/admin/financeiro',
+    });
+  const tarefasAtrasadas = dados.tarefas.filter((t) => t.data < dados.hoje);
+  if (tarefasAtrasadas.length)
+    itens.push({
+      Icone: ListChecks,
+      cor: 'var(--color-error)',
+      titulo: `${tarefasAtrasadas.length} atividade${tarefasAtrasadas.length > 1 ? 's' : ''} atrasada${tarefasAtrasadas.length > 1 ? 's' : ''}`,
+      detalhe: `${tarefasAtrasadas[0].titulo}${tarefasAtrasadas[0].cliente ? ` · ${tarefasAtrasadas[0].cliente}` : ''}`,
+      href: `/admin/prestacao-servico?atividades=${tarefasAtrasadas[0].prestacaoId}`,
     });
   if (semCusto)
     itens.push({

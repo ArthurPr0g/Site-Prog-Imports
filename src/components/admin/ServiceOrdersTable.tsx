@@ -1,7 +1,9 @@
-﻿'use client';
+'use client';
 
-import { useState, useMemo, useTransition } from 'react';
-import { Pencil, Trash2, Plus, X, Search } from 'lucide-react';
+import { useState, useMemo, useTransition, useEffect } from 'react';
+import { Pencil, Trash2, Plus, X, Search, ListChecks } from 'lucide-react';
+import { AtividadesModal } from '@/components/admin/AtividadesModal';
+import { situacao, type Atividade, type Modelo } from '@/lib/atividades';
 import { useToast } from '@/components/ui/Toast';
 import { formatBRL, parseNumeroBR, formatDateBR, formatNumeroInput } from '@/lib/format';
 import {
@@ -125,17 +127,41 @@ export function ServiceOrdersTable({
   services,
   customers,
   lancamentos,
+  atividades,
+  modelos,
+  hoje,
 }: {
   orders: ServiceOrder[];
   services: InternalService[];
   customers: { id: string; name: string }[];
   /** Lançamentos do Financeiro por prestação: a fonte do recebido e do a receber. */
   lancamentos: Record<string, LancamentoDaPrestacao[]>;
+  atividades: Record<string, Atividade[]>;
+  modelos: Modelo[];
+  /** Hoje no fuso da loja, vindo do servidor (a Vercel roda em UTC). */
+  hoje: string;
 }) {
   const [busca, setBusca] = useState('');
   const [form, setForm] = useState<ServiceOrderInput | null>(null);
+  const [atividadesDe, setAtividadesDe] = useState<string | null>(null);
+  // Veio do Painel depois de concluir a última atividade: abre já perguntando
+  const [perguntarFim, setPerguntarFim] = useState(false);
   const [pending, startTransition] = useTransition();
   const toast = useToast();
+
+  // O Painel linka para cá com ?atividades=<id>: abre direto na prestação certa
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('atividades');
+    if (!id) return;
+    setAtividadesDe(id);
+    setPerguntarFim(params.get('finalizar') === '1');
+    params.delete('atividades');
+    params.delete('finalizar');
+    const resto = params.toString();
+    window.history.replaceState(null, '', window.location.pathname + (resto ? `?${resto}` : ''));
+  }, []);
+  const prestacaoAberta = atividadesDe ? orders.find((o) => o.id === atividadesDe) : undefined;
 
   const ind = useMemo(() => computeServiceIndicators(orders), [orders]);
 
@@ -352,6 +378,7 @@ export function ServiceOrdersTable({
                 {o.planMonths ? ` · plano de ${o.planMonths} meses` : ''}
                 {o.quoteId ? ' · veio de orçamento' : ''}
               </div>
+              <PilulaAtividades lista={atividades[o.id] ?? []} hoje={hoje} onAbrir={() => setAtividadesDe(o.id)} />
             </div>
             <div className="truncate text-fg-secondary">{o.customerName || '—'}</div>
             {/* Valor único e mensalidade aparecem separados, como o contrato é
@@ -428,6 +455,26 @@ export function ServiceOrdersTable({
           </div>
         ))}
       </div>
+
+      {prestacaoAberta && (
+        <AtividadesModal
+          prestacao={{
+            id: prestacaoAberta.id,
+            title: prestacaoAberta.title,
+            customerName: prestacaoAberta.customerName,
+            startDate: prestacaoAberta.startDate,
+            status: prestacaoAberta.status,
+          }}
+          atividades={atividades[prestacaoAberta.id] ?? []}
+          modelos={modelos}
+          hoje={hoje}
+          perguntarAoAbrir={perguntarFim}
+          onFechar={() => {
+            setAtividadesDe(null);
+            setPerguntarFim(false);
+          }}
+        />
+      )}
 
       {form && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
@@ -775,5 +822,34 @@ export function ServiceOrdersTable({
         </div>
       )}
     </div>
+  );
+}
+
+/** Atalho para as atividades, embaixo do título: o progresso fica à vista sem
+ *  abrir nada, e atrasada pinta de vermelho. */
+function PilulaAtividades({ lista, hoje, onAbrir }: { lista: Atividade[]; hoje: string; onAbrir: () => void }) {
+  const feitas = lista.filter((a) => a.feita).length;
+  const atrasadas = lista.filter((a) => situacao(a, hoje) === 'atrasada').length;
+  const pct = lista.length ? (feitas / lista.length) * 100 : 0;
+  return (
+    <button
+      onClick={onAbrir}
+      className={`mt-1.5 inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-extrabold transition-colors ${
+        atrasadas ? 'border-error/40 text-error hover:bg-error/10' : 'border-border-strong text-fg-secondary hover:border-accent hover:text-accent'
+      }`}
+    >
+      <ListChecks size={12} />
+      {lista.length ? (
+        <>
+          Atividades {feitas}/{lista.length}
+          <span className="h-1 w-10 overflow-hidden rounded-full bg-divider-strong">
+            <span className="block h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+          </span>
+          {atrasadas > 0 && <span>· {atrasadas} atrasada{atrasadas > 1 ? 's' : ''}</span>}
+        </>
+      ) : (
+        'Atividades'
+      )}
+    </button>
   );
 }
