@@ -1,5 +1,6 @@
 'use client';
 
+import { useAbrirNovoPelaUrl } from '@/lib/use-abrir-novo';
 import { useState, useTransition } from 'react';
 import { Pencil, Trash2, Link2Off, UserPlus } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
@@ -39,6 +40,7 @@ function paraFormulario(c: Customer): CustomerFormInput {
 export function CustomersTable({ customers }: { customers: Customer[] }) {
   const [busca, setBusca] = useState('');
   const [form, setForm] = useState<CustomerFormInput | null>(null);
+  useAbrirNovoPelaUrl(() => setForm({ ...VAZIO }));
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 

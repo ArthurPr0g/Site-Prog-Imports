@@ -1,5 +1,6 @@
 'use client';
 
+import { useAbrirNovoPelaUrl } from '@/lib/use-abrir-novo';
 import { useState, useMemo, useTransition } from 'react';
 import { Pencil, Trash2, Plus, Minus } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
@@ -126,6 +127,7 @@ export function FinanceBoard({ entries }: { entries: FinanceEntry[] }) {
   const [inicio, setInicio] = useState('');
   const [fim, setFim] = useState('');
   const [form, setForm] = useState<FinanceFormInput | null>(null);
+  useAbrirNovoPelaUrl((tipo) => setForm(formVazio(tipo === 'despesa' ? 'despesa' : 'receita')));
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 

@@ -1,5 +1,6 @@
-﻿'use client';
+'use client';
 
+import { useAbrirNovoPelaUrl } from '@/lib/use-abrir-novo';
 import { useState, useMemo, useEffect, useTransition } from 'react';
 import Link from 'next/link';
 import { Pencil, Trash2, ImageDown, PackageCheck, FilePlus2, RefreshCw, ShoppingCart } from 'lucide-react';
@@ -104,6 +105,7 @@ export function QuotesTable({
   const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
   const [form, setForm] = useState<QuoteFormInput | null>(null);
+  useAbrirNovoPelaUrl(() => setForm({ ...VAZIO }));
   const [proposta, setProposta] = useState<PropostaDaLoja | null>(null);
   const [pending, startTransition] = useTransition();
   const toast = useToast();

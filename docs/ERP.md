@@ -1325,6 +1325,34 @@ três pixels reais por ponto do layout. Verificado em produção: a imagem chega
 
 ---
 
+## Painel (/admin) — regras confirmadas (2026-10-14)
+
+**O dinheiro vem do Financeiro, não de `orders.total`.** "Entrou no caixa" e o
+gráfico de fluxo somam `finance_entries` pagos na data do lançamento. É lá que
+estão as parcelas do PIX parcelado, as mensalidades e a compra de estoque na
+data de entrada; somar a venda inteira no dia em que foi fechada mostraria um
+caixa que não existiu. "Vendas" conta pedidos pela `sale_date`.
+
+**Período escolhido no navegador.** `getPainel()` (`lib/data/painel.ts`) traz
+tudo cru uma vez; 7 dias, 30, 90 (13 semanas) e 12 meses são recalculados no
+cliente, com variação contra o período anterior do mesmo tamanho. "A receber" e
+"Em estoque" não dependem do período.
+
+**"Hoje" é o de São Paulo**, calculado no servidor e passado ao componente. A
+Vercel roda em UTC: depois das 21h o hoje do servidor já é amanhã e uma parcela
+do dia apareceria como atrasada.
+
+**Atalhos abrem o formulário direto** via `?novo=` (`useAbrirNovoPelaUrl`) em
+Vendas, Estoque, Orçamentos Loja, Clientes e Financeiro (`?novo=receita` ou
+`?novo=despesa`). O parâmetro sai da URL depois de usado, para recarregar a
+página não reabrir o formulário.
+
+**"Precisa de atenção"** só lista o que existe: recebimento atrasado, venda sem
+custo, unidade parada há mais de 60 dias, produto ativo sem foto e prestação em
+andamento. Sem pendência, mostra "Tudo em dia".
+
+---
+
 ## Em aberto
 
 ### Módulos que faltam

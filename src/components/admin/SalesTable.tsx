@@ -1,5 +1,6 @@
-﻿'use client';
+'use client';
 
+import { useAbrirNovoPelaUrl } from '@/lib/use-abrir-novo';
 import { useState, useMemo, useTransition } from 'react';
 import { Pencil, Trash2, Plus, X, Search, Tag as TagIcon } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
@@ -87,6 +88,7 @@ export function SalesTable({
 }) {
   const [busca, setBusca] = useState('');
   const [form, setForm] = useState<SaleFormInput | null>(null);
+  useAbrirNovoPelaUrl(() => setForm(formVazio()));
   const [etiqueta, setEtiqueta] = useState<{ dados: Etiqueta; clienteId: string | null } | null>(null);
   const [pending, startTransition] = useTransition();
   const toast = useToast();

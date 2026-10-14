@@ -1,5 +1,6 @@
 'use client';
 
+import { useAbrirNovoPelaUrl } from '@/lib/use-abrir-novo';
 import { useState, useMemo, useTransition } from 'react';
 import { Pencil, Trash2, PackagePlus } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
@@ -77,6 +78,7 @@ export function StockTable({
   const [filtroStatus, setFiltroStatus] = useState('');
   const [filtroOrigem, setFiltroOrigem] = useState('');
   const [form, setForm] = useState<StockFormInput | null>(null);
+  useAbrirNovoPelaUrl(() => setForm({ ...VAZIO, usdRate: usdRate }));
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 
