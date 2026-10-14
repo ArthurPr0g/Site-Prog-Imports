@@ -1382,6 +1382,23 @@ andamento. Sem pendência, mostra "Tudo em dia".
 
 3. **Aviso antes do fim do contrato** de plano mensal — ver a seção "Em aberto
    sobre planos", que tem o que falta decidir com o dono.
+12. **Atividades da prestação de serviço** (pedido do dono, 2026-10-14). Três
+    partes que dependem uma da outra:
+    - **Botão "Atividades" em cada prestação** (`/admin/prestacao-servico`):
+      lista do que fazer naquela prestação, com o que falta e o que já foi
+      feito. Adicionar, editar e excluir atividade.
+    - **Modelos de trabalho:** roteiros de atividades prontos (ex.: "Site
+      institucional"). Ao escolher um modelo na prestação, as atividades dele
+      entram de uma vez. O dono **cria e edita os modelos**, e mudar um modelo
+      não deve reescrever as atividades das prestações que já o usaram.
+    - **Seção no Painel** com as atividades programadas, as de hoje e as
+      atrasadas, cada uma levando à prestação de origem.
+
+    A decidir com o dono antes de construir: se a atividade tem **data prevista**
+    (sem ela não existe "atrasada" nem "programada") e se o modelo define o prazo
+    de cada atividade em **dias a partir do início** da prestação; se há
+    responsável ou é sempre o dono; e se concluir todas as atividades deve
+    sugerir marcar a prestação como Concluída.
 
 ### Dívidas técnicas
 
