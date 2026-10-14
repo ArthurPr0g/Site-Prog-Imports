@@ -228,6 +228,7 @@ export type Database = {
           address_number: string | null
           cep: string | null
           city: string | null
+          company: string | null
           complement: string | null
           created_at: string
           district: string | null
@@ -246,6 +247,7 @@ export type Database = {
           address_number?: string | null
           cep?: string | null
           city?: string | null
+          company?: string | null
           complement?: string | null
           created_at?: string
           district?: string | null
@@ -264,6 +266,7 @@ export type Database = {
           address_number?: string | null
           cep?: string | null
           city?: string | null
+          company?: string | null
           complement?: string | null
           created_at?: string
           district?: string | null
@@ -330,6 +333,7 @@ export type Database = {
           installment_id: string | null
           installment_number: number | null
           kind: string
+          paid_by_owner: boolean
           reference_id: string | null
           source: string
           status: string
@@ -344,6 +348,7 @@ export type Database = {
           installment_id?: string | null
           installment_number?: number | null
           kind: string
+          paid_by_owner?: boolean
           reference_id?: string | null
           source?: string
           status?: string
@@ -358,6 +363,7 @@ export type Database = {
           installment_id?: string | null
           installment_number?: number | null
           kind?: string
+          paid_by_owner?: boolean
           reference_id?: string | null
           source?: string
           status?: string

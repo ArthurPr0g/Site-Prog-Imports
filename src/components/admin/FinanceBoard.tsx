@@ -77,11 +77,21 @@ function TabelaLancamentos({
         >
           <div className="min-w-0">
             <div className="truncate font-bold">{e.description}</div>
-            {e.source !== 'manual' && (
-              <div className="text-[11px] text-fg-faded">{ROTULO_DA_ORIGEM[e.source]}</div>
+            {(e.source !== 'manual' || e.paidByOwner) && (
+              <div className="text-[11px] text-fg-faded">
+                {e.source !== 'manual' && ROTULO_DA_ORIGEM[e.source]}
+                {e.source !== 'manual' && e.paidByOwner && ' · '}
+                {e.paidByOwner && <span className="font-bold text-accent">Paga pelo dono · fora do caixa</span>}
+              </div>
             )}
           </div>
-          <div className="text-right font-bold" style={{ color: cor }}>{formatBRL(e.amount)}</div>
+          <div
+            className={`text-right font-bold ${e.paidByOwner ? 'line-through decoration-1 opacity-60' : ''}`}
+            style={{ color: cor }}
+            title={e.paidByOwner ? 'Paga com dinheiro do dono: não entra nos totais' : undefined}
+          >
+            {formatBRL(e.amount)}
+          </div>
           <div className="text-fg-secondary">{formatDateBR(e.entryDate + 'T12:00:00')}</div>
           <div>
             <span
@@ -193,6 +203,7 @@ export function FinanceBoard({ entries }: { entries: FinanceEntry[] }) {
       entryDate: e.entryDate,
       status: e.status,
       source: e.source,
+      paidByOwner: e.paidByOwner,
     });
   }
 
@@ -329,7 +340,8 @@ export function FinanceBoard({ entries }: { entries: FinanceEntry[] }) {
 
             {gerado && (
               <div className="mb-5 rounded-control border border-border bg-card-dark px-4 py-3 text-[12px] text-fg-tertiary">
-                Este lançamento vem de {form.source === 'venda' ? 'uma venda' : 'uma prestação de serviço'} e é
+                Este lançamento vem de{' '}
+                {form.source === 'venda' ? 'uma venda' : form.source === 'estoque' ? 'uma compra de estoque' : 'uma prestação de serviço'} e é
                 mantido por ela. Aqui você só marca se já foi{' '}
                 <strong>{form.kind === 'receita' ? 'recebido' : 'pago'}</strong> — valor, data e descrição mudam na
                 origem, senão a próxima atualização de lá desfaria a alteração em silêncio.
@@ -373,6 +385,22 @@ export function FinanceBoard({ entries }: { entries: FinanceEntry[] }) {
                   ))}
                 </select>
               </div>
+              {form.kind === 'despesa' && (
+                <label className="flex cursor-pointer items-start gap-3 rounded-control border border-border bg-card-dark px-4 py-3 sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={!!form.paidByOwner}
+                    onChange={(e) => set('paidByOwner', e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-[var(--color-accent)]"
+                  />
+                  <span className="text-[13px]">
+                    <span className="block font-bold">Paguei com dinheiro meu (aporte)</span>
+                    <span className="block text-[12px] text-fg-tertiary">
+                      Fica registrada aqui, mas não desconta do caixa da loja nos totais, no gráfico e no Painel.
+                    </span>
+                  </span>
+                </label>
+              )}
             </div>
             <div className="flex justify-end gap-2.5">
               <button

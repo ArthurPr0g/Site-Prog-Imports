@@ -1347,6 +1347,23 @@ Vendas, Estoque, Orçamentos Loja, Clientes e Financeiro (`?novo=receita` ou
 `?novo=despesa`). O parâmetro sai da URL depois de usado, para recarregar a
 página não reabrir o formulário.
 
+**Empresa antes da cobrança (2026-10-14).** O cliente é cadastrado pela pessoa,
+mas o dono reconhece a cobrança pelo negócio ("TecnoPallet", "DW Sports"), e o
+título do serviço se repete entre clientes. `customers.company` (migração 0056)
+é opcional; o Painel mostra a empresa e, sem ela, o nome da pessoa. O vínculo
+sai do `reference_id` do lançamento: venda → `orders.erp_customer_id`,
+prestação → `service_orders.customer_id`.
+
+**Despesa paga pelo dono (2026-10-14).** Decisão do dono: compra feita com
+dinheiro que ele pôs na loja não sai do caixa da loja. `paid_by_owner`
+(migração 0057) mantém a linha no livro, riscada e com etiqueta, mas fora dos
+totais, do gráfico do Financeiro e do Painel (`contaNoCaixa` em `lib/finance.ts`).
+Primeiro caso: a compra do Alienware Area-51 (R$ 18.993,33, 01/08). A marca
+sobrevive à edição do item no Estoque, que atualiza a linha sem reescrever esse
+campo. ⚠️ Quando esse item for vendido, a venda não lança custo (regra da compra
+na entrada), então a receita entra inteira no caixa — o que é correto para a
+loja, mas o dono não vê ali a devolução do aporte.
+
 **"Precisa de atenção"** só lista o que existe: recebimento atrasado, venda sem
 custo, unidade parada há mais de 60 dias, produto ativo sem foto e prestação em
 andamento. Sem pendência, mostra "Tudo em dia".

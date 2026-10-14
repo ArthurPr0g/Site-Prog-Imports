@@ -8,6 +8,9 @@ import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/a
 export type CustomerFormInput = {
   id?: string;
   name: string;
+  /** Empresa ou projeto (TecnoPallet, DW Sports...). Opcional: o cadastro rápido
+   *  do orçamento de serviço não pergunta. */
+  company?: string;
   email: string;
   phone: string;
   doc: string;
@@ -55,6 +58,8 @@ export async function saveCustomerAction(input: CustomerFormInput): Promise<Acti
     city: input.city.trim() || null,
     state: input.state.trim() || null,
     notes: input.notes.trim() || null,
+    // Ausente = não mexe (cadastro rápido); presente e vazio = apaga
+    ...(input.company !== undefined ? { company: input.company.trim() || null } : {}),
     updated_at: new Date().toISOString(),
   };
 

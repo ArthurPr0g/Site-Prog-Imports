@@ -636,7 +636,7 @@ function GraficoFluxo({
               className="pointer-events-none absolute top-0 z-20 w-[180px] -translate-x-1/2 -translate-y-[calc(100%+6px)] rounded-xl border border-border-strong bg-card-dark p-3 text-[12px] shadow-[0_16px_40px_-14px_rgba(0,0,0,.8)]"
               style={{ marginLeft: foco < 2 ? 60 : foco > fluxo.length - 3 ? -60 : 0 }}
             >
-              <div className="mb-1.5 font-extrabold capitalize text-fg">{f.dica}</div>
+              <div className="mb-1.5 font-extrabold text-fg">{f.dica.charAt(0).toUpperCase() + f.dica.slice(1)}</div>
               <Linha cor="var(--color-accent)" rotulo="Entrou" valor={f.entrou} />
               <Linha cor="var(--color-error)" rotulo="Saiu" valor={f.saiu} />
               <div className="mt-1.5 flex justify-between border-t border-divider pt-1.5 font-extrabold">
@@ -760,7 +760,11 @@ function Recebimento({ l, hoje, i }: { l: LancamentoPainel; hoje: string; i: num
         {atrasada ? <TriangleAlert size={15} /> : <CalendarClock size={15} />}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-bold">{l.descricao || origem(l.origem).rotulo}</span>
+        <span className="block truncate text-[13px] font-bold">
+          {/* Empresa na frente: é por ela que se reconhece a cobrança */}
+          {l.cliente && <span className="text-accent">{l.cliente} · </span>}
+          {l.descricao || origem(l.origem).rotulo}
+        </span>
         <span className={`block text-[11.5px] font-semibold ${atrasada ? 'text-error' : 'text-fg-tertiary'}`}>
           {`${l.data.slice(8, 10)}/${l.data.slice(5, 7)}`} · {quandoTxt}
         </span>

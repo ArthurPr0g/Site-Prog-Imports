@@ -10,6 +10,7 @@ type Row = {
   status: string;
   source: string;
   reference_id: string | null;
+  paid_by_owner: boolean | null;
 };
 
 function toEntry(r: Row): FinanceEntry {
@@ -22,6 +23,7 @@ function toEntry(r: Row): FinanceEntry {
     status: r.status as FinanceStatus,
     source: r.source as FinanceSource,
     referenceId: r.reference_id,
+    paidByOwner: !!r.paid_by_owner,
   };
 }
 

@@ -19,6 +19,7 @@ const inputClass =
 
 const VAZIO: CustomerFormInput = {
   name: '',
+  company: '',
   email: '',
   phone: '',
   doc: '',
@@ -33,8 +34,8 @@ const VAZIO: CustomerFormInput = {
 };
 
 function paraFormulario(c: Customer): CustomerFormInput {
-  const { id, name, email, phone, doc, cep, addressLine, addressNumber, complement, district, city, state, notes } = c;
-  return { id, name, email, phone, doc, cep, addressLine, addressNumber, complement, district, city, state, notes };
+  const { id, name, company, email, phone, doc, cep, addressLine, addressNumber, complement, district, city, state, notes } = c;
+  return { id, name, company, email, phone, doc, cep, addressLine, addressNumber, complement, district, city, state, notes };
 }
 
 export function CustomersTable({ customers }: { customers: Customer[] }) {
@@ -49,7 +50,7 @@ export function CustomersTable({ customers }: { customers: Customer[] }) {
   const termo = busca.trim().toLowerCase();
   const visiveis = termo
     ? customers.filter((c) =>
-        [c.name, c.email, c.phone, c.doc, c.city].some((v) => v.toLowerCase().includes(termo))
+        [c.name, c.company, c.email, c.phone, c.doc, c.city].some((v) => v.toLowerCase().includes(termo))
       )
     : customers;
 
@@ -135,6 +136,7 @@ export function CustomersTable({ customers }: { customers: Customer[] }) {
                   >
                     {c.name}
                   </Link>
+                  {c.company && <div className="truncate text-[12px] font-semibold text-fg-tertiary">{c.company}</div>}
                   {c.profileId && (
                     // Sinaliza que este cliente também tem conta na loja — evita
                     // o operador cadastrar a mesma pessoa duas vezes.
@@ -192,7 +194,14 @@ export function CustomersTable({ customers }: { customers: Customer[] }) {
 
             <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">Identificação</div>
             <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <input value={form.name} onChange={set('name')} placeholder="Nome completo *" className={`sm:col-span-2 ${inputClass}`} />
+              <input value={form.name} onChange={set('name')} placeholder="Nome completo *" className={inputClass} />
+              <input
+                value={form.company ?? ''}
+                onChange={set('company')}
+                placeholder="Empresa / projeto (ex.: TecnoPallet)"
+                title="Aparece no Painel antes de cada cobrança, para saber de onde veio"
+                className={inputClass}
+              />
               <input value={form.email} onChange={set('email')} placeholder="E-mail" className={inputClass} />
               <input value={form.phone} onChange={set('phone')} placeholder="Telefone" className={inputClass} />
               <input value={form.doc} onChange={set('doc')} placeholder="CPF ou CNPJ" className={inputClass} />

@@ -10,6 +10,8 @@ import { statusExibido, type Installment } from '@/lib/installments';
 export type Customer = {
   id: string;
   name: string;
+  /** Empresa ou projeto do cliente; vazio quando não informado. */
+  company: string;
   email: string;
   phone: string;
   doc: string;
@@ -32,6 +34,7 @@ export type Customer = {
 type Row = {
   id: string;
   name: string;
+  company: string | null;
   email: string | null;
   phone: string | null;
   doc: string | null;
@@ -59,6 +62,7 @@ function toCustomer(r: Row, parcelas: Installment[] = []): Customer {
     parcelasAtrasadas: parcelas.filter((p) => statusExibido(p, hoje) === 'Atrasada').length,
     id: r.id,
     name: r.name,
+    company: r.company ?? '',
     email: r.email ?? '',
     phone: r.phone ?? '',
     doc: r.doc ?? '',

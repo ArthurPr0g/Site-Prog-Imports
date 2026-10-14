@@ -26,7 +26,13 @@ export type FinanceEntry = {
   status: FinanceStatus;
   source: FinanceSource;
   referenceId: string | null;
+  /** Despesa paga com dinheiro do dono (aporte): fica no livro, fora do caixa da loja. */
+  paidByOwner: boolean;
 };
+
+/** O que conta no caixa da loja. Despesa paga pelo dono saiu do bolso dele, não
+ *  do faturamento: aparece na lista, mas não entra em total nem em gráfico. */
+export const contaNoCaixa = (e: FinanceEntry) => !(e.kind === 'despesa' && e.paidByOwner);
 
 export type Periodo = { inicio: string; fim: string; rotulo: string };
 
@@ -134,7 +140,7 @@ export type FinanceIndicators = {
 /** Soma por tipo. Sem `status`, soma tudo daquele tipo no período. */
 function somar(entries: FinanceEntry[], kind: FinanceKind, status?: FinanceStatus): number {
   return entries
-    .filter((e) => e.kind === kind && (status === undefined || e.status === status))
+    .filter((e) => e.kind === kind && contaNoCaixa(e) && (status === undefined || e.status === status))
     .reduce((s, e) => s + e.amount, 0);
 }
 
@@ -179,7 +185,7 @@ export function fluxoMensal(entries: FinanceEntry[], ano: number): PontoFluxo[] 
   const pontos: PontoFluxo[] = MESES.map((m) => ({ mes: m.slice(0, 3), entradas: 0, saidas: 0 }));
 
   for (const e of entries) {
-    if (e.status !== 'Pago') continue;
+    if (e.status !== 'Pago' || !contaNoCaixa(e)) continue;
     const [a, m] = e.entryDate.split('-').map(Number);
     if (a !== ano || !m) continue;
     if (e.kind === 'receita') pontos[m - 1].entradas += e.amount;

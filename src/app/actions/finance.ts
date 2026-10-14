@@ -25,6 +25,9 @@ export type FinanceFormInput = {
   /** Origem do lançamento sendo editado. Gerado por venda/serviço só aceita
    *  mudança de status — a action confere de novo no servidor. */
   source?: FinanceSource;
+  /** Despesa paga com dinheiro do dono. Vale também em lançamento gerado (compra
+   *  de estoque): quem pagou não é dado da origem, então não diverge dela. */
+  paidByOwner?: boolean;
 };
 
 async function adminClient() {
@@ -85,6 +88,8 @@ export async function saveFinanceEntryAction(input: FinanceFormInput): Promise<A
     amount: input.amount,
     entry_date: input.entryDate,
     status: input.status,
+    // Receita nunca é "paga pelo dono": a marca só existe do lado da saída
+    paid_by_owner: input.kind === 'despesa' && !!input.paidByOwner,
     updated_at: new Date().toISOString(),
   };
 
@@ -135,7 +140,7 @@ export async function saveFinanceEntryAction(input: FinanceFormInput): Promise<A
 
       const { error } = await supabase
         .from('finance_entries')
-        .update({ status: input.status, updated_at: payload.updated_at })
+        .update({ status: input.status, paid_by_owner: payload.paid_by_owner, updated_at: payload.updated_at })
         .eq('id', input.id);
       if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar o lançamento.'));
       revalidarDinheiro();

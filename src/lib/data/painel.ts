@@ -16,6 +16,8 @@ export type LancamentoPainel = {
   pago: boolean;
   origem: string;
   descricao: string;
+  /** Empresa do cliente (ou o nome dele) da venda/prestação de origem; vazio se avulso. */
+  cliente: string;
 };
 
 export type VendaPainel = {
@@ -62,21 +64,37 @@ export async function getPainel(): Promise<PainelDados> {
   const hoje = hojeEmSaoPaulo();
 
   const [fin, ord, est, prest, cli, prod, orc] = await Promise.all([
-    supabase.from('finance_entries').select('kind, amount, entry_date, status, source, description'),
+    // Despesa paga com dinheiro do dono não saiu do caixa da loja (ver 0057)
+    supabase
+      .from('finance_entries')
+      .select('kind, amount, entry_date, status, source, description, reference_id')
+      .or('kind.eq.receita,paid_by_owner.eq.false'),
     supabase
       .from('orders')
-      .select('order_number, name, customer_name, total, cost_total, status, payment_method, sale_date, created_at, order_items(product_name, qty)')
+      .select(
+        'id, order_number, name, customer_name, total, cost_total, status, payment_method, sale_date, created_at, order_items(product_name, qty), customers!orders_erp_customer_id_fkey(name, company)'
+      )
       .neq('status', 'Cancelado')
       .order('created_at', { ascending: false }),
     supabase.from('stock_items').select('name, status, paid_amount, entry_date, created_at').order('created_at', { ascending: false }),
     supabase
       .from('service_orders')
-      .select('title, status, total_amount, created_at, customers(name)')
+      .select('id, title, status, total_amount, created_at, customers(name, company)')
       .order('created_at', { ascending: false }),
-    supabase.from('customers').select('name, created_at').order('created_at', { ascending: false }),
+    supabase.from('customers').select('name, company, created_at').order('created_at', { ascending: false }),
     supabase.from('products').select('active, product_images(url)').eq('active', true),
-    supabase.from('store_quotes').select('name, status, created_at, customers(name)').order('created_at', { ascending: false }).limit(5),
+    supabase.from('store_quotes').select('name, status, created_at, customers(name, company)').order('created_at', { ascending: false }).limit(5),
   ]);
+
+  const pedidos = ord.data ?? [];
+  const prestacoes = prest.data ?? [];
+
+  // De quem é cada lançamento: o Financeiro guarda o id da venda ou da prestação
+  // em reference_id. A empresa vem antes do nome da pessoa porque é por ela que o
+  // dono reconhece a cobrança ("TecnoPallet"), e o título do serviço se repete.
+  const clientePorReferencia = new Map<string, string>();
+  for (const o of pedidos) clientePorReferencia.set(o.id, nomeDoCliente(o.customers) || o.customer_name || '');
+  for (const s of prestacoes) clientePorReferencia.set(s.id, nomeDoCliente(s.customers));
 
   const lancamentos: LancamentoPainel[] = (fin.data ?? []).map((f) => ({
     tipo: f.kind === 'despesa' ? 'despesa' : 'receita',
@@ -85,9 +103,9 @@ export async function getPainel(): Promise<PainelDados> {
     pago: f.status === 'Pago',
     origem: f.source ?? 'manual',
     descricao: f.description ?? '',
+    cliente: (f.reference_id && clientePorReferencia.get(f.reference_id)) || '',
   }));
 
-  const pedidos = ord.data ?? [];
   const vendas: VendaPainel[] = pedidos.map((o) => ({
     numero: o.order_number,
     nome: o.name || nomeDosItens(o.order_items ?? []) || `Venda #${o.order_number}`,
@@ -110,7 +128,6 @@ export async function getPainel(): Promise<PainelDados> {
       .sort((a, b) => b.dias - a.dias),
   };
 
-  const prestacoes = prest.data ?? [];
   const clientes = cli.data ?? [];
 
   // Linha do tempo: o que aconteceu por último em cada módulo, misturado por data
@@ -118,7 +135,7 @@ export async function getPainel(): Promise<PainelDados> {
     ...pedidos.slice(0, 6).map((o) => ({
       tipo: 'venda' as const,
       titulo: `Venda #${o.order_number} · ${o.name || nomeDosItens(o.order_items ?? [])}`,
-      detalhe: [o.customer_name || 'Sem cliente', o.payment_method].filter(Boolean).join(' · '),
+      detalhe: [nomeDoCliente(o.customers) || o.customer_name || 'Sem cliente', o.payment_method].filter(Boolean).join(' · '),
       valor: Number(o.total),
       quando: o.created_at,
       href: '/admin/vendas',
@@ -149,7 +166,7 @@ export async function getPainel(): Promise<PainelDados> {
     })),
     ...clientes.slice(0, 6).map((c) => ({
       tipo: 'cliente' as const,
-      titulo: `Novo cliente · ${c.name}`,
+      titulo: `Novo cliente · ${c.company ? `${c.company} (${c.name})` : c.name}`,
       detalhe: 'Cadastro',
       valor: null,
       quando: c.created_at,
@@ -177,8 +194,9 @@ function nomeDosItens(itens: { product_name: string; qty: number }[]): string {
   return itens.length > 1 ? `${itens[0].product_name} +${itens.length - 1}` : itens[0].product_name;
 }
 
-// O join volta como objeto ou lista dependendo de como o Supabase lê a relação
+// O join volta como objeto ou lista dependendo de como o Supabase lê a relação.
+// Empresa primeiro; sem empresa cadastrada, o nome da pessoa.
 function nomeDoCliente(c: unknown): string {
-  const um = Array.isArray(c) ? c[0] : c;
-  return (um as { name?: string } | null)?.name ?? '';
+  const um = (Array.isArray(c) ? c[0] : c) as { name?: string; company?: string | null } | null;
+  return um?.company?.trim() || um?.name || '';
 }
