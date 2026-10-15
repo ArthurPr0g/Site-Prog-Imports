@@ -3,7 +3,7 @@ import { listActiveProducts, listCategories, listTopCollections, listFeedCollect
 import { BRAND } from '@/lib/brand';
 import { SITE_DESCRIPTION } from '@/lib/seo';
 import { JsonLd, itemListSchema } from '@/components/seo/JsonLd';
-import { listBanners, listServices, listTestimonials, getSiteSettings } from '@/lib/data/content';
+import { listBanners, listServices, listTestimonials, getVitrineSettings } from '@/lib/data/content';
 import { getCurrentUser } from '@/lib/auth';
 import { PromoBar } from '@/components/layout/PromoBar';
 import { Header } from '@/components/layout/Header';
@@ -44,7 +44,7 @@ export default async function HomePage({
     listServices(),
     listTestimonials(),
     getCurrentUser(),
-    getSiteSettings(),
+    getVitrineSettings(),
   ]);
 
   const heroSlides = banners.map((b) => ({

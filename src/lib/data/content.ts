@@ -34,6 +34,16 @@ export async function getSignaturePreviewUrl(path: string): Promise<string> {
   return data?.signedUrl ?? '';
 }
 
+/** O que a loja pública lê das configurações: só se os banners pequenos estão
+ *  ligados. Vem por função porque a tabela é só do admin desde a migração 0060
+ *  — ela guarda documento, telefone e endereço do dono. */
+export async function getVitrineSettings(): Promise<{ showSmallBanners: boolean }> {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc('vitrine_settings');
+  return { showSmallBanners: data?.[0]?.show_small_banners ?? true };
+}
+
+/** Configurações completas — só admin (RLS da migração 0060). */
 export async function getSiteSettings() {
   const supabase = await createClient();
   const { data } = await supabase

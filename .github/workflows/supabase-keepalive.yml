@@ -43,14 +43,15 @@ env:
   # So as tabelas que NAO podem ser lidas por visitante (conferido em 15/10/2026).
   # Ficam de fora as publicas de proposito (vitrine): banners brands categories
   # collections product_collections product_images product_related product_specs
-  # products reviews services testimonials. PENDENTE decisao do dono: coupons e
-  # site_settings tambem estao legiveis por visitante (ver docs/ERP.md).
+  # products reviews services testimonials. coupons e site_settings foram
+  # fechadas na migracao 0060 e agora sao vigiadas aqui.
   # Tabela nova precisa entrar aqui (privada) ou na lista acima (publica).
   TABLES: >-
-    addresses assistant_rate_limits customers favorites finance_entries
+    addresses assistant_rate_limits coupons customers favorites finance_entries
     internal_services newsletter_subscribers order_events order_items orders
     payment_installments profiles service_activities service_order_items
-    service_orders service_quote_items service_quotes stock_items store_quotes
+    service_orders service_quote_items service_quotes site_settings stock_items
+    store_quotes
     studio_perfil_diario studio_pieces studio_posts studio_publications
     studio_respostas studio_topics trade_items trades work_template_items
     work_templates

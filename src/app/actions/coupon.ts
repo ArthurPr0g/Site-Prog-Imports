@@ -8,9 +8,11 @@ export async function validateCouponAction(code: string): Promise<{ valid: boole
 
   try {
     const supabase = await createClient();
-    const { data } = await supabase.from('coupons').select('pct, active').eq('code', normalized).maybeSingle();
-    if (!data || !data.active) return { valid: false, pct: 0 };
-    return { valid: true, pct: data.pct };
+    // Função e não a tabela: visitante não pode listar os cupons (migração 0060).
+    // Devolve o percentual só para código existente e ativo; nulo nos outros casos.
+    const { data: pct } = await supabase.rpc('validar_cupom', { p_codigo: normalized });
+    if (pct == null) return { valid: false, pct: 0 };
+    return { valid: true, pct };
   } catch {
     return { valid: false, pct: 0 };
   }

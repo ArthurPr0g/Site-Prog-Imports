@@ -2101,6 +2101,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      keepalive: { Args: never; Returns: string }
+      validar_cupom: { Args: { p_codigo: string }; Returns: number | null }
+      vitrine_settings: {
+        Args: never
+        Returns: {
+          show_small_banners: boolean
+        }[]
+      }
       check_assistant_rate_limit: {
         Args: { p_key: string; p_limit: number; p_window_seconds: number }
         Returns: boolean

@@ -1434,9 +1434,15 @@ mesmo (some na hora e volta se o servidor recusar).
 3. **Aviso antes do fim do contrato** de plano mensal — ver a seção "Em aberto
    sobre planos", que tem o que falta decidir com o dono.
 
-### Segurança — decisão pendente do dono (encontrado em 2026-10-15)
+### Segurança — RESOLVIDO em 2026-10-15 (migração 0060)
 
-- **`site_settings` é legível por qualquer visitante** com a chave pública:
+Fechado no mesmo dia: as duas tabelas passaram a ser só do admin. A home lê
+`show_small_banners` pela função `vitrine_settings()` (`getVitrineSettings`) e o
+carrinho valida o código por `validar_cupom(p_codigo)`, que devolve só o
+percentual. As duas entraram na lista `TABLES` do keepalive, que agora alarma
+se voltarem a abrir. Registro do que era:
+
+- **`site_settings` era legível por qualquer visitante** com a chave pública:
   `contractor_name`, `contractor_doc`, `sender_doc`, `sender_phone`, o endereço
   do remetente e `signature_path` saem inteiros. Isso contraria o motivo da
   migração 0036 (tirar CPF/CNPJ e endereço do repositório público). A vitrine
