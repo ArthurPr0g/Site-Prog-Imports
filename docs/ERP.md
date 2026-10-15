@@ -1434,6 +1434,21 @@ mesmo (some na hora e volta se o servidor recusar).
 3. **Aviso antes do fim do contrato** de plano mensal — ver a seção "Em aberto
    sobre planos", que tem o que falta decidir com o dono.
 
+### Segurança — decisão pendente do dono (encontrado em 2026-10-15)
+
+- **`site_settings` é legível por qualquer visitante** com a chave pública:
+  `contractor_name`, `contractor_doc`, `sender_doc`, `sender_phone`, o endereço
+  do remetente e `signature_path` saem inteiros. Isso contraria o motivo da
+  migração 0036 (tirar CPF/CNPJ e endereço do repositório público). A vitrine
+  só precisa de `usd_rate`, `usd_rate_spread`, `show_small_banners` e
+  `default_delivery_time`; o resto deveria ser só admin (separar em tabela
+  própria ou expor uma view com as colunas públicas).
+- **`coupons` é legível por visitante:** os códigos de cupom aparecem para
+  qualquer um. Se a validação do carrinho precisa ler a tabela, trocar por uma
+  função que recebe o código e devolve só o desconto.
+- O workflow `supabase-keepalive.yml` deixa as duas fora da lista de tabelas
+  vigiadas até a decisão; depois de fechar, incluí-las em `TABLES`.
+
 ### Dívidas técnicas
 
 4. **Confirmação de vínculo no cadastro do site** (M1): `findCustomerCandidates`
