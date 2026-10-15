@@ -1,0 +1,144 @@
+name: Supabase - manter ativo e vigiar
+
+# Duas funcoes num workflow so:
+#
+# 1. Manter o projeto Free acordado. A Supabase olha uma JANELA DESLIZANTE de
+#    7 dias de atividade no banco, nao um contador que zera a cada acesso -
+#    por isso o cron e diario: um ping semanal deixaria a janela quase vazia.
+#
+#    A consulta que conta como atividade e a chamada a public.keepalive(),
+#    no ultimo passo - sem login, sem senha guardada.
+#
+# 2. Servir de alarme. Falha (e o GitHub manda e-mail) se o projeto sumir do
+#    DNS, se a chave publica conseguir LER alguma tabela (RLS aberto) ou se a
+#    configuracao de cadastro mudar sem ninguem ter decidido.
+
+on:
+  schedule:
+    # 09:17 UTC = 06:17 em Brasilia. Minuto quebrado de proposito: no inicio
+    # de cada hora a fila de agendamentos do GitHub lota e execucoes podem
+    # atrasar ou ser descartadas.
+    - cron: '17 9 * * *'
+  workflow_dispatch:
+
+# So le o repositorio (nem isso usa, na verdade: nao ha checkout).
+permissions:
+  contents: read
+
+# Um disparo manual durante o agendado nao roda em dobro.
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+env:
+  SUPABASE_HOST: oduimaztcoxbvtlsjjcy.supabase.co
+  # Chave PUBLICAVEL: e a mesma que ja vai para o navegador em
+  # .env (NEXT_PUBLIC_SUPABASE_ANON_KEY). Nao e segredo - quem protege os dados e o RLS.
+  # A service_role NUNCA entra aqui, nem como secret: ela ignora o RLS, e o
+  # objetivo deste workflow e justamente enxergar o banco como um estranho.
+  SUPABASE_ANON_KEY: sb_publishable_9dBYz8mrchRZZXsw8CdNhw_93bzX6lk
+  # Cadastro aberto de proposito: o cliente da loja cria a propria conta.
+  # O alarme exige o valor DECIDIDO; se um dia fechar, troque aqui.
+  EXPECTED_DISABLE_SIGNUP: 'false'
+  # So as tabelas que NAO podem ser lidas por visitante (conferido em 15/10/2026).
+  # Ficam de fora as publicas de proposito (vitrine): banners brands categories
+  # collections product_collections product_images product_related product_specs
+  # products reviews services testimonials. PENDENTE decisao do dono: coupons e
+  # site_settings tambem estao legiveis por visitante (ver docs/ERP.md).
+  # Tabela nova precisa entrar aqui (privada) ou na lista acima (publica).
+  TABLES: >-
+    addresses assistant_rate_limits customers favorites finance_entries
+    internal_services newsletter_subscribers order_events order_items orders
+    payment_installments profiles service_activities service_order_items
+    service_orders service_quote_items service_quotes stock_items store_quotes
+    studio_perfil_diario studio_pieces studio_posts studio_publications
+    studio_respostas studio_topics trade_items trades work_template_items
+    work_templates
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Primeiro o DNS, separado do resto: se o host sumir, todo curl abaixo
+      # falharia com "could not resolve host", que nao diz o que aconteceu.
+      - name: Host resolve no DNS
+        run: |
+          if ! getent hosts "$SUPABASE_HOST" > /dev/null; then
+            echo "::error::$SUPABASE_HOST nao resolve no DNS. Sinal de projeto pausado ou removido - confira no painel da Supabase."
+            exit 1
+          fi
+          echo "DNS ok: $(getent hosts "$SUPABASE_HOST" | head -n1)"
+
+      # /auth/v1/settings e publico e diz como o Auth esta configurado.
+      - name: Configuracao de cadastro nao mudou
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o settings.json -w '%{http_code}' \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            "https://$SUPABASE_HOST/auth/v1/settings")
+          echo "GET /auth/v1/settings -> HTTP $code"
+          echo "- GET /auth/v1/settings -> HTTP $code" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$code" != "200" ]; then
+            echo "::error::/auth/v1/settings respondeu $code. O Auth nao esta respondendo normalmente (projeto pausado?)."
+            exit 1
+          fi
+          atual=$(jq -r '.disable_signup' settings.json)
+          echo "disable_signup = $atual (esperado: $EXPECTED_DISABLE_SIGNUP)"
+          if [ "$atual" != "$EXPECTED_DISABLE_SIGNUP" ]; then
+            echo "::error::disable_signup mudou para $atual (esperado $EXPECTED_DISABLE_SIGNUP). Se foi de proposito, atualize EXPECTED_DISABLE_SIGNUP neste workflow."
+            exit 1
+          fi
+
+      # Ping anonimo + teste de RLS aberto, na mesma volta pelas tabelas.
+      #
+      # Com o RLS certo, a chave publica recebe 200 com [] - nao 401. O 200 []
+      # significa que o PostgREST EXECUTOU a consulta no Postgres e o RLS
+      # filtrou tudo: isso ja e atividade no banco, entao este passo sozinho
+      # mantem o projeto acordado. Pelo mesmo motivo, "RLS aberto" e detectado
+      # pelo CONTEUDO (veio alguma linha), nunca pelo status.
+      - name: Ping anonimo e RLS fechado em todas as tabelas
+        run: |
+          set -uo pipefail
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Tabela (anonimo) | HTTP | Linhas |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          falhas=0
+          for t in $TABLES; do
+            code=$(curl -sS -o body.json -w '%{http_code}' \
+              -H "apikey: $SUPABASE_ANON_KEY" \
+              -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+              "https://$SUPABASE_HOST/rest/v1/$t?select=*&limit=1")
+            linhas=$(jq 'if type == "array" then length else -1 end' body.json 2>/dev/null || echo -1)
+            echo "GET /rest/v1/$t -> HTTP $code, linhas=$linhas"
+            echo "| $t | $code | $linhas |" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$code" != "200" ]; then
+              echo "::error::$t respondeu HTTP $code para a chave publica. 404 = tabela saiu do banco (atualize TABLES); 5xx = projeto com problema."
+              falhas=$((falhas + 1))
+            elif [ "$linhas" != "0" ]; then
+              # Nao imprime o corpo: se o RLS abriu, o log do Actions (que fica
+              # guardado e visivel a quem tem acesso ao repo) seria mais um
+              # lugar com o dado vazado.
+              echo "::error::RLS ABERTO: a chave publica leu $linhas linha(s) de $t. Qualquer pessoa na internet consegue ler essa tabela."
+              falhas=$((falhas + 1))
+            fi
+          done
+          rm -f body.json
+          [ "$falhas" -eq 0 ] || exit 1
+
+      # Consulta garantida ao banco, sem login: a funcao public.keepalive()
+      # (migracao 0059_keepalive) so devolve now(): consulta real, sem login e sem
+      # senha guardada em lugar nenhum.
+      - name: Consulta ao banco (rpc keepalive)
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o hora.json -w '%{http_code}' -X POST \
+            -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H 'Content-Type: application/json' -d '{}' \
+            "https://$SUPABASE_HOST/rest/v1/rpc/keepalive")
+          echo "POST /rest/v1/rpc/keepalive -> HTTP $code: $(cat hora.json)"
+          printf '\n- rpc/keepalive -> HTTP %s: %s\n' "$code" "$(cat hora.json)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$code" != "200" ]; then
+            echo "::error::keepalive respondeu HTTP $code. 404 = funcao removida do banco; 5xx = projeto com problema."
+            exit 1
+          fi
