@@ -1,0 +1,24 @@
+{
+  "id": "/admin",
+  "name": "Prog Admin",
+  "short_name": "Prog Admin",
+  "description": "Gerenciamento da Prog Imports: vendas, orçamentos, estoque, prestações e financeiro.",
+  "lang": "pt-BR",
+  "start_url": "/admin",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0b0c",
+  "theme_color": "#0b0b0c",
+  "icons": [
+    { "src": "/admin-app/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/admin-app/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/admin-app/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Novo orçamento", "url": "/admin/orcamentos-loja?novo=1", "icons": [{ "src": "/admin-app/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Nova venda", "url": "/admin/vendas?novo=1", "icons": [{ "src": "/admin-app/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Chegou mercadoria", "url": "/admin/estoque?novo=1", "icons": [{ "src": "/admin-app/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Prestações", "url": "/admin/prestacao-servico", "icons": [{ "src": "/admin-app/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
