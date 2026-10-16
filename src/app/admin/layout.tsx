@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/auth';
 import { AdminShell } from '@/components/admin/AdminSidebar';
 import { RegistrarAppAdmin } from '@/components/admin/RegistrarAppAdmin';
+import { PuxarParaAtualizar } from '@/components/admin/PuxarParaAtualizar';
 
 /** O painel não é conteúdo de busca. Fora do índice pelo mesmo motivo da área
  *  do cliente — e aqui vale duplamente: são telas com preço de custo, margem e
@@ -30,6 +31,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <>
       <RegistrarAppAdmin />
+      <PuxarParaAtualizar />
       <AdminShell>{children}</AdminShell>
     </>
   );
