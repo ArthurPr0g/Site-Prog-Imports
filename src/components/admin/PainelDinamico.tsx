@@ -219,7 +219,7 @@ function Cartao({ i, className = '', children }: { i: number; className?: string
       variants={entrada}
       initial="oculto"
       animate="visivel"
-      className={`rounded-[18px] border border-border bg-card p-5 sm:p-6 ${className}`}
+      className={`rounded-[18px] border border-border bg-card p-4 sm:p-6 ${className}`}
     >
       {children}
     </motion.section>
@@ -337,7 +337,8 @@ export function PainelDinamico({ dados }: { dados: PainelDados }) {
       </motion.div>
 
       {/* Indicadores */}
-      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Celular: 2×2 e compacto; a partir de sm, como antes */}
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 xl:grid-cols-4">
         <Kpi
           i={0}
           cor="var(--color-accent)"
@@ -396,7 +397,8 @@ export function PainelDinamico({ dados }: { dados: PainelDados }) {
           <GraficoFluxo fluxo={calc.fluxo} desc={cfg.desc} recebido={calc.recebido} saiu={calc.saiu} />
         </Cartao>
 
-        <Cartao i={5} className="flex flex-col">
+        {/* No celular, atalhos antes do gráfico: é o que se usa com o telefone na mão */}
+        <Cartao i={5} className="order-first flex flex-col lg:order-none">
           <Rotulo>De onde veio o dinheiro</Rotulo>
           {calc.origens.length === 0 ? (
             <div className="mt-4 rounded-xl border border-dashed border-border-strong p-4 text-[13px] text-fg-tertiary">
@@ -431,7 +433,7 @@ export function PainelDinamico({ dados }: { dados: PainelDados }) {
             </>
           )}
 
-          <div className="mt-5 grid grid-cols-2 gap-2.5">
+          <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-2.5 lg:grid-cols-2">
             {ATALHOS.map((a, i) => (
               <Atalho key={a.href} {...a} i={i} />
             ))}
@@ -454,7 +456,8 @@ export function PainelDinamico({ dados }: { dados: PainelDados }) {
             </Link>
           </div>
           {dados.atividade.length === 0 && <Vazio>Nada registrado ainda.</Vazio>}
-          <div className="-mx-2">
+          {/* Celular: só as 4 mais recentes */}
+          <div className="-mx-2 max-sm:[&>*:nth-child(n+5)]:hidden">
             {dados.atividade.map((a, i) => (
               <ItemAtividade key={a.tipo + a.quando + i} a={a} i={i} />
             ))}
@@ -469,13 +472,20 @@ export function PainelDinamico({ dados }: { dados: PainelDados }) {
             </Link>
           </div>
           {aReceber.lista.length === 0 && <Vazio>Nada a receber. Tudo em dia.</Vazio>}
-          <div className="space-y-1.5">
+          {/* Celular: só os 3 próximos */}
+          <div className="space-y-1.5 max-sm:[&>*:nth-child(n+4)]:hidden">
             {aReceber.lista.slice(0, 6).map((l, i) => (
               <Recebimento key={l.data + l.descricao + i} l={l} hoje={hoje} i={i} />
             ))}
           </div>
+          {/* Celular mostra só 3: o link leva ao resto com o total certo */}
+          {aReceber.lista.length > 3 && (
+            <Link href="/admin/financeiro" className="mt-3 block text-[12px] font-bold text-accent sm:hidden">
+              Ver todos os {aReceber.lista.length} no Financeiro →
+            </Link>
+          )}
           {aReceber.lista.length > 6 && (
-            <div className="mt-3 text-[12px] text-fg-tertiary">
+            <div className="mt-3 hidden text-[12px] text-fg-tertiary sm:block">
               e mais {aReceber.lista.length - 6} lançamento{aReceber.lista.length - 6 > 1 ? 's' : ''} previsto
               {aReceber.lista.length - 6 > 1 ? 's' : ''}
             </div>
@@ -576,7 +586,7 @@ function MinhasAtividades({ tarefas, hoje }: { tarefas: AtividadeDoPainel[]; hoj
       ) : lista.length === 0 ? (
         <Vazio>{atual === 'atrasadas' ? 'Nada atrasado. ' : 'Nada aqui. '}Tudo em dia nesta lista.</Vazio>
       ) : (
-        <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-1.5 max-sm:[&>*:nth-child(n+6)]:hidden md:grid-cols-2">
           <AnimatePresence initial={false}>
             {lista.slice(0, 10).map((t, i) => {
               const s = situacao(t, hoje);
@@ -662,14 +672,14 @@ function Kpi({
       initial="oculto"
       animate="visivel"
       whileHover={{ y: -3 }}
-      className="group relative overflow-hidden rounded-[18px] border border-border bg-card p-5 transition-colors hover:border-border-hover"
+      className="group relative overflow-hidden rounded-[16px] border border-border bg-card p-3.5 transition-colors hover:border-border-hover sm:rounded-[18px] sm:p-5"
     >
       <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: cor }} />
       <span
         className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-25"
         style={{ background: cor }}
       />
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2">
         <Dica texto={dica}>
           <span tabIndex={0} className="cursor-help border-b border-dashed border-fg-faded/60 outline-none">
             <Rotulo>{rotulo}</Rotulo>
@@ -677,9 +687,10 @@ function Kpi({
         </Dica>
         {selo}
       </div>
-      <div className="mt-2 font-display text-[28px] font-bold tabular-nums tracking-[-.01em] sm:text-[30px]">{valor}</div>
-      <div className="mt-3">{barras ? <Minibarras valores={barras} cor={cor} /> : <div className="h-9" />}</div>
-      <div className="mt-2.5 truncate text-[12.5px] text-fg-tertiary">{rodape}</div>
+      <div className="mt-1.5 font-display text-[21px] font-bold tabular-nums tracking-[-.01em] sm:mt-2 sm:text-[28px] xl:text-[30px]">{valor}</div>
+      {/* Minibarras só a partir de sm: no celular o número já diz o que importa */}
+      <div className="mt-3 hidden sm:block">{barras ? <Minibarras valores={barras} cor={cor} /> : <div className="h-9" />}</div>
+      <div className="mt-1 line-clamp-2 text-[11px] leading-snug text-fg-tertiary sm:mt-2.5 sm:truncate sm:text-[12.5px]">{rodape}</div>
     </motion.div>
   );
 }
@@ -728,13 +739,13 @@ function GraficoFluxo({
 
       <div className="relative mt-6" onMouseLeave={() => setFoco(null)}>
         {/* linhas de guia */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[190px]">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[130px] sm:h-[190px]">
           {[0, 1, 2, 3].map((k) => (
             <div key={k} className="absolute inset-x-0 border-t border-dashed border-divider" style={{ top: `${(k / 3) * 100}%` }} />
           ))}
         </div>
 
-        <div className={`relative flex h-[190px] items-end ${muitos ? 'gap-[3px]' : 'gap-2 sm:gap-3'}`}>
+        <div className={`relative flex h-[130px] items-end sm:h-[190px] ${muitos ? 'gap-[3px]' : 'gap-2 sm:gap-3'}`}>
           {fluxo.map((b, i) => (
             <button
               key={b.chave}
@@ -802,7 +813,7 @@ function GraficoFluxo({
           )}
         </AnimatePresence>
       </div>
-      <div className="mt-3 text-right text-[11.5px] text-fg-faded">Passe o mouse ou toque nas barras</div>
+      <div className="mt-3 hidden text-right text-[11.5px] text-fg-faded sm:block">Passe o mouse ou toque nas barras</div>
     </div>
   );
 }
@@ -854,10 +865,10 @@ function Atalho({ href, rotulo, dica, Icone, i }: (typeof ATALHOS)[number] & { i
       >
         <Link
           href={href}
-          className="group flex w-full flex-col gap-2.5 rounded-[14px] border border-border bg-card-dark p-3.5 transition-colors hover:border-accent/50 hover:bg-card-hover"
+          className="group flex h-full w-full flex-col gap-1.5 rounded-[14px] border border-border bg-card-dark p-2.5 transition-colors hover:border-accent/50 hover:bg-card-hover sm:gap-2.5 sm:p-3.5"
         >
           <Icone size={18} className="text-accent transition-transform duration-300 group-hover:scale-110" />
-          <span className="text-[13px] font-extrabold leading-tight">{rotulo}</span>
+          <span className="text-[11.5px] font-extrabold leading-tight sm:text-[13px]">{rotulo}</span>
         </Link>
       </motion.div>
     </Dica>
