@@ -1,0 +1,30 @@
+{
+  "_leia": "Produto da loja (SKU) -> configurações testadas pelo Bench Promos que são A MESMA máquina (mesmo modelo, mesmo processador e mesma placa de vídeo). Revisado à mão em 17/10/2026. Na dúvida, NÃO entra: dado de outra configuração confunde o cliente.",
+  "ASUROGSTR-Q8KGP": {
+    "produto": "ASUS ROG Strix SCAR 18 — Core Ultra 9 275HX + RTX 5090 + 64GB + 4TB",
+    "testados": ["ASUS ROG Strix Scar 18 (Core Ultra 9 275HX - RTX 5090)"],
+    "por_que": "Mesma configuração inteira: a fonte liga o teste ao 'ROG Strix SCAR 18 Ultra 9 275HX RTX 5090 64GB 4TB SSD'."
+  },
+  "NOTLENLOQ-W7Y5E": {
+    "produto": "Lenovo LOQ 15 — i5-12450H + RTX 3050 6GB + 16GB",
+    "testados": ["Lenovo LOQ (i5 12450H - RTX 3050 6GB)"],
+    "por_que": "Mesmo modelo, processador e placa de vídeo; os jogos foram testados com 16GB de RAM, como o da loja."
+  },
+  "ROGXBOALL-J5JAB": {
+    "produto": "ROG Xbox Ally X — Ryzen AI Z2 Extreme",
+    "testados": ["ROG Xbox Ally X (Ryzen Z2 Extreme)"],
+    "por_que": "Mesmo aparelho; os testes foram no modo de 25 W (aparece junto de cada resultado)."
+  },
+  "NOTASUTUF-YWKLN": {
+    "produto": "ASUS TUF Gaming F15 — i5-12500H + RTX 3050 + 16GB",
+    "testados": ["Asus TUF Gaming F15 (i5 12500H - RTX 3050)", "Asus TUF Gaming F15 (i5 12500H + RTX 3050)"],
+    "por_que": "Mesmo modelo (FX507ZC4), processador e placa de vídeo; os jogos foram testados com 16GB de RAM, como o da loja."
+  },
+  "_fora": {
+    "NOTALIM16-9PFSZ": "Alienware M16 R1 da loja é Ryzen 9 7845HX + RTX 4080; o testado é i9 13900HX + RTX 4060/4070.",
+    "NOTALIM15-8SDY5": "Alienware M15 R7 da loja é Ryzen 9 6900HX; o testado é i7 12700H.",
+    "AW51-5080": "Area-51 16 da loja tem RTX 5070 Ti; o testado tem RTX 5070.",
+    "NOTACEPRE-YMBBF": "Predator Helios Neo 16S AI (5070 Ti 115W) ≠ Helios 16 AI testado (5070 Ti 140W, outro modelo).",
+    "NOTASUROG-CR89S": "ROG Strix G16 G614JV da loja é i7-13650HX; o testado com RTX 4060 é i9 13980HX."
+  }
+}

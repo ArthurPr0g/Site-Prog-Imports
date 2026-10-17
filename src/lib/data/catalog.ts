@@ -164,6 +164,8 @@ export async function getProductBySku(sku: string) {
       `*, categories(name), brands(name),
        product_images(id, label, url, position),
        product_specs(k, v, position),
+       product_benchmarks(grupo, teste, ajuste, resultado, unidade, menor_melhor, posicao_ranking, total_ranking,
+         config_testada, condicao, fonte, fonte_url, coletado_em, ordem),
        reviews(id, author_name, rating, text, created_at)`
     )
     .eq('sku', sku)
@@ -262,6 +264,10 @@ export async function getProductBySku(sku: string) {
     brand: product.brands?.name ?? '',
     images: (product.product_images ?? []).sort((a, b) => a.position - b.position),
     specs: (product.product_specs ?? []).sort((a, b) => a.position - b.position),
+    // Testes reais (Bench Promos) só da configuração idêntica — ver scripts/benchmarks/casamentos.json
+    benchmarks: (product.product_benchmarks ?? [])
+      .map((b) => ({ ...b, resultado: Number(b.resultado) }))
+      .sort((a, b) => a.ordem - b.ordem),
     // Sem curadoria no admin, os destaques saem da própria descrição. Derivado
     // aqui em vez de gravado para não dessincronizar quando a descrição mudar.
     highlights: resolveHighlights(product.highlights, product.description),

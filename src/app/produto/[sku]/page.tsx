@@ -189,7 +189,7 @@ export default async function ProductPage({ params }: { params: Promise<{ sku: s
         </div>
       </section>
 
-      <ProductTabs description={product.description} specs={product.specs} reviews={product.reviews} />
+      <ProductTabs description={product.description} specs={product.specs} reviews={product.reviews} benchmarks={product.benchmarks} />
       <RelatedProducts products={product.related} />
       </main>
 

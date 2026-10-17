@@ -688,6 +688,74 @@ export type Database = {
         }
         Relationships: []
       }
+      product_benchmarks: {
+        Row: {
+          ajuste: string | null
+          coletado_em: string
+          condicao: string | null
+          config_testada: string
+          created_at: string
+          fonte: string
+          fonte_url: string
+          grupo: string
+          id: string
+          menor_melhor: boolean
+          ordem: number
+          posicao_ranking: number | null
+          product_id: string
+          resultado: number
+          teste: string
+          total_ranking: number | null
+          unidade: string
+        }
+        Insert: {
+          ajuste?: string | null
+          coletado_em: string
+          condicao?: string | null
+          config_testada: string
+          created_at?: string
+          fonte?: string
+          fonte_url: string
+          grupo: string
+          id?: string
+          menor_melhor?: boolean
+          ordem?: number
+          posicao_ranking?: number | null
+          product_id: string
+          resultado: number
+          teste: string
+          total_ranking?: number | null
+          unidade: string
+        }
+        Update: {
+          ajuste?: string | null
+          coletado_em?: string
+          condicao?: string | null
+          config_testada?: string
+          created_at?: string
+          fonte?: string
+          fonte_url?: string
+          grupo?: string
+          id?: string
+          menor_melhor?: boolean
+          ordem?: number
+          posicao_ranking?: number | null
+          product_id?: string
+          resultado?: number
+          teste?: string
+          total_ranking?: number | null
+          unidade?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_benchmarks_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_collections: {
         Row: {
           collection_id: string
