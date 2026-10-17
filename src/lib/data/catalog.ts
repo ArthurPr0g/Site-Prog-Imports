@@ -264,7 +264,7 @@ export async function getProductBySku(sku: string) {
     brand: product.brands?.name ?? '',
     images: (product.product_images ?? []).sort((a, b) => a.position - b.position),
     specs: (product.product_specs ?? []).sort((a, b) => a.position - b.position),
-    // Testes reais (Bench Promos) só da configuração idêntica — ver scripts/benchmarks/casamentos.json
+    // Testes reais (Bench Promos ou Notebookcheck) só da configuração idêntica — ver scripts/benchmarks/
     benchmarks: (product.product_benchmarks ?? [])
       .map((b) => ({ ...b, resultado: Number(b.resultado) }))
       .sort((a, b) => a.ordem - b.ordem),

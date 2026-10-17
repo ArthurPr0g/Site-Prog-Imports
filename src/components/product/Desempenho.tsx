@@ -1,9 +1,10 @@
 /** Aba "Desempenho": testes reais de jogos, programas, bateria e ruído.
  *
- *  Os números vêm do canal Bench Promos e só entram quando a máquina testada é a
- *  MESMA configuração do produto (modelo, processador e placa de vídeo) — o
- *  casamento é revisado à mão em scripts/benchmarks/casamentos.json. Por isso a
- *  aba sempre mostra a configuração testada e a fonte de cada número. */
+ *  Os números vêm do canal Bench Promos (scripts/benchmarks/casamentos.json) ou de
+ *  análises do Notebookcheck (scripts/benchmarks/notebookcheck.json) e só entram
+ *  quando a máquina testada é a MESMA configuração do produto (modelo, processador
+ *  e placa de vídeo). Por isso a aba sempre mostra a configuração testada e a
+ *  fonte de cada número. */
 
 export type Benchmark = {
   grupo: string;
@@ -41,7 +42,9 @@ function oQueMede(teste: string) {
   if (/blender/i.test(teste)) return 'Renderização 3D (Blender), muito usado em criação';
   if (/3dmark.*cpu/i.test(teste)) return 'Processador em cargas de jogos e simulação';
   if (/3dmark/i.test(teste)) return 'Placa de vídeo em cenas de jogo padronizadas';
-  if (/geekbench/i.test(teste)) return 'Desempenho geral em tarefas do dia a dia e da GPU';
+  if (/geekbench.*gpu/i.test(teste)) return 'Força da placa de vídeo em cálculo e efeitos';
+  if (/geekbench/i.test(teste)) return 'Processador em tarefas do dia a dia';
+  if (/pcmark/i.test(teste)) return 'Uso geral: escritório, navegação, videochamada e edição leve';
   if (/premiere/i.test(teste)) return 'Tempo para exportar vídeo no Adobe Premiere Pro';
   if (/davinci/i.test(teste)) return 'Exportação de vídeo no DaVinci Resolve';
   return null;
@@ -50,7 +53,7 @@ function oQueMede(teste: string) {
 function Colocacao({ b }: { b: Benchmark }) {
   if (!b.posicao_ranking || !b.total_ranking) return null;
   return (
-    <span className="text-[12px] text-fg-tertiary" title="Colocação entre todos os aparelhos que o Bench Promos testou neste mesmo teste">
+    <span className="text-[12px] text-fg-tertiary" title={`Colocação entre todos os aparelhos que o ${b.fonte} testou neste mesmo teste`}>
       {b.posicao_ranking}º de {b.total_ranking} testados
     </span>
   );
@@ -65,6 +68,10 @@ export function Desempenho({ benchmarks }: { benchmarks: Benchmark[] }) {
   const condicoes = [...new Set(benchmarks.map((b) => b.condicao).filter(Boolean))] as string[];
   const maiorFps = Math.max(...jogos.map((j) => j.resultado), 60);
   const coleta = benchmarks[0].coletado_em;
+  // Uma entrada por fonte, com o link certo: a página de benchmarks do Bench
+  // Promos ou a análise original do Notebookcheck.
+  const fontes = [...new Map(benchmarks.map((b) => [b.fonte, b.fonte === 'Bench Promos' ? 'https://benchpromos.com.br/benchmarks' : b.fonte_url])).entries()];
+  const nomesFontes = fontes.map(([f]) => (f === 'Bench Promos' ? 'canal Bench Promos' : f)).join(' e ');
 
   return (
     <div className="max-w-[1100px]">
@@ -72,7 +79,7 @@ export function Desempenho({ benchmarks }: { benchmarks: Benchmark[] }) {
       <div className="mb-8 rounded-2xl border border-border bg-card px-6 py-5">
         <div className="mb-1 text-xs font-extrabold uppercase tracking-[.12em] text-accent">Testes reais</div>
         <p className="text-[15px] leading-relaxed text-fg-secondary">
-          Resultados medidos pelo canal <strong className="text-fg">{benchmarks[0].fonte}</strong> nesta mesma configuração:{' '}
+          Resultados medidos por <strong className="text-fg">{nomesFontes}</strong> nesta mesma configuração:{' '}
           <strong className="text-fg">{configs.join(' / ')}</strong>
           {condicoes.length > 0 && <> — condição do teste: {condicoes.join(', ')}</>}.
         </p>
@@ -86,12 +93,12 @@ export function Desempenho({ benchmarks }: { benchmarks: Benchmark[] }) {
           <h3 className="mb-1 font-display text-xl font-bold">Jogos</h3>
           <p className="mb-4 text-[13px] text-fg-tertiary">Quadros por segundo (FPS): quanto mais, mais suave. 60 FPS é a referência de jogo fluido.</p>
           <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-            {jogos.map((j) => {
+            {jogos.map((j, i) => {
               const s = selo(j.resultado);
               return (
-                <a key={j.fonte_url} href={j.fonte_url} target="_blank" rel="noopener noreferrer"
+                <a key={i} href={j.fonte_url} target="_blank" rel="noopener noreferrer"
                   className="group rounded-2xl border border-border bg-card p-5 transition-colors hover:border-border-hover"
-                  title="Ver este teste no Bench Promos">
+                  title={`Ver este teste no ${j.fonte}`}>
                   <div className="text-[15px] font-extrabold leading-snug">{j.teste}</div>
                   <div className="mb-3 text-[12.5px] text-fg-tertiary">{j.ajuste}</div>
                   <div className="mb-2 flex items-baseline gap-1.5">
@@ -117,10 +124,10 @@ export function Desempenho({ benchmarks }: { benchmarks: Benchmark[] }) {
           <h3 className="mb-1 font-display text-xl font-bold">Programas e testes de desempenho</h3>
           <p className="mb-4 text-[13px] text-fg-tertiary">Pontuação: quanto mais, melhor. Tempo (minutos ou segundos): quanto menos, melhor.</p>
           <div className="overflow-hidden rounded-2xl border border-border">
-            {programas.map((p) => {
+            {programas.map((p, i) => {
               const mede = oQueMede(p.teste);
               return (
-                <div key={p.fonte_url} className="grid grid-cols-1 gap-1 border-b border-border px-5 py-3.5 last:border-b-0 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-6">
+                <div key={i}className="grid grid-cols-1 gap-1 border-b border-border px-5 py-3.5 last:border-b-0 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-6">
                   <div>
                     <div className="text-[14.5px] font-extrabold">
                       {p.teste}{p.ajuste ? <span className="font-semibold text-fg-secondary"> · {p.ajuste}</span> : null}
@@ -146,14 +153,20 @@ export function Desempenho({ benchmarks }: { benchmarks: Benchmark[] }) {
         <section className="mb-10">
           <h3 className="mb-4 font-display text-xl font-bold">Bateria e ruído</h3>
           <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-            {extras.map((e) => (
-              <a key={e.fonte_url} href={e.fonte_url} target="_blank" rel="noopener noreferrer" className="rounded-2xl border border-border bg-card p-5 transition-colors hover:border-border-hover">
-                <div className="text-[14.5px] font-extrabold">{e.grupo === 'bateria' ? `Bateria${e.ajuste ? ` · ${e.ajuste.toLowerCase()}` : ''}` : 'Ruído jogando'}</div>
+            {extras.map((e, i) => (
+              <a key={i} href={e.fonte_url} target="_blank" rel="noopener noreferrer" className="rounded-2xl border border-border bg-card p-5 transition-colors hover:border-border-hover">
+                <div className="text-[14.5px] font-extrabold">
+                  {e.grupo === 'bateria'
+                    ? `Bateria${e.ajuste ? ` · ${e.ajuste.toLowerCase()}` : ''}`
+                    : /jogo/i.test(e.teste) ? `Ruído jogando${e.ajuste ? ` · ${e.ajuste.split(' · ')[0]}` : ''}` : e.teste}
+                </div>
                 <div className="my-2 font-display text-[30px] font-bold leading-none tracking-[-.02em]">
                   {e.grupo === 'bateria' && /min/i.test(e.unidade) ? horas(e.resultado) : `${numero(e.resultado)} ${e.unidade}`}
                 </div>
                 <div className="mb-1 text-[12.5px] text-fg-tertiary">
-                  {e.grupo === 'bateria' ? 'Tempo até descarregar, no teste do canal.' : 'Medido durante jogo — quanto menos, mais silencioso.'}
+                  {e.grupo === 'bateria'
+                    ? 'Tempo até descarregar, no teste da fonte.'
+                    : /jogo/i.test(e.teste) ? 'Medido durante jogo — quanto menos, mais silencioso.' : 'Ventoinhas no máximo — quanto menos, mais silencioso.'}
                 </div>
                 <Colocacao b={e} />
               </a>
@@ -163,8 +176,15 @@ export function Desempenho({ benchmarks }: { benchmarks: Benchmark[] }) {
       )}
 
       <p className="text-[12.5px] text-fg-tertiary">
-        Fonte:{' '}
-        <a href="https://benchpromos.com.br/benchmarks" target="_blank" rel="noopener noreferrer" className="font-bold text-accent">Bench Promos — benchmarks</a>
+        {fontes.length > 1 ? 'Fontes' : 'Fonte'}:{' '}
+        {fontes.map(([f, url], i) => (
+          <span key={f}>
+            {i > 0 && ' · '}
+            <a href={url} target="_blank" rel="noopener noreferrer" className="font-bold text-accent">
+              {f === 'Bench Promos' ? 'Bench Promos — benchmarks' : `${f} — análise completa`}
+            </a>
+          </span>
+        ))}
         . Cada número leva ao teste original. Resultados podem variar com drivers, atualizações e modo de energia.
       </p>
     </div>

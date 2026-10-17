@@ -1,0 +1,149 @@
+{
+  "_como_funciona": "Testes do Notebookcheck para produtos que o Bench Promos não testou. Só entra análise cuja máquina tem o MESMO modelo, processador e placa de vídeo (e TGP) do produto. Números lidos da linha do aparelho analisado ('referencespecs') e das tabelas célula a célula, nunca do texto corrido (colunas vazias embaralham). Jogos: coluna 'ultra' = Full HD no preset mais alto; 'QHD' = 2560x1440 no mesmo preset. Coletado em 2026-10-17.",
+  "_rejeitados": {
+    "AW51-5080 (Area-51 16 RTX 5070 Ti)": "Notebookcheck só tem ficha técnica dessa configuração, sem análise própria.",
+    "NOTARE51-7S3SQ (Area-51 18 RTX 5080)": "A análise do Area-51 18 testou a RTX 5090.",
+    "NOTALIM15-8SDY5 (m15 R7 R9 6900HX + 3070 Ti)": "Nenhuma análise dessa combinação; as que existem são Intel ou RTX 3060.",
+    "NOTASUROG-CR89S (Strix G16 G614JV i7-13650HX)": "Notebookcheck só agrega notas de terceiros, sem números próprios.",
+    "LEG5I-5070 (Legion 5i Gen 10 i7-14700HX)": "A análise da RTX 5070 testou o i7-13650HX.",
+    "NOTGAMLEN-FJGUQ (Legion 9i Gen 10 RTX 5090)": "Sem análise própria encontrada.",
+    "NOTLENLOQ-DHCKH (LOQ 15 R5 7235HS)": "Só notícia de oferta, sem teste.",
+    "NOTACENIT-HNNK5 (Nitro V15 R5 7535HS + 4050)": "Só ficha técnica e notas de terceiros.",
+    "NOTLENIDE-CXZT2 (IdeaPad Slim 3 R5 7520U)": "Sem análise encontrada.",
+    "NOTSAMGAL-NQR65 (Galaxy Book2 360 i5-1235U)": "Análises encontradas são do Galaxy Book2 PRO 360, outro modelo.",
+    "SAMGALBOO-UEVG5 (Galaxy Book4 Edge 16)": "Há análises do X1E-80-100 e do X1E-84-100; o cadastro não diz qual Snapdragon X Elite é o nosso. Confirmar antes de usar."
+  },
+  "analises": [
+    {
+      "skus": ["NOTALIM16-9PFSZ"],
+      "url": "https://www.notebookcheck.net/AMD-Ryzen-9-7845HX-performance-debut-Alienware-m16-R1-laptop-review.742228.0.html",
+      "config": "Alienware m16 R1 AMD (Ryzen 9 7845HX - RTX 4080 175 W)",
+      "condicao": "modo Overdrive com GPU dedicada; unidade testada com 16 GB de RAM e bateria de 86 Wh",
+      "bateria": [["Navegação Wi-Fi", 222]],
+      "ruido": [["Nível de ruído (dB) durante jogo", "The Witcher 3 · Ultra", 54.7]],
+      "jogos": [
+        ["Cyberpunk 2077", "Full HD · Ultra", 128.3], ["Cyberpunk 2077", "Quad HD · Ultra", 84.5],
+        ["F1 22", "Full HD · Ultra", 124.2], ["F1 22", "Quad HD · Ultra", 78.1],
+        ["Far Cry 5", "Full HD · Ultra", 136], ["Far Cry 5", "Quad HD · Ultra", 131],
+        ["Returnal", "Full HD · Ultra", 107], ["Returnal", "Quad HD · Ultra", 80],
+        ["Tiny Tina's Wonderlands", "Full HD · Ultra", 160.8], ["Tiny Tina's Wonderlands", "Quad HD · Ultra", 112.9],
+        ["Strange Brigade", "Full HD · Ultra", 357], ["Strange Brigade", "Quad HD · Ultra", 248],
+        ["Final Fantasy XV", "Full HD · Alto", 167.6], ["Final Fantasy XV", "Quad HD · Alto", 131.6],
+        ["The Witcher 3", "Full HD · Ultra", 169.7],
+        ["Dota 2 Reborn", "Full HD · Ultra", 164.7]
+      ],
+      "programas": [
+        ["Cinebench R23 Multi Core", null, 26876, "Pontos", false],
+        ["Cinebench R23 Single Core", null, 1852, "Pontos", false],
+        ["PCMark 10", null, 8867, "Pontos", false],
+        ["3DMark Time Spy", "Pontuação gráfica · 2560x1440", 19365, "Pontos", false],
+        ["3DMark Fire Strike", "Pontuação gráfica · 1920x1080", 44782, "Pontos", false],
+        ["3DMark Speed Way", "Ray Tracing · 2560x1440", 4739, "Pontos", false],
+        ["Blender 3.3 Classroom", "Placa de vídeo (OptiX)", 16, "Segundos", true],
+        ["Blender 3.3 Classroom", "Processador", 185, "Segundos", true]
+      ]
+    },
+    {
+      "skus": ["ALIARE16-UJ5GR", "NOTARE51-RJD35"],
+      "url": "https://www.notebookcheck.net/Alienware-16-Area-51-laptop-review-Dell-s-best-flagship-gaming-laptop-yet.1027688.0.html",
+      "config": "Alienware 16 Area-51 (Core Ultra 9 275HX - RTX 5080 175 W, 32 GB DDR5-6400)",
+      "condicao": "modo Performance, em que a placa de vídeo fica em 150 W (os 175 W só no modo Turbo)",
+      "bateria": [["Navegação Wi-Fi", 168]],
+      "ruido": [["Nível de ruído (dB) durante jogo", "Cyberpunk 2077 · Ultra", 50.4]],
+      "jogos": [
+        ["Cyberpunk 2077", "Full HD · Ultra", 135.1], ["Cyberpunk 2077", "Quad HD · Ultra", 102.4],
+        ["Indiana Jones and the Great Circle", "Full HD · Ultra", 124.2], ["Indiana Jones and the Great Circle", "Quad HD · Ultra", 99.3],
+        ["Monster Hunter Wilds", "Full HD · Ultra", 83.1], ["Monster Hunter Wilds", "Quad HD · Ultra", 69.8],
+        ["Assassin's Creed Shadows", "Full HD · Ultra", 65], ["Assassin's Creed Shadows", "Quad HD · Ultra", 55],
+        ["Black Myth: Wukong", "Full HD · Ultra", 57], ["Black Myth: Wukong", "Quad HD · Ultra", 43],
+        ["Baldur's Gate 3", "Full HD · Ultra", 202.6], ["Baldur's Gate 3", "Quad HD · Ultra", 154.4],
+        ["F1 24", "Full HD · Ultra", 132.5], ["F1 24", "Quad HD · Ultra", 84.7],
+        ["Alan Wake 2", "Full HD · Alto", 113.5], ["Alan Wake 2", "Quad HD · Alto", 74.3],
+        ["Strange Brigade", "Full HD · Ultra", 397], ["Strange Brigade", "Quad HD · Ultra", 303],
+        ["Final Fantasy XV", "Full HD · Alto", 189.6], ["Final Fantasy XV", "Quad HD · Alto", 158.8],
+        ["Dota 2 Reborn", "Full HD · Ultra", 160.4]
+      ],
+      "programas": [
+        ["Cinebench R23 Multi Core", null, 31707, "Pontos", false],
+        ["Cinebench R23 Single Core", null, 2009, "Pontos", false],
+        ["Geekbench 6 Multi Core", null, 18978, "Pontos", false],
+        ["Geekbench 6 Single Core", null, 2925, "Pontos", false],
+        ["PCMark 10", null, 8767, "Pontos", false],
+        ["3DMark Time Spy", "Pontuação gráfica · 2560x1440", 21724, "Pontos", false],
+        ["3DMark Fire Strike", "Pontuação gráfica · 1920x1080", 47367, "Pontos", false],
+        ["3DMark Speed Way", "Ray Tracing · 2560x1440", 5675, "Pontos", false],
+        ["Blender 3.3 Classroom", "Placa de vídeo (OptiX)", 13, "Segundos", true],
+        ["Blender 3.3 Classroom", "Processador", 160, "Segundos", true]
+      ]
+    },
+    {
+      "skus": ["NOTACEPRE-YMBBF"],
+      "url": "https://www.notebookcheck.net/Shooting-star-or-flop-Acer-Predator-Helios-Neo-16S-AI-gaming-laptop-review.1201655.0.html",
+      "config": "Acer Predator Helios Neo 16S AI PHN16S-71 (Core Ultra 9 275HX - RTX 5070 Ti 115 W, 32 GB, OLED 240 Hz)",
+      "condicao": "modo Performance",
+      "bateria": [["Navegação Wi-Fi", 300]],
+      "ruido": [["Nível de ruído (dB) durante jogo", "Cyberpunk 2077 · Ultra", 52]],
+      "jogos": [
+        ["Cyberpunk 2077", "Full HD · Ultra", 100.8],
+        ["Baldur's Gate 3", "Full HD · Ultra", 122.8],
+        ["GTA V", "Full HD · Ultra", 147],
+        ["ARC Raiders", "Full HD · Ultra", 79.8], ["ARC Raiders", "Quad HD · Ultra", 58],
+        ["Call of Duty Black Ops 7", "Full HD · Ultra", 47], ["Call of Duty Black Ops 7", "Quad HD · Ultra", 31],
+        ["The Outer Worlds 2", "Full HD · Ultra", 49.9], ["The Outer Worlds 2", "Quad HD · Ultra", 33.4],
+        ["Borderlands 4", "Full HD · Ultra", 31.1], ["Borderlands 4", "Quad HD · Ultra", 22.4],
+        ["Anno 117: Pax Romana", "Full HD · Ultra", 41.7], ["Anno 117: Pax Romana", "Quad HD · Ultra", 29.3],
+        ["Dota 2 Reborn", "Full HD · Ultra", 176.4]
+      ],
+      "programas": [
+        ["Cinebench R23 Multi Core", null, 31727, "Pontos", false],
+        ["Cinebench R23 Single Core", null, 2250, "Pontos", false],
+        ["Geekbench 6 Multi Core", null, 19675, "Pontos", false],
+        ["Geekbench 6 Single Core", null, 3113, "Pontos", false],
+        ["PCMark 10", null, 8332, "Pontos", false],
+        ["3DMark Time Spy", "Pontuação gráfica · 2560x1440", 14615, "Pontos", false],
+        ["3DMark Fire Strike", "Pontuação gráfica · 1920x1080", 36184, "Pontos", false],
+        ["3DMark Port Royal", "Ray Tracing · 2560x1440", 9925, "Pontos", false],
+        ["Blender 3.3 Classroom", "Placa de vídeo (OptiX)", 17, "Segundos", true]
+      ]
+    },
+    {
+      "skus": ["APPMACPRO-Y4GC3"],
+      "url": "https://www.notebookcheck.net/Apple-MacBook-Pro-14-2023-Entry-Review-Base-model-with-cut-down-M2-Pro-SSD-downgrade-and-slightly-higher-power-draws.700015.0.html",
+      "config": "Apple MacBook Pro 14 2023 (M2 Pro com CPU de 10 núcleos e GPU de 16 núcleos)",
+      "condicao": "unidade testada com 16 GB de memória e SSD de 512 GB",
+      "bateria": [["Navegação Wi-Fi", 774], ["Vídeo playback", 984]],
+      "ruido": [["Ruído em carga máxima", null, 47.5]],
+      "jogos": [],
+      "programas": [
+        ["Cinebench R23 Multi Core", null, 11811, "Pontos", false],
+        ["Cinebench R23 Single Core", null, 1643, "Pontos", false],
+        ["Geekbench 5 Multi Core", null, 12189, "Pontos", false],
+        ["Geekbench 5 Single Core", null, 1926, "Pontos", false],
+        ["Geekbench 6 GPU", "Metal", 73104, "Pontos", false],
+        ["3DMark Wild Life Extreme", "GPU Benchmark", 11105, "Pontos", false],
+        ["Blender 3.3 Classroom", "Placa de vídeo (Metal)", 132, "Segundos", true],
+        ["Blender 3.3 Classroom", "Processador", 435, "Segundos", true]
+      ]
+    },
+    {
+      "skus": ["MACPROM5-DFCPC"],
+      "url": "https://www.notebookcheck.net/Apple-MacBook-Pro-M5-2025-review-The-fastest-single-core-performance-in-the-world.1144391.0.html",
+      "config": "Apple MacBook Pro 14 2025 (M5 com CPU e GPU de 10 núcleos, 32 GB, 1 TB)",
+      "condicao": null,
+      "bateria": [["Navegação Wi-Fi", 1002]],
+      "ruido": [["Nível de ruído (dB) durante jogo", "Cyberpunk 2077 · Ultra", 30]],
+      "jogos": [],
+      "programas": [
+        ["Cinebench 2024 Multi Core", null, 1172, "Pontos", false],
+        ["Cinebench 2024 Single Core", null, 200, "Pontos", false],
+        ["Geekbench 6 Multi Core", null, 18054, "Pontos", false],
+        ["Geekbench 6 Single Core", null, 4326, "Pontos", false],
+        ["Geekbench 6 GPU", "Metal", 77007, "Pontos", false],
+        ["3DMark Steel Nomad", "GPU Benchmark", 1125, "Pontos", false],
+        ["3DMark Wild Life Extreme", "GPU Benchmark", 12059, "Pontos", false],
+        ["Blender 3.3 Classroom", "Placa de vídeo (Metal)", 68, "Segundos", true],
+        ["Blender 3.3 Classroom", "Processador", 429, "Segundos", true]
+      ]
+    }
+  ]
+}
