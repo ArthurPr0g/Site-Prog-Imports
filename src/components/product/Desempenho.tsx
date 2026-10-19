@@ -96,9 +96,7 @@ export function Desempenho({ benchmarks }: { benchmarks: Benchmark[] }) {
             {jogos.map((j, i) => {
               const s = selo(j.resultado);
               return (
-                <a key={i} href={j.fonte_url} target="_blank" rel="noopener noreferrer"
-                  className="group rounded-2xl border border-border bg-card p-5 transition-colors hover:border-border-hover"
-                  title={`Ver este teste no ${j.fonte}`}>
+                <div key={i} className="rounded-2xl border border-border bg-card p-5">
                   <div className="text-[15px] font-extrabold leading-snug">{j.teste}</div>
                   <div className="mb-3 text-[12.5px] text-fg-tertiary">{j.ajuste}</div>
                   <div className="mb-2 flex items-baseline gap-1.5">
@@ -112,7 +110,7 @@ export function Desempenho({ benchmarks }: { benchmarks: Benchmark[] }) {
                     <div className="h-full rounded-full" style={{ width: `${Math.min(100, (j.resultado / maiorFps) * 100)}%`, background: s.cor }} />
                   </div>
                   <Colocacao b={j} />
-                </a>
+                </div>
               );
             })}
           </div>
@@ -154,7 +152,7 @@ export function Desempenho({ benchmarks }: { benchmarks: Benchmark[] }) {
           <h3 className="mb-4 font-display text-xl font-bold">Bateria e ruído</h3>
           <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
             {extras.map((e, i) => (
-              <a key={i} href={e.fonte_url} target="_blank" rel="noopener noreferrer" className="rounded-2xl border border-border bg-card p-5 transition-colors hover:border-border-hover">
+              <div key={i} className="rounded-2xl border border-border bg-card p-5">
                 <div className="text-[14.5px] font-extrabold">
                   {e.grupo === 'bateria'
                     ? `Bateria${e.ajuste ? ` · ${e.ajuste.toLowerCase()}` : ''}`
@@ -169,7 +167,7 @@ export function Desempenho({ benchmarks }: { benchmarks: Benchmark[] }) {
                     : /jogo/i.test(e.teste) ? 'Medido durante jogo — quanto menos, mais silencioso.' : 'Ventoinhas no máximo — quanto menos, mais silencioso.'}
                 </div>
                 <Colocacao b={e} />
-              </a>
+              </div>
             ))}
           </div>
         </section>
@@ -185,7 +183,7 @@ export function Desempenho({ benchmarks }: { benchmarks: Benchmark[] }) {
             </a>
           </span>
         ))}
-        . Cada número leva ao teste original. Resultados podem variar com drivers, atualizações e modo de energia.
+        . Resultados podem variar com drivers, atualizações e modo de energia.
       </p>
     </div>
   );

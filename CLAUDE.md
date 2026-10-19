@@ -45,7 +45,8 @@ no mesmo pedido, e é publicada e conferida sem precisar de aprovação:
 1. **Catálogo deste ERP** — tabela `internal_services`, por migration (ver acima).
    Lógica de combo/mensalidade em `src/lib/combo-servicos.ts`.
 2. **Página de planos do portfólio** — `ArthurPr0g/Portfolio-Arthur-Prog`,
-   `app/src/pages/planos/planos.js` (portfolio-arthur-prog.vercel.app/#/planos).
+   `app/src/pages/planos/planos.js` (portfolio-arthur-prog.vercel.app/pt/planos).
+   A tabela em dólar (`planos.en.js`, /en/pricing) não segue esta regra.
 3. **Página avulsa e tabela interna** — `ArthurPr0g/Resgate-Cr-dito-Claude`,
    `index.html` e `PACOTES.md`.
 
