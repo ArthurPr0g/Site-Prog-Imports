@@ -1424,6 +1424,8 @@ mesmo (some na hora e volta se o servidor recusar).
 
 ## Captação (M10) — regras confirmadas (2026-10-27)
 
+Ideias e pendências do módulo: `docs/CAPTACAO-BACKLOG.md`.
+
 Painel de leads para vender os serviços da Prog Soluções (site, loja, sistema
 de gestão, marca) no Brasil e nos EUA. A loja (importados) **não** entra aqui
 por enquanto, por decisão do dono.

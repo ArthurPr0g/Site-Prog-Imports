@@ -1,0 +1,111 @@
+# Captação — backlog
+
+Ideias e pendências do módulo Captação (`/admin/captacao`), para não se perderem.
+Regras e decisões do que já existe: `docs/ERP.md`, seção "Captação (M10)".
+
+Status: **a fazer** · **fazendo** · **feito (local)** = commitado, ainda não publicado · **no ar**.
+
+Pedido do dono em 27/10/2026: "pode fazer todos" (itens 1 a 12).
+
+---
+
+## Para publicar o que já existe
+
+| # | Item | Status | Observação |
+|---|---|---|---|
+| P1 | Aplicar a migration `0062` em produção e rodar `get_advisors` | a fazer | Só numa sessão do Claude Code aberta na pasta **Prog Soluções** (MCP `supabase-arthurmatos003`). |
+| P2 | Push dos commits locais e acompanhar o deploy | a fazer | Depois do P1, nunca antes (a tela sem a tabela quebra). |
+| P3 | Testar no Chrome, iPhone e Android pelo acesso do dono | a fazer | O Android ainda não foi testado em nenhuma versão (emulador não abria o Chrome após boot a frio). |
+| P4 | Conferir se `NEXT_PUBLIC_WHATSAPP_NUMBER` na Vercel é `5562982133188` | a fazer | É o número de serviços (padrão do código). |
+| P5 | Importar em produção os CSVs de `google-maps-scraper-kit\resultados` | a fazer | Lote de Goiânia (36 nichos) e Orlando (18) rodando em 27/10. |
+
+---
+
+## Melhorias pedidas (27/10/2026)
+
+### 1. Lead quente: quem abriu o diagnóstico — a fazer
+Registrar cada abertura do `/diagnostico/<token>` (contador, primeira e última
+visita) e destacar no painel: "abriu 3x, a última há 10 min", no topo da lista.
+- Não contar: o próprio dono (sessão admin ou `?previa=1` no link do painel) e
+  os robôs que montam a prévia do link (User-Agent com WhatsApp,
+  facebookexternalhit, Telegram, Slack, bot, crawler, preview).
+- Função `security definer` para registrar (o anônimo não escreve na tabela).
+- Depois: aviso no celular (precisa de push; hoje não existe infraestrutura).
+
+### 2. Modo foco "Próximos 10" + meta diária — a fazer
+Um lead por vez, do maior para o menor (quentes e retornos do dia primeiro),
+com a mensagem pronta; "Enviei" passa para o próximo. Meta diária de contatos
+("hoje: 14 de 20") com barra; a meta fica no navegador do dono.
+- Precisa de `last_contact_at` para contar os contatos do dia (inclui retornos).
+
+### 3. Sequência de retorno (follow-up) — a fazer
+Dia 0 WhatsApp → dia 3 lembrete → dia 7 e-mail → dia 14 último contato
+("vou parar de te escrever"). Card **"Para hoje"** com quem precisa de retorno e
+qual mensagem.
+- `followup_step` no lead e `step` nos modelos (`lead_templates`: canal ×
+  idioma × etapa, com WhatsApp e e-mail em todas as etapas; a tela sugere o canal).
+- Parar a sequência quando o lead responder, for perdido ou pedir para não ser contatado.
+
+### 4. Proposta em um clique — a fazer
+"Virar cliente" já cria o **Orçamento de Serviço** com os serviços sugeridos
+(itens do catálogo, combo aplicado pela regra de `combo-servicos.ts`) e abre
+para ajustar e mandar o PDF que o ERP já gera.
+- Reusar `saveServiceQuoteAction` / `ajustarCombosEMensalidades`, nunca
+  duplicar a regra de combo.
+
+### 5. Relatório por ramo e cidade — a fazer
+Leads, contatados, taxa de resposta, reuniões, fechados e valor por ramo e
+por cidade. Mostra onde buscar mais e onde parar.
+
+### 6. Mapa dos leads — a fazer
+Leads no mapa coloridos pela nota, para montar rota de visitas por bairro
+(Goiânia: visita presencial).
+- Coordenadas: o `link` do Google Maps traz `!3d<lat>!4d<lng>`, então os CSVs já
+  baixados servem; para os próximos, pedir `latitude,longitude` no `--fields`.
+- Leaflet + OpenStreetMap (sem chave).
+
+### 7. Pedir busca pelo celular (importação automática) — a fazer
+Botão "Nova busca" (nicho + cidade, ou "todos os nichos da lista") no painel
+grava um pedido; um programa no PC do dono (`scripts/captacao/worker`) pega o
+pedido, roda a busca, confere os sites, tira os prints (item 8) e **importa
+sozinho**, sem CSV manual.
+- O programa usa a `SUPABASE_SECRET_KEY` do `.env.local` (uso previsto: scripts
+  locais); a chave nunca vai para a Vercel.
+- Mesma lógica de importação do painel (nota, dedupe, preserva etapa), num
+  módulo compartilhado; não reescrever em Python.
+- Começar sozinho com o Windows é configuração persistente: só com o OK do dono.
+
+### 8. Print do site no celular dentro do diagnóstico — a fazer
+Foto real do site do lead numa tela de celular (prova de "não se adapta",
+"não seguro"). Gerado no PC (Playwright) e guardado no Storage do Supabase
+(bucket público só de leitura). Depende do item 7.
+
+### 9. Não abordar quem já é cliente — a fazer
+Cruzar leads com `customers` (telefone e e-mail normalizados) e marcar
+"já é cliente"; fora da fila e do modo foco.
+
+### 10. Nota que aprende — a fazer
+Com 30+ leads contatados, mostrar a taxa de resposta por motivo da nota
+("sem site" responde 12%, "site fora do ar" 20%…) para ajustar os pesos com
+dados reais. Não mudar os pesos sozinho: sugerir e o dono decide.
+
+### 11. Teste A/B de mensagens — a fazer
+Duas versões (A/B) de cada modelo; cada lead recebe uma (alternando) e o
+relatório compara a taxa de resposta.
+
+### 12. Quadro (kanban) — a fazer
+Ver os leads em colunas por etapa e arrastar entre elas (no celular, tocar e
+escolher a etapa).
+
+---
+
+## Pendências e ideias levantadas antes
+
+| Item | Observação |
+|---|---|
+| Portugal e Espanha | Espaço reservado no card "Valor na mesa". Falta: preço em euro (`planos.ptpt.js` e `planos.eu.js` do portfólio), cotação do euro, mensagens em pt-PT e espanhol, WhatsApp +351/+34. |
+| Captação para a loja Prog Imports | Revendedores, assistências técnicas, empresas com frota. O dono adiou (27/10). |
+| Domínio do diagnóstico | Hoje sai em prog-imports.com (domínio da loja). Melhor num domínio da Prog Soluções; liga com o "domínio próprio" do backlog do portfólio. |
+| Botão "Agendar 20 min" | No diagnóstico e no e-mail, quando existir o Cal.com (backlog do portfólio). |
+| Docker caindo no lote longo | Log mostra o "Resource Saver" do Docker Desktop. Se repetir, desativar nas configurações (pedir ao dono antes). |
+| Mais cidades | Capitais do Brasil e cidades com brasileiros nos EUA (Pompano Beach, Framingham, Marlborough, Newark, Danbury). |
