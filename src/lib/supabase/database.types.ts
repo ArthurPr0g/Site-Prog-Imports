@@ -413,6 +413,119 @@ export type Database = {
         }
         Relationships: []
       }
+      leads: {
+        Row: {
+          address: string | null
+          category: string | null
+          city: string | null
+          closed_at: string | null
+          country: string
+          created_at: string
+          customer_id: string | null
+          dedupe_key: string
+          email: string | null
+          facebook: string | null
+          first_contact_at: string | null
+          id: string
+          instagram: string | null
+          linkedin: string | null
+          maps_url: string | null
+          name: string
+          next_contact: string | null
+          niche: string | null
+          notes: string | null
+          phone: string | null
+          place_id: string | null
+          rating: number | null
+          reasons: string[]
+          replied_at: string | null
+          review_count: number | null
+          score: number
+          source: string | null
+          state: string | null
+          status: string
+          suggested_services: string[]
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          category?: string | null
+          city?: string | null
+          closed_at?: string | null
+          country?: string
+          created_at?: string
+          customer_id?: string | null
+          dedupe_key: string
+          email?: string | null
+          facebook?: string | null
+          first_contact_at?: string | null
+          id?: string
+          instagram?: string | null
+          linkedin?: string | null
+          maps_url?: string | null
+          name: string
+          next_contact?: string | null
+          niche?: string | null
+          notes?: string | null
+          phone?: string | null
+          place_id?: string | null
+          rating?: number | null
+          reasons?: string[]
+          replied_at?: string | null
+          review_count?: number | null
+          score?: number
+          source?: string | null
+          state?: string | null
+          status?: string
+          suggested_services?: string[]
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          category?: string | null
+          city?: string | null
+          closed_at?: string | null
+          country?: string
+          created_at?: string
+          customer_id?: string | null
+          dedupe_key?: string
+          email?: string | null
+          facebook?: string | null
+          first_contact_at?: string | null
+          id?: string
+          instagram?: string | null
+          linkedin?: string | null
+          maps_url?: string | null
+          name?: string
+          next_contact?: string | null
+          niche?: string | null
+          notes?: string | null
+          phone?: string | null
+          place_id?: string | null
+          rating?: number | null
+          reasons?: string[]
+          replied_at?: string | null
+          review_count?: number | null
+          score?: number
+          source?: string | null
+          state?: string | null
+          status?: string
+          suggested_services?: string[]
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       newsletter_subscribers: {
         Row: {
           created_at: string

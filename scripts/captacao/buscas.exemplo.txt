@@ -1,0 +1,8 @@
+# ramo | cidade | BR ou US   (linhas com # são ignoradas)
+# Use: .\captar.ps1 -Lista .\buscas.exemplo.txt
+clínica odontológica | Brasília, DF | BR
+loja de roupas | Goiânia, GO | BR
+academia | Belo Horizonte, MG | BR
+salão de beleza | São Paulo, SP | BR
+dentist | Orlando, FL | US
+boutique | Miami, FL | US

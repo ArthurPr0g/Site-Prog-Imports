@@ -25,6 +25,7 @@ import {
   HandPlatter,
   Images,
   Settings,
+  Magnet,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 
@@ -71,6 +72,7 @@ const NAV: NavGroup[] = [
   {
     group: 'Operacional',
     items: [
+      { href: '/admin/captacao', label: 'Captação', Icon: Magnet },
       { href: '/admin/orcamentos-loja', label: 'Orçamentos Loja', Icon: FileText },
       { href: '/admin/orcamentos-servicos', label: 'Orçamentos Serviços', Icon: FileSpreadsheet },
       { href: '/admin/vendas', label: 'Vendas', Icon: ClipboardList },

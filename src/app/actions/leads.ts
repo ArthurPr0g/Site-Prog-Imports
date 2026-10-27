@@ -1,0 +1,182 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { createClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/auth';
+import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
+import type { TablesInsert, TablesUpdate } from '@/lib/supabase/database.types';
+import { LEAD_STATUSES, avaliarLead, chaveDoLead, linhasDoCsv, type LeadStatus, type Pais } from '@/lib/captacao';
+
+async function adminClient() {
+  const admin = await requireAdmin();
+  if (!admin) return null;
+  return createClient();
+}
+
+const LIMITE_ARQUIVO = 5 * 1024 * 1024;
+
+/**
+ * Importa o CSV do google-maps-scraper-kit. Lead que já existe (mesmo
+ * place_id, ou mesmo nome + telefone) tem os dados públicos e a nota
+ * atualizados; status, notas e datas de contato nunca são tocados.
+ */
+export async function importLeadsAction(formData: FormData): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  const arquivo = formData.get('arquivo');
+  if (!(arquivo instanceof File) || arquivo.size === 0) return errResult('Escolha o arquivo CSV.');
+  if (arquivo.size > LIMITE_ARQUIVO) return errResult('Arquivo maior que 5 MB. Divida a busca em partes.');
+
+  const pais: Pais = formData.get('pais') === 'US' ? 'US' : 'BR';
+  const niche = String(formData.get('nicho') ?? '').trim() || null;
+  const city = String(formData.get('cidade') ?? '').trim() || null;
+  const state = String(formData.get('estado') ?? '').trim().toUpperCase() || null;
+
+  const linhas = linhasDoCsv(await arquivo.text());
+  if (linhas.length === 0) return errResult('Nenhuma empresa encontrada no arquivo. Confira se é o CSV do scraper.');
+
+  // Mesma empresa repetida no arquivo (tiles do --grid): fica a última.
+  const porChave = new Map<string, TablesInsert<'leads'>>();
+  for (const l of linhas) {
+    const { score, suggestedServices, reasons } = avaliarLead(l, niche);
+    const chave = chaveDoLead(l);
+    porChave.set(chave, {
+      dedupe_key: chave,
+      place_id: l.placeId,
+      name: l.name,
+      category: l.category,
+      niche,
+      city,
+      state,
+      country: pais,
+      address: l.address,
+      phone: l.phone,
+      email: l.email,
+      website: l.website,
+      instagram: l.instagram,
+      facebook: l.facebook,
+      linkedin: l.linkedin,
+      maps_url: l.mapsUrl,
+      rating: l.rating,
+      review_count: l.reviewCount,
+      score,
+      suggested_services: suggestedServices,
+      reasons,
+      source: arquivo.name,
+      updated_at: new Date().toISOString(),
+    });
+  }
+  const registros = [...porChave.values()];
+
+  // A contagem vai na URL (filtro "in"): lotes de 100 chaves cabem com folga
+  // no limite de tamanho da URL; o upsert vai no corpo e aceita lotes maiores.
+  let jaExistiam = 0;
+  for (let i = 0; i < registros.length; i += 100) {
+    const { count } = await supabase
+      .from('leads')
+      .select('id', { count: 'exact', head: true })
+      .in('dedupe_key', registros.slice(i, i + 100).map((r) => r.dedupe_key));
+    jaExistiam += count ?? 0;
+  }
+
+  for (let i = 0; i < registros.length; i += 500) {
+    const { error } = await supabase
+      .from('leads')
+      .upsert(registros.slice(i, i + 500), { onConflict: 'dedupe_key' });
+    if (error) return errResult(friendlyDbError(error, 'Não foi possível importar os leads.'));
+  }
+
+  revalidatePath('/admin/captacao');
+  return okResult(`${registros.length - jaExistiam} lead(s) novo(s) e ${jaExistiam} atualizado(s).`);
+}
+
+export type LeadUpdate = {
+  status?: LeadStatus;
+  nextContact?: string | null;
+  notes?: string | null;
+};
+
+export async function updateLeadAction(id: string, input: LeadUpdate): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  const { data: atual } = await supabase
+    .from('leads')
+    .select('first_contact_at, replied_at, closed_at')
+    .eq('id', id)
+    .maybeSingle();
+  if (!atual) return errResult('Lead não encontrado.');
+
+  const agora = new Date().toISOString();
+  const payload: TablesUpdate<'leads'> = { updated_at: agora };
+
+  if (input.status !== undefined) {
+    if (!LEAD_STATUSES.includes(input.status)) return errResult('Etapa inválida.');
+    payload.status = input.status;
+    // As datas marcam a primeira vez que o lead passou da etapa, e servem para
+    // a taxa de resposta: voltar a etapa não apaga o que já aconteceu.
+    const passouDoContato = !['novo', 'nao_contatar'].includes(input.status);
+    const respondeu = ['respondeu', 'reuniao', 'proposta', 'fechado'].includes(input.status);
+    if (passouDoContato && !atual.first_contact_at) payload.first_contact_at = agora;
+    if (respondeu && !atual.replied_at) payload.replied_at = agora;
+    payload.closed_at = input.status === 'fechado' ? (atual.closed_at ?? agora) : null;
+    // Lead encerrado não tem próximo contato.
+    if (['fechado', 'perdido', 'nao_contatar'].includes(input.status)) payload.next_contact = null;
+  }
+  if (input.nextContact !== undefined && payload.next_contact === undefined) {
+    payload.next_contact = input.nextContact || null;
+  }
+  if (input.notes !== undefined) payload.notes = input.notes?.trim() || null;
+
+  const { error } = await supabase.from('leads').update(payload).eq('id', id);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar o lead.'));
+
+  revalidatePath('/admin/captacao');
+  return okResult('Lead atualizado.');
+}
+
+/** Cadastra o lead como cliente do ERP (para o orçamento de serviço) e liga os dois. */
+export async function convertLeadToCustomerAction(id: string): Promise<ActionResult & { customerId?: string }> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  const { data: lead } = await supabase
+    .from('leads')
+    .select('name, phone, email, city, state, address, website, maps_url, category, customer_id')
+    .eq('id', id)
+    .maybeSingle();
+  if (!lead) return errResult('Lead não encontrado.');
+  if (lead.customer_id) return { ...okResult('Este lead já é cliente.'), customerId: lead.customer_id };
+
+  const notas = [
+    'Veio da Captação (Google Maps).',
+    lead.category && `Ramo: ${lead.category}`,
+    lead.address && `Endereço: ${lead.address}`,
+    lead.website && `Site: ${lead.website}`,
+    lead.maps_url && `Maps: ${lead.maps_url}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const { data: cliente, error } = await supabase
+    .from('customers')
+    .insert({
+      name: lead.name,
+      phone: lead.phone,
+      email: lead.email,
+      city: lead.city,
+      state: lead.state,
+      notes: notas,
+    })
+    .select('id')
+    .single();
+  if (error || !cliente) return errResult(friendlyDbError(error, 'Não foi possível cadastrar o cliente.'));
+
+  await supabase.from('leads').update({ customer_id: cliente.id, updated_at: new Date().toISOString() }).eq('id', id);
+
+  revalidatePath('/admin/captacao');
+  revalidatePath('/admin/clientes');
+  revalidatePath('/admin/orcamentos-servicos');
+  return { ...okResult('Cliente cadastrado. Já pode fazer o orçamento.'), customerId: cliente.id };
+}

@@ -25,6 +25,7 @@ Serviços, extraída de um sistema Flask anterior).
 | M7 | Orçamentos Serviços | **Pronto** | `/admin/orcamentos-servicos` |
 | M8 | Avaliação de Troca | **Pronto** | `/admin/avaliacao-troca` |
 | M9 | Relatórios | Pendente | `/admin/relatorios` |
+| M10 | Captação (leads do Google Maps para os serviços) | **Pronto** | `/admin/captacao` |
 
 Os módulos pendentes aparecem **apagados no menu lateral** (propriedade
 `pendente` em `AdminSidebar.tsx`). Ao concluir um módulo, remova a marcação —
@@ -1420,6 +1421,51 @@ Próximos 7 dias e Todas; abre na primeira que tiver algo. O círculo conclui al
 mesmo (some na hora e volta se o servidor recusar).
 
 ---
+
+## Captação (M10) — regras confirmadas (2026-10-27)
+
+Painel de leads para vender os serviços da Prog Soluções (site, loja, sistema
+de gestão, marca) no Brasil e nos EUA. A loja (importados) **não** entra aqui
+por enquanto, por decisão do dono. Mensagens prontas de e-mail e WhatsApp para
+cada lead são o próximo passo pedido, ainda não construído.
+
+**Origem dos dados.** CSV do `google-maps-scraper-kit` (Mahanaicoach, MIT,
+engine gosom em Docker, roda local em `127.0.0.1:8080`, telemetria desligada
+por `docker-compose.override.yml` local). O kit fica em
+`C:\Apps\1 - Dev\Prog Soluções\3 - Ferramentas\google-maps-scraper-kit`.
+O atalho `scripts/captacao/captar.ps1` liga o Docker, apaga job preso,
+roda a busca com `place_id` e `link` (via `--fields`) e redes sociais, e abre a
+pasta e a tela de importação. Lote: `-Lista buscas.txt` (`ramo | cidade | BR/US`).
+No Windows o Python precisa de `PYTHONUTF8=1` (o script já põe).
+
+**Deduplicação.** `dedupe_key` = `place:<place_id>`; sem place_id (CSV do
+modo padrão), `nome:<nome sem acento>|<dígitos do telefone>`. Reimportar
+atualiza dados públicos e nota, **nunca** etapa, retorno, anotações e datas.
+
+**Nota (0–100)** em `src/lib/captacao.ts`, só com o que o CSV mostra: sem site
++40; "site" que é rede social, link ou página de agendamento +30; loja física
+com site +10 (conferir se vende online); ramo com agenda/cadastro/estoque +10;
+avaliações (≥100 +20, ≥30 +15, ≥10 +5, <3 −10); nota ≥4,5 +5; telefone +10;
+e-mail +5; sem telefone nem e-mail −20. A categoria vem em inglês (o kit fixa
+`lang=en`), por isso as listas de ramos têm termos em português e inglês.
+É ordenação da fila, não previsão de venda.
+
+**Serviços sugeridos** são nomes do catálogo (`internal_services`); o valor
+estimado é a soma dos preços atuais do catálogo, sem combo e sem mensalidade.
+Para os EUA é só referência em reais (os planos em dólar ficam no portfólio).
+
+**Etapas.** novo → contatado → respondeu → reunião → proposta → fechado /
+perdido / não contatar. `first_contact_at`, `replied_at` e `closed_at` gravam a
+primeira vez e não somem se a etapa voltar: são a base da taxa de resposta.
+"Não contatar" (pedido de opt-out, LGPD/CAN-SPAM) fica escondido da lista
+padrão e impede que a reimportação traga a empresa de volta como nova.
+
+**Virar cliente.** Disponível a partir de "respondeu": cria o registro em
+`customers` (nome, telefone, e-mail, cidade, UF e as informações do Maps em
+notas) e liga ao lead; o orçamento sai pelo fluxo normal de Orçamentos Serviços.
+
+**WhatsApp.** Telefone brasileiro com 8 dígitos depois do DDD é tratado como
+fixo (botão apagado, aviso no título), porque normalmente não tem WhatsApp.
 
 ## Em aberto
 
