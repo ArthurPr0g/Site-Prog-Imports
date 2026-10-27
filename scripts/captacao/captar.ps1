@@ -34,6 +34,8 @@ param(
   # Pausa entre buscas de um lote: lote longo sem pausa arrisca bloqueio temporário do Google.
   [int]$Pausa = 45,
   [switch]$SemAbrir,
+  # Grava a lista de CSVs gerados neste arquivo JSON (usado pelo worker.ts).
+  [string]$SaidaJson,
   [string]$Kit = 'C:\Apps\1 - Dev\Prog Soluções\3 - Ferramentas\google-maps-scraper-kit'
 )
 
@@ -70,9 +72,12 @@ function Preparar-Engine {
   for ($i = 0; $i -lt 30; $i++) {
     try { $jobs = Invoke-RestMethod $Engine -TimeoutSec 5; break } catch { Start-Sleep -Seconds 2 }
   }
-  # Job em "working" sem ninguém esperando por ele é sobra de execução interrompida.
+  # Job em "working" há mais de 20 min é sobra de execução interrompida (PC
+  # reiniciado): cada busca tem limite de 10 min. Job recente é de outra busca
+  # rodando agora (lote em outra janela ou o worker) e não pode ser apagado.
   foreach ($j in @($jobs)) {
-    if ($j -and $j.Status -eq 'working') {
+    $idade = if ($j.Date) { ((Get-Date).ToUniversalTime() - ([datetime]$j.Date).ToUniversalTime()).TotalMinutes } else { 999 }
+    if ($j -and $j.Status -eq 'working' -and $idade -gt 20) {
       Write-Host "Apagando job preso: $($j.ID)"
       Invoke-RestMethod "$Engine/$($j.ID)" -Method Delete | Out-Null
     }
@@ -150,6 +155,8 @@ foreach ($b in $buscas) {
 }
 
 Write-Host "`nPronto: $($feitos.Count) de $($buscas.Count) busca(s)."
+# -InputObject: no PowerShell 5.1, um item só sairia como texto e não como lista.
+if ($SaidaJson) { ConvertTo-Json -InputObject @($feitos) | Set-Content -Path $SaidaJson -Encoding UTF8 }
 $feitos | ForEach-Object { Write-Host "  $_" }
 if ($feitos.Count -gt 0 -and -not $SemAbrir) {
   Write-Host 'Importe em Captação > Importar CSV (pode selecionar todos os arquivos de uma vez).'

@@ -413,35 +413,81 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_search_requests: {
+        Row: {
+          city: string
+          country: string
+          created_at: string
+          finished_at: string | null
+          id: string
+          message: string | null
+          new_leads: number | null
+          niche: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          city: string
+          country?: string
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          message?: string | null
+          new_leads?: number | null
+          niche: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          city?: string
+          country?: string
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          message?: string | null
+          new_leads?: number | null
+          niche?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       lead_templates: {
         Row: {
           body: string
           channel: string
           id: string
           lang: string
+          step: number
           subject: string | null
           updated_at: string
+          variant: string
         }
         Insert: {
           body: string
           channel: string
           id?: string
           lang: string
+          step?: number
           subject?: string | null
           updated_at?: string
+          variant?: string
         }
         Update: {
           body?: string
           channel?: string
           id?: string
           lang?: string
+          step?: number
           subject?: string | null
           updated_at?: string
+          variant?: string
         }
         Relationships: []
       }
       leads: {
         Row: {
+          ab_variant: string | null
           address: string | null
           category: string | null
           city: string | null
@@ -450,12 +496,19 @@ export type Database = {
           created_at: string
           customer_id: string | null
           dedupe_key: string
+          diag_first_view_at: string | null
+          diag_last_view_at: string | null
+          diag_views: number
           email: string | null
           facebook: string | null
           first_contact_at: string | null
+          followup_step: number
           id: string
           instagram: string | null
+          last_contact_at: string | null
+          latitude: number | null
           linkedin: string | null
+          longitude: number | null
           maps_url: string | null
           name: string
           next_contact: string | null
@@ -464,11 +517,13 @@ export type Database = {
           phone: string | null
           place_id: string | null
           public_token: string
+          quote_id: string | null
           rating: number | null
           reasons: string[]
           replied_at: string | null
           review_count: number | null
           score: number
+          screenshot_url: string | null
           sem_whatsapp: boolean
           site_check: string | null
           source: string | null
@@ -479,6 +534,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          ab_variant?: string | null
           address?: string | null
           category?: string | null
           city?: string | null
@@ -487,12 +543,19 @@ export type Database = {
           created_at?: string
           customer_id?: string | null
           dedupe_key: string
+          diag_first_view_at?: string | null
+          diag_last_view_at?: string | null
+          diag_views?: number
           email?: string | null
           facebook?: string | null
           first_contact_at?: string | null
+          followup_step?: number
           id?: string
           instagram?: string | null
+          last_contact_at?: string | null
+          latitude?: number | null
           linkedin?: string | null
+          longitude?: number | null
           maps_url?: string | null
           name: string
           next_contact?: string | null
@@ -501,11 +564,13 @@ export type Database = {
           phone?: string | null
           place_id?: string | null
           public_token?: string
+          quote_id?: string | null
           rating?: number | null
           reasons?: string[]
           replied_at?: string | null
           review_count?: number | null
           score?: number
+          screenshot_url?: string | null
           sem_whatsapp?: boolean
           site_check?: string | null
           source?: string | null
@@ -516,6 +581,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          ab_variant?: string | null
           address?: string | null
           category?: string | null
           city?: string | null
@@ -524,12 +590,19 @@ export type Database = {
           created_at?: string
           customer_id?: string | null
           dedupe_key?: string
+          diag_first_view_at?: string | null
+          diag_last_view_at?: string | null
+          diag_views?: number
           email?: string | null
           facebook?: string | null
           first_contact_at?: string | null
+          followup_step?: number
           id?: string
           instagram?: string | null
+          last_contact_at?: string | null
+          latitude?: number | null
           linkedin?: string | null
+          longitude?: number | null
           maps_url?: string | null
           name?: string
           next_contact?: string | null
@@ -538,11 +611,13 @@ export type Database = {
           phone?: string | null
           place_id?: string | null
           public_token?: string
+          quote_id?: string | null
           rating?: number | null
           reasons?: string[]
           replied_at?: string | null
           review_count?: number | null
           score?: number
+          screenshot_url?: string | null
           sem_whatsapp?: boolean
           site_check?: string | null
           source?: string | null
@@ -558,6 +633,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "service_quotes"
             referencedColumns: ["id"]
           },
         ]
@@ -2332,6 +2414,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       lead_diagnostico: { Args: { p_token: string }; Returns: Json }
+      lead_registrar_visita: { Args: { p_token: string }; Returns: undefined }
       my_installments: {
         Args: never
         Returns: {

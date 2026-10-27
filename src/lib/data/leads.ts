@@ -1,40 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
+import type { Tables } from '@/lib/supabase/database.types';
 import type { Lead, LeadStatus, Pais } from '@/lib/captacao';
 import type { ModeloMensagem } from '@/lib/mensagens-lead';
 
-type Row = {
-  id: string;
-  name: string;
-  category: string | null;
-  niche: string | null;
-  city: string | null;
-  state: string | null;
-  country: string;
-  address: string | null;
-  phone: string | null;
-  sem_whatsapp: boolean;
-  email: string | null;
-  website: string | null;
-  site_check: string | null;
-  public_token: string;
-  instagram: string | null;
-  facebook: string | null;
-  linkedin: string | null;
-  maps_url: string | null;
-  rating: number | null;
-  review_count: number | null;
-  score: number;
-  suggested_services: string[];
-  reasons: string[];
-  status: string;
-  next_contact: string | null;
-  first_contact_at: string | null;
-  replied_at: string | null;
-  closed_at: string | null;
-  notes: string | null;
-  customer_id: string | null;
-  created_at: string;
-};
+type Row = Tables<'leads'>;
 
 function toLead(r: Row): Lead {
   return {
@@ -69,6 +38,16 @@ function toLead(r: Row): Lead {
     notes: r.notes,
     customerId: r.customer_id,
     createdAt: r.created_at,
+    lastContactAt: r.last_contact_at,
+    followupStep: r.followup_step,
+    abVariant: (r.ab_variant as Lead['abVariant']) ?? null,
+    diagViews: r.diag_views,
+    diagFirstViewAt: r.diag_first_view_at,
+    diagLastViewAt: r.diag_last_view_at,
+    latitude: r.latitude === null ? null : Number(r.latitude),
+    longitude: r.longitude === null ? null : Number(r.longitude),
+    screenshotUrl: r.screenshot_url,
+    quoteId: r.quote_id,
   };
 }
 
@@ -86,20 +65,79 @@ export async function listLeads(): Promise<Lead[]> {
       .order('score', { ascending: false })
       .order('created_at', { ascending: false })
       .range(de, de + PAGINA - 1);
-    leads.push(...(data ?? []).map((r) => toLead(r as Row)));
+    leads.push(...(data ?? []).map(toLead));
     if (!data || data.length < PAGINA) break;
   }
   return leads;
 }
 
-/** Os 4 modelos de mensagem (WhatsApp e e-mail, em português e inglês). */
+/** Modelos de mensagem: canal × idioma × etapa da sequência × variante A/B. */
 export async function listLeadTemplates(): Promise<ModeloMensagem[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from('lead_templates').select('channel, lang, subject, body');
+  const { data } = await supabase.from('lead_templates').select('channel, lang, step, variant, subject, body');
   return (data ?? []).map((r) => ({
     channel: r.channel as ModeloMensagem['channel'],
     lang: r.lang as ModeloMensagem['lang'],
+    step: r.step,
+    variant: r.variant as ModeloMensagem['variant'],
     subject: r.subject,
     body: r.body,
   }));
+}
+
+export type PedidoDeBusca = {
+  id: string;
+  niche: string;
+  city: string;
+  country: Pais;
+  status: 'pendente' | 'rodando' | 'feito' | 'erro';
+  message: string | null;
+  newLeads: number | null;
+  createdAt: string;
+  finishedAt: string | null;
+};
+
+/** Pedidos de busca: pendentes e rodando, mais os 30 últimos terminados. */
+export async function listSearchRequests(): Promise<PedidoDeBusca[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('lead_search_requests')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(200);
+  const todos = (data ?? []).map((r) => ({
+    id: r.id,
+    niche: r.niche,
+    city: r.city,
+    country: r.country as Pais,
+    status: r.status as PedidoDeBusca['status'],
+    message: r.message,
+    newLeads: r.new_leads,
+    createdAt: r.created_at,
+    finishedAt: r.finished_at,
+  }));
+  const abertos = todos.filter((p) => p.status === 'pendente' || p.status === 'rodando');
+  const fechados = todos.filter((p) => p.status === 'feito' || p.status === 'erro').slice(0, 30);
+  return [...abertos.reverse(), ...fechados];
+}
+
+const digitos = (v: string | null) => (v ?? '').replace(/\D/g, '');
+
+/**
+ * Ids dos leads que já são clientes do ERP: ligados por customer_id ou com o
+ * mesmo telefone (últimos 10 dígitos, ignora DDI) ou e-mail de um cliente.
+ */
+export async function leadsQueJaSaoClientes(leads: Lead[]): Promise<string[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from('customers').select('phone, email');
+  const fones = new Set((data ?? []).map((c) => digitos(c.phone).slice(-10)).filter((f) => f.length >= 10));
+  const emails = new Set((data ?? []).map((c) => (c.email ?? '').trim().toLowerCase()).filter(Boolean));
+  return leads
+    .filter(
+      (l) =>
+        l.customerId !== null ||
+        (digitos(l.phone).length >= 10 && fones.has(digitos(l.phone).slice(-10))) ||
+        (!!l.email && emails.has(l.email.trim().toLowerCase()))
+    )
+    .map((l) => l.id);
 }

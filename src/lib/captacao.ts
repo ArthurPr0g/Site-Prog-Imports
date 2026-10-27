@@ -70,6 +70,17 @@ export type Lead = {
   notes: string | null;
   customerId: string | null;
   createdAt: string;
+  lastContactAt: string | null;
+  /** Etapa da sequência já enviada: 0 nada, 1 primeiro contato, 2 dia 3, 3 dia 7, 4 dia 14. */
+  followupStep: number;
+  abVariant: 'A' | 'B' | null;
+  diagViews: number;
+  diagFirstViewAt: string | null;
+  diagLastViewAt: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  screenshotUrl: string | null;
+  quoteId: string | null;
 };
 
 /* ------------------------------------------------------------ CSV */
@@ -125,6 +136,8 @@ const COLUNAS: Record<string, string[]> = {
   linkedin: ['linkedin'],
   placeId: ['place_id', 'cid', 'data_id'],
   mapsUrl: ['link', 'maps_url', 'google_maps_url', 'url'],
+  latitude: ['latitude', 'lat'],
+  longitude: ['longitude', 'lng', 'lon'],
   // Gravada pelo scripts/captacao/checar-sites.py: fora, sem_https, sem_celular,
   // vende_online ou ok (vários juntos com "+").
   siteCheck: ['site_check'],
@@ -149,6 +162,8 @@ export type LinhaImportada = {
   linkedin: string | null;
   placeId: string | null;
   mapsUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
   siteCheck: string | null;
   buscaRamo: string | null;
   buscaCidade: string | null;
@@ -186,7 +201,10 @@ export function linhasDoCsv(texto: string): LinhaImportada[] {
       name: ler(l, 'name') ?? '',
       phone: ler(l, 'phone'),
       // O kit junta vários e-mails numa célula; o primeiro basta para contato.
-      email: ler(l, 'email')?.split(/[,;\s]+/).find((e) => e.includes('@')) ?? null,
+      email:
+        ler(l, 'email')
+          ?.split(/[,;\s]+/)
+          .find((e) => e.includes('@')) ?? null,
       website: ler(l, 'website'),
       category: ler(l, 'category'),
       address: ler(l, 'address'),
@@ -197,6 +215,7 @@ export function linhasDoCsv(texto: string): LinhaImportada[] {
       linkedin: ler(l, 'linkedin'),
       placeId: ler(l, 'placeId'),
       mapsUrl: ler(l, 'mapsUrl'),
+      ...coordenadas(ler(l, 'latitude'), ler(l, 'longitude'), ler(l, 'mapsUrl')),
       siteCheck: ler(l, 'siteCheck'),
       buscaRamo: ler(l, 'buscaRamo'),
       buscaCidade: ler(l, 'buscaCidade'),
@@ -204,6 +223,24 @@ export function linhasDoCsv(texto: string): LinhaImportada[] {
       buscaPais: ler(l, 'buscaPais'),
     }))
     .filter((l) => l.name);
+}
+
+/**
+ * Coordenadas da linha: colunas latitude/longitude, ou do próprio link do Maps
+ * (`.../data=...!3d-16.68!4d-49.25...`), que vem em todo CSV do captar.ps1.
+ */
+function coordenadas(
+  lat: string | null,
+  lng: string | null,
+  link: string | null
+): { latitude: number | null; longitude: number | null } {
+  const ok = (v: number) => Number.isFinite(v) && v !== 0;
+  const a = Number(lat);
+  const b = Number(lng);
+  if (lat && lng && ok(a) && ok(b)) return { latitude: a, longitude: b };
+  const m = link?.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+  if (m) return { latitude: Number(m[1]), longitude: Number(m[2]) };
+  return { latitude: null, longitude: null };
 }
 
 /** Chave de deduplicação: place_id do Google, senão nome + dígitos do telefone. */
@@ -217,41 +254,171 @@ export function chaveDoLead(l: Pick<LinhaImportada, 'placeId' | 'name' | 'phone'
 
 // Endereços que aparecem no campo "site" mas não são um site da empresa.
 const SITE_FRACO = [
-  'instagram.com', 'facebook.com', 'fb.com', 'fb.me', 'linktr.ee', 'linkin.bio', 'beacons.ai',
-  'wa.me', 'whatsapp.com', 'api.whatsapp', 'business.site', 'negocio.site', 'sites.google.com',
-  'wixsite.com', 'ifood.com.br', 'doctoralia', 'booksy.com', 'yelp.com', 'google.com', 'goo.gl',
-  'bit.ly', 'tiktok.com', 'ubereats.com', 'doordash.com', 'linkedin.com', 'my.canva.site',
+  'instagram.com',
+  'facebook.com',
+  'fb.com',
+  'fb.me',
+  'linktr.ee',
+  'linkin.bio',
+  'beacons.ai',
+  'wa.me',
+  'whatsapp.com',
+  'api.whatsapp',
+  'business.site',
+  'negocio.site',
+  'sites.google.com',
+  'wixsite.com',
+  'ifood.com.br',
+  'doctoralia',
+  'booksy.com',
+  'yelp.com',
+  'google.com',
+  'goo.gl',
+  'bit.ly',
+  'tiktok.com',
+  'ubereats.com',
+  'doordash.com',
+  'linkedin.com',
+  'my.canva.site',
   // Páginas de agendamento: a empresa usa no lugar de um site próprio.
-  'apointoo.com', 'calendly.com', 'simplybook', 'agendapro', 'trinks.com', 'setmore.com', 'square.site',
+  'apointoo.com',
+  'calendly.com',
+  'simplybook',
+  'agendapro',
+  'trinks.com',
+  'setmore.com',
+  'square.site',
 ];
 
 // Negócios que vendem produto: candidatos a loja virtual.
 const VAREJO = [
-  'loja', 'boutique', 'moda', 'roupa', 'vestuário', 'calçado', 'joalheria', 'ótica', 'otica',
-  'perfumaria', 'cosmético', 'cosmetico', 'suplemento', 'papelaria', 'móveis', 'moveis',
-  'decoração', 'decoracao', 'floricultura', 'pet shop', 'artigos', 'presentes', 'brinquedo',
+  'loja',
+  'boutique',
+  'moda',
+  'roupa',
+  'vestuário',
+  'calçado',
+  'joalheria',
+  'ótica',
+  'otica',
+  'perfumaria',
+  'cosmético',
+  'cosmetico',
+  'suplemento',
+  'papelaria',
+  'móveis',
+  'moveis',
+  'decoração',
+  'decoracao',
+  'floricultura',
+  'pet shop',
+  'artigos',
+  'presentes',
+  'brinquedo',
   // "shop" sozinho não entra: pegaria barbershop, que é serviço.
-  'store', 'clothing', 'apparel', 'jewelry', 'jeweler', 'florist',
-  'furniture', 'gift', 'cosmetics', 'supplement', 'retail', 'optical', 'eyewear',
+  'store',
+  'clothing',
+  'apparel',
+  'jewelry',
+  'jeweler',
+  'florist',
+  'furniture',
+  'gift',
+  'cosmetics',
+  'supplement',
+  'retail',
+  'optical',
+  'eyewear',
   // Categorias do Google em português (buscas do Brasil saem em pt-BR).
-  'materiais de construção', 'materiais de construcao', 'mercado', 'empório', 'emporio',
-  'market', 'bakery', 'padaria', 'confeitaria',
+  'materiais de construção',
+  'materiais de construcao',
+  'mercado',
+  'empório',
+  'emporio',
+  'market',
+  'bakery',
+  'padaria',
+  'confeitaria',
 ];
 
 // Negócios com agenda, cadastro, estoque ou financeiro: candidatos a sistema de gestão.
 const GESTAO = [
-  'clínica', 'clinica', 'consultório', 'consultorio', 'odontol', 'dentista', 'academia', 'pilates',
-  'crossfit', 'oficina', 'mecânica', 'mecanica', 'salão', 'salao', 'barbearia', 'estética',
-  'estetica', 'escola', 'curso', 'veterinár', 'veterinar', 'pet shop', 'distribuidora',
-  'contabilidade', 'imobiliária', 'imobiliaria', 'laboratório', 'laboratorio', 'fisioterapia',
-  'autoescola', 'buffet', 'clinic', 'dentist', 'dental', 'gym', 'fitness', 'auto repair',
-  'mechanic', 'salon', 'barber', 'spa', 'school', 'academy', 'veterinar', 'physical therap',
-  'chiropract', 'accounting', 'real estate', 'distributor', 'wholesale',
+  'clínica',
+  'clinica',
+  'consultório',
+  'consultorio',
+  'odontol',
+  'dentista',
+  'academia',
+  'pilates',
+  'crossfit',
+  'oficina',
+  'mecânica',
+  'mecanica',
+  'salão',
+  'salao',
+  'barbearia',
+  'estética',
+  'estetica',
+  'escola',
+  'curso',
+  'veterinár',
+  'veterinar',
+  'pet shop',
+  'distribuidora',
+  'contabilidade',
+  'imobiliária',
+  'imobiliaria',
+  'laboratório',
+  'laboratorio',
+  'fisioterapia',
+  'autoescola',
+  'buffet',
+  'clinic',
+  'dentist',
+  'dental',
+  'gym',
+  'fitness',
+  'auto repair',
+  'mechanic',
+  'salon',
+  'barber',
+  'spa',
+  'school',
+  'academy',
+  'veterinar',
+  'physical therap',
+  'chiropract',
+  'accounting',
+  'real estate',
+  'distributor',
+  'wholesale',
   // Categorias do Google em português (buscas do Brasil saem em pt-BR).
-  'contador', 'advoga', 'advocacia', 'psicólog', 'psicolog', 'nutricionista', 'idiomas',
-  'arquitet', 'dedetiza', 'assistência técnica', 'assistencia tecnica', 'centro automotivo',
-  'despachante', 'corretor', 'materiais de construção', 'materiais de construcao', 'lavanderia',
-  'cleaning', 'contractor', 'construction', 'lawyer', 'attorney', 'insurance', 'church', 'igreja',
+  'contador',
+  'advoga',
+  'advocacia',
+  'psicólog',
+  'psicolog',
+  'nutricionista',
+  'idiomas',
+  'arquitet',
+  'dedetiza',
+  'assistência técnica',
+  'assistencia tecnica',
+  'centro automotivo',
+  'despachante',
+  'corretor',
+  'materiais de construção',
+  'materiais de construcao',
+  'lavanderia',
+  'cleaning',
+  'contractor',
+  'construction',
+  'lawyer',
+  'attorney',
+  'insurance',
+  'church',
+  'igreja',
 ];
 
 const contem = (texto: string, lista: string[]) => lista.some((p) => texto.includes(p));
@@ -261,13 +428,14 @@ export function ehVarejo(category: string | null, niche: string | null): boolean
 }
 
 /** O principal achado sobre o site, na ordem em que vira argumento de venda. */
-export type SituacaoDoSite = 'sem_site' | 'rede_social' | 'fora' | 'sem_celular' | 'sem_https' | 'vende_online' | 'ok';
+export type SituacaoDoSite = 'sem_site' | 'rede_social' | 'parado' | 'fora' | 'sem_celular' | 'sem_https' | 'vende_online' | 'ok';
 
 export function situacaoDoSite(website: string | null, siteCheck: string | null): SituacaoDoSite {
   const site = (website ?? '').toLowerCase();
   if (!site) return 'sem_site';
   if (contem(site, SITE_FRACO)) return 'rede_social';
   const c = siteCheck ?? '';
+  if (c.includes('parado')) return 'parado';
   if (c.includes('fora')) return 'fora';
   if (c.includes('sem_celular')) return 'sem_celular';
   if (c.includes('sem_https')) return 'sem_https';
@@ -294,6 +462,11 @@ export function avaliarLead(l: LinhaImportada, niche: string | null): Avaliacao 
     nota += 30;
     motivos.push('O "site" é só rede social ou link');
     servicos.push(varejo ? 'Loja Essencial' : 'Site Profissional');
+  } else if (l.siteCheck?.includes('parado')) {
+    // Domínio à venda: o site morreu e o endereço pode ir para outro dono.
+    nota += 40;
+    motivos.push('Domínio do site à venda (site perdido)');
+    servicos.push(varejo ? 'Loja Essencial' : 'Site Essencial');
   } else if (l.siteCheck?.includes('fora')) {
     nota += 35;
     motivos.push('Site fora do ar');
@@ -343,7 +516,6 @@ export function avaliarLead(l: LinhaImportada, niche: string | null): Avaliacao 
   return { score: Math.max(0, Math.min(100, nota)), suggestedServices: servicos, reasons: motivos };
 }
 
-
 /* ------------------------------------------------------------ contato */
 
 /**
@@ -372,6 +544,99 @@ export function mapsDoLead(l: Pick<Lead, 'mapsUrl' | 'name' | 'address' | 'city'
   if (l.mapsUrl) return l.mapsUrl;
   const q = [l.name, l.address ?? l.city].filter(Boolean).join(', ');
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+}
+
+/* ------------------------------------------------------------ sequência de retorno */
+
+/** Dias depois do primeiro contato em que cada retorno vence (etapas 1, 2 e 3). */
+export const DIAS_DA_ETAPA = [0, 3, 7, 14] as const;
+export const NOME_DA_ETAPA = ['Primeiro contato', 'Retorno (dia 3)', 'Retorno (dia 7)', 'Último contato (dia 14)'] as const;
+/** Canal sugerido em cada etapa: alterna para não insistir sempre no mesmo. */
+export const CANAL_DA_ETAPA = ['whatsapp', 'whatsapp', 'email', 'whatsapp'] as const;
+
+function somarDias(iso: string, dias: number): string {
+  const d = new Date(iso);
+  d.setDate(d.getDate() + dias);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Próxima mensagem da sequência: etapa (0–3) e a data em que vence. Só para
+ * quem ainda não respondeu (novo ou contatado); null quando a sequência acabou.
+ */
+export function proximaEtapa(
+  l: Pick<Lead, 'status' | 'followupStep' | 'firstContactAt'>
+): { etapa: number; vence: string | null } | null {
+  if (l.status !== 'novo' && l.status !== 'contatado') return null;
+  if (l.followupStep >= 4) return null;
+  if (l.followupStep === 0 || !l.firstContactAt) return { etapa: 0, vence: null };
+  const etapa = l.followupStep;
+  return { etapa, vence: somarDias(l.firstContactAt, DIAS_DA_ETAPA[etapa]) };
+}
+
+/** Data do retorno seguinte depois de enviar a etapa `etapa` (null depois da última). */
+export function retornoDepoisDe(etapa: number, primeiroContato: string): string | null {
+  return etapa >= 3 ? null : somarDias(primeiroContato, DIAS_DA_ETAPA[etapa + 1]);
+}
+
+/* ------------------------------------------------------------ lead quente */
+
+/** Abriu o diagnóstico nas últimas 48 h. */
+export function ehQuente(l: Pick<Lead, 'diagLastViewAt' | 'status'>, agora: number): boolean {
+  return !!l.diagLastViewAt && !ENCERRADOS.includes(l.status) && agora - Date.parse(l.diagLastViewAt) <= 48 * 3600 * 1000;
+}
+
+/* ------------------------------------------------------------ importação */
+
+export type PadroesDaImportacao = {
+  pais: Pais;
+  niche: string | null;
+  city: string | null;
+  state: string | null;
+  source: string;
+};
+
+/**
+ * Linhas do CSV → registros da tabela leads (nota, serviços, dedupe). Usada
+ * pela importação do painel e pelo programa do PC (worker), para as duas
+ * darem exatamente o mesmo resultado. Nunca leva status, notas e datas de
+ * contato: o upsert não pode mexer no que o dono já fez.
+ */
+export function registrosDaImportacao(linhas: LinhaImportada[], padroes: PadroesDaImportacao) {
+  const agora = new Date().toISOString();
+  return linhas.map((l) => {
+    const pais: Pais = l.buscaPais === 'US' || l.buscaPais === 'BR' ? l.buscaPais : padroes.pais;
+    const niche = l.buscaRamo ?? padroes.niche;
+    const { score, suggestedServices, reasons } = avaliarLead(l, niche);
+    return {
+      dedupe_key: chaveDoLead(l),
+      place_id: l.placeId,
+      name: l.name,
+      category: l.category,
+      niche,
+      city: l.buscaCidade ?? padroes.city,
+      state: l.buscaEstado || padroes.state,
+      country: pais,
+      address: l.address,
+      phone: l.phone,
+      email: l.email,
+      website: l.website,
+      site_check: l.siteCheck,
+      instagram: l.instagram,
+      facebook: l.facebook,
+      linkedin: l.linkedin,
+      maps_url: l.mapsUrl,
+      latitude: l.latitude,
+      longitude: l.longitude,
+      rating: l.rating,
+      review_count: l.reviewCount,
+      score,
+      suggested_services: suggestedServices,
+      reasons,
+      source: padroes.source,
+      updated_at: agora,
+    };
+  });
 }
 
 export function urlComProtocolo(url: string): string {

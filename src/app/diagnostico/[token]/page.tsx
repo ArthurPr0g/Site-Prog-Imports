@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
 import { Check, X, Minus, Star, MessageCircle, ArrowUpRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { WHATSAPP_NUMBER } from '@/lib/constants';
 import { situacaoDoSite } from '@/lib/captacao';
 import { linkWhatsApp } from '@/lib/mensagens-lead';
+import { getCurrentUser } from '@/lib/auth';
 
 // Diagnóstico de presença digital que vai no link da primeira mensagem da
 // Captação. Público por token, lido pela função lead_diagnostico (só campos
@@ -29,9 +31,15 @@ type Diagnostico = {
   review_count: number | null;
   suggested_services: string[];
   concorrentes: { total: number; com_site: number; nota_media: number | null };
+  screenshot_url: string | null;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Quem monta a prévia do link (WhatsApp, Facebook, Telegram...) abre a página
+// sozinho assim que a mensagem é enviada: não é o lead, não conta como visita.
+const ROBO =
+  /whatsapp|facebookexternalhit|facebot|telegrambot|slackbot|twitterbot|linkedinbot|discordbot|skypeuripreview|bot\b|crawler|spider|preview|headless/i;
 
 const T = {
   pt: {
@@ -47,12 +55,14 @@ const T = {
       redeSocial: 'O link do Google leva para uma rede social, não para um site próprio',
       noAr: 'Site no ar',
       fora: 'O site não abriu: o endereço parece fora do ar',
+      parado: 'O endereço do site está à venda: o site de vocês saiu do ar',
       seguro: 'Conexão segura (HTTPS)',
       inseguro: 'O navegador mostra o site como "não seguro"',
       celular: 'Funciona bem no celular',
       naoCelular: 'O site não se adapta à tela do celular',
       lojaOnline: 'Venda online',
       instagram: 'Instagram ligado ao site',
+      print: 'Seu site no celular hoje',
     },
     concorrentes: 'Comparando com a sua região',
     concorrentesTexto: (c: number, t: number, cidade: string) =>
@@ -78,12 +88,14 @@ const T = {
       redeSocial: 'Your Google link goes to a social profile, not your own website',
       noAr: 'Website online',
       fora: "The website didn't load: the address seems to be down",
+      parado: 'Your website address is up for sale: the site is no longer online',
       seguro: 'Secure connection (HTTPS)',
       inseguro: 'Browsers show the website as "not secure"',
       celular: 'Works well on phones',
       naoCelular: "The website doesn't fit phone screens",
       lojaOnline: 'Online sales',
       instagram: 'Instagram linked on the website',
+      print: 'Your website on a phone today',
     },
     concorrentes: 'Compared to your area',
     concorrentesTexto: (c: number, t: number, cidade: string) =>
@@ -130,7 +142,13 @@ function Item({ ok, texto }: { ok: boolean | null; texto: string }) {
   );
 }
 
-export default async function DiagnosticoPage({ params }: { params: Promise<{ token: string }> }) {
+export default async function DiagnosticoPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>;
+  searchParams: Promise<{ previa?: string }>;
+}) {
   const { token } = await params;
   if (!UUID.test(token)) notFound();
 
@@ -138,6 +156,15 @@ export default async function DiagnosticoPage({ params }: { params: Promise<{ to
   const { data } = await supabase.rpc('lead_diagnostico', { p_token: token });
   if (!data) notFound();
   const d = data as unknown as Diagnostico;
+
+  // Conta a abertura (lead quente no painel), menos quando é o próprio dono
+  // (link do painel com ?previa=1 ou sessão de admin) ou um robô de prévia.
+  const { previa } = await searchParams;
+  const ua = (await headers()).get('user-agent') ?? '';
+  if (!previa && ua && !ROBO.test(ua)) {
+    const usuario = await getCurrentUser();
+    if (usuario?.role !== 'admin') await supabase.rpc('lead_registrar_visita', { p_token: token });
+  }
 
   const lang = d.country === 'US' ? 'en' : 'pt';
   const t = T[lang];
@@ -155,7 +182,9 @@ export default async function DiagnosticoPage({ params }: { params: Promise<{ to
         <h1 className="mt-2 font-display text-[28px] font-bold leading-tight tracking-[-.02em] sm:text-[34px]">{t.titulo}</h1>
         <div className="mt-2 text-[17px] font-bold">{d.name}</div>
         {/* A categoria do Google vem em inglês (o scraper busca com lang=en): só na versão em inglês. */}
-        <div className="text-[13.5px] text-fg-tertiary">{[lang === 'en' ? d.category : null, local].filter(Boolean).join(' · ')}</div>
+        <div className="text-[13.5px] text-fg-tertiary">
+          {[lang === 'en' ? d.category : null, local].filter(Boolean).join(' · ')}
+        </div>
       </div>
 
       <section className="mb-4 rounded-[18px] border border-border bg-card p-5 sm:p-6">
@@ -181,11 +210,17 @@ export default async function DiagnosticoPage({ params }: { params: Promise<{ to
           {sit === 'rede_social' && <Item ok={false} texto={t.itens.redeSocial} />}
           {temSiteProprio && <Item ok={true} texto={t.itens.siteProprio} />}
           {temSiteProprio && checado && (
-            <Item ok={sit !== 'fora'} texto={sit === 'fora' ? t.itens.fora : t.itens.noAr} />
+            <Item
+              ok={sit !== 'fora' && sit !== 'parado'}
+              texto={sit === 'parado' ? t.itens.parado : sit === 'fora' ? t.itens.fora : t.itens.noAr}
+            />
           )}
-          {temSiteProprio && checado && sit !== 'fora' && (
+          {temSiteProprio && checado && sit !== 'fora' && sit !== 'parado' && (
             <>
-              <Item ok={!d.site_check!.includes('sem_https')} texto={d.site_check!.includes('sem_https') ? t.itens.inseguro : t.itens.seguro} />
+              <Item
+                ok={!d.site_check!.includes('sem_https')}
+                texto={d.site_check!.includes('sem_https') ? t.itens.inseguro : t.itens.seguro}
+              />
               <Item
                 ok={!d.site_check!.includes('sem_celular')}
                 texto={d.site_check!.includes('sem_celular') ? t.itens.naoCelular : t.itens.celular}
@@ -209,6 +244,20 @@ export default async function DiagnosticoPage({ params }: { params: Promise<{ to
               {t.notaMedia(lang === 'pt' ? String(c.nota_media).replace('.', ',') : String(c.nota_media))}
             </p>
           )}
+        </section>
+      )}
+
+      {d.screenshot_url && (
+        <section className="mb-4 rounded-[18px] border border-border bg-card p-5 sm:p-6">
+          <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{t.itens.print}</div>
+          {/* Print feito no PC (iPhone simulado), guardado no Storage público */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={d.screenshot_url}
+            alt={t.itens.print}
+            loading="lazy"
+            className="mx-auto max-h-[520px] w-auto rounded-[22px] border-[6px] border-[#1c1c1f] shadow-[0_10px_40px_rgba(0,0,0,.5)]"
+          />
         </section>
       )}
 

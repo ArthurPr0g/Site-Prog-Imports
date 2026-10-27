@@ -1530,6 +1530,35 @@ tem mudanças que nunca viraram arquivo, ex.: `profiles.email`; o CLI novo não
 dá acesso da API às tabelas). Login local por e-mail e senha
 (`ACESSO-LOCAL.txt`); o Google não existe no banco local.
 
+### Captação — melhorias de 27/10 (detalhes em `docs/CAPTACAO-BACKLOG.md`)
+
+O painel virou abas em `src/components/admin/captacao/` (Lista, Foco, Quadro,
+Mapa, Relatório, Buscas; peças comuns em `comum.tsx`):
+- **Lead quente:** `lead_registrar_visita` soma as aberturas do diagnóstico;
+  a página não conta o dono (sessão admin ou `?previa=1`, que o painel usa) nem
+  robôs de prévia de link (User-Agent de WhatsApp, Facebook, Telegram, bot…).
+  Quem abriu nas últimas 48 h sobe para o topo e ganha selo laranja.
+- **Sequência de retorno:** `followup_step` 0–4; modelos por etapa (0 primeiro
+  contato, 1 dia 3, 2 dia 7, 3 dia 14), contados a partir do primeiro contato.
+  "Enviei" (`registrarEnvioAction`) agenda o próximo retorno; resposta, perda ou
+  "não contatar" param a sequência. "Para hoje" = retorno marcado ou etapa vencida.
+- **Modo foco:** fila de quem tem mensagem a mandar hoje (quentes, retornos
+  vencidos, depois novos por nota), sem quem já é cliente; meta diária no navegador.
+- **Teste A/B:** variante B opcional por modelo; o lead fica com a mesma variante
+  na sequência toda (`ab_variant`, alternada pelo id quando existe B).
+- **Proposta em um clique** (`criarPropostaAction`, só Brasil): cria o cliente e
+  o Orçamento de Serviço com os serviços sugeridos + mensalidade, passando pela
+  regra oficial `ajustarCombosEMensalidades`; o lead vai para "Proposta".
+- **Já é cliente:** `leadsQueJaSaoClientes` cruza telefone (últimos 10 dígitos)
+  e e-mail com `customers`.
+- **Mapa:** Leaflet + OpenStreetMap; coordenadas vêm do `link` do Maps (`!3d…!4d…`).
+- **Buscas pelo painel:** `lead_search_requests` + `scripts/captacao/worker.ts`
+  no PC (`iniciar-worker.ps1`), com a chave secreta do `.env.local`. O worker
+  importa com o mesmo código do painel (`registrosDaImportacao` + `gravarLeads`)
+  e tira o print do site num iPhone 15 (WebKit do `3 - Ferramentas\celular-ios`)
+  para o bucket público `diagnosticos`. O `captar.ps1` só apaga job "working"
+  com mais de 20 min, para não matar uma busca que outra janela está rodando.
+
 ## Em aberto
 
 ### Módulos que faltam

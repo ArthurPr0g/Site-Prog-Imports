@@ -1,6 +1,6 @@
 """Confere o site de cada empresa do CSV e grava a coluna `site_check`.
 
-Valores: `fora` (não abre), `sem_https`, `sem_celular` (sem meta viewport, ou
+Valores: `fora` (não abre), `parado` (domínio estacionado ou à venda), `sem_https`, `sem_celular` (sem meta viewport, ou
 seja, não se adapta ao celular), `vende_online` (já tem loja virtual), `ok`, ou
 vazio quando não há site. Mais de um valor vira lista separada por "+"
 (ex.: `sem_https+sem_celular`).
@@ -28,6 +28,16 @@ UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like 
 # Endereços que não são site da empresa: o painel já trata como "site fraco".
 NAO_E_SITE = re.compile(r"instagram\.com|facebook\.com|fb\.(com|me)|wa\.me|whatsapp|linktr\.ee|linkin\.bio", re.I)
 VIEWPORT = re.compile(rb"<meta[^>]+name=[\"']?viewport", re.I)
+# Domínio estacionado ou à venda: a página abre, mas o site da empresa morreu
+# (ex.: GoDaddy "O domínio clinica.com.br está à venda").
+PARADO = re.compile(
+    rb"est[a\xc3\xa1]+ [a\xc3\xa0]+ venda|is for sale|domain (?:name )?(?:is )?(?:for sale|available)|buy this domain"
+    rb"|dom[i\xc3\xad]+nio (?:est[a\xc3\xa1]+ )?dispon[i\xc3\xad]+vel|godaddy\.com/domain|sedo\.com|dan\.com/buy|afternic"
+    rb"|hugedomains|parkingcrew|bodis\.com|domain parking|parked (?:free|domain)|this domain has expired"
+    # GoDaddy estacionado: página vazia que redireciona por JavaScript para /lander.
+    rb"|location\.href\s*=\s*[\"']/lander",
+    re.I,
+)
 # Sinais de loja virtual na página inicial (plataformas e carrinho).
 LOJA = re.compile(
     rb"vtex|shopify|nuvemshop|tray\.com|lojaintegrada|woocommerce|magento|bigcommerce|wix-ecommerce"
@@ -58,6 +68,8 @@ def checar(url: str) -> str:
     except Exception:
         # DNS que não resolve, conexão recusada, tempo esgotado: fora do ar.
         return "fora"
+    if PARADO.search(html) or re.search(r"forsale\.|sedoparking|parkingcrew|/lander", final, re.I):
+        return "parado"
     problemas = []
     if not final.lower().startswith("https://"):
         problemas.append("sem_https")

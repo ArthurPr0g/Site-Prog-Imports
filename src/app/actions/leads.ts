@@ -6,7 +6,14 @@ import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
 import type { TablesInsert, TablesUpdate } from '@/lib/supabase/database.types';
 import type { ModeloMensagem } from '@/lib/mensagens-lead';
-import { LEAD_STATUSES, avaliarLead, chaveDoLead, linhasDoCsv, type LeadStatus, type Pais } from '@/lib/captacao';
+import { LEAD_STATUSES, linhasDoCsv, registrosDaImportacao, retornoDepoisDe, type LeadStatus, type Pais } from '@/lib/captacao';
+import { gravarLeads } from '@/lib/captacao-gravar';
+import { saveServiceQuoteAction } from '@/app/actions/service-quotes';
+import { listInternalServices } from '@/lib/data/internal-services';
+import { ajustarCombosEMensalidades } from '@/lib/combo-servicos';
+import { PLAN_MONTHS_DEFAULT, type ServiceOrderItem } from '@/lib/services';
+import { SEM_DESCONTO } from '@/lib/discount';
+import { NICHOS, type ListaDeNichos } from '@/lib/nichos';
 
 async function adminClient() {
   const admin = await requireAdmin();
@@ -43,74 +50,22 @@ export async function importLeadsAction(formData: FormData): Promise<ActionResul
       .trim()
       .toUpperCase() || null;
 
-  // Mesma empresa repetida (tiles do --grid, ou em dois arquivos): fica a última.
-  const porChave = new Map<string, TablesInsert<'leads'>>();
-  let semRamo = 0;
+  const registros: TablesInsert<'leads'>[] = [];
   for (const arquivo of arquivos) {
-    const linhas = linhasDoCsv(await arquivo.text());
-    for (const l of linhas) {
-      const pais: Pais = l.buscaPais === 'US' || l.buscaPais === 'BR' ? l.buscaPais : paisDoForm;
-      const niche = l.buscaRamo ?? nicheDoForm;
-      const city = l.buscaCidade ?? cityDoForm;
-      const state = l.buscaEstado || stateDoForm;
-      if (!niche) semRamo++;
-      const { score, suggestedServices, reasons } = avaliarLead(l, niche);
-      const chave = chaveDoLead(l);
-      porChave.set(chave, {
-        dedupe_key: chave,
-        place_id: l.placeId,
-        name: l.name,
-        category: l.category,
-        niche,
-        city,
-        state,
-        country: pais,
-        address: l.address,
-        phone: l.phone,
-        email: l.email,
-        website: l.website,
-        site_check: l.siteCheck,
-        instagram: l.instagram,
-        facebook: l.facebook,
-        linkedin: l.linkedin,
-        maps_url: l.mapsUrl,
-        rating: l.rating,
-        review_count: l.reviewCount,
-        score,
-        suggested_services: suggestedServices,
-        reasons,
-        source: arquivo.name,
-        updated_at: new Date().toISOString(),
-      });
-    }
+    const padroes = { pais: paisDoForm, niche: nicheDoForm, city: cityDoForm, state: stateDoForm, source: arquivo.name };
+    registros.push(...registrosDaImportacao(linhasDoCsv(await arquivo.text()), padroes));
   }
-  const registros = [...porChave.values()];
   if (registros.length === 0) return errResult('Nenhuma empresa encontrada. Confira se são CSVs do scraper.');
+  const semRamo = registros.filter((r) => !r.niche).length;
 
-  // A contagem vai na URL (filtro "in"): lotes de 100 chaves cabem com folga
-  // no limite de tamanho da URL; o upsert vai no corpo e aceita lotes maiores.
-  let jaExistiam = 0;
-  for (let i = 0; i < registros.length; i += 100) {
-    const { count } = await supabase
-      .from('leads')
-      .select('id', { count: 'exact', head: true })
-      .in(
-        'dedupe_key',
-        registros.slice(i, i + 100).map((r) => r.dedupe_key)
-      );
-    jaExistiam += count ?? 0;
-  }
-
-  for (let i = 0; i < registros.length; i += 500) {
-    const { error } = await supabase.from('leads').upsert(registros.slice(i, i + 500), { onConflict: 'dedupe_key' });
-    if (error) return errResult(friendlyDbError(error, 'Não foi possível importar os leads.'));
-  }
+  const r = await gravarLeads(supabase, registros);
+  if (!r.ok) return errResult(friendlyDbError({ message: r.erro }, 'Não foi possível importar os leads.'));
+  const jaExistiam = r.atualizados;
+  const novos = r.novos;
 
   revalidatePath('/admin/captacao');
   const aviso = semRamo ? ` ${semRamo} sem ramo: preencha o ramo ao importar CSV que não veio do captar.ps1.` : '';
-  return okResult(
-    `${arquivos.length} arquivo(s): ${registros.length - jaExistiam} lead(s) novo(s) e ${jaExistiam} atualizado(s).${aviso}`
-  );
+  return okResult(`${arquivos.length} arquivo(s): ${novos} lead(s) novo(s) e ${jaExistiam} atualizado(s).${aviso}`);
 }
 
 export type LeadUpdate = {
@@ -210,25 +165,196 @@ export async function saveLeadTemplatesAction(modelos: ModeloMensagem[]): Promis
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
 
   for (const m of modelos) {
-    if (!['whatsapp', 'email'].includes(m.channel) || !['pt', 'en'].includes(m.lang)) {
+    if (!['whatsapp', 'email'].includes(m.channel) || !['pt', 'en'].includes(m.lang)) return errResult('Modelo inválido.');
+    if (!Number.isInteger(m.step) || m.step < 0 || m.step > 3 || !['A', 'B'].includes(m.variant)) {
       return errResult('Modelo inválido.');
     }
-    if (!m.body.trim()) return errResult('A mensagem não pode ficar vazia.');
-    if (m.channel === 'email' && !m.subject?.trim()) return errResult('Preencha o assunto do e-mail.');
   }
+  // A é obrigatória; B vazia significa "sem teste A/B" e é apagada.
+  const preenchidos = modelos.filter((m) => m.body.trim());
+  const faltando = modelos.find((m) => m.variant === 'A' && !m.body.trim());
+  if (faltando) return errResult('A variante A não pode ficar vazia.');
+  if (preenchidos.some((m) => m.channel === 'email' && !m.subject?.trim())) return errResult('Preencha o assunto do e-mail.');
 
-  const { error } = await supabase.from('lead_templates').upsert(
-    modelos.map((m) => ({
-      channel: m.channel,
-      lang: m.lang,
-      subject: m.channel === 'email' ? m.subject!.trim() : null,
-      body: m.body.trim(),
-      updated_at: new Date().toISOString(),
-    })),
-    { onConflict: 'channel,lang' }
-  );
-  if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar as mensagens.'));
+  if (preenchidos.length) {
+    const { error } = await supabase.from('lead_templates').upsert(
+      preenchidos.map((m) => ({
+        channel: m.channel,
+        lang: m.lang,
+        step: m.step,
+        variant: m.variant,
+        subject: m.channel === 'email' ? m.subject!.trim() : null,
+        body: m.body.trim(),
+        updated_at: new Date().toISOString(),
+      })),
+      { onConflict: 'channel,lang,step,variant' }
+    );
+    if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar as mensagens.'));
+  }
+  for (const m of modelos.filter((x) => x.variant === 'B' && !x.body.trim())) {
+    await supabase.from('lead_templates').delete().match({ channel: m.channel, lang: m.lang, step: m.step, variant: 'B' });
+  }
 
   revalidatePath('/admin/captacao');
   return okResult('Mensagens salvas.');
+}
+
+/**
+ * "Enviei": registra a mensagem da etapa `etapa` (0 = primeiro contato, 1–3 =
+ * retornos dos dias 3, 7 e 14). Marca contatado, grava a variante do teste A/B
+ * no primeiro contato e agenda o próximo retorno da sequência.
+ */
+export async function registrarEnvioAction(id: string, etapa: number, variante: 'A' | 'B'): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  if (!Number.isInteger(etapa) || etapa < 0 || etapa > 3) return errResult('Etapa inválida.');
+
+  const { data: atual } = await supabase
+    .from('leads')
+    .select('status, first_contact_at, followup_step, ab_variant')
+    .eq('id', id)
+    .maybeSingle();
+  if (!atual) return errResult('Lead não encontrado.');
+
+  const agora = new Date().toISOString();
+  const primeiro = atual.first_contact_at ?? agora;
+  const payload: TablesUpdate<'leads'> = {
+    first_contact_at: primeiro,
+    last_contact_at: agora,
+    followup_step: Math.max(atual.followup_step, etapa + 1),
+    next_contact: retornoDepoisDe(etapa, primeiro),
+    updated_at: agora,
+  };
+  if (atual.status === 'novo') payload.status = 'contatado';
+  if (etapa === 0 && !atual.ab_variant) payload.ab_variant = variante;
+
+  const { error } = await supabase.from('leads').update(payload).eq('id', id);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível registrar o envio.'));
+  revalidatePath('/admin/captacao');
+  return okResult(etapa >= 3 ? 'Sequência encerrada para este lead.' : 'Envio registrado. O próximo retorno já está agendado.');
+}
+
+// Mensalidade de cada produto no catálogo (nomes de 0045–0049).
+function mensalidadeDoServico(nome: string): string | null {
+  if (nome.startsWith('Site ')) return 'Mensalidade Site';
+  if (nome.startsWith('Loja ')) return 'Mensalidade Loja';
+  const gestao = nome.match(/^Sistema de Gestão (Básico|Intermediário|Avançado)$/);
+  return gestao ? `Mensalidade Gestão ${gestao[1]}` : null;
+}
+
+/**
+ * Proposta em um clique: garante o cliente e cria o Orçamento de Serviço com
+ * os serviços sugeridos do lead (itens do catálogo + mensalidade), já com a
+ * regra de combo do ERP (ajustarCombosEMensalidades). Abre para ajustar.
+ */
+export async function criarPropostaAction(id: string): Promise<ActionResult & { quoteId?: string }> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  const { data: lead } = await supabase
+    .from('leads')
+    .select('name, country, suggested_services, customer_id, quote_id, notes')
+    .eq('id', id)
+    .maybeSingle();
+  if (!lead) return errResult('Lead não encontrado.');
+  if (lead.quote_id) return { ...okResult('Este lead já tem proposta.'), quoteId: lead.quote_id };
+  if (lead.country !== 'BR') {
+    return errResult('Proposta automática só para o Brasil por enquanto: o orçamento do ERP é em reais.');
+  }
+
+  let customerId = lead.customer_id;
+  if (!customerId) {
+    const r = await convertLeadToCustomerAction(id);
+    if (!r.ok || !r.customerId) return r;
+    customerId = r.customerId;
+  }
+
+  const catalogo = (await listInternalServices()).filter((s) => s.active);
+  const porNome = new Map(catalogo.map((s) => [s.name, s]));
+  const nomes = [...lead.suggested_services];
+  for (const n of lead.suggested_services) {
+    const m = mensalidadeDoServico(n);
+    if (m && !nomes.includes(m)) nomes.push(m);
+  }
+  const itens: ServiceOrderItem[] = nomes
+    .map((n) => porNome.get(n))
+    .filter((s): s is NonNullable<typeof s> => !!s)
+    .map((s) => ({
+      internalServiceId: s.id,
+      name: s.name,
+      description: s.description,
+      amount: s.price,
+      billingType: s.billingType,
+      leadTimeDays: s.leadTimeDays,
+    }));
+  if (itens.length === 0) return errResult('Nenhum serviço sugerido existe no catálogo. Monte a proposta à mão.');
+  const ajustados = ajustarCombosEMensalidades(itens, catalogo)?.items ?? itens;
+  const temMensal = ajustados.some((i) => i.billingType === 'mensal');
+
+  const r = await saveServiceQuoteAction({
+    customerId,
+    title: `Proposta para ${lead.name}`,
+    notes: 'Criada pela Captação a partir dos serviços sugeridos. Revise antes de enviar.',
+    status: 'Em elaboração',
+    planMonths: temMensal ? PLAN_MONTHS_DEFAULT : null,
+    includeContract: false,
+    clientHasDomain: false,
+    desconto: SEM_DESCONTO,
+    items: ajustados,
+  });
+  if (!r.ok) return r;
+
+  // O save não devolve o id: pega o orçamento mais recente deste cliente.
+  const { data: quote } = await supabase
+    .from('service_quotes')
+    .select('id')
+    .eq('customer_id', customerId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (quote) {
+    await supabase
+      .from('leads')
+      .update({ quote_id: quote.id, status: 'proposta', updated_at: new Date().toISOString() })
+      .eq('id', id);
+  }
+  revalidatePath('/admin/captacao');
+  return { ...okResult('Proposta criada em Orçamentos Serviços. Revise e envie o PDF.'), quoteId: quote?.id };
+}
+
+/** Pedido de busca para o programa do PC (um por nicho; "todos" cria um por nicho da lista). */
+export async function pedirBuscaAction(input: {
+  niche: string;
+  city: string;
+  country: Pais;
+  lista?: ListaDeNichos;
+}): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const city = input.city.trim();
+  if (!/,\s*[A-Za-z]{2}$/.test(city)) return errResult('Informe a cidade com a sigla do estado, ex.: Goiânia, GO.');
+  if (input.country !== 'BR' && input.country !== 'US') return errResult('País inválido.');
+
+  const nichos = input.lista ? NICHOS[input.lista] : [input.niche.trim()].filter(Boolean);
+  if (nichos.length === 0) return errResult('Informe o nicho.');
+
+  const { error } = await supabase
+    .from('lead_search_requests')
+    .insert(nichos.map((niche) => ({ niche, city, country: input.country })));
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível registrar o pedido.'));
+  revalidatePath('/admin/captacao');
+  return okResult(
+    nichos.length > 1
+      ? `${nichos.length} buscas na fila. O programa do PC busca uma por vez e importa sozinho.`
+      : 'Busca na fila. O programa do PC busca e importa sozinho.'
+  );
+}
+
+export async function cancelarBuscaAction(id: string): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const { error } = await supabase.from('lead_search_requests').delete().eq('id', id).eq('status', 'pendente');
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível cancelar.'));
+  revalidatePath('/admin/captacao');
+  return okResult('Busca cancelada.');
 }
