@@ -48,12 +48,15 @@ export type Lead = {
   country: Pais;
   address: string | null;
   phone: string | null;
+  semWhatsapp: boolean;
   email: string | null;
   website: string | null;
+  siteCheck: string | null;
   instagram: string | null;
   facebook: string | null;
   linkedin: string | null;
   mapsUrl: string | null;
+  publicToken: string;
   rating: number | null;
   reviewCount: number | null;
   score: number;
@@ -232,6 +235,25 @@ const GESTAO = [
 
 const contem = (texto: string, lista: string[]) => lista.some((p) => texto.includes(p));
 
+export function ehVarejo(category: string | null, niche: string | null): boolean {
+  return contem(`${category ?? ''} ${niche ?? ''}`.toLowerCase(), VAREJO);
+}
+
+/** O principal achado sobre o site, na ordem em que vira argumento de venda. */
+export type SituacaoDoSite = 'sem_site' | 'rede_social' | 'fora' | 'sem_celular' | 'sem_https' | 'vende_online' | 'ok';
+
+export function situacaoDoSite(website: string | null, siteCheck: string | null): SituacaoDoSite {
+  const site = (website ?? '').toLowerCase();
+  if (!site) return 'sem_site';
+  if (contem(site, SITE_FRACO)) return 'rede_social';
+  const c = siteCheck ?? '';
+  if (c.includes('fora')) return 'fora';
+  if (c.includes('sem_celular')) return 'sem_celular';
+  if (c.includes('sem_https')) return 'sem_https';
+  if (c.includes('vende_online')) return 'vende_online';
+  return 'ok';
+}
+
 export type Avaliacao = { score: number; suggestedServices: string[]; reasons: string[] };
 
 export function avaliarLead(l: LinhaImportada, niche: string | null): Avaliacao {
@@ -300,10 +322,6 @@ export function avaliarLead(l: LinhaImportada, niche: string | null): Avaliacao 
   return { score: Math.max(0, Math.min(100, nota)), suggestedServices: servicos, reasons: motivos };
 }
 
-/** Soma dos preços do catálogo para os serviços sugeridos (sem combo). */
-export function valorEstimado(servicos: string[], precos: Map<string, number>): number {
-  return servicos.reduce((soma, s) => soma + (precos.get(s) ?? 0), 0);
-}
 
 /* ------------------------------------------------------------ contato */
 
@@ -323,7 +341,9 @@ export function whatsappDoLead(phone: string | null, pais: Pais): { numero: stri
   }
   if (d.length === 10) d = `1${d}`;
   if (d.length !== 11 || !d.startsWith('1')) return null;
-  return { numero: d, celular: true };
+  // Nos EUA não dá para saber pelo número, e telefone comercial costuma ser fixo
+  // sem WhatsApp: o botão fica sem destaque (e-mail e ligação primeiro).
+  return { numero: d, celular: false };
 }
 
 /** Link do Maps: o do CSV (modo --full) ou uma busca por nome + endereço. */

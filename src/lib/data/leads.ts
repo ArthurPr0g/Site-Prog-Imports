@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import type { Lead, LeadStatus, Pais } from '@/lib/captacao';
+import type { ModeloMensagem } from '@/lib/mensagens-lead';
 
 type Row = {
   id: string;
@@ -11,8 +12,11 @@ type Row = {
   country: string;
   address: string | null;
   phone: string | null;
+  sem_whatsapp: boolean;
   email: string | null;
   website: string | null;
+  site_check: string | null;
+  public_token: string;
   instagram: string | null;
   facebook: string | null;
   linkedin: string | null;
@@ -43,8 +47,11 @@ function toLead(r: Row): Lead {
     country: r.country as Pais,
     address: r.address,
     phone: r.phone,
+    semWhatsapp: r.sem_whatsapp,
     email: r.email,
     website: r.website,
+    siteCheck: r.site_check,
+    publicToken: r.public_token,
     instagram: r.instagram,
     facebook: r.facebook,
     linkedin: r.linkedin,
@@ -83,4 +90,16 @@ export async function listLeads(): Promise<Lead[]> {
     if (!data || data.length < PAGINA) break;
   }
   return leads;
+}
+
+/** Os 4 modelos de mensagem (WhatsApp e e-mail, em português e inglês). */
+export async function listLeadTemplates(): Promise<ModeloMensagem[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from('lead_templates').select('channel, lang, subject, body');
+  return (data ?? []).map((r) => ({
+    channel: r.channel as ModeloMensagem['channel'],
+    lang: r.lang as ModeloMensagem['lang'],
+    subject: r.subject,
+    body: r.body,
+  }));
 }

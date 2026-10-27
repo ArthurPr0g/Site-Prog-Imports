@@ -413,6 +413,33 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_templates: {
+        Row: {
+          body: string
+          channel: string
+          id: string
+          lang: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          channel: string
+          id?: string
+          lang: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          channel?: string
+          id?: string
+          lang?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           address: string | null
@@ -436,11 +463,14 @@ export type Database = {
           notes: string | null
           phone: string | null
           place_id: string | null
+          public_token: string
           rating: number | null
           reasons: string[]
           replied_at: string | null
           review_count: number | null
           score: number
+          sem_whatsapp: boolean
+          site_check: string | null
           source: string | null
           state: string | null
           status: string
@@ -470,11 +500,14 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           place_id?: string | null
+          public_token?: string
           rating?: number | null
           reasons?: string[]
           replied_at?: string | null
           review_count?: number | null
           score?: number
+          sem_whatsapp?: boolean
+          site_check?: string | null
           source?: string | null
           state?: string | null
           status?: string
@@ -504,11 +537,14 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           place_id?: string | null
+          public_token?: string
           rating?: number | null
           reasons?: string[]
           replied_at?: string | null
           review_count?: number | null
           score?: number
+          sem_whatsapp?: boolean
+          site_check?: string | null
           source?: string | null
           state?: string | null
           status?: string
@@ -2295,6 +2331,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      lead_diagnostico: { Args: { p_token: string }; Returns: Json }
       my_installments: {
         Args: never
         Returns: {

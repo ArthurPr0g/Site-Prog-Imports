@@ -1426,8 +1426,7 @@ mesmo (some na hora e volta se o servidor recusar).
 
 Painel de leads para vender os serviços da Prog Soluções (site, loja, sistema
 de gestão, marca) no Brasil e nos EUA. A loja (importados) **não** entra aqui
-por enquanto, por decisão do dono. Mensagens prontas de e-mail e WhatsApp para
-cada lead são o próximo passo pedido, ainda não construído.
+por enquanto, por decisão do dono.
 
 **Origem dos dados.** CSV do `google-maps-scraper-kit` (Mahanaicoach, MIT,
 engine gosom em Docker, roda local em `127.0.0.1:8080`, telemetria desligada
@@ -1436,7 +1435,16 @@ por `docker-compose.override.yml` local). O kit fica em
 O atalho `scripts/captacao/captar.ps1` liga o Docker, apaga job preso,
 roda a busca com `place_id` e `link` (via `--fields`) e redes sociais, e abre a
 pasta e a tela de importação. Lote: `-Lista buscas.txt` (`ramo | cidade | BR/US`).
-No Windows o Python precisa de `PYTHONUTF8=1` (o script já põe).
+No Windows o Python precisa de `PYTHONUTF8=1` (o script já põe). Cada busca
+confere o engine antes e tenta de novo uma vez: num lote, o container pode
+reiniciar e todas as buscas seguintes falhariam em segundos.
+
+**Checagem dos sites** (`scripts/captacao/checar-sites.py`, roda sozinho no
+`captar.ps1`): grava a coluna `site_check` com `fora` (DNS, conexão recusada,
+tempo esgotado), `sem_https`, `sem_celular` (sem meta viewport) e
+`vende_online` (VTEX, Shopify, Nuvemshop, carrinho…). Resposta HTTP de erro
+(403 anti-robô, redirecionamento em loop) conta como "site existe": antes disso
+deu falso "fora do ar" em clínicas de Orlando.
 
 **Deduplicação.** `dedupe_key` = `place:<place_id>`; sem place_id (CSV do
 modo padrão), `nome:<nome sem acento>|<dígitos do telefone>`. Reimportar
@@ -1450,9 +1458,19 @@ e-mail +5; sem telefone nem e-mail −20. A categoria vem em inglês (o kit fixa
 `lang=en`), por isso as listas de ramos têm termos em português e inglês.
 É ordenação da fila, não previsão de venda.
 
-**Serviços sugeridos** são nomes do catálogo (`internal_services`); o valor
-estimado é a soma dos preços atuais do catálogo, sem combo e sem mensalidade.
-Para os EUA é só referência em reais (os planos em dólar ficam no portfólio).
+**Serviços sugeridos** são nomes do catálogo (`internal_services`). O valor
+estimado (`src/lib/precos-captacao.ts`) segue a moeda do país do lead:
+Brasil pelo catálogo deste ERP (lido na hora, só itens ativos); EUA pela tabela
+em dólar do portfólio (`planos.en.js`, copiada em `TABELA_USD` — mudou lá, mude
+aqui). Mesmas regras da página de planos: site/loja + sistema vira combo
+(15/15/20% no mesmo nível, 15% em níveis diferentes, terminado em 97 em reais
+ou 90 em dólar) e entra uma mensalidade só, a maior. Fora do Brasil a tela
+mostra também em reais, pela cotação de **mercado** do dia (`buscarCotacaoMercado`,
+sem a taxa da Prog: é estimativa do que entra, não preço de compra).
+
+**Valor na mesa** (card do topo): soma de implementação e de mensalidades dos
+leads em aberto (fora fechado, perdido e não contatar), total em reais e, ao
+lado, cada país na moeda dele.
 
 **Etapas.** novo → contatado → respondeu → reunião → proposta → fechado /
 perdido / não contatar. `first_contact_at`, `replied_at` e `closed_at` gravam a
@@ -1466,6 +1484,34 @@ notas) e liga ao lead; o orçamento sai pelo fluxo normal de Orçamentos Serviç
 
 **WhatsApp.** Telefone brasileiro com 8 dígitos depois do DDD é tratado como
 fixo (botão apagado, aviso no título), porque normalmente não tem WhatsApp.
+Nos EUA o botão nunca fica em destaque (não dá para saber pelo número, e
+telefone comercial costuma ser fixo): o e-mail fica em destaque. Clicar no
+WhatsApp ou no e-mail **não** marca contato: a tela pergunta "A mensagem
+saiu?" (Enviei / Sem WhatsApp). "Sem WhatsApp" grava `sem_whatsapp` e esconde
+o botão daquele lead.
+
+**Mensagens prontas.** Tabela `lead_templates`, uma por canal (WhatsApp,
+e-mail) e idioma (pt para o Brasil, en para os EUA), editadas no botão
+"Mensagens" com prévia no primeiro lead da lista. Variáveis em
+`src/lib/mensagens-lead.ts`: `{problema}` sai do achado principal do site (sem
+site, rede social, fora do ar, celular, HTTPS, venda online), `{elogio}` só com
+30+ avaliações e nota 4,3+. O e-mail abre no Gmail (conta padrão do
+navegador) e traz o link do portfólio; o WhatsApp leva só o link do
+diagnóstico (dois links na primeira mensagem parecem spam). "Enviei" marca
+"contatado" e põe retorno em 3 dias.
+
+**Diagnóstico público** (`/diagnostico/<public_token>`): página da Prog
+Soluções, fora do índice dos buscadores, em português ou inglês conforme o
+país. Lida só pela função `lead_diagnostico` (security definer, campos que já
+são públicos no Google), que também compara com os concorrentes da mesma busca
+(cidade + ramo). Lead em "não contatar" não abre. O assistente da loja não
+aparece nela.
+
+**Teste local** (`3 - Ferramentas\prog-imports-local\rodar-local.ps1`):
+banco Supabase no Docker com as migrations do repo + remendos locais (produção
+tem mudanças que nunca viraram arquivo, ex.: `profiles.email`; o CLI novo não
+dá acesso da API às tabelas). Login local por e-mail e senha
+(`ACESSO-LOCAL.txt`); o Google não existe no banco local.
 
 ## Em aberto
 

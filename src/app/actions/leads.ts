@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
 import type { TablesInsert, TablesUpdate } from '@/lib/supabase/database.types';
+import type { ModeloMensagem } from '@/lib/mensagens-lead';
 import { LEAD_STATUSES, avaliarLead, chaveDoLead, linhasDoCsv, type LeadStatus, type Pais } from '@/lib/captacao';
 
 async function adminClient() {
@@ -54,6 +55,7 @@ export async function importLeadsAction(formData: FormData): Promise<ActionResul
       phone: l.phone,
       email: l.email,
       website: l.website,
+      site_check: l.siteCheck,
       instagram: l.instagram,
       facebook: l.facebook,
       linkedin: l.linkedin,
@@ -95,6 +97,7 @@ export type LeadUpdate = {
   status?: LeadStatus;
   nextContact?: string | null;
   notes?: string | null;
+  semWhatsapp?: boolean;
 };
 
 export async function updateLeadAction(id: string, input: LeadUpdate): Promise<ActionResult> {
@@ -128,6 +131,7 @@ export async function updateLeadAction(id: string, input: LeadUpdate): Promise<A
     payload.next_contact = input.nextContact || null;
   }
   if (input.notes !== undefined) payload.notes = input.notes?.trim() || null;
+  if (input.semWhatsapp !== undefined) payload.sem_whatsapp = input.semWhatsapp;
 
   const { error } = await supabase.from('leads').update(payload).eq('id', id);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar o lead.'));
@@ -179,4 +183,32 @@ export async function convertLeadToCustomerAction(id: string): Promise<ActionRes
   revalidatePath('/admin/clientes');
   revalidatePath('/admin/orcamentos-servicos');
   return { ...okResult('Cliente cadastrado. Já pode fazer o orçamento.'), customerId: cliente.id };
+}
+
+export async function saveLeadTemplatesAction(modelos: ModeloMensagem[]): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+
+  for (const m of modelos) {
+    if (!['whatsapp', 'email'].includes(m.channel) || !['pt', 'en'].includes(m.lang)) {
+      return errResult('Modelo inválido.');
+    }
+    if (!m.body.trim()) return errResult('A mensagem não pode ficar vazia.');
+    if (m.channel === 'email' && !m.subject?.trim()) return errResult('Preencha o assunto do e-mail.');
+  }
+
+  const { error } = await supabase.from('lead_templates').upsert(
+    modelos.map((m) => ({
+      channel: m.channel,
+      lang: m.lang,
+      subject: m.channel === 'email' ? m.subject!.trim() : null,
+      body: m.body.trim(),
+      updated_at: new Date().toISOString(),
+    })),
+    { onConflict: 'channel,lang' }
+  );
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar as mensagens.'));
+
+  revalidatePath('/admin/captacao');
+  return okResult('Mensagens salvas.');
 }

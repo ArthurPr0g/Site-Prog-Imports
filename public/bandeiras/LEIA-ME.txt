@@ -1,0 +1,2 @@
+Bandeiras SVG do pacote flag-icons 7.2.3 (https://github.com/lipis/flag-icons),
+licença MIT, Copyright (c) 2013 Panayiotis Lipiridis. Usadas no card "Valor na mesa" da Captação.

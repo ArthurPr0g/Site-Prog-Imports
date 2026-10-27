@@ -89,8 +89,16 @@ function Captar([string]$ramo, [string]$cidade, [string]$pais) {
   Write-Host "`n>> $busca"
   # Sem isto o Windows grava o CSV em cp1252 e os acentos quebram.
   $env:PYTHONUTF8 = '1'; $env:PYTHONIOENCODING = 'utf-8'
-  # Write-Host: o que a função "devolve" tem de ser só o caminho do CSV.
-  python @cmd 2>&1 | ForEach-Object { Write-Host "$_" }
+  # Duas tentativas, conferindo o engine antes de cada uma: num lote longo o
+  # container pode reiniciar (Docker ocupado por outro serviço) e, sem isso,
+  # todas as buscas seguintes falhavam em segundos.
+  for ($tentativa = 1; $tentativa -le 2; $tentativa++) {
+    try { Invoke-RestMethod $Engine -TimeoutSec 10 | Out-Null } catch { Preparar-Engine }
+    # Write-Host: o que a função "devolve" tem de ser só o caminho do CSV.
+    python @cmd 2>&1 | ForEach-Object { Write-Host "$_" }
+    if ($LASTEXITCODE -eq 0) { break }
+    if ($tentativa -eq 1) { Write-Host 'Falhou; tentando de novo em 30 s...'; Start-Sleep -Seconds 30 }
+  }
   if ($LASTEXITCODE -ne 0) { Write-Warning "A busca '$busca' falhou."; return $null }
   # Site fora do ar, sem HTTPS ou que não se adapta ao celular: argumentos de venda.
   python -I "$PSScriptRoot\checar-sites.py" $saida 2>&1 | ForEach-Object { Write-Host "$_" }
