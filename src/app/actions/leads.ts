@@ -15,6 +15,8 @@ async function adminClient() {
 }
 
 const LIMITE_ARQUIVO = 5 * 1024 * 1024;
+// Soma dos arquivos de uma importação: a régua do Next para actions é 6 MB.
+const LIMITE_TOTAL = 5.5 * 1024 * 1024;
 
 /**
  * Importa o CSV do google-maps-scraper-kit. Lead que já existe (mesmo
@@ -25,51 +27,65 @@ export async function importLeadsAction(formData: FormData): Promise<ActionResul
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
 
-  const arquivo = formData.get('arquivo');
-  if (!(arquivo instanceof File) || arquivo.size === 0) return errResult('Escolha o arquivo CSV.');
-  if (arquivo.size > LIMITE_ARQUIVO) return errResult('Arquivo maior que 5 MB. Divida a busca em partes.');
+  const arquivos = formData.getAll('arquivo').filter((f): f is File => f instanceof File && f.size > 0);
+  if (arquivos.length === 0) return errResult('Escolha pelo menos um arquivo CSV.');
+  if (arquivos.some((a) => a.size > LIMITE_ARQUIVO)) return errResult('Arquivo maior que 5 MB. Divida a busca em partes.');
+  if (arquivos.reduce((s, a) => s + a.size, 0) > LIMITE_TOTAL) {
+    return errResult('Arquivos demais de uma vez (mais de 5,5 MB). Importe em duas levas.');
+  }
 
-  const pais: Pais = formData.get('pais') === 'US' ? 'US' : 'BR';
-  const niche = String(formData.get('nicho') ?? '').trim() || null;
-  const city = String(formData.get('cidade') ?? '').trim() || null;
-  const state = String(formData.get('estado') ?? '').trim().toUpperCase() || null;
+  // Valem para as linhas sem as colunas busca_* (CSV que não veio do captar.ps1).
+  const paisDoForm: Pais = formData.get('pais') === 'US' ? 'US' : 'BR';
+  const nicheDoForm = String(formData.get('nicho') ?? '').trim() || null;
+  const cityDoForm = String(formData.get('cidade') ?? '').trim() || null;
+  const stateDoForm =
+    String(formData.get('estado') ?? '')
+      .trim()
+      .toUpperCase() || null;
 
-  const linhas = linhasDoCsv(await arquivo.text());
-  if (linhas.length === 0) return errResult('Nenhuma empresa encontrada no arquivo. Confira se é o CSV do scraper.');
-
-  // Mesma empresa repetida no arquivo (tiles do --grid): fica a última.
+  // Mesma empresa repetida (tiles do --grid, ou em dois arquivos): fica a última.
   const porChave = new Map<string, TablesInsert<'leads'>>();
-  for (const l of linhas) {
-    const { score, suggestedServices, reasons } = avaliarLead(l, niche);
-    const chave = chaveDoLead(l);
-    porChave.set(chave, {
-      dedupe_key: chave,
-      place_id: l.placeId,
-      name: l.name,
-      category: l.category,
-      niche,
-      city,
-      state,
-      country: pais,
-      address: l.address,
-      phone: l.phone,
-      email: l.email,
-      website: l.website,
-      site_check: l.siteCheck,
-      instagram: l.instagram,
-      facebook: l.facebook,
-      linkedin: l.linkedin,
-      maps_url: l.mapsUrl,
-      rating: l.rating,
-      review_count: l.reviewCount,
-      score,
-      suggested_services: suggestedServices,
-      reasons,
-      source: arquivo.name,
-      updated_at: new Date().toISOString(),
-    });
+  let semRamo = 0;
+  for (const arquivo of arquivos) {
+    const linhas = linhasDoCsv(await arquivo.text());
+    for (const l of linhas) {
+      const pais: Pais = l.buscaPais === 'US' || l.buscaPais === 'BR' ? l.buscaPais : paisDoForm;
+      const niche = l.buscaRamo ?? nicheDoForm;
+      const city = l.buscaCidade ?? cityDoForm;
+      const state = l.buscaEstado || stateDoForm;
+      if (!niche) semRamo++;
+      const { score, suggestedServices, reasons } = avaliarLead(l, niche);
+      const chave = chaveDoLead(l);
+      porChave.set(chave, {
+        dedupe_key: chave,
+        place_id: l.placeId,
+        name: l.name,
+        category: l.category,
+        niche,
+        city,
+        state,
+        country: pais,
+        address: l.address,
+        phone: l.phone,
+        email: l.email,
+        website: l.website,
+        site_check: l.siteCheck,
+        instagram: l.instagram,
+        facebook: l.facebook,
+        linkedin: l.linkedin,
+        maps_url: l.mapsUrl,
+        rating: l.rating,
+        review_count: l.reviewCount,
+        score,
+        suggested_services: suggestedServices,
+        reasons,
+        source: arquivo.name,
+        updated_at: new Date().toISOString(),
+      });
+    }
   }
   const registros = [...porChave.values()];
+  if (registros.length === 0) return errResult('Nenhuma empresa encontrada. Confira se são CSVs do scraper.');
 
   // A contagem vai na URL (filtro "in"): lotes de 100 chaves cabem com folga
   // no limite de tamanho da URL; o upsert vai no corpo e aceita lotes maiores.
@@ -78,19 +94,23 @@ export async function importLeadsAction(formData: FormData): Promise<ActionResul
     const { count } = await supabase
       .from('leads')
       .select('id', { count: 'exact', head: true })
-      .in('dedupe_key', registros.slice(i, i + 100).map((r) => r.dedupe_key));
+      .in(
+        'dedupe_key',
+        registros.slice(i, i + 100).map((r) => r.dedupe_key)
+      );
     jaExistiam += count ?? 0;
   }
 
   for (let i = 0; i < registros.length; i += 500) {
-    const { error } = await supabase
-      .from('leads')
-      .upsert(registros.slice(i, i + 500), { onConflict: 'dedupe_key' });
+    const { error } = await supabase.from('leads').upsert(registros.slice(i, i + 500), { onConflict: 'dedupe_key' });
     if (error) return errResult(friendlyDbError(error, 'Não foi possível importar os leads.'));
   }
 
   revalidatePath('/admin/captacao');
-  return okResult(`${registros.length - jaExistiam} lead(s) novo(s) e ${jaExistiam} atualizado(s).`);
+  const aviso = semRamo ? ` ${semRamo} sem ramo: preencha o ramo ao importar CSV que não veio do captar.ps1.` : '';
+  return okResult(
+    `${arquivos.length} arquivo(s): ${registros.length - jaExistiam} lead(s) novo(s) e ${jaExistiam} atualizado(s).${aviso}`
+  );
 }
 
 export type LeadUpdate = {

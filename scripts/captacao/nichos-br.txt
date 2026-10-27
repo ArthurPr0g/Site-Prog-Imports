@@ -1,0 +1,52 @@
+# Nichos do Brasil para a Captação (um por linha; texto depois de # é comentário).
+# Critério: negócio pequeno/médio que pode pagar R$ 1,5–7 mil e precisa de
+# site + agenda/cadastro (Sistema de Gestão) ou de catálogo/estoque (Loja).
+# Use: .\captar.ps1 -Nichos .\nichos-br.txt -Cidade "Goiânia, GO"
+
+# Saúde e bem-estar (site + agenda/prontuário simples)
+clínica odontológica
+clínica de estética
+clínica de fisioterapia
+consultório de psicologia
+nutricionista
+clínica veterinária
+clínica médica
+
+# Beleza
+salão de beleza
+barbearia
+estúdio de sobrancelhas
+
+# Fitness
+academia
+estúdio de pilates
+
+# Educação
+escola de idiomas
+autoescola
+escola infantil
+
+# Serviços (site + clientes, orçamentos e financeiro)
+oficina mecânica
+escritório de contabilidade
+escritório de advocacia
+imobiliária
+escritório de arquitetura
+assistência técnica de celular
+dedetizadora
+buffet de festas
+lavanderia
+
+# Varejo (loja virtual + estoque)
+loja de roupas
+loja de calçados
+ótica
+joalheria
+loja de móveis
+loja de decoração
+pet shop
+loja de suplementos
+floricultura
+loja de cosméticos
+loja de materiais de construção
+distribuidora de bebidas

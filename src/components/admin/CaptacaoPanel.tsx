@@ -115,6 +115,7 @@ export function CaptacaoPanel({
   const [pais, setPais] = useState<'' | 'BR' | 'US'>('');
   const [etapa, setEtapa] = useState<'' | 'atrasados' | LeadStatus>('');
   const [servico, setServico] = useState('');
+  const [ramo, setRamo] = useState('');
   const [notaMin, setNotaMin] = useState(0);
   const [limite, setLimite] = useState(POR_PAGINA);
   const [importando, setImportando] = useState(false);
@@ -167,6 +168,12 @@ export function CaptacaoPanel({
   }, [leads, tabBRL, cotacoes, hoje, agora]);
 
   const servicosSugeridos = useMemo(() => [...new Set(leads.flatMap((l) => l.suggestedServices))].sort(), [leads]);
+  // Ramos das buscas importadas, com quantos leads em aberto cada um tem.
+  const ramos = useMemo(() => {
+    const n = new Map<string, number>();
+    for (const l of leads) if (l.niche && !ENCERRADOS.includes(l.status)) n.set(l.niche, (n.get(l.niche) ?? 0) + 1);
+    return [...n.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
+  }, [leads]);
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -174,6 +181,7 @@ export function CaptacaoPanel({
       if (pais && l.country !== pais) return false;
       if (etapa === 'atrasados' ? !atrasado(l) : etapa ? l.status !== etapa : l.status === 'nao_contatar') return false;
       if (servico && !l.suggestedServices.includes(servico)) return false;
+      if (ramo && l.niche !== ramo) return false;
       if (l.score < notaMin) return false;
       if (termo && ![l.name, l.category, l.city, l.niche, l.state].some((c) => c?.toLowerCase().includes(termo))) {
         return false;
@@ -181,7 +189,7 @@ export function CaptacaoPanel({
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leads, busca, pais, etapa, servico, notaMin, hoje]);
+  }, [leads, busca, pais, etapa, servico, ramo, notaMin, hoje]);
 
   const total = leads.length;
 
@@ -283,6 +291,22 @@ export function CaptacaoPanel({
           {LEAD_STATUSES.map((s) => (
             <option key={s} value={s}>
               {LEAD_STATUS_LABEL[s]}
+            </option>
+          ))}
+        </select>
+        <select
+          value={ramo}
+          onChange={(e) => {
+            setRamo(e.target.value);
+            setLimite(POR_PAGINA);
+          }}
+          className={inputClass}
+          aria-label="Ramo"
+        >
+          <option value="">Todos os ramos</option>
+          {ramos.map(([r, n]) => (
+            <option key={r} value={r}>
+              {r} ({n})
             </option>
           ))}
         </select>
@@ -448,7 +472,9 @@ function ValorNaMesa({
                 <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{NOME_PAIS[codigo]}</div>
                 {p ? (
                   <>
-                    <div className="mt-0.5 text-[16px] font-bold tabular-nums leading-tight sm:text-[18px]">{formatMoeda(p.unico, p.moeda)}</div>
+                    <div className="mt-0.5 text-[16px] font-bold tabular-nums leading-tight sm:text-[18px]">
+                      {formatMoeda(p.unico, p.moeda)}
+                    </div>
                     <div className="text-[12.5px] font-bold tabular-nums text-fg-tertiary">
                       + {formatMoeda(p.mensal, p.moeda)}/mês
                     </div>
@@ -797,8 +823,11 @@ function ImportarModal({ onFechar }: { onFechar: () => void }) {
     <Modal titulo="Importar leads do Google Maps" onFechar={onFechar}>
       <form action={enviar} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="sm:col-span-2">
-          <div className="mb-1.5 text-[11px] text-fg-faded">CSV gerado pelo google-maps-scraper-kit *</div>
-          <input name="arquivo" type="file" accept=".csv,text/csv" required className={`w-full ${inputClass}`} />
+          <div className="mb-1.5 text-[11px] text-fg-faded">CSVs do captar.ps1 (pode escolher vários) *</div>
+          <input name="arquivo" type="file" accept=".csv,text/csv" multiple required className={`w-full ${inputClass}`} />
+          <div className="mt-1.5 text-[11.5px] leading-relaxed text-fg-tertiary">
+            O captar.ps1 grava ramo, cidade e país dentro de cada arquivo: os campos abaixo só valem para CSV que não veio dele.
+          </div>
         </label>
         <label>
           <div className="mb-1.5 text-[11px] text-fg-faded">País</div>

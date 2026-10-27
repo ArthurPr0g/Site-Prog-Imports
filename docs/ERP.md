@@ -1434,7 +1434,17 @@ por `docker-compose.override.yml` local). O kit fica em
 `C:\Apps\1 - Dev\Prog Soluções\3 - Ferramentas\google-maps-scraper-kit`.
 O atalho `scripts/captacao/captar.ps1` liga o Docker, apaga job preso,
 roda a busca com `place_id` e `link` (via `--fields`) e redes sociais, e abre a
-pasta e a tela de importação. Lote: `-Lista buscas.txt` (`ramo | cidade | BR/US`).
+pasta e a tela de importação. Lote: `-Lista buscas.txt` (`ramo | cidade | BR/US`)
+ou `-Nichos nichos-br.txt -Cidade "Goiânia, GO"` (todos os nichos numa cidade,
+com 45 s de pausa entre buscas). As listas `scripts/captacao/nichos-br.txt` e
+`nichos-us.txt` são os nichos que fazem sentido para os serviços (EUA: só
+negócios brasileiros, atendimento em português); o dono busca tudo e filtra
+pelo **Ramo** no painel. Buscas do Brasil saem com categoria em português
+(`GMAPS_LANG=pt`, duas letras: o engine recusa `pt-BR`; a cópia local do kit lê essa variável em `scrape.py`, o
+original fixa `en` — refazer a alteração se atualizar o kit).
+Cada CSV leva `busca_ramo`, `busca_cidade`, `busca_estado` e `busca_pais` em
+todas as linhas: a importação lê dali, aceita vários arquivos de uma vez e só
+usa os campos do formulário para CSV que não veio do `captar.ps1`.
 No Windows o Python precisa de `PYTHONUTF8=1` (o script já põe). Cada busca
 confere o engine antes e tenta de novo uma vez: num lote, o container pode
 reiniciar e todas as buscas seguintes falhariam em segundos.
@@ -1489,6 +1499,11 @@ telefone comercial costuma ser fixo): o e-mail fica em destaque. Clicar no
 WhatsApp ou no e-mail **não** marca contato: a tela pergunta "A mensagem
 saiu?" (Enviei / Sem WhatsApp). "Sem WhatsApp" grava `sem_whatsapp` e esconde
 o botão daquele lead.
+
+**Endereço no e-mail.** A assinatura dos dois modelos de e-mail traz o
+endereço comercial (Alameda Botafogo, Quadra 36B, Lote 16-21, Setor Pedro
+Ludovico, Goiânia - GO): a lei americana de e-mail comercial (CAN-SPAM) exige
+endereço físico e forma de sair da lista ("responda não").
 
 **Mensagens prontas.** Tabela `lead_templates`, uma por canal (WhatsApp,
 e-mail) e idioma (pt para o Brasil, en para os EUA), editadas no botão

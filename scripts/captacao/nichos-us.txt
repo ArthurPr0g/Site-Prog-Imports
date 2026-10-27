@@ -1,0 +1,24 @@
+# Nichos dos EUA para a Captação: negócios BRASILEIROS (atendimento em
+# português, cobrança em dólar pela tabela do portfólio).
+# Use: .\captar.ps1 -Nichos .\nichos-us.txt -Cidade "Orlando, FL" -Pais US
+# Cidades com mais brasileiros: Orlando FL, Pompano Beach FL, Miami FL,
+# Framingham MA, Marlborough MA, Boston MA, Newark NJ, Danbury CT.
+
+brazilian restaurant
+brazilian steakhouse
+brazilian bakery
+brazilian market
+brazilian store
+brazilian hair salon
+brazilian wax
+brazilian nail salon
+brazilian cleaning services
+brazilian construction company
+brazilian painter
+brazilian auto repair
+brazilian accountant
+brazilian real estate agent
+brazilian insurance agency
+brazilian dentist
+brazilian moving company
+brazilian church

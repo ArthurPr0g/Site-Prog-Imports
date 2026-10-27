@@ -128,6 +128,11 @@ const COLUNAS: Record<string, string[]> = {
   // Gravada pelo scripts/captacao/checar-sites.py: fora, sem_https, sem_celular,
   // vende_online ou ok (vários juntos com "+").
   siteCheck: ['site_check'],
+  // Gravadas pelo captar.ps1: a importação não precisa perguntar ramo, cidade e país.
+  buscaRamo: ['busca_ramo'],
+  buscaCidade: ['busca_cidade'],
+  buscaEstado: ['busca_estado'],
+  buscaPais: ['busca_pais'],
 };
 
 export type LinhaImportada = {
@@ -145,6 +150,10 @@ export type LinhaImportada = {
   placeId: string | null;
   mapsUrl: string | null;
   siteCheck: string | null;
+  buscaRamo: string | null;
+  buscaCidade: string | null;
+  buscaEstado: string | null;
+  buscaPais: string | null;
 };
 
 function numero(v: string | undefined): number | null {
@@ -189,6 +198,10 @@ export function linhasDoCsv(texto: string): LinhaImportada[] {
       placeId: ler(l, 'placeId'),
       mapsUrl: ler(l, 'mapsUrl'),
       siteCheck: ler(l, 'siteCheck'),
+      buscaRamo: ler(l, 'buscaRamo'),
+      buscaCidade: ler(l, 'buscaCidade'),
+      buscaEstado: ler(l, 'buscaEstado'),
+      buscaPais: ler(l, 'buscaPais'),
     }))
     .filter((l) => l.name);
 }
@@ -220,6 +233,9 @@ const VAREJO = [
   // "shop" sozinho não entra: pegaria barbershop, que é serviço.
   'store', 'clothing', 'apparel', 'jewelry', 'jeweler', 'florist',
   'furniture', 'gift', 'cosmetics', 'supplement', 'retail', 'optical', 'eyewear',
+  // Categorias do Google em português (buscas do Brasil saem em pt-BR).
+  'materiais de construção', 'materiais de construcao', 'mercado', 'empório', 'emporio',
+  'market', 'bakery', 'padaria', 'confeitaria',
 ];
 
 // Negócios com agenda, cadastro, estoque ou financeiro: candidatos a sistema de gestão.
@@ -231,6 +247,11 @@ const GESTAO = [
   'autoescola', 'buffet', 'clinic', 'dentist', 'dental', 'gym', 'fitness', 'auto repair',
   'mechanic', 'salon', 'barber', 'spa', 'school', 'academy', 'veterinar', 'physical therap',
   'chiropract', 'accounting', 'real estate', 'distributor', 'wholesale',
+  // Categorias do Google em português (buscas do Brasil saem em pt-BR).
+  'contador', 'advoga', 'advocacia', 'psicólog', 'psicolog', 'nutricionista', 'idiomas',
+  'arquitet', 'dedetiza', 'assistência técnica', 'assistencia tecnica', 'centro automotivo',
+  'despachante', 'corretor', 'materiais de construção', 'materiais de construcao', 'lavanderia',
+  'cleaning', 'contractor', 'construction', 'lawyer', 'attorney', 'insurance', 'church', 'igreja',
 ];
 
 const contem = (texto: string, lista: string[]) => lista.some((p) => texto.includes(p));

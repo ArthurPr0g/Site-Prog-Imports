@@ -9,6 +9,10 @@
   Várias buscas (uma por linha: ramo | cidade | BR ou US):
     .\captar.ps1 -Lista .\buscas.txt
 
+  Todos os nichos de uma lista numa cidade (nichos-br.txt / nichos-us.txt):
+    .\captar.ps1 -Nichos .\nichos-br.txt -Cidade "Goiânia, GO"
+    .\captar.ps1 -Nichos .\nichos-us.txt -Cidade "Orlando, FL" -Pais US
+
   O que ele faz sozinho: liga o Docker Desktop se estiver desligado, sobe o
   engine, apaga jobs que ficaram presos (ex.: depois de reiniciar o PC), roda
   a busca com place_id e link do Maps (deduplicação) e redes sociais, confere
@@ -25,6 +29,10 @@ param(
   [int]$Profundidade = 5,
   [int]$Grade = 0,
   [string]$Lista,
+  # Arquivo com um ramo por linha; roda todos na -Cidade/-Pais informada.
+  [string]$Nichos,
+  # Pausa entre buscas de um lote: lote longo sem pausa arrisca bloqueio temporário do Google.
+  [int]$Pausa = 45,
   [switch]$SemAbrir,
   [string]$Kit = 'C:\Apps\1 - Dev\Prog Soluções\3 - Ferramentas\google-maps-scraper-kit'
 )
@@ -89,6 +97,10 @@ function Captar([string]$ramo, [string]$cidade, [string]$pais) {
   Write-Host "`n>> $busca"
   # Sem isto o Windows grava o CSV em cp1252 e os acentos quebram.
   $env:PYTHONUTF8 = '1'; $env:PYTHONIOENCODING = 'utf-8'
+  # Categoria do Google no idioma do lead (pedido do dono). O kit original fixa
+  # "en"; a cópia local lê GMAPS_LANG (scripts/scrape.py, linha do body do job).
+  # O engine só aceita código de 2 letras: "pt" funciona, "pt-BR" dá 422.
+  $env:GMAPS_LANG = if ($pais -eq 'BR') { 'pt' } else { 'en' }
   # Duas tentativas, conferindo o engine antes de cada uma: num lote longo o
   # container pode reiniciar (Docker ocupado por outro serviço) e, sem isso,
   # todas as buscas seguintes falhavam em segundos.
@@ -101,7 +113,9 @@ function Captar([string]$ramo, [string]$cidade, [string]$pais) {
   }
   if ($LASTEXITCODE -ne 0) { Write-Warning "A busca '$busca' falhou."; return $null }
   # Site fora do ar, sem HTTPS ou que não se adapta ao celular: argumentos de venda.
-  python -I "$PSScriptRoot\checar-sites.py" $saida 2>&1 | ForEach-Object { Write-Host "$_" }
+  # Também grava ramo, cidade e país em cada linha: a importação lê dali.
+  python -I "$PSScriptRoot\checar-sites.py" $saida --ramo $ramo --cidade $cidade --pais $pais 2>&1 |
+    ForEach-Object { Write-Host "$_" }
   return $saida
 }
 
@@ -114,15 +128,23 @@ if ($Lista) {
     $p = $linha.Split('|') | ForEach-Object { $_.Trim() }
     $buscas += , @($p[0], $p[1], $(if ($p.Count -gt 2 -and $p[2]) { $p[2].ToUpper() } else { 'BR' }))
   }
+} elseif ($Nichos -and $Cidade) {
+  foreach ($linha in Get-Content $Nichos -Encoding UTF8) {
+    $r = ($linha -replace '#.*$', '').Trim()
+    if ($r) { $buscas += , @($r, $Cidade, $Pais) }
+  }
 } elseif ($Ramo -and $Cidade) {
   $buscas += , @($Ramo, $Cidade, $Pais)
 } else {
-  throw 'Informe -Ramo e -Cidade, ou -Lista arquivo.txt'
+  throw 'Informe -Ramo e -Cidade, -Nichos arquivo.txt e -Cidade, ou -Lista arquivo.txt'
 }
 
 Preparar-Engine
 $feitos = @()
+$n = 0
 foreach ($b in $buscas) {
+  if ($n++ -gt 0 -and $Pausa -gt 0) { Start-Sleep -Seconds $Pausa }
+  Write-Host "[$n/$($buscas.Count)]"
   $arq = Captar $b[0] $b[1] $b[2]
   if ($arq) { $feitos += $arq }
 }
@@ -130,7 +152,7 @@ foreach ($b in $buscas) {
 Write-Host "`nPronto: $($feitos.Count) de $($buscas.Count) busca(s)."
 $feitos | ForEach-Object { Write-Host "  $_" }
 if ($feitos.Count -gt 0 -and -not $SemAbrir) {
-  Write-Host 'Importe em Captação > Importar CSV, informando país, ramo e cidade de cada arquivo.'
+  Write-Host 'Importe em Captação > Importar CSV (pode selecionar todos os arquivos de uma vez).'
   Start-Process explorer.exe "/select,`"$($feitos[-1])`""
   $chrome = @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe") |
     Where-Object { Test-Path $_ } | Select-Object -First 1

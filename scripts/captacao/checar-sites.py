@@ -8,8 +8,13 @@ vazio quando não há site. Mais de um valor vira lista separada por "+"
 São argumentos de venda que o painel de Captação usa na nota. Só a biblioteca
 padrão; roda local, depois da busca (o captar.ps1 chama sozinho):
 
-    python checar-sites.py arquivo.csv
+    python checar-sites.py arquivo.csv [--ramo X --cidade "Cidade, UF" --pais BR]
+
+Com --ramo/--cidade/--pais, grava também busca_ramo, busca_cidade, busca_estado
+e busca_pais em cada linha: a importação da Captação lê dali e não precisa
+perguntar nada (dá para importar vários arquivos de uma vez).
 """
+import argparse
 import csv
 import re
 import ssl
@@ -64,7 +69,7 @@ def checar(url: str) -> str:
     return "+".join(problemas) or "ok"
 
 
-def main(caminho: str) -> None:
+def main(caminho: str, busca: dict) -> None:
     with open(caminho, encoding="utf-8-sig", newline="") as f:
         linhas = list(csv.DictReader(f))
     if not linhas:
@@ -73,11 +78,15 @@ def main(caminho: str) -> None:
     campos = list(linhas[0].keys())
     if "site_check" not in campos:
         campos.append("site_check")
+    for k in busca:
+        if k not in campos:
+            campos.append(k)
 
     with ThreadPoolExecutor(max_workers=8) as ex:
         resultados = list(ex.map(lambda l: checar(l.get("website", "")), linhas))
     for l, r in zip(linhas, resultados):
         l["site_check"] = r
+        l.update(busca)
 
     with open(caminho, "w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=campos)
@@ -92,4 +101,19 @@ def main(caminho: str) -> None:
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    ap = argparse.ArgumentParser()
+    ap.add_argument("csv")
+    ap.add_argument("--ramo")
+    ap.add_argument("--cidade", help='"Cidade, UF" (a sigla depois da vírgula vira o estado)')
+    ap.add_argument("--pais", choices=["BR", "US", "PT", "ES"])
+    a = ap.parse_args()
+    busca = {}
+    if a.ramo:
+        busca["busca_ramo"] = a.ramo
+    if a.cidade:
+        cidade, _, estado = a.cidade.partition(",")
+        busca["busca_cidade"] = cidade.strip()
+        busca["busca_estado"] = estado.strip().upper()
+    if a.pais:
+        busca["busca_pais"] = a.pais
+    main(a.csv, busca)

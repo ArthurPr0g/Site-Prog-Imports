@@ -70,6 +70,8 @@ alter table public.leads enable row level security;
 create policy leads_admin_all on public.leads for all using (public.is_admin()) with check (public.is_admin());
 
 -- Modelos de mensagem: um por canal e idioma, editados pelo dono na tela.
+-- O endereço na assinatura do e-mail é exigência da lei americana de e-mail
+-- comercial (CAN-SPAM), junto com o "responda não" para sair da lista.
 create table if not exists public.lead_templates (
   id uuid primary key default gen_random_uuid(),
   channel text not null check (channel in ('whatsapp', 'email')),
@@ -113,7 +115,8 @@ Alguns trabalhos meus: {portfolio}
 Se fizer sentido, te mando uma proposta sem compromisso. Se não for o momento, é só responder "não" que eu não volto a escrever.
 
 Arthur Matos
-Prog Soluções'),
+Prog Soluções
+Alameda Botafogo, Quadra 36B, Lote 16-21, Setor Pedro Ludovico, Goiânia - GO, Brasil'),
 ('email', 'en', 'A quick idea for {empresa}',
 'Hi {empresa} team,
 
@@ -127,7 +130,8 @@ Some of my work: {portfolio}
 If it makes sense, I can send you a no-strings proposal. If now isn''t a good time, just reply "no" and I won''t reach out again.
 
 Arthur Matos
-Prog Soluções')
+Prog Soluções
+Alameda Botafogo, Quadra 36B, Lote 16-21, Setor Pedro Ludovico, Goiânia - GO, Brazil')
 on conflict (channel, lang) do nothing;
 
 -- Diagnóstico público: o lead + a comparação com os concorrentes da mesma
