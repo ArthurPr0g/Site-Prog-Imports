@@ -407,7 +407,8 @@ export async function responderConversa(conversaId: string, avisoInterno?: strin
   if (mensagens.at(-1)?.role !== 'user') return 'nada novo para responder';
 
   const system: Anthropic.Beta.BetaTextBlockParam[] = [
-    { type: 'text', text: instrucoesFixas(), cache_control: { type: 'ephemeral' } },
+    // Cache de 1 h: o cliente de WhatsApp costuma demorar mais que os 5 min do padrão para responder.
+    { type: 'text', text: instrucoesFixas(), cache_control: { type: 'ephemeral', ttl: '1h' } },
     { type: 'text', text: contexto },
   ];
 

@@ -15,13 +15,13 @@ export const MODELOS_DA_IA = [
 ] as const;
 export type ModeloDaIA = (typeof MODELOS_DA_IA)[number]['id'];
 
-/** Custo em dólar de uma chamada (preço por milhão de tokens; escrita no cache vale 1,25× a entrada). */
+/** Custo em dólar de uma chamada (preço por milhão de tokens; escrita no cache de 1 h vale 2× a entrada). */
 export function custoDaChamada(
   modelo: string,
   u: { entrada: number; saida: number; cacheLido: number; cacheEscrito: number }
 ): number {
   const m = MODELOS_DA_IA.find((x) => x.id === modelo) ?? MODELOS_DA_IA[0];
-  return (u.entrada * m.entrada + u.cacheEscrito * m.entrada * 1.25 + u.cacheLido * m.cacheLido + u.saida * m.saida) / 1e6;
+  return (u.entrada * m.entrada + u.cacheEscrito * m.entrada * 2 + u.cacheLido * m.cacheLido + u.saida * m.saida) / 1e6;
 }
 
 export type ConfigDoAtendente = {

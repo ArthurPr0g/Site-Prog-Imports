@@ -14,6 +14,10 @@ export type PerguntaDoChecklist = {
 
 export const CHECKLIST: PerguntaDoChecklist[] = [
   { chave: 'decisor', pergunta: 'Quem decide a contratação?', dica: 'Nome e cargo (dono, sócio, gerente…)', tipo: 'texto' },
+  // O "gap" (Gap Selling): como está, aonde quer chegar e quanto custa ficar como está.
+  { chave: 'estadoAtual', pergunta: 'Como está hoje?', dica: 'Nas palavras do cliente. Ex.: só indicação, agenda no caderno', tipo: 'textoLongo' },
+  { chave: 'estadoDesejado', pergunta: 'Aonde quer chegar?', dica: 'Ex.: 20 alunos novos por mês, parar de responder preço um por um', tipo: 'textoLongo' },
+  { chave: 'custoDoGap', pergunta: 'Quanto custa ficar como está?', dica: 'Clientes ou R$ por mês, nas palavras dele', tipo: 'texto' },
   {
     chave: 'origemClientes',
     pergunta: 'Como os clientes novos chegam hoje?',
