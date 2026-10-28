@@ -50,6 +50,77 @@ export async function enviarTexto(para: string, texto: string): Promise<Resultad
   }
 }
 
+async function respostaDoEnvio(r: Response): Promise<ResultadoDoEnvio> {
+  const j = (await r.json()) as { messages?: { id: string }[]; error?: { message?: string } };
+  if (!r.ok || !j.messages?.[0]?.id) return { ok: false, erro: j.error?.message ?? `HTTP ${r.status}` };
+  return { ok: true, id: j.messages[0].id };
+}
+
+/**
+ * Mensagem com opções para tocar (modo rápido, 28/10/2026): até 3 opções viram
+ * botões (título até 20 caracteres); de 4 a 10, uma lista (até 24). Só dentro da
+ * janela de 24 h. O toque volta pelo webhook como texto (o título da opção).
+ */
+export async function enviarComOpcoes(para: string, texto: string, opcoes: string[]): Promise<ResultadoDoEnvio> {
+  if (!whatsappConfigurado()) return { ok: false, erro: 'WhatsApp não configurado' };
+  const corpo = { text: texto.slice(0, 1024) };
+  const interactive =
+    opcoes.length <= 3
+      ? {
+          type: 'button',
+          body: corpo,
+          action: { buttons: opcoes.map((t, i) => ({ type: 'reply', reply: { id: `op${i}`, title: t.slice(0, 20) } })) },
+        }
+      : {
+          type: 'list',
+          body: corpo,
+          action: {
+            button: 'Ver opções',
+            sections: [{ title: 'Opções', rows: opcoes.slice(0, 10).map((t, i) => ({ id: `op${i}`, title: t.slice(0, 24) })) }],
+          },
+        };
+  try {
+    return await respostaDoEnvio(await chamar({ recipient_type: 'individual', to: para, type: 'interactive', interactive }));
+  } catch (e) {
+    return { ok: false, erro: e instanceof Error ? e.message : 'falha de rede' };
+  }
+}
+
+/** Sobe um arquivo para a Meta e manda como documento (ex.: a proposta em PDF). */
+export async function enviarDocumento(
+  para: string,
+  arquivo: Uint8Array,
+  nome: string,
+  mime: string,
+  legenda?: string
+): Promise<ResultadoDoEnvio> {
+  if (!whatsappConfigurado()) return { ok: false, erro: 'WhatsApp não configurado' };
+  try {
+    const form = new FormData();
+    form.append('messaging_product', 'whatsapp');
+    form.append('type', mime);
+    form.append('file', new Blob([new Uint8Array(arquivo)], { type: mime }), nome);
+    const up = await fetch(`${BASE}/${VERSAO}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/media`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` },
+      body: form,
+      signal: AbortSignal.timeout(30000),
+    });
+    const m = (await up.json()) as { id?: string; error?: { message?: string } };
+    if (!up.ok || !m.id) return { ok: false, erro: m.error?.message ?? `upload HTTP ${up.status}` };
+    return await respostaDoEnvio(
+      await chamar({
+        recipient_type: 'individual',
+        to: para,
+        type: 'document',
+        document: { id: m.id, filename: nome, ...(legenda ? { caption: legenda.slice(0, 1024) } : {}) },
+      })
+    );
+  } catch (e) {
+    return { ok: false, erro: e instanceof Error ? e.message : 'falha de rede' };
+  }
+}
+
 /** Marca como lida (os dois tiques azuis) e mostra "digitando…" enquanto a IA pensa. */
 export async function marcarLidaEDigitando(mensagemId: string): Promise<void> {
   if (!whatsappConfigurado()) return;

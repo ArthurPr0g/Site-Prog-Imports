@@ -7,7 +7,10 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { dbDoAtendente, type DbDoAtendente } from '@/lib/atendente/db';
-import { enviarTexto, baixarMidia, JANELA_MS } from '@/lib/atendente/whatsapp-api';
+import { enviarTexto, enviarComOpcoes, enviarDocumento, baixarMidia, JANELA_MS } from '@/lib/atendente/whatsapp-api';
+import { renderToBuffer } from '@react-pdf/renderer';
+import { PrePropostaDocument } from '@/lib/pdf/pre-proposta';
+import { montarPreProposta } from '@/lib/pdf/montar-pre-proposta';
 import { avisarArthur } from '@/lib/atendente/avisos';
 import { casesDoLead, linkDoCase } from '@/lib/cases-portfolio';
 import { siteAbreAgora } from '@/lib/atendente/site-agora';
@@ -45,7 +48,7 @@ const MARCA_INTERNA = /\[(\s*(?:aviso interno|arthur escreveu)[^\]]*)\]/gi;
 // Última barreira antes do WhatsApp: resposta com nome de ferramenta, título
 // das instruções ou chave não sai; o Arthur é chamado.
 const VAZAMENTO =
-  /resumo da conversa|estou esperando a resposta del[ea]|Mandei os exemplos pr[oa]|\*\*Painel|\[Aviso interno\]|\[Arthur escreveu\]|calcular_preco|registrar_descoberta|mudar_etapa|gerar_cobranca_do_sinal|pedir_desconto_extra|chamar_arthur|atualizar_resumo|mostrar_exemplos|SEU NOME:|MOEDA DOS PREÇOS|Desconto extra (disponível|JÁ APROVADO)|COMO ESCREVER NO WHATSAPP|SOAR COMO GENTE|PROTEÇÃO CONTRA ABUSO|GUIA DOS PACOTES|PERGUNTAS DIFÍCEIS|CHECKLIST DE DESCOBERTA|O QUE A EQUIPE APRENDEU|RESUMO DA CONVERSA ATÉ AQUI|ATENDENTE_|ANTHROPIC_|WHATSAPP_|sk-ant-|ia_(config|conversations|messages|aprendizados|usage)/;
+  /resumo da conversa|estou esperando a resposta del[ea]|Mandei os exemplos pr[oa]|\*\*Painel|\[Aviso interno\]|\[Arthur escreveu\]|calcular_preco|enviar_proposta_pdf|horarios_livres|marcar_reuniao|registrar_descoberta|mudar_etapa|gerar_cobranca_do_sinal|pedir_desconto_extra|chamar_arthur|atualizar_resumo|mostrar_exemplos|SEU NOME:|MOEDA DOS PREÇOS|Desconto extra (disponível|JÁ APROVADO)|COMO ESCREVER NO WHATSAPP|SOAR COMO GENTE|PROTEÇÃO CONTRA ABUSO|GUIA DOS PACOTES|PERGUNTAS DIFÍCEIS|CHECKLIST DE DESCOBERTA|O QUE A EQUIPE APRENDEU|RESUMO DA CONVERSA ATÉ AQUI|ATENDENTE_|ANTHROPIC_|WHATSAPP_|sk-ant-|ia_(config|conversations|messages|aprendizados|usage)/;
 
 /* ------------------------------------------------------------ configuração */
 
@@ -120,6 +123,28 @@ const tools: Anthropic.Beta.BetaTool[] = [
     name: 'calcular_preco',
     description:
       'Calcula o preço oficial (mesmo simulador do vendedor) de um pacote: trabalho, desconto de combo, mensalidade, prazo em dias úteis e formas de pagamento. Devolve o bloco da proposta já formatado para o WhatsApp. Use SEMPRE antes de falar qualquer valor ou prazo. Já aplica o desconto extra se ele foi aprovado nesta conversa.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        produto: { type: 'string', enum: ['site', 'loja', 'erp'], description: 'site, loja (loja virtual) ou erp (sistema de gestão sozinho)' },
+        nivel: { type: 'integer', enum: [0, 1, 2], description: '0 Essencial/Básico, 1 Profissional/Intermediário, 2 Premium/Avançado' },
+        com_gestao: { type: 'boolean', description: 'Combo com sistema de gestão (só para site ou loja)' },
+        nivel_gestao: { type: 'integer', enum: [0, 1, 2], description: 'Nível do sistema no combo' },
+        marca: {
+          type: 'integer',
+          enum: [0, 1, 2, 3],
+          description: '0 já tem marca; 1 Logo Essencial; 2 Identidade a partir do logo; 3 Identidade visual completa',
+        },
+      },
+      required: ['produto', 'nivel', 'com_gestao', 'nivel_gestao', 'marca'],
+      additionalProperties: false,
+    },
+    strict: true,
+  },
+  {
+    name: 'enviar_proposta_pdf',
+    description:
+      'Calcula o preço (igual a calcular_preco) e manda ao cliente, pelo WhatsApp, a proposta em PDF com o pacote, o que inclui, valores, prazo e pagamento. É o jeito padrão de passar o preço: o cliente lê quando puder e encaminha ao sócio. Depois, NÃO cole o bloco da proposta: escreva só a frase e os números principais que a ferramenta indicar.',
     input_schema: {
       type: 'object',
       properties: {
@@ -281,6 +306,9 @@ type Estado = {
   eua: boolean;
   /** Simulador do painel: as ferramentas que gravam só fingem. */
   simulado: boolean;
+  /** WhatsApp do cliente e nome que vai no PDF da proposta. */
+  contato: string;
+  nomeDoCliente: string | null;
 };
 
 const ORDEM: LeadStatus[] = ['novo', 'contatado', 'respondeu', 'reuniao', 'proposta', 'fechado'];
@@ -371,6 +399,41 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
         if (subirParaProposta) e.leadStatus = 'proposta';
       }
       return p.texto;
+    }
+    case 'enviar_proposta_pdf': {
+      // Mesmo cálculo e mesmo efeito no lead (vai para Proposta) do calcular_preco.
+      const bloco = await executar(e, 'calcular_preco', entrada);
+      if (bloco.startsWith('Pacote sem preço')) return bloco;
+      const escolha = {
+        produto: entrada.produto as 'site' | 'loja' | 'erp',
+        nivel: Number(entrada.nivel) as 0 | 1 | 2,
+        comGestao: !!entrada.com_gestao,
+        nivelGestao: Number(entrada.nivel_gestao) as 0 | 1 | 2,
+        marca: Number(entrada.marca) as 0 | 1 | 2 | 3,
+      };
+      const pre = montarPreProposta(escolha, e.tabela, e.prazos, {
+        cliente: e.nomeDoCliente,
+        vendedor: cfg.personaName,
+        descontoExtraPct: e.descontoAprovado,
+      });
+      if (!pre) return bloco;
+      const arquivo = `${pre.nomeDoArquivo}.pdf`;
+      if (!e.simulado) {
+        const pdf = await renderToBuffer(PrePropostaDocument(pre.dados));
+        const env = await enviarDocumento(e.contato, new Uint8Array(pdf), arquivo, 'application/pdf');
+        await registrar(db, conversaId, 'ia', `📄 ${arquivo}`, env.ok ? { external_id: env.id, status: 'sent' } : { status: 'failed', error: env.erro });
+        if (!env.ok) return `Não consegui mandar o PDF agora. Mande este bloco como uma mensagem própria, do jeito que veio:\n${bloco}`;
+      } else {
+        await registrar(db, conversaId, 'ia', `📄 ${arquivo} (simulação: o PDF não é enviado)`);
+      }
+      const p = pre.dados;
+      return [
+        `PDF "${arquivo}" enviado ao cliente. NÃO cole o bloco da proposta.`,
+        'Agora escreva, em mensagens curtas:',
+        `1) Uma frase dizendo que mandou a proposta em PDF e por que esse pacote resolve o caso dele, e os números principais numa linha: *Total ${p.total}*${p.aPartirDe ? ' (a partir de)' : ''} + ${p.mensal}/mês${p.prazoDias ? `, pronto em até ${p.prazoDias} dias úteis` : ''}. Se ajudar, cite o 12x: ${p.pagamento[2] ?? ''}.`,
+        '2) Use mostrar_exemplos e mande 1 ou 2 links parecidos com o caso dele.',
+        '3) Termine com opções: [[opções: Quero fechar | Tenho uma dúvida | Falar com o Arthur]]',
+      ].join('\n');
     }
     case 'registrar_descoberta': {
       if (!leadId) return 'Sem lead identificado: guardei só no resumo. Continue a conversa.';
@@ -705,6 +768,8 @@ async function responder(conversaId: string, avisoInterno?: string): Promise<str
     },
     eua: moeda === 'USD',
     simulado,
+    contato: conversa.contact_id,
+    nomeDoCliente: lead?.name ?? null,
   };
 
   // "Fora do ar" da captação pode estar velho ou ter sido falha passageira:
@@ -927,8 +992,17 @@ async function responder(conversaId: string, avisoInterno?: string): Promise<str
     // Pausa de "quem está digitando" entre uma mensagem e outra (1,2 s a 4 s,
     // pelo tamanho), para não chegarem todas no mesmo segundo.
     if (i > 0 && !simulado) await new Promise((r) => setTimeout(r, Math.min(4000, 1200 + parte.length * 30)));
-    const env = simulado ? ({ ok: true, id: `simulado-${crypto.randomUUID()}` } as const) : await enviarTexto(conversa.contact_id, parte);
-    await registrar(db, conversaId, 'ia', parte, env.ok ? { external_id: env.id, status: 'sent' } : { status: 'failed', error: env.erro });
+    // Opções para tocar no fim da mensagem: [[opções: A | B | C]] (modo rápido).
+    const marca = parte.match(/\[\[\s*opç(?:õ|o)es\s*:\s*([^\]]+)\]\]\s*$/i);
+    const opcoes = marca ? marca[1].split('|').map((o) => o.trim()).filter(Boolean).slice(0, 10) : [];
+    const texto = (marca ? parte.slice(0, marca.index).trim() : parte) || 'Escolha uma opção:';
+    const env = simulado
+      ? ({ ok: true, id: `simulado-${crypto.randomUUID()}` } as const)
+      : opcoes.length >= 2
+        ? await enviarComOpcoes(conversa.contact_id, texto, opcoes)
+        : await enviarTexto(conversa.contact_id, texto);
+    const corpo = opcoes.length >= 2 ? `${texto}\n[opções: ${opcoes.join(' | ')}]` : texto;
+    await registrar(db, conversaId, 'ia', corpo, env.ok ? { external_id: env.id, status: 'sent' } : { status: 'failed', error: env.erro });
     if (!env.ok) {
       await chamarArthur(db, cfg, conversaId, `Falha ao enviar pelo WhatsApp: ${env.erro}`, 'Mensagem não enviada');
       break;

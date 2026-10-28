@@ -137,11 +137,16 @@ export function TestarALia({ leads }: { leads: Lead[] }) {
       setMensagens([]);
     });
 
-  const enviar = () =>
+  // Opções para tocar da última mensagem da Lia (no WhatsApp viram botões).
+  const ultima = mensagens.at(-1);
+  const opcoes =
+    ultima?.author === 'ia' ? (ultima.body.match(/\n\[opções: ([^\]]+)\]$/)?.[1].split(' | ').filter(Boolean) ?? []) : [];
+
+  const enviar = (escolhida?: string) =>
     start(async () => {
-      if (!conversa || !texto.trim()) return;
-      const t = texto;
-      setTexto('');
+      const t = escolhida ?? texto;
+      if (!conversa || !t.trim()) return;
+      if (!escolhida) setTexto('');
       setMensagens((m) => [
         ...m,
         { id: `local-${m.length}`, direction: 'in', author: 'lead', body: t, status: null, error: null, createdAt: new Date().toISOString() },
@@ -241,6 +246,19 @@ export function TestarALia({ leads }: { leads: Lead[] }) {
                 </div>
               )
             )}
+            {!pending && opcoes.length > 0 && (
+              <div className="flex flex-wrap justify-end gap-1.5">
+                {opcoes.map((o) => (
+                  <button
+                    key={o}
+                    onClick={() => enviar(o)}
+                    className="rounded-full border border-accent/60 px-3 py-1 text-[12.5px] font-bold text-accent"
+                  >
+                    {o}
+                  </button>
+                ))}
+              </div>
+            )}
             {pending && <div className="text-[12px] text-fg-faded">A Lia está escrevendo…</div>}
           </div>
           {aviso && <div className="px-3 pb-2 text-[12px] text-error">A Lia não respondeu: {aviso}</div>}
@@ -259,7 +277,7 @@ export function TestarALia({ leads }: { leads: Lead[] }) {
               className={`flex-1 resize-none ${inputClass}`}
             />
             <button
-              onClick={enviar}
+              onClick={() => enviar()}
               disabled={pending || !texto.trim()}
               aria-label="Enviar"
               className="grid h-11 w-11 place-items-center rounded-full bg-accent text-page disabled:opacity-50"

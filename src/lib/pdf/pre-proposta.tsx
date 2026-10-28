@@ -13,6 +13,8 @@ export type DadosDaPreProposta = {
   validadeDias: number;
   itens: { nome: string; valor: string; inclui: string[] }[];
   desconto: string | null;
+  /** Desconto extra aprovado pelo superior (só nas propostas da Lia). */
+  condicaoEspecial?: string | null;
   total: string;
   aPartirDe: boolean;
   mensal: string;
@@ -85,6 +87,12 @@ export function PrePropostaDocument(d: DadosDaPreProposta) {
             <View style={s.totalLinha}>
               <Text>Desconto do combo</Text>
               <Text>- {d.desconto}</Text>
+            </View>
+          )}
+          {d.condicaoEspecial && (
+            <View style={s.totalLinha}>
+              <Text>Condição especial</Text>
+              <Text>- {d.condicaoEspecial}</Text>
             </View>
           )}
           <View style={s.totalLinha}>
