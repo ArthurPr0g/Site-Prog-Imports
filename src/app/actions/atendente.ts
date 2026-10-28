@@ -117,6 +117,7 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
         lastMessageAt: v.last_message_at,
         unread: v.unread,
         ultimaMensagem: v.ia_messages?.[0]?.body ?? null,
+        descoberta: (v.leads?.discovery ?? {}) as RespostasDoChecklist,
         gastoUsd: gastoPorConversa.get(v.id) ?? 0,
         isTest: v.is_test,
         marcos: {

@@ -314,6 +314,8 @@ export type ConversaDoPainel = {
   lastMessageAt: string;
   unread: number;
   ultimaMensagem: string | null;
+  /** Respostas do checklist de descoberta do lead (o resumo do topo mostra em campos). */
+  descoberta: Record<string, string | string[]>;
   /** Quanto a IA já gastou nesta conversa (US$). */
   gastoUsd: number;
   /** Lead de teste ou simulador: fora do placar, do custo e do aprendizado. */

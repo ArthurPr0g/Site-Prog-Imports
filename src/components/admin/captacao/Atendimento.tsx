@@ -35,6 +35,7 @@ import {
 } from '@/app/actions/atendente';
 import { inputClass, semCentavos } from './comum';
 import { ResultadosDaLiaPainel, TestarALia } from './LiaResultadosETeste';
+import { ResumoDaConversa } from './ResumoDaConversa';
 
 const RELER_A_CADA = 10_000;
 
@@ -738,11 +739,7 @@ function Conversa({
           <b>Precisa de você:</b> {conversa.needsHumanReason}
         </div>
       )}
-      {conversa?.summary && (
-        <div className="mx-3 mt-2 rounded-[10px] bg-card px-3 py-2 text-[12.5px] leading-snug text-fg-secondary">
-          <b>Resumo:</b> {conversa.summary}
-        </div>
-      )}
+      {conversa && <ResumoDaConversa resumo={conversa.summary} descoberta={conversa.descoberta} />}
       <div className="max-h-[440px] flex-1 space-y-2 overflow-y-auto p-3">
         {!mensagens ? (
           <div className="text-[13px] text-fg-tertiary">Carregando…</div>
