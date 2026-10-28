@@ -63,7 +63,7 @@ function Seg<T extends string | number>({
   );
 }
 
-type Cartao<T> = { valor: T; titulo: string; texto?: string; preco?: string; selo?: string; economia?: string };
+type Cartao<T> = { valor: T; titulo: string; texto?: string; preco?: string; selo?: string; economia?: string[] };
 
 /** Opções em cartões: nome, preço e para quem é, para escolher sem decorar. */
 function Cartoes<T extends string | number>({
@@ -97,7 +97,11 @@ function Cartoes<T extends string | number>({
               )}
             </span>
             {o.preco && <span className="text-[12.5px] font-bold tabular-nums text-fg-secondary">{o.preco}</span>}
-            {o.economia && <span className="text-[12px] font-bold tabular-nums text-success">{o.economia}</span>}
+            {o.economia?.map((x) => (
+              <span key={x} className="text-[12px] font-bold tabular-nums leading-snug text-success">
+                {x}
+              </span>
+            ))}
             {o.texto && <span className="text-[12px] leading-snug text-fg-tertiary">{o.texto}</span>}
           </button>
         );
@@ -207,6 +211,9 @@ export function Simulador({
     `${s.linhas.map((l) => l.nome).join(' + ')}\n` +
     `Total${s.aPartirDe ? ' (a partir de)' : ''}: ${m(s.total)}${s.desconto ? ` (já com ${m(s.desconto)} de desconto do combo)` : ''}\n` +
     `Depois: ${m(s.mensal)}/mês (hospedagem, segurança, backups e suporte)` +
+    (s.mensalSeparadas
+      ? `, em vez de ${m(s.mensalSeparadas)}: economia de ${m(s.mensalSeparadas - s.mensal)}/mês por contratar os 2 juntos`
+      : '') +
     (moeda === 'BRL'
       ? `\nPagamento: 50% no fechamento e 50% na entrega, ou 2x de ${m(s.total / 2)} sem juros no cartão, ou ${n}x de ${m(parcela(s.total, n))}.` +
         itens.map((i) => `\n\n${i.nome} inclui:\n${i.guia.inclui.map((x) => `• ${x}`).join('\n')}`).join('')
@@ -294,7 +301,7 @@ export function Simulador({
                   3. Adicionar sistema de gestão
                 </span>
                 <span className="rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-bold text-success">
-                  combo: até 20% off + 1 mensalidade só
+                  combo: até 20% off + paga só a maior mensalidade
                 </span>
               </div>
               <div className="mb-2.5 text-[12.5px] leading-snug text-fg-secondary">
@@ -308,14 +315,20 @@ export function Simulador({
                     titulo: 'Sem sistema',
                     texto: `Só ${e.produto === 'site' ? 'o site' : 'a loja'}.`,
                   },
-                  ...NIVEIS[moeda].erp.map((r, i) => ({
-                    valor: i,
-                    titulo: r,
-                    preco: precoDoNivel('erp', i),
-                    economia: `Economiza ${m(simular({ ...e, comGestao: true, nivelGestao: i as 0 | 1 | 2 }, t).desconto)} no combo`,
-                    texto: GUIA_DO_PRODUTO.erp.niveis[i].ideal,
-                    selo: GUIA_DO_PRODUTO.erp.niveis[i].maisEscolhido ? 'Mais escolhido' : undefined,
-                  })),
+                  ...NIVEIS[moeda].erp.map((r, i) => {
+                    const c = simular({ ...e, comGestao: true, nivelGestao: i as 0 | 1 | 2 }, t);
+                    return {
+                      valor: i,
+                      titulo: r,
+                      preco: precoDoNivel('erp', i),
+                      economia: [
+                        `Economiza ${m(c.desconto)} no projeto`,
+                        `e ${m((c.mensalSeparadas ?? c.mensal) - c.mensal)}/mês na mensalidade`,
+                      ],
+                      texto: GUIA_DO_PRODUTO.erp.niveis[i].ideal,
+                      selo: GUIA_DO_PRODUTO.erp.niveis[i].maisEscolhido ? 'Mais escolhido' : undefined,
+                    };
+                  }),
                 ]}
                 valor={e.comGestao ? e.nivelGestao : -1}
                 onChange={(v) =>
@@ -384,6 +397,12 @@ export function Simulador({
               {s.mensalSeparadas && <s className="ml-1">{m(s.mensalSeparadas)}</s>} · domínio grátis no 1º ano
               {prazo > 0 && moeda === 'BRL' && <> · prazo de até {prazo} dias úteis</>}
             </div>
+            {s.mensalSeparadas && (
+              <div className="mt-2 rounded-[12px] border border-success/30 bg-success/10 p-2.5 text-[13px] text-success">
+                <b>Economia de {m(s.mensalSeparadas - s.mensal)}/mês</b> na mensalidade por contratar os 2 juntos (separados
+                seriam {m(s.mensalSeparadas)}/mês), além de {m(s.desconto)} de desconto no projeto.
+              </div>
+            )}
 
             {moeda === 'BRL' ? (
               <div className="mt-3 space-y-2 text-[13px]">
