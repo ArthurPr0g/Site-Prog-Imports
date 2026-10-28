@@ -6,7 +6,8 @@ import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
 import type { TablesInsert, TablesUpdate } from '@/lib/supabase/database.types';
 import type { ModeloMensagem } from '@/lib/mensagens-lead';
-import { LEAD_STATUSES, linhasDoCsv, registrosDaImportacao, retornoDepoisDe, type LeadStatus, type Pais, motivoFantasma, emailDeVerdade } from '@/lib/captacao';
+import { LEAD_STATUSES, linhasDoCsv, registrosDaImportacao, retornoDepoisDe, type LeadStatus, type Pais, motivoFantasma, emailDeVerdade, whatsappDoLead } from '@/lib/captacao';
+import { SITE_URL } from '@/lib/seo';
 import { gravarLeads } from '@/lib/captacao-gravar';
 import { saveServiceQuoteAction } from '@/app/actions/service-quotes';
 import { listInternalServices } from '@/lib/data/internal-services';
@@ -591,7 +592,12 @@ async function assumirDoVendedor(supabase: Db, leadId: string, statusAntes: stri
  * todos (kitId null = fica com o Arthur, sem vendedor). Sai dos outros links
  * ativos. Para a IA, o lead precisa de e-mail (o primeiro contato dela).
  */
-export async function moverLeadAction(leadId: string, kitId: string | null): Promise<ActionResult> {
+export async function moverLeadAction(
+  leadId: string,
+  kitId: string | null,
+  /** semEmail: o Arthur faz o 1º contato pelo WhatsApp dele, então a IA não precisa do e-mail. */
+  opcoes: { semEmail?: boolean } = {}
+): Promise<ActionResult> {
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
   const { data: lead } = await supabase.from('leads').select('id, email, status').eq('id', leadId).maybeSingle();
@@ -601,7 +607,7 @@ export async function moverLeadAction(leadId: string, kitId: string | null): Pro
   if (kitId) {
     const { data } = await supabase.from('lead_seller_kits').select('id, seller_name, kind, active').eq('id', kitId).maybeSingle();
     if (!data?.active) return errResult('Link não encontrado ou desativado.');
-    if (data.kind === 'ia' && !(lead.email && emailDeVerdade(lead.email)))
+    if (data.kind === 'ia' && !opcoes.semEmail && !(lead.email && emailDeVerdade(lead.email)))
       return errResult('Este lead não tem e-mail: a IA chega por e-mail. Mande para o Felipe.');
     destino = data;
   }
@@ -624,6 +630,64 @@ export async function moverLeadAction(leadId: string, kitId: string | null): Pro
   revalidatePath('/admin/captacao');
   const aviso = lead.status !== 'novo' ? ' (o lead já tinha contato: o histórico continua com ele)' : '';
   return okResult(destino ? `Lead com ${destino.seller_name}${aviso}.` : 'Lead fora dos vendedores: fica com você.');
+}
+
+/**
+ * "Chamar pelo meu WhatsApp e passar para a Lia" (pedido do dono, 28/10/2026):
+ * a 1ª mensagem sai do WhatsApp do Arthur, à mão (sem risco de bloqueio por
+ * automação), com o link do diagnóstico cujo botão abre a conversa no número
+ * da Lia. Quando o cliente clica, a conversa começa por ele e a IA assume.
+ * Coloca o lead na lista da Lia (e tira dos outros links) e devolve o texto.
+ */
+export async function passarParaLiaAction(
+  leadId: string
+): Promise<ActionResult & { whatsapp?: string | null; texto?: string }> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const { data: kit } = await supabase
+    .from('lead_seller_kits')
+    .select('id, token, seller_name')
+    .eq('kind', 'ia')
+    .eq('active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!kit) return errResult('Gere antes o link da atendente de IA (aba Vendedores).');
+  const { data: lead } = await supabase.from('leads').select('name, phone, country, public_token').eq('id', leadId).maybeSingle();
+  if (!lead) return errResult('Lead não encontrado.');
+
+  const r = await moverLeadAction(leadId, kit.id, { semEmail: true });
+  if (!r.ok) return r;
+
+  const link = `${SITE_URL}/diagnostico/${lead.public_token}?k=${kit.token}`;
+  const ingles = lead.country === 'US';
+  const texto = ingles
+    ? `Hi! This is Arthur from Prog Soluções. I put together a free review of ${lead.name}'s online presence: ${link}\n\nIf it makes sense, the button at the end of the page takes you straight to ${kit.seller_name}, our assistant, who can answer your questions right away.`
+    : `Oi, tudo bem? Aqui é o Arthur, da Prog Soluções. Fiz um diagnóstico gratuito da presença online da ${lead.name}: ${link}\n\nSe fizer sentido, o botão no fim da página te leva direto para a ${kit.seller_name}, nossa assistente, que tira suas dúvidas na hora.`;
+  const wa = whatsappDoLead(lead.phone, lead.country as Pais);
+  return { ...okResult(`Lead na lista da ${kit.seller_name}. Mande a mensagem pelo seu WhatsApp.`), whatsapp: wa?.numero ?? null, texto };
+}
+
+/** Depois que o Arthur confirma que mandou: lead vira "Contatado" (se ainda era Novo). */
+export async function confirmarPassagemParaLiaAction(leadId: string): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const { data: l } = await supabase.from('leads').select('status, notes, first_contact_at').eq('id', leadId).maybeSingle();
+  if (!l) return errResult('Lead não encontrado.');
+  const agora = new Date().toISOString();
+  const hoje = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  const { error } = await supabase
+    .from('leads')
+    .update({
+      ...(l.status === 'novo' ? { status: 'contatado', first_contact_at: l.first_contact_at ?? agora } : {}),
+      last_contact_at: agora,
+      notes: [l.notes, `[Arthur ${hoje}] Chamou pelo WhatsApp dele e passou para a Lia.`].filter(Boolean).join('\n'),
+      updated_at: agora,
+    })
+    .eq('id', leadId);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível registrar.'));
+  revalidatePath('/admin/captacao');
+  return okResult('Registrado. Quando o cliente clicar no botão do diagnóstico, a Lia assume a conversa.');
 }
 
 /** Desativa (ou reativa) o link: desativado, a página do vendedor some. */

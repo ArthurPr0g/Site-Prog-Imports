@@ -4,9 +4,9 @@
 // Contato e mensagens, Oportunidade, Como agir, Ligação, Checklist, Registro),
 // com as mensagens no nome do Arthur e gravando pelas ações do painel.
 
-import { useMemo, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText } from 'lucide-react';
+import { FileText, MessageCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import type { Lead } from '@/lib/captacao';
 import { situacaoDoSite } from '@/lib/captacao';
@@ -15,7 +15,14 @@ import type { TabelaPrecos } from '@/lib/precos-captacao';
 import type { Kit, LeadDoKit } from '@/lib/vendedor';
 import { valoresDoItem, type ServicoDoCatalogo } from '@/lib/itens-do-kit';
 import { okResult } from '@/lib/action-result';
-import { registrarEnvioAction, updateLeadAction, salvarChecklistAction, criarPropostaAction } from '@/app/actions/leads';
+import {
+  registrarEnvioAction,
+  updateLeadAction,
+  salvarChecklistAction,
+  criarPropostaAction,
+  passarParaLiaAction,
+  confirmarPassagemParaLiaAction,
+} from '@/app/actions/leads';
 import { LeadDoVendedor, type AcoesDaFicha } from '@/components/vendedor/LeadDoVendedor';
 import type { KitDoVendedor } from '@/lib/data/leads';
 import { QuemAtende } from './QuemAtende';
@@ -81,6 +88,71 @@ function comoLeadDoKit(l: Lead, leads: Lead[], porNome: Map<string, ServicoDoCat
     regiao: regiaoDe(l, leads),
     ...valoresDoItem({ country: l.country, suggested_services: l.suggestedServices }, porNome, tabBRL),
   };
+}
+
+/**
+ * "Chamar pelo meu WhatsApp e passar para a Lia": a 1ª mensagem sai do WhatsApp
+ * do Arthur, à mão; o link do diagnóstico leva o cliente ao número da Lia.
+ */
+function PassarParaLia({ leadId }: { leadId: string }) {
+  const router = useRouter();
+  const toast = useToast();
+  const [pending, start] = useTransition();
+  const [aberto, setAberto] = useState(false);
+
+  const chamar = () => {
+    // Reserva a aba no clique (depois do await o navegador bloquearia o pop-up).
+    const aba = window.open('about:blank', '_blank');
+    start(async () => {
+      const r = await passarParaLiaAction(leadId);
+      if (!r.ok || !r.texto) {
+        aba?.close();
+        toast(r);
+        return;
+      }
+      const url = r.whatsapp
+        ? `https://wa.me/${r.whatsapp}?text=${encodeURIComponent(r.texto)}`
+        : `https://wa.me/?text=${encodeURIComponent(r.texto)}`;
+      if (aba) aba.location.href = url;
+      else window.open(url, '_blank');
+      if (!r.whatsapp) toast({ ok: true, message: 'Lead sem celular no cadastro: escolha o contato no WhatsApp.' });
+      setAberto(true);
+    });
+  };
+
+  const confirmar = () =>
+    start(async () => {
+      const r = await confirmarPassagemParaLiaAction(leadId);
+      toast(r);
+      if (r.ok) {
+        setAberto(false);
+        router.refresh();
+      }
+    });
+
+  return (
+    <span className="ml-2 mt-3 inline-flex flex-wrap items-center gap-2">
+      <button
+        disabled={pending}
+        onClick={chamar}
+        title="Abre o seu WhatsApp com a mensagem pronta; o botão do diagnóstico leva o cliente para a Lia"
+        className="inline-flex items-center gap-1.5 rounded-control border border-accent/60 px-4 py-2.5 text-[13.5px] font-extrabold text-accent disabled:opacity-50"
+      >
+        <MessageCircle size={15} /> Chamar pelo meu WhatsApp → Lia
+      </button>
+      {aberto && (
+        <span className="inline-flex items-center gap-1.5 rounded-control border border-accent/40 bg-accent/[.06] px-2.5 py-1.5 text-[12.5px]">
+          A mensagem saiu?
+          <button disabled={pending} onClick={confirmar} className="rounded-full bg-accent px-2.5 py-0.5 font-extrabold text-page">
+            Enviei
+          </button>
+          <button onClick={() => setAberto(false)} className="px-1 font-bold text-fg-faded" aria-label="Fechar">
+            ×
+          </button>
+        </span>
+      )}
+    </span>
+  );
 }
 
 export function FichaDoLead({
@@ -193,6 +265,8 @@ export function FichaDoLead({
         </div>
       }
       extraOportunidade={
+        <>
+        <PassarParaLia leadId={lead.id} />
         <button
           disabled={criando}
           onClick={() =>
@@ -207,6 +281,7 @@ export function FichaDoLead({
         >
           <FileText size={15} /> {criando ? 'Criando…' : 'Criar proposta no ERP'}
         </button>
+        </>
       }
     />
   );
