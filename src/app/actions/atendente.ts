@@ -26,6 +26,10 @@ import { respondidas, type RespostasDoChecklist } from '@/lib/checklist-descober
 import { responderConversa, SIMULADOR } from '@/lib/atendente/agente';
 import { dbDoAtendente } from '@/lib/atendente/db';
 import { agendaConectada, googleConfigurado } from '@/lib/google-agenda';
+import { SELECT_DO_ITEM, emailDoLead, type ItemComLead } from '@/lib/atendente/email-do-lead';
+import { enviarEmail } from '@/lib/atendente/email';
+import { lerConfig } from '@/lib/atendente/agente';
+import { emailDeVerdade } from '@/lib/captacao';
 
 async function adminClient() {
   const admin = await requireAdmin();
@@ -474,4 +478,42 @@ export async function resultadosDaLiaAction(): Promise<ResultadosDaLia | null> {
     exemplos,
     mensagensDoClienteAtePreco: validas.length ? validas.reduce((s, n) => s + n, 0) / validas.length : null,
   };
+}
+
+/**
+ * "Enviar e-mail de teste": manda para o e-mail do Arthur exatamente o 1º e-mail
+ * que o próximo lead da lista da Lia vai receber. Não registra envio nem mexe no lead.
+ */
+export async function enviarEmailDeTesteAction(para: string): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Sem permissão.');
+  const destino = para.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(destino)) return errResult('E-mail inválido.');
+  if (!emailConfigurado()) return errResult('O e-mail ainda não está configurado na Vercel (SMTP_*).');
+  const db = dbDoAtendente();
+  const cfg = await lerConfig(db);
+  const { data: itens } = await db
+    .from('lead_kit_items')
+    .select(SELECT_DO_ITEM)
+    .eq('lead_seller_kits.kind', 'ia')
+    .eq('lead_seller_kits.active', true)
+    .order('position');
+  const lista = (itens ?? []) as unknown as ItemComLead[];
+  const item =
+    lista.find((x) => x.leads.status === 'novo' && x.leads.email && emailDeVerdade(x.leads.email)) ??
+    lista.find((x) => x.leads.email);
+  if (!item) return errResult('Nenhum lead com e-mail na lista da Lia.');
+  const email = emailDoLead(cfg, item, 0);
+  if (!email) return errResult('O link da Lia está sem o WhatsApp dela: gere o link de novo na aba Vendedores.');
+  const r = await enviarEmail({
+    para: destino,
+    assunto: `[TESTE] ${email.assunto}`,
+    texto: email.corpo,
+    html: email.html,
+    nomeDoRemetente: `${cfg.personaName} | Prog Soluções`,
+    responderPara: cfg.ownerEmail,
+  });
+  return r.ok
+    ? okResult(`Enviado para ${destino} (o e-mail de ${item.leads.name}). Confira se caiu na caixa de entrada e não no spam.`)
+    : errResult(`O Gmail recusou: ${r.erro}`);
 }

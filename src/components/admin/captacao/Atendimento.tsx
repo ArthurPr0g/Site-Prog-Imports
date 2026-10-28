@@ -6,7 +6,7 @@
 // visível; o placar usa os leads do painel (relidos a cada minuto).
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { Bell, Bot, CalendarDays, CheckCircle2, CircleAlert, FlaskConical, GraduationCap, Hand, MessageCircle, Send, Settings, Sparkles, Trophy, UserRound } from 'lucide-react';
+import { Bell, Bot, CalendarDays, Mail, CheckCircle2, CircleAlert, FlaskConical, GraduationCap, Hand, MessageCircle, Send, Settings, Sparkles, Trophy, UserRound } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { LEAD_STATUS_LABEL, type Lead } from '@/lib/captacao';
 import { TrilhaDaVenda, BarraDaEtapa } from './TrilhaDaVenda';
@@ -32,6 +32,7 @@ import {
   decidirLicaoAction,
   salvarConfigAtendenteAction,
   orientarLiaAction,
+  enviarEmailDeTesteAction,
 } from '@/app/actions/atendente';
 import { inputClass, semCentavos } from './comum';
 import { ResultadosDaLiaPainel, TestarALia } from './LiaResultadosETeste';
@@ -334,6 +335,7 @@ function Situacao({ painel, cotacaoDolar }: { painel: PainelDoAtendente; cotacao
       <Cartao rotulo="E-mails de 1º contato hoje" valor={`${painel.emailsHoje} de ${c.dailyEmailCap}`} ok />
       <AvisosNoWhatsapp avisos={painel.avisos} />
       <AgendaDoGoogle estado={painel.agenda} />
+      {i.email && <EmailDeTeste padrao={c.ownerEmail ?? ''} limite={c.dailyEmailCap} />}
       {faltam.length > 0 && (
         <div className="flex items-start gap-2 rounded-[14px] border border-error/40 bg-error/[.06] px-3.5 py-2.5 text-[12.5px] sm:col-span-4">
           <CircleAlert size={15} className="mt-0.5 shrink-0 text-error" />
@@ -343,6 +345,42 @@ function Situacao({ painel, cotacaoDolar }: { painel: PainelDoAtendente; cotacao
         </div>
       )}
     </section>
+  );
+}
+
+/** Manda para o Arthur o mesmo 1º e-mail que o próximo lead da Lia vai receber. */
+function EmailDeTeste({ padrao, limite }: { padrao: string; limite: number }) {
+  const [para, setPara] = useState(padrao);
+  const [pending, start] = useTransition();
+  const toast = useToast();
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-[14px] border border-border bg-card px-3.5 py-2.5 text-[12.5px] sm:col-span-4">
+      <Mail size={13} className="text-accent" />
+      <b>E-mail de 1º contato</b>
+      <span className="text-fg-tertiary">
+        · {limite > 0 ? `até ${limite} por dia, dias úteis das 8h às 18h` : 'pausado (limite do dia em 0 na Configuração)'}
+      </span>
+      <span className="flex flex-1 flex-wrap items-center justify-end gap-1.5">
+        <input
+          value={para}
+          onChange={(e) => setPara(e.target.value)}
+          placeholder="seu e-mail"
+          className={`min-w-[200px] flex-1 sm:max-w-[260px] ${inputClass}`}
+        />
+        <button
+          disabled={pending || !para.trim()}
+          onClick={() =>
+            start(async () => {
+              const r = await seguro(() => enviarEmailDeTesteAction(para), (m) => toast({ ok: false, message: m }));
+              if (r) toast(r);
+            })
+          }
+          className="rounded-full bg-accent px-3 py-1.5 text-[12px] font-extrabold text-page disabled:opacity-50"
+        >
+          {pending ? 'Enviando…' : 'Enviar e-mail de teste'}
+        </button>
+      </span>
+    </div>
   );
 }
 

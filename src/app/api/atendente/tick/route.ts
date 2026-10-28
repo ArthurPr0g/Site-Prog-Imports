@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbDoAtendente, type DbDoAtendente } from '@/lib/atendente/db';
 import { lerConfig, responderConversa } from '@/lib/atendente/agente';
 import { enviarEmail, emailConfigurado } from '@/lib/atendente/email';
-import { emailDaEtapa, textoDoBotao, DIAS_DOS_RETORNOS } from '@/lib/atendente/regras';
+import { DIAS_DOS_RETORNOS } from '@/lib/atendente/regras';
 import type { ConfigDoAtendente } from '@/lib/atendente/regras';
-import { variaveisDoLead, linkWhatsApp } from '@/lib/mensagens-lead';
 import { emailDeVerdade } from '@/lib/captacao';
-import { SITE_URL } from '@/lib/seo';
 import { guardarArquivosDeClientes } from '@/lib/atendente/arquivos-clientes';
 import { aprenderComConversas } from '@/lib/atendente/aprender';
+import { SELECT_DO_ITEM, emailDoLead, type ItemComLead } from '@/lib/atendente/email-do-lead';
 import { garantirModeloDoAviso } from '@/lib/atendente/avisos';
 
 // Relógio do atendente: o pg_cron do Supabase chama a cada minuto (migration
@@ -91,12 +90,11 @@ function horarioComercial(): boolean {
 async function mandarEmails(db: DbDoAtendente, cfg: ConfigDoAtendente): Promise<number> {
   const { data: itens } = await db
     .from('lead_kit_items')
-    .select(
-      'kit_id, position, lead_seller_kits!inner(kind, active, token, seller_whatsapp), leads!inner(id, name, email, status, country, city, website, site_check, category, niche, review_count, rating, public_token, suggested_services, first_contact_at)'
-    )
+    .select(SELECT_DO_ITEM)
     .eq('lead_seller_kits.kind', 'ia')
     .eq('lead_seller_kits.active', true)
-    .order('position');
+    .order('position')
+    .returns<(ItemComLead & { position: number })[]>();
   if (!itens?.length) return 0;
 
   const ids = itens.map((i) => i.leads.id);
@@ -133,59 +131,11 @@ async function mandarEmails(db: DbDoAtendente, cfg: ConfigDoAtendente): Promise<
   return enviadosAgora;
 }
 
-type ItemComLead = {
-  kit_id: string;
-  lead_seller_kits: { token: string; seller_whatsapp: string | null };
-  leads: {
-    id: string;
-    name: string;
-    email: string | null;
-    status: string;
-    country: string;
-    city: string | null;
-    website: string | null;
-    site_check: string | null;
-    category: string | null;
-    niche: string | null;
-    review_count: number | null;
-    rating: number | null;
-    public_token: string;
-    suggested_services: string[];
-    first_contact_at: string | null;
-  };
-};
-
 async function mandar(db: DbDoAtendente, cfg: ConfigDoAtendente, i: ItemComLead, etapa: number): Promise<boolean> {
   const l = i.leads;
-  const numero = i.lead_seller_kits.seller_whatsapp;
-  if (!l.email || !numero) return false;
-  const ingles = l.country === 'US';
-  const v = variaveisDoLead(
-    {
-      website: l.website,
-      siteCheck: l.site_check,
-      category: l.category,
-      niche: l.niche,
-      reviewCount: l.review_count,
-      rating: l.rating,
-      name: l.name,
-      city: l.city,
-      publicToken: l.public_token,
-      suggestedServices: l.suggested_services,
-    },
-    ingles ? 'en' : 'pt',
-    SITE_URL,
-    { nome: cfg.personaName, assinatura: cfg.personaName, kit: i.lead_seller_kits.token }
-  );
-  const { assunto, corpo } = emailDaEtapa(etapa, {
-    persona: cfg.personaName,
-    empresa: l.name,
-    problema: v.problema,
-    elogio: v.elogio,
-    diagnostico: v.diagnostico,
-    whatsapp: linkWhatsApp(numero, textoDoBotao(l.name, cfg.personaName, ingles)),
-    ingles,
-  });
+  const email = l.email ? emailDoLead(cfg, i, etapa) : null;
+  if (!l.email || !email) return false;
+  const { assunto, corpo, html } = email;
 
   // Reserva a etapa antes de enviar (unique lead+etapa): dois ticks não mandam duas vezes.
   const { data: reg, error } = await db
@@ -201,6 +151,7 @@ async function mandar(db: DbDoAtendente, cfg: ConfigDoAtendente, i: ItemComLead,
     texto: corpo,
     nomeDoRemetente: `${cfg.personaName} | Prog Soluções`,
     responderPara: cfg.ownerEmail,
+    html,
   });
   const agora = new Date().toISOString();
   await db.from('ia_emails').update(r.ok ? { sent_at: agora } : { error: r.erro }).eq('id', reg.id);
