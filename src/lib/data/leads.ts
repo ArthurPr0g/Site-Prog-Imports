@@ -126,7 +126,7 @@ const digitos = (v: string | null) => (v ?? '').replace(/\D/g, '');
  * Ids dos leads que já são clientes do ERP: ligados por customer_id ou com o
  * mesmo telefone (últimos 10 dígitos, ignora DDI) ou e-mail de um cliente.
  */
-export async function leadsQueJaSaoClientes(leads: Lead[]): Promise<string[]> {
+export async function leadsQueJaSaoClientes(leads: Pick<Lead, 'id' | 'phone' | 'email' | 'customerId'>[]): Promise<string[]> {
   const supabase = await createClient();
   const { data } = await supabase.from('customers').select('phone, email');
   const fones = new Set((data ?? []).map((c) => digitos(c.phone).slice(-10)).filter((f) => f.length >= 10));
@@ -149,6 +149,8 @@ export type KitDoVendedor = {
   active: boolean;
   createdAt: string;
   leadIds: string[];
+  /** O vendedor tocou em "Pedir mais leads". */
+  moreRequestedAt: string | null;
 };
 
 /** Links de vendedor, os mais novos primeiro, com os leads de cada um. */
@@ -156,7 +158,7 @@ export async function listKits(): Promise<KitDoVendedor[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from('lead_seller_kits')
-    .select('id, token, seller_name, seller_whatsapp, active, created_at, lead_kit_items(lead_id, position)')
+    .select('id, token, seller_name, seller_whatsapp, active, created_at, more_requested_at, lead_kit_items(lead_id, position)')
     .order('created_at', { ascending: false });
   return (data ?? []).map((k) => ({
     id: k.id,
@@ -165,6 +167,7 @@ export async function listKits(): Promise<KitDoVendedor[]> {
     sellerWhatsapp: k.seller_whatsapp,
     active: k.active,
     createdAt: k.created_at,
+    moreRequestedAt: k.more_requested_at,
     leadIds: [...(k.lead_kit_items ?? [])].sort((a, b) => a.position - b.position).map((i) => i.lead_id),
   }));
 }

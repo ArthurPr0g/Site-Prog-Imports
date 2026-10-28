@@ -11,7 +11,7 @@ import { LEAD_STATUS_LABEL, type Lead, type LeadStatus } from '@/lib/captacao';
 import { respondidas } from '@/lib/checklist-descoberta';
 import { linkWhatsApp } from '@/lib/mensagens-lead';
 import type { KitDoVendedor } from '@/lib/data/leads';
-import { criarKitAction, alternarKitAction } from '@/app/actions/leads';
+import { criarKitAction, alternarKitAction, adicionarAoKitAction, type FiltrosDoKit } from '@/app/actions/leads';
 import { inputClass } from './comum';
 
 const LIMITE = 20;
@@ -22,12 +22,15 @@ export function Vendedores({
   kits,
   leadsPorId,
   origem,
+  filtros,
 }: {
   /** Leads do filtro atual que podem ir para um vendedor (novos, sem link ativo). */
   candidatos: Lead[];
   kits: KitDoVendedor[];
   leadsPorId: Map<string, Lead>;
   origem: string;
+  /** Filtros atuais do painel: ficam guardados no link para o "Adicionar mais 20". */
+  filtros: FiltrosDoKit;
 }) {
   const [pending, startTransition] = useTransition();
   const toast = useToast();
@@ -47,6 +50,7 @@ export function Vendedores({
         sellerWhatsapp: whats,
         sellerEmail: email,
         instructions: recado,
+        filtros,
       });
       toast(r);
       if (r.ok && r.token) setNovo({ token: r.token, nome: nome.trim(), whats: whats.replace(/\D/g, '') });
@@ -211,6 +215,24 @@ export function Vendedores({
                       </button>
                     </div>
                   </div>
+                  {k.moreRequestedAt && k.active && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 rounded-[12px] border border-accent/50 bg-accent/[.08] px-3 py-2 text-[12.5px]">
+                      <b className="text-accent">{k.sellerName} pediu mais leads</b>
+                      <span className="text-fg-tertiary">em {formatDateBR(k.moreRequestedAt)}</span>
+                    </div>
+                  )}
+                  {k.active && (
+                    <button
+                      onClick={() => startTransition(async () => toast(await adicionarAoKitAction(k.id)))}
+                      disabled={pending}
+                      title="Os próximos 20 de maior nota, com os mesmos filtros de quando o link foi gerado"
+                      className={`mt-2 rounded-control px-3 py-1.5 text-[12.5px] font-extrabold disabled:opacity-50 ${
+                        k.moreRequestedAt ? 'bg-accent text-page' : 'border border-border-strong text-fg-secondary'
+                      }`}
+                    >
+                      Adicionar mais 20
+                    </button>
+                  )}
                   <div className="mt-2 flex flex-wrap gap-1.5 text-[11.5px] font-bold">
                     <span className="rounded-full bg-fg-faded/12 px-2 py-0.5 text-fg-secondary">{aContatar} a contatar</span>
                     {contagem.map(([s, n]) => (

@@ -1596,6 +1596,22 @@ para o painel, seleção pelos 20 melhores do filtro.
   (sem ele o dnd-kit dá erro de hidratação). No quadro do vendedor "Não
   contatar" não é coluna (fica junto de "Sem interesse"; marca-se no Registro) e
   "Fechado" é só com o dono.
+- **Aba Hoje** (abre primeiro): "Ligue agora" (abriu o diagnóstico em 48 h →
+  abre o lead direto na aba Ligação), "Retornos de hoje" (sequência vencida →
+  aba Contato) e "Próximos a contatar" (5 de maior nota).
+- **Roteiro de ligação** (`roteiroDoLead(l, vendedor).ligacao`, aba Ligação do
+  lead): fala por fala com o achado do site em uma frase, o que fazer em cada
+  situação (não é quem decide, caixa postal, ocupado…) e dicas.
+- **Cases do mesmo ramo** (`src/lib/cases-portfolio.ts`, aba Oportunidade): até
+  3 trabalhos do portfólio, com texto copiado do `content.js` do portfólio (sem
+  números inventados) e link `/pt/projetos/<slug>` ou `/en/projects/<slug>`.
+  Mudou um case no portfólio, mude aqui.
+- **Pedir mais leads:** o vendedor toca no botão (destaque com ≤ 5 "A contatar")
+  → `lead_kit_pedir_mais` grava `more_requested_at` → o painel mostra "pediu mais
+  leads" e o botão **Adicionar mais 20** (`adicionarAoKitAction`): os próximos
+  Novos de maior nota com os mesmos filtros guardados em `lead_seller_kits.filters`
+  na hora de gerar o link, fora de outro link ativo e que não são clientes; limpa
+  o pedido.
 
 ## Em aberto
 

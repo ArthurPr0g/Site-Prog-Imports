@@ -457,8 +457,10 @@ export type Database = {
           active: boolean
           catalog: Json
           created_at: string
+          filters: Json
           id: string
           instructions: string | null
+          more_requested_at: string | null
           seller_email: string | null
           seller_name: string
           seller_whatsapp: string | null
@@ -468,8 +470,10 @@ export type Database = {
           active?: boolean
           catalog?: Json
           created_at?: string
+          filters?: Json
           id?: string
           instructions?: string | null
+          more_requested_at?: string | null
           seller_email?: string | null
           seller_name: string
           seller_whatsapp?: string | null
@@ -479,8 +483,10 @@ export type Database = {
           active?: boolean
           catalog?: Json
           created_at?: string
+          filters?: Json
           id?: string
           instructions?: string | null
+          more_requested_at?: string | null
           seller_email?: string | null
           seller_name?: string
           seller_whatsapp?: string | null
@@ -2522,6 +2528,7 @@ export type Database = {
         }
         Returns: string
       }
+      lead_kit_pedir_mais: { Args: { p_token: string }; Returns: string }
       lead_kit_descoberta: {
         Args: { p_dados: Json; p_lead: string; p_token: string }
         Returns: string

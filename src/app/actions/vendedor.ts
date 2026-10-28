@@ -40,6 +40,17 @@ export async function registrarPeloVendedorAction(
   return okResult(dados.etapaEnviada !== undefined ? 'Envio registrado.' : 'Salvo.');
 }
 
+/** "Pedir mais leads": avisa o Arthur no painel (ele adiciona mais 20 ao link). */
+export async function pedirMaisLeadsAction(token: string): Promise<ActionResult> {
+  if (!UUID.test(token)) return errResult('Link inválido.');
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('lead_kit_pedir_mais', { p_token: token });
+  if (error) return errResult('Não foi possível enviar o pedido. Tente de novo.');
+  if (data !== 'ok') return errResult(String(data));
+  revalidar(token);
+  return okResult('Pedido enviado. O Arthur vai adicionar mais leads aqui.');
+}
+
 export async function salvarChecklistDoVendedorAction(
   token: string,
   leadId: string,

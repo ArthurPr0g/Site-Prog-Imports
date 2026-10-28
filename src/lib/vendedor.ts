@@ -55,6 +55,8 @@ export type Kit = {
   seller_email: string | null;
   instructions: string | null;
   created_at: string;
+  /** Quando o vendedor pediu mais leads (o Arthur ainda não atendeu). */
+  more_requested_at: string | null;
   catalog: ItemDoCatalogo[];
   templates: ModeloMensagem[];
   leads: LeadDoKit[];

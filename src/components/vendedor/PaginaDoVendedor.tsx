@@ -3,8 +3,22 @@
 // Página do vendedor: leads (quadro ou lista), simulador de preços, perguntas
 // difíceis e o passo a passo da venda. Funciona igual no celular e no computador.
 
-import { useMemo, useState } from 'react';
-import { LayoutGrid, List, Calculator, HelpCircle, Route, Flame, ClipboardCheck, MessageCircle } from 'lucide-react';
+import { useMemo, useState, useTransition } from 'react';
+import {
+  LayoutGrid,
+  List,
+  Calculator,
+  HelpCircle,
+  Route,
+  Flame,
+  ClipboardCheck,
+  MessageCircle,
+  Sun,
+  Phone,
+  CalendarClock,
+  Send,
+  PlusCircle,
+} from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { Kanban } from '@/components/kanban/Kanban';
 import { formatMoeda } from '@/lib/precos-captacao';
@@ -22,12 +36,16 @@ import {
   type LeadDoKit,
 } from '@/lib/vendedor';
 import type { Escolha } from '@/lib/simulador';
-import { registrarPeloVendedorAction } from '@/app/actions/vendedor';
+import { registrarPeloVendedorAction, pedirMaisLeadsAction } from '@/app/actions/vendedor';
 import { Simulador } from './Simulador';
 import { PerguntasDificeis, PerguntarAoArthur } from './PerguntasDificeis';
-import { LeadDoVendedor } from './LeadDoVendedor';
+import { LeadDoVendedor, type AbaDoLead } from './LeadDoVendedor';
 
-type Aba = 'leads' | 'simulador' | 'perguntas' | 'como';
+type Aba = 'hoje' | 'leads' | 'simulador' | 'perguntas' | 'como';
+
+/** Com até tantos leads ainda "A contatar", o botão de pedir mais fica em destaque. */
+const POUCOS_LEADS = 5;
+const ENCERRADOS: LeadStatus[] = ['fechado', 'perdido', 'nao_contatar'];
 
 /** Pré-seleção do simulador a partir dos serviços sugeridos do lead. */
 function escolhaDoLead(l: LeadDoKit): Partial<Escolha> {
@@ -90,16 +108,19 @@ export function PaginaDoVendedor({
 }) {
   const toast = useToast();
   const [agora] = useState(() => Date.now());
-  const [aba, setAba] = useState<Aba>('leads');
+  const [aba, setAba] = useState<Aba>('hoje');
   const [vista, setVista] = useState<'quadro' | 'lista'>('quadro');
-  const [aberto, setAberto] = useState<string | null>(null);
+  const [aberto, setAbertoComAba] = useState<{ id: string; aba: AbaDoLead } | null>(null);
+  const setAberto = (id: string | null, abaDoLead: AbaDoLead = 'analise') => setAbertoComAba(id ? { id, aba: abaDoLead } : null);
+  const [pedindo, startPedido] = useTransition();
+  const [pedidoEm, setPedidoEm] = useState(kit.more_requested_at);
   const [presetSimulador, setPresetSimulador] = useState<{
     chave: number;
     escolha: Partial<Escolha>;
     moeda: 'BRL' | 'USD';
   } | null>(null);
   const vendedor = primeiroNome(kit.seller_name);
-  const leadAberto = kit.leads.find((l) => l.id === aberto) ?? null;
+  const leadAberto = kit.leads.find((l) => l.id === aberto?.id) ?? null;
 
   const progresso = useMemo(() => {
     const total = kit.leads.length;
@@ -123,7 +144,40 @@ export function PaginaDoVendedor({
     [kit.leads]
   );
 
+  // Tela "Hoje": o que fazer agora, em ordem de prioridade.
+  const hoje = useMemo(() => {
+    const dia = new Date(agora).toISOString().slice(0, 10);
+    const ativos = kit.leads.filter((l) => !ENCERRADOS.includes(l.status));
+    const quentes = ativos
+      .filter((l) => l.diag_last_view_at && agora - Date.parse(l.diag_last_view_at) < 48 * 3600 * 1000)
+      .sort((a, b) => Date.parse(b.diag_last_view_at!) - Date.parse(a.diag_last_view_at!));
+    const ids = new Set(quentes.map((l) => l.id));
+    const retornos = ativos
+      .map((l) => ({ l, prox: proximaEtapa(comoLeadDoPainel(l)) }))
+      .filter(({ l, prox }) => !ids.has(l.id) && !!prox && prox.etapa > 0 && !!prox.vence && prox.vence <= dia)
+      .sort((a, b) => (a.prox!.vence ?? '').localeCompare(b.prox!.vence ?? ''));
+    const aContatar = kit.leads.filter((l) => l.status === 'novo');
+    return {
+      quentes,
+      retornos,
+      proximos: aContatar
+        .filter((l) => !ids.has(l.id))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5),
+      restantes: aContatar.length,
+    };
+  }, [kit.leads, agora]);
+  const tarefasDeHoje = hoje.quentes.length + hoje.retornos.length + hoje.proximos.length;
+
+  const pedirMais = () =>
+    startPedido(async () => {
+      const r = await pedirMaisLeadsAction(token);
+      toast(r);
+      if (r.ok) setPedidoEm(new Date().toISOString());
+    });
+
   const abas: [Aba, string, typeof LayoutGrid][] = [
+    ['hoje', 'Hoje', Sun],
     ['leads', 'Leads', LayoutGrid],
     ['simulador', 'Simulador', Calculator],
     ['perguntas', 'Perguntas difíceis', HelpCircle],
@@ -175,6 +229,102 @@ export function PaginaDoVendedor({
           </button>
         ))}
       </nav>
+
+      {aba === 'hoje' && (
+        <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+          <div className="space-y-3">
+            {tarefasDeHoje === 0 && (
+              <section className="rounded-[18px] border border-border bg-card p-5 text-[14px] text-fg-tertiary">
+                Nada pendente para hoje. Veja o quadro na aba Leads ou peça mais leads ao Arthur.
+              </section>
+            )}
+            {(
+              [
+                {
+                  lista: hoje.quentes.map((l) => ({ l, nota: 'Abriu o diagnóstico' })),
+                  titulo: 'Ligue agora',
+                  Icone: Flame,
+                  cor: 'text-[#ff8a5c]',
+                  aba: 'ligacao' as AbaDoLead,
+                  acao: 'Ver roteiro de ligação',
+                },
+                {
+                  lista: hoje.retornos.map(({ l, prox }) => ({ l, nota: NOME_DA_ETAPA[prox!.etapa] })),
+                  titulo: 'Retornos de hoje',
+                  Icone: CalendarClock,
+                  cor: 'text-error',
+                  aba: 'contato' as AbaDoLead,
+                  acao: 'Abrir mensagem',
+                },
+                {
+                  lista: hoje.proximos.map((l) => ({ l, nota: `Nota ${l.score}` })),
+                  titulo: 'Próximos a contatar',
+                  Icone: Send,
+                  cor: 'text-accent',
+                  aba: 'contato' as AbaDoLead,
+                  acao: 'Abrir mensagem',
+                },
+              ] as const
+            )
+              .filter((g) => g.lista.length > 0)
+              .map((g) => (
+                <section key={g.titulo} className="rounded-[18px] border border-border bg-card p-4 sm:p-5">
+                  <div className={`mb-3 flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-[.08em] ${g.cor}`}>
+                    <g.Icone size={15} /> {g.titulo} ({g.lista.length})
+                  </div>
+                  <div className="space-y-2">
+                    {g.lista.map(({ l, nota }) => (
+                      <div
+                        key={l.id}
+                        className="flex flex-wrap items-center gap-2 rounded-[12px] border border-border bg-page/40 p-2.5"
+                      >
+                        <button onClick={() => setAberto(l.id)} className="min-w-0 flex-1 text-left">
+                          <div className="truncate text-[14px] font-bold">{l.name}</div>
+                          <div className="truncate text-[12px] text-fg-tertiary">
+                            {nota} · {formatMoeda(l.one_time, l.currency)}
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => setAberto(l.id, g.aba)}
+                          className="inline-flex items-center gap-1.5 rounded-control bg-accent px-3 py-2 text-[12.5px] font-extrabold text-page"
+                        >
+                          {g.aba === 'ligacao' ? <Phone size={13} /> : <MessageCircle size={13} />} {g.acao}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
+          </div>
+
+          <section
+            className={`h-fit rounded-[18px] border p-4 sm:p-5 ${hoje.restantes <= POUCOS_LEADS ? 'border-accent/50 bg-accent/[.06]' : 'border-border bg-card'}`}
+          >
+            <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">Seus leads</div>
+            <div className="mt-1 font-display text-[22px] font-bold">{hoje.restantes} ainda a contatar</div>
+            <p className="mt-1 text-[13px] leading-relaxed text-fg-tertiary">
+              {hoje.restantes <= POUCOS_LEADS
+                ? 'Estão acabando. Peça mais e o Arthur adiciona outros 20 nesta mesma página.'
+                : 'Quando estiverem acabando, peça mais por aqui.'}
+            </p>
+            {pedidoEm ? (
+              <p className="mt-3 rounded-[12px] bg-success/12 px-3 py-2 text-[13px] font-bold text-success">
+                Pedido enviado. Os novos leads aparecem aqui assim que o Arthur adicionar.
+              </p>
+            ) : (
+              <button
+                onClick={pedirMais}
+                disabled={pedindo}
+                className={`mt-3 inline-flex items-center gap-2 rounded-control px-4 py-2.5 text-[13.5px] font-extrabold disabled:opacity-50 ${
+                  hoje.restantes <= POUCOS_LEADS ? 'bg-accent text-page' : 'border border-border-strong text-fg-secondary'
+                }`}
+              >
+                <PlusCircle size={15} /> Pedir mais leads
+              </button>
+            )}
+          </section>
+        </div>
+      )}
 
       {aba === 'leads' && (
         <>
@@ -309,8 +459,9 @@ export function PaginaDoVendedor({
 
       {leadAberto && (
         <LeadDoVendedor
-          key={leadAberto.id}
+          key={`${leadAberto.id}-${aberto?.aba}`}
           lead={leadAberto}
+          abaInicial={aberto?.aba}
           kit={kit}
           token={token}
           origem={origem}

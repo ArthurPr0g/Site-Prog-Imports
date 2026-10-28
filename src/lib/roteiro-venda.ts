@@ -17,6 +17,24 @@ export type Roteiro = {
   argumentos: string[];
   objecoes: { objecao: string; resposta: string }[];
   proximoPasso: string;
+  /** Roteiro para ligar (lead quente ou sem WhatsApp): fala por fala. */
+  ligacao: {
+    falas: { momento: string; fala: string }[];
+    situacoes: { se: string; faca: string }[];
+    dicas: string[];
+  };
+};
+
+// O que dizer em uma frase, ao telefone, sobre o achado do site.
+const ACHADO_NA_LIGACAO: Record<SituacaoDoSite, string> = {
+  sem_site: 'notei que vocês ainda não têm um site próprio aparecendo no Google',
+  rede_social: 'notei que o link de vocês no Google leva para o Instagram, e não para um site',
+  parado: 'notei que o endereço do site de vocês está à venda, ou seja, o site saiu do ar',
+  fora: 'tentei abrir o site de vocês e ele não está abrindo',
+  sem_celular: 'abri o site de vocês no celular e ele não se adapta à tela',
+  sem_https: 'o site de vocês aparece como "não seguro" no navegador',
+  vende_online: 'vi que vocês já vendem online e trabalho justamente com a parte de gestão por trás disso',
+  ok: 'vi o site de vocês e trabalho com sites e sistemas para negócios como o de vocês',
 };
 
 type LeadDoRoteiro = {
@@ -62,7 +80,7 @@ function temServico(l: LeadDoRoteiro, prefixo: string) {
   return l.suggested_services.some((s) => s.startsWith(prefixo));
 }
 
-export function roteiroDoLead(l: LeadDoRoteiro): Roteiro {
+export function roteiroDoLead(l: LeadDoRoteiro, vendedor: string): Roteiro {
   const sit = situacaoDoSite(l.website, l.site_check);
   const eua = l.country === 'US';
   const n = l.review_count ?? 0;
@@ -142,7 +160,56 @@ export function roteiroDoLead(l: LeadDoRoteiro): Roteiro {
     });
   }
 
+  const ligacao: Roteiro['ligacao'] = {
+    falas: [
+      {
+        momento: 'Apresentação (5 s)',
+        // Sem artigo antes do nome da empresa ("pela Centro de Ensino" erra o gênero).
+        fala: `Oi, tudo bem? Meu nome é ${vendedor}, sou da Prog Soluções. Esse número é de ${l.name}? Falo com o responsável ou com quem cuida da divulgação?`,
+      },
+      { momento: 'Pedir licença (5 s)', fala: 'Prometo ser rápido, uns dois minutinhos. Pode falar agora?' },
+      {
+        momento: 'Motivo da ligação (15 s)',
+        fala: `${boaFama ? `Encontrei vocês no Google Maps, com ${n} avaliações e nota ${String(l.rating).replace('.', ',')}, parabéns! ${ACHADO_NA_LIGACAO[sit].charAt(0).toUpperCase()}${ACHADO_NA_LIGACAO[sit].slice(1)}` : `Encontrei vocês no Google Maps e ${ACHADO_NA_LIGACAO[sit]}`}.`,
+      },
+      { momento: 'Pergunta (deixe o cliente falar)', fala: 'Hoje, como os clientes novos chegam até vocês?' },
+      {
+        momento: 'Próximo passo',
+        fala: 'Eu montei um diagnóstico gratuito da presença online de vocês. Posso te mandar agora pelo WhatsApp, neste número mesmo?',
+      },
+      {
+        momento: 'Se mostrar interesse',
+        fala: 'Que tal uma conversa de 20 minutos com o Arthur, nosso responsável técnico, para te mostrar exemplos parecidos com o de vocês? Qual o melhor dia e horário?',
+      },
+    ],
+    situacoes: [
+      {
+        se: 'Não é quem decide',
+        faca: 'Pergunte o nome de quem decide e o melhor horário para falar com essa pessoa; anote no Checklist (campo "Quem decide").',
+      },
+      {
+        se: 'Pediu para mandar pelo WhatsApp',
+        faca: 'Diga "claro, mando agora" e envie a mensagem pronta do primeiro contato. Depois toque em "Enviei".',
+      },
+      {
+        se: 'Não atendeu ou caiu na caixa postal',
+        faca: 'Não deixe recado longo. Mande a mensagem do WhatsApp e tente ligar de novo em outro período do dia (manhã x tarde).',
+      },
+      {
+        se: 'Disse que está ocupado',
+        faca: 'Pergunte qual o melhor horário para retornar, marque a data no Registro e mande o diagnóstico pelo WhatsApp enquanto isso.',
+      },
+      { se: 'Não quer ser contatado', faca: 'Agradeça, peça desculpas pelo incômodo e marque "Não contatar" no Registro.' },
+    ],
+    dicas: [
+      'Ligue fora do horário de pico do negócio (ex.: salão no meio da manhã, restaurante antes do almoço).',
+      'Fale com calma e sorrindo: no telefone, o tom conta mais que as palavras.',
+      'Na dúvida técnica, use a frase da aba Perguntas difíceis e pergunte ao Arthur.',
+    ],
+  };
+
   return {
+    ligacao,
     oportunidade: OPORTUNIDADE[sit],
     abertura: `${elogio} Depois, aponte o que encontramos: ${OPORTUNIDADE[sit].charAt(0).toLowerCase()}${OPORTUNIDADE[sit].slice(1)} Mande o link do diagnóstico, que mostra isso com os dados da própria empresa.`,
     perguntas,

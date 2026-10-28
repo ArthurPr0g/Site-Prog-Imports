@@ -4,7 +4,22 @@
 // mensagens, Oportunidade, Como agir, Checklist e Registro.
 
 import { useState, useTransition } from 'react';
-import { X, MessageCircle, Mail, Phone, Globe, AtSign, MapPin, FileSearch, Copy, Check, Star, Flame } from 'lucide-react';
+import {
+  X,
+  MessageCircle,
+  Mail,
+  Phone,
+  Globe,
+  AtSign,
+  MapPin,
+  FileSearch,
+  Copy,
+  Check,
+  Star,
+  Flame,
+  ExternalLink,
+} from 'lucide-react';
+import { casesDoLead, linkDoCase } from '@/lib/cases-portfolio';
 import { useToast } from '@/components/ui/Toast';
 import { ChecklistForm } from '@/components/checklist/ChecklistForm';
 import { whatsappDoLead, proximaEtapa, situacaoDoSite, urlComProtocolo, NOME_DA_ETAPA, CANAL_DA_ETAPA } from '@/lib/captacao';
@@ -35,10 +50,12 @@ const ABAS = [
   ['contato', 'Contato e mensagens'],
   ['oportunidade', 'Oportunidade'],
   ['agir', 'Como agir'],
+  ['ligacao', 'Ligação'],
   ['checklist', 'Checklist'],
   ['registro', 'Registro'],
 ] as const;
-type Aba = (typeof ABAS)[number][0];
+export type AbaDoLead = (typeof ABAS)[number][0];
+type Aba = AbaDoLead;
 
 const SITUACAO: Record<string, string> = {
   sem_site: 'Sem site próprio',
@@ -88,6 +105,7 @@ export function LeadDoVendedor({
   whatsArthur,
   onFechar,
   onSimular,
+  abaInicial = 'analise',
 }: {
   lead: LeadDoKit;
   kit: Kit;
@@ -96,9 +114,11 @@ export function LeadDoVendedor({
   whatsArthur: string;
   onFechar: () => void;
   onSimular: () => void;
+  /** Aba que abre primeiro (a tela Hoje abre direto em Contato ou Ligação). */
+  abaInicial?: AbaDoLead;
 }) {
   const toast = useToast();
-  const [aba, setAba] = useState<Aba>('analise');
+  const [aba, setAba] = useState<Aba>(abaInicial);
   const [pending, startTransition] = useTransition();
   // Lido uma vez ao abrir: o selo "quente" não precisa mudar com a tela aberta.
   const [agora] = useState(() => Date.now());
@@ -118,7 +138,9 @@ export function LeadDoVendedor({
   const assunto = mE ? preencher(mE.subject ?? '', vars) : '';
   const textoE = mE ? preencher(mE.body, vars) : '';
   const wa = l.sem_whatsapp ? null : whatsappDoLead(l.phone, l.country);
-  const roteiro = roteiroDoLead(l);
+  const roteiro = roteiroDoLead(l, vendedor);
+  const cases = casesDoLead(l);
+  const eua = l.country === 'US';
   const sit = situacaoDoSite(l.website, l.site_check);
   const m = (v: number) => formatMoeda(v, l.currency);
   const quente = !!l.diag_last_view_at && agora - Date.parse(l.diag_last_view_at) < 48 * 3600 * 1000;
@@ -180,6 +202,7 @@ export function LeadDoVendedor({
             {ABAS.map(([a, nome]) => (
               <button
                 key={a}
+                ref={aba === a ? (el) => el?.scrollIntoView({ inline: 'center', block: 'nearest' }) : undefined}
                 onClick={() => setAba(a)}
                 className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2.5 text-[13px] font-bold ${aba === a ? 'border-accent text-accent' : 'border-transparent text-fg-tertiary'}`}
               >
@@ -261,6 +284,14 @@ export function LeadDoVendedor({
                     >
                       <Phone size={14} /> {l.phone}
                     </a>
+                  )}
+                  {l.phone && (
+                    <button
+                      onClick={() => setAba('ligacao')}
+                      className="inline-flex items-center gap-1.5 rounded-control border border-accent/50 px-3 py-2 text-[13px] font-bold text-accent"
+                    >
+                      Roteiro de ligação
+                    </button>
                   )}
                   {l.email && (
                     <a
@@ -421,6 +452,88 @@ export function LeadDoVendedor({
                 >
                   Simular outras opções
                 </button>
+              </Bloco>
+              <Bloco titulo="Trabalhos parecidos para mostrar">
+                <div className="space-y-2.5">
+                  {cases.map(({ caso, porque }) => {
+                    const link = linkDoCase(caso.slug, eua);
+                    return (
+                      <div key={caso.slug} className="rounded-[12px] border border-border bg-page/40 p-3">
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <span className="text-[14px] font-bold">{caso.titulo}</span>
+                          <span className="text-[11.5px] font-bold text-fg-faded">{caso.tipo}</span>
+                        </div>
+                        <p className="mt-1 text-[12.5px] font-bold text-accent">{porque}</p>
+                        <p className="mt-1 text-[12.5px] leading-relaxed text-fg-tertiary">
+                          <b className="text-fg-secondary">Antes:</b> {caso.antes} <b className="text-fg-secondary">Depois:</b>{' '}
+                          {caso.depois}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <a
+                            href={link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-control border border-border-strong px-3 py-1.5 text-[12.5px] font-bold"
+                          >
+                            <ExternalLink size={13} /> Ver o case
+                          </a>
+                          <Copiar
+                            texto={
+                              eua
+                                ? `Here's a project I did for a business like yours (${caso.tipo.toLowerCase()}): ${link}`
+                                : `Olha um trabalho que fizemos parecido com o que vocês precisam (${caso.tipo.toLowerCase()}): ${link}`
+                            }
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-[12px] text-fg-tertiary">
+                  Use quando o cliente pedir exemplo ou na objeção &quot;vou pensar&quot;.
+                </p>
+              </Bloco>
+            </>
+          )}
+
+          {aba === 'ligacao' && (
+            <>
+              <Bloco titulo="Fala por fala (uns 2 minutos)">
+                <ol className="space-y-3">
+                  {roteiro.ligacao.falas.map((f, i) => (
+                    <li key={f.momento}>
+                      <div className="text-[11.5px] font-extrabold uppercase tracking-[.06em] text-accent">
+                        {i + 1}. {f.momento}
+                      </div>
+                      <div className="mt-0.5 text-[14.5px] leading-relaxed">“{f.fala}”</div>
+                    </li>
+                  ))}
+                </ol>
+                {l.phone && (
+                  <a
+                    href={`tel:${l.phone.replace(/[^\d+]/g, '')}`}
+                    className="mt-4 inline-flex items-center gap-2 rounded-control bg-accent px-4 py-2.5 text-[14px] font-extrabold text-page"
+                  >
+                    <Phone size={15} /> Ligar para {l.phone}
+                  </a>
+                )}
+              </Bloco>
+              <Bloco titulo="Se acontecer…">
+                <div className="space-y-2.5">
+                  {roteiro.ligacao.situacoes.map((x) => (
+                    <div key={x.se}>
+                      <div className="text-[13.5px] font-extrabold">{x.se}</div>
+                      <div className="text-[13.5px] leading-relaxed text-fg-secondary">{x.faca}</div>
+                    </div>
+                  ))}
+                </div>
+              </Bloco>
+              <Bloco titulo="Dicas">
+                <ul className="space-y-1.5 text-[13.5px] leading-relaxed">
+                  {roteiro.ligacao.dicas.map((d) => (
+                    <li key={d}>• {d}</li>
+                  ))}
+                </ul>
               </Bloco>
             </>
           )}

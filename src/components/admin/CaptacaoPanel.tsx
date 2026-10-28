@@ -457,6 +457,13 @@ export function CaptacaoPanel({
             kits={kits}
             leadsPorId={leadsPorId}
             origem={origem}
+            filtros={{
+              pais: pais || undefined,
+              ramo: ramo || undefined,
+              servico: servico || undefined,
+              notaMin: notaMin || undefined,
+              busca: busca.trim() || undefined,
+            }}
           />
         </>
       )}

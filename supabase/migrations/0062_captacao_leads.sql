@@ -319,6 +319,11 @@ create table if not exists public.lead_seller_kits (
   instructions text,          -- recado do dono no topo da página
   -- Catálogo de serviços no momento do envio (simulador e "o que inclui").
   catalog jsonb not null default '[]',
+  -- Filtros do painel quando o link foi gerado (ramo, país, nota...): o
+  -- "Adicionar mais 20" usa os mesmos.
+  filters jsonb not null default '{}',
+  -- O vendedor tocou em "Pedir mais leads" (aparece para o dono na aba Vendedores).
+  more_requested_at timestamptz,
   active boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -357,6 +362,7 @@ as $$
     'seller_email', k.seller_email,
     'instructions', k.instructions,
     'catalog', k.catalog,
+    'more_requested_at', k.more_requested_at,
     'created_at', k.created_at,
     'templates', (
       select coalesce(jsonb_agg(jsonb_build_object(
@@ -476,6 +482,22 @@ $$;
 
 revoke all on function public.lead_kit_descoberta(uuid, uuid, jsonb) from public;
 grant execute on function public.lead_kit_descoberta(uuid, uuid, jsonb) to anon, authenticated;
+
+-- "Pedir mais leads": só marca o pedido; quem adiciona é o dono, no painel.
+create or replace function public.lead_kit_pedir_mais(p_token uuid)
+returns text
+language sql
+volatile
+security definer
+set search_path = public
+as $$
+  update public.lead_seller_kits set more_requested_at = now()
+  where token = p_token and active
+  returning 'ok';
+$$;
+
+revoke all on function public.lead_kit_pedir_mais(uuid) from public;
+grant execute on function public.lead_kit_pedir_mais(uuid) to anon, authenticated;
 
 revoke all on function public.lead_kit(uuid) from public;
 revoke all on function public.lead_kit_atualizar(uuid, uuid, text, text, integer) from public;

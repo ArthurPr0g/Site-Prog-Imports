@@ -10,6 +10,7 @@ import { LEAD_STATUSES, linhasDoCsv, registrosDaImportacao, retornoDepoisDe, typ
 import { gravarLeads } from '@/lib/captacao-gravar';
 import { saveServiceQuoteAction } from '@/app/actions/service-quotes';
 import { listInternalServices } from '@/lib/data/internal-services';
+import { leadsQueJaSaoClientes } from '@/lib/data/leads';
 import { ajustarCombosEMensalidades } from '@/lib/combo-servicos';
 import { PLAN_MONTHS_DEFAULT, type ServiceOrderItem } from '@/lib/services';
 import { SEM_DESCONTO } from '@/lib/discount';
@@ -363,59 +364,43 @@ export async function cancelarBuscaAction(id: string): Promise<ActionResult> {
 
 /* ------------------------------------------------------------ página do vendedor */
 
+/** Filtros do painel na hora de gerar o link (o "Adicionar mais 20" usa os mesmos). */
+export type FiltrosDoKit = { pais?: string; ramo?: string; servico?: string; notaMin?: number; busca?: string };
+
 export type NovoKit = {
   leadIds: string[];
   sellerName: string;
   sellerWhatsapp: string;
   sellerEmail: string;
   instructions: string;
+  filtros: FiltrosDoKit;
 };
 
 const LIMITE_DO_KIT = 20;
 
-/**
- * Gera o link do vendedor com até 20 leads. Guarda o retrato dos preços e das
- * descrições do catálogo de agora: o vendedor vende pelo preço que recebeu.
- */
-export async function criarKitAction(input: NovoKit): Promise<ActionResult & { token?: string }> {
-  const supabase = await adminClient();
-  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
-  const nome = input.sellerName.trim();
-  if (!nome) return errResult('Informe o nome do vendedor.');
-  const ids = [...new Set(input.leadIds)].slice(0, LIMITE_DO_KIT);
-  if (ids.length === 0) return errResult('Nenhum lead para enviar com esses filtros.');
-  let whats = input.sellerWhatsapp.replace(/\D/g, '');
-  if (whats && whats.length <= 11) whats = `55${whats}`;
-
-  const { data: leads } = await supabase.from('leads').select('id, country, suggested_services').in('id', ids);
-  if (!leads?.length) return errResult('Leads não encontrados.');
-
+async function catalogoAtivo() {
   const catalogo = (await listInternalServices()).filter((s) => s.active);
-  const porNome = new Map(catalogo.map((s) => [s.name, s]));
-  const tabBRL = tabelaBRL(new Map(catalogo.map((s) => [s.name, s.price])));
+  return {
+    catalogo,
+    porNome: new Map(catalogo.map((s) => [s.name, s])),
+    tabBRL: tabelaBRL(new Map(catalogo.map((s) => [s.name, s.price]))),
+  };
+}
 
-  const { data: kit, error } = await supabase
-    .from('lead_seller_kits')
-    .insert({
-      seller_name: nome,
-      seller_whatsapp: whats || null,
-      seller_email: input.sellerEmail.trim() || null,
-      instructions: input.instructions.trim() || null,
-      catalog: catalogo.map((s) => ({
-        nome: s.name,
-        categoria: s.category,
-        descricao: s.description,
-        preco: s.price,
-        mensal: s.billingType === 'mensal',
-        prazoDias: s.leadTimeDays,
-      })),
-    })
-    .select('id, token')
-    .single();
-  if (error || !kit) return errResult(friendlyDbError(error, 'Não foi possível criar o link.'));
-
-  const ordem = new Map(ids.map((id, i) => [id, i]));
-  const itens = leads.map((l) => {
+/**
+ * Itens do link: retrato do valor e dos serviços (com descrição e preço do
+ * catálogo de agora) de cada lead. O vendedor vende pelo preço que recebeu.
+ */
+async function montarItensDoKit(
+  supabase: NonNullable<Awaited<ReturnType<typeof adminClient>>>,
+  kitId: string,
+  ids: string[],
+  primeiraPosicao: number
+) {
+  const { data: leads } = await supabase.from('leads').select('id, country, suggested_services').in('id', ids);
+  const { porNome, tabBRL } = await catalogoAtivo();
+  const ordem = new Map(ids.map((id, i) => [id, primeiraPosicao + i]));
+  return (leads ?? []).map((l) => {
     const e = estimar(l.suggested_services, l.country === 'US' ? TABELA_USD : tabBRL);
     const nomes = [...l.suggested_services];
     for (const n of l.suggested_services) {
@@ -423,9 +408,9 @@ export async function criarKitAction(input: NovoKit): Promise<ActionResult & { t
       if (m && !nomes.includes(m)) nomes.push(m);
     }
     return {
-      kit_id: kit.id,
+      kit_id: kitId,
       lead_id: l.id,
-      position: ordem.get(l.id) ?? 0,
+      position: ordem.get(l.id) ?? primeiraPosicao,
       currency: e.moeda,
       one_time: e.unico,
       monthly: e.mensal,
@@ -442,13 +427,111 @@ export async function criarKitAction(input: NovoKit): Promise<ActionResult & { t
         })),
     };
   });
+}
+
+/** Gera o link do vendedor com até 20 leads (os escolhidos na tela, pelos filtros). */
+export async function criarKitAction(input: NovoKit): Promise<ActionResult & { token?: string }> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const nome = input.sellerName.trim();
+  if (!nome) return errResult('Informe o nome do vendedor.');
+  const ids = [...new Set(input.leadIds)].slice(0, LIMITE_DO_KIT);
+  if (ids.length === 0) return errResult('Nenhum lead para enviar com esses filtros.');
+  let whats = input.sellerWhatsapp.replace(/\D/g, '');
+  if (whats && whats.length <= 11) whats = `55${whats}`;
+
+  const { catalogo } = await catalogoAtivo();
+  const { data: kit, error } = await supabase
+    .from('lead_seller_kits')
+    .insert({
+      seller_name: nome,
+      seller_whatsapp: whats || null,
+      seller_email: input.sellerEmail.trim() || null,
+      instructions: input.instructions.trim() || null,
+      filters: input.filtros,
+      catalog: catalogo.map((s) => ({
+        nome: s.name,
+        categoria: s.category,
+        descricao: s.description,
+        preco: s.price,
+        mensal: s.billingType === 'mensal',
+        prazoDias: s.leadTimeDays,
+      })),
+    })
+    .select('id, token')
+    .single();
+  if (error || !kit) return errResult(friendlyDbError(error, 'Não foi possível criar o link.'));
+
+  const itens = await montarItensDoKit(supabase, kit.id, ids, 0);
   const { error: erroItens } = await supabase.from('lead_kit_items').insert(itens);
-  if (erroItens) {
+  if (erroItens || itens.length === 0) {
     await supabase.from('lead_seller_kits').delete().eq('id', kit.id);
     return errResult(friendlyDbError(erroItens, 'Não foi possível montar o link.'));
   }
   revalidatePath('/admin/captacao');
   return { ...okResult(`Link criado com ${itens.length} lead(s) para ${nome}.`), token: kit.token };
+}
+
+/**
+ * "Adicionar mais 20": os próximos leads de maior nota com os mesmos filtros do
+ * link, ainda Novos, fora de outro link ativo e que não são clientes. Atende o
+ * "Pedir mais leads" do vendedor (limpa o pedido).
+ */
+export async function adicionarAoKitAction(kitId: string): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const { data: kit } = await supabase.from('lead_seller_kits').select('id, filters, active').eq('id', kitId).maybeSingle();
+  if (!kit) return errResult('Link não encontrado.');
+  if (!kit.active) return errResult('Reative o link antes de adicionar leads.');
+  const f = (kit.filters ?? {}) as FiltrosDoKit;
+
+  // Leads já em algum link ativo (inclusive este) não entram de novo.
+  const { data: emUso } = await supabase
+    .from('lead_kit_items')
+    .select('lead_id, kit_id, lead_seller_kits!inner(active)')
+    .eq('lead_seller_kits.active', true);
+  const ocupados = new Set((emUso ?? []).map((i) => i.lead_id));
+  const { data: posicoes } = await supabase
+    .from('lead_kit_items')
+    .select('position')
+    .eq('kit_id', kitId)
+    .order('position', { ascending: false })
+    .limit(1);
+
+  let q = supabase
+    .from('leads')
+    .select('id, name, city, niche, state, phone, email, customer_id, score')
+    .eq('status', 'novo')
+    .is('customer_id', null)
+    .gte('score', f.notaMin ?? 0)
+    .order('score', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(400);
+  if (f.pais) q = q.eq('country', f.pais);
+  if (f.ramo) q = q.eq('niche', f.ramo);
+  if (f.servico) q = q.contains('suggested_services', [f.servico]);
+  const { data: candidatos } = await q;
+  const termo = (f.busca ?? '').trim().toLowerCase();
+  const livres = (candidatos ?? []).filter(
+    (l) => !ocupados.has(l.id) && (!termo || [l.name, l.city, l.niche, l.state].some((c) => c?.toLowerCase().includes(termo)))
+  );
+  // Mesma regra do painel para "já é cliente" (telefone ou e-mail de um cliente).
+  const clientes = new Set(
+    await leadsQueJaSaoClientes(livres.map((l) => ({ id: l.id, phone: l.phone, email: l.email, customerId: l.customer_id })))
+  );
+  const ids = livres
+    .filter((l) => !clientes.has(l.id))
+    .slice(0, LIMITE_DO_KIT)
+    .map((l) => l.id);
+  if (ids.length === 0)
+    return errResult('Não há mais leads livres com os filtros deste link. Gere um link novo com outros filtros.');
+
+  const itens = await montarItensDoKit(supabase, kitId, ids, (posicoes?.[0]?.position ?? 0) + 1);
+  const { error } = await supabase.from('lead_kit_items').insert(itens);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível adicionar os leads.'));
+  await supabase.from('lead_seller_kits').update({ more_requested_at: null }).eq('id', kitId);
+  revalidatePath('/admin/captacao');
+  return okResult(`${itens.length} lead(s) adicionados ao link.`);
 }
 
 /** Desativa (ou reativa) o link: desativado, a página do vendedor some. */
