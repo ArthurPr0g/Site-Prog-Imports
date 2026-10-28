@@ -156,6 +156,8 @@ export type KitDoVendedor = {
   token: string;
   sellerName: string;
   sellerWhatsapp: string | null;
+  /** 'ia' = a atendente de IA (migration 0067). */
+  kind: 'pessoa' | 'ia';
   active: boolean;
   createdAt: string;
   leadIds: string[];
@@ -168,13 +170,14 @@ export async function listKits(): Promise<KitDoVendedor[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from('lead_seller_kits')
-    .select('id, token, seller_name, seller_whatsapp, active, created_at, more_requested_at, lead_kit_items(lead_id, position)')
+    .select('id, token, seller_name, seller_whatsapp, kind, active, created_at, more_requested_at, lead_kit_items(lead_id, position)')
     .order('created_at', { ascending: false });
   return (data ?? []).map((k) => ({
     id: k.id,
     token: k.token,
     sellerName: k.seller_name,
     sellerWhatsapp: k.seller_whatsapp,
+    kind: k.kind === 'ia' ? 'ia' : 'pessoa',
     active: k.active,
     createdAt: k.created_at,
     moreRequestedAt: k.more_requested_at,

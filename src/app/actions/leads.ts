@@ -6,7 +6,7 @@ import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
 import type { TablesInsert, TablesUpdate } from '@/lib/supabase/database.types';
 import type { ModeloMensagem } from '@/lib/mensagens-lead';
-import { LEAD_STATUSES, linhasDoCsv, registrosDaImportacao, retornoDepoisDe, type LeadStatus, type Pais, motivoFantasma } from '@/lib/captacao';
+import { LEAD_STATUSES, linhasDoCsv, registrosDaImportacao, retornoDepoisDe, type LeadStatus, type Pais, motivoFantasma, emailDeVerdade } from '@/lib/captacao';
 import { gravarLeads } from '@/lib/captacao-gravar';
 import { saveServiceQuoteAction } from '@/app/actions/service-quotes';
 import { listInternalServices } from '@/lib/data/internal-services';
@@ -376,6 +376,8 @@ export type NovoKit = {
   sellerEmail: string;
   instructions: string;
   filtros: FiltrosDoKit;
+  /** Link da atendente de IA: só leads com e-mail (o primeiro contato dela é por e-mail). */
+  ia?: boolean;
 };
 
 const LIMITE_DO_KIT = 20;
@@ -416,8 +418,15 @@ export async function criarKitAction(input: NovoKit): Promise<ActionResult & { t
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
   const nome = input.sellerName.trim();
   if (!nome) return errResult('Informe o nome do vendedor.');
-  const ids = [...new Set(input.leadIds)].slice(0, LIMITE_DO_KIT);
-  if (ids.length === 0) return errResult('Nenhum lead para enviar com esses filtros.');
+  let ids = [...new Set(input.leadIds)];
+  if (input.ia) {
+    const { data: comEmail } = await supabase.from('leads').select('id, email').in('id', ids).not('email', 'is', null);
+    const ok = new Set((comEmail ?? []).filter((l) => l.email && emailDeVerdade(l.email)).map((l) => l.id));
+    ids = ids.filter((id) => ok.has(id));
+  }
+  ids = ids.slice(0, LIMITE_DO_KIT);
+  if (ids.length === 0)
+    return errResult(input.ia ? 'Nenhum lead com e-mail nesses filtros (a IA chega por e-mail).' : 'Nenhum lead para enviar com esses filtros.');
   let whats = input.sellerWhatsapp.replace(/\D/g, '');
   if (whats && whats.length <= 11) whats = `55${whats}`;
 
@@ -430,6 +439,7 @@ export async function criarKitAction(input: NovoKit): Promise<ActionResult & { t
       seller_email: input.sellerEmail.trim() || null,
       instructions: input.instructions.trim() || null,
       filters: input.filtros,
+      kind: input.ia ? 'ia' : 'pessoa',
       catalog: catalogo.map((s) => ({
         nome: s.name,
         categoria: s.category,
@@ -461,11 +471,11 @@ export async function criarKitAction(input: NovoKit): Promise<ActionResult & { t
 export async function adicionarAoKitAction(kitId: string): Promise<ActionResult> {
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
-  const { data: kit } = await supabase.from('lead_seller_kits').select('id, filters, active').eq('id', kitId).maybeSingle();
+  const { data: kit } = await supabase.from('lead_seller_kits').select('id, filters, active, kind').eq('id', kitId).maybeSingle();
   if (!kit) return errResult('Link não encontrado.');
   if (!kit.active) return errResult('Reative o link antes de adicionar leads.');
 
-  const ids = await leadsLivresParaOKit(supabase, (kit.filters ?? {}) as FiltrosDoKit, LIMITE_DO_KIT);
+  const ids = await leadsLivresParaOKit(supabase, (kit.filters ?? {}) as FiltrosDoKit, LIMITE_DO_KIT, kit.kind === 'ia');
   if (ids.length === 0)
     return errResult('Não há mais leads livres com os filtros deste link. Gere um link novo com outros filtros.');
 
@@ -496,7 +506,7 @@ const ETAPAS_DE_CONVERSA: LeadStatus[] = ['contatado', 'respondeu', 'reuniao', '
  * Os próximos leads de maior nota com os filtros do link: ainda Novos, fora de
  * outro link ativo, que não passaram para o Arthur e que não são clientes.
  */
-async function leadsLivresParaOKit(supabase: Db, f: FiltrosDoKit, quantidade: number): Promise<string[]> {
+async function leadsLivresParaOKit(supabase: Db, f: FiltrosDoKit, quantidade: number, comEmail = false): Promise<string[]> {
   // Leads já em algum link ativo (inclusive este) não entram de novo; nem os que o Arthur assumiu.
   const [{ data: emUso }, { data: assumidos }] = await Promise.all([
     supabase.from('lead_kit_items').select('lead_id, kit_id, lead_seller_kits!inner(active)').eq('lead_seller_kits.active', true),
@@ -516,11 +526,13 @@ async function leadsLivresParaOKit(supabase: Db, f: FiltrosDoKit, quantidade: nu
   if (f.pais) q = q.eq('country', f.pais);
   if (f.ramo) q = q.eq('niche', f.ramo);
   if (f.servico) q = q.contains('suggested_services', [f.servico]);
+  if (comEmail) q = q.not('email', 'is', null);
   const { data: candidatos } = await q;
   const termo = (f.busca ?? '').trim().toLowerCase();
   const livres = (candidatos ?? []).filter(
     (l) =>
       !ocupados.has(l.id) &&
+      (!comEmail || (!!l.email && emailDeVerdade(l.email))) &&
       // Possível empresa fantasma (fechada ou parada) não vai para o vendedor.
       !motivoFantasma({ mapsStatus: l.maps_status, lastReviewAt: l.last_review_at, reviewCount: l.review_count, phone: l.phone, email: l.email }) &&
       (!termo || [l.name, l.city, l.niche, l.state].some((c) => c?.toLowerCase().includes(termo)))
@@ -545,7 +557,7 @@ async function assumirDoVendedor(supabase: Db, leadId: string, statusAntes: stri
   if (statusAntes !== 'novo') return '';
   const { data: itens } = await supabase
     .from('lead_kit_items')
-    .select('kit_id, lead_seller_kits!inner(active, seller_name, filters)')
+    .select('kit_id, lead_seller_kits!inner(active, seller_name, filters, kind)')
     .eq('lead_id', leadId)
     .eq('lead_seller_kits.active', true);
   if (!itens?.length) return '';
@@ -559,7 +571,7 @@ async function assumirDoVendedor(supabase: Db, leadId: string, statusAntes: stri
     if (error) continue; // sem o registro, o lead fica onde está
     await supabase.from('lead_kit_items').delete().match({ kit_id: item.kit_id, lead_id: leadId });
 
-    const [novo] = await leadsLivresParaOKit(supabase, (kit.filters ?? {}) as FiltrosDoKit, 1);
+    const [novo] = await leadsLivresParaOKit(supabase, (kit.filters ?? {}) as FiltrosDoKit, 1, kit.kind === 'ia');
     if (novo) {
       const reposto = await montarItensDoKit(supabase, item.kit_id, [novo], (await ultimaPosicao(supabase, item.kit_id)) + 1);
       const { error: erroNovo } = await supabase.from('lead_kit_items').insert(reposto);
@@ -572,6 +584,46 @@ async function assumirDoVendedor(supabase: Db, leadId: string, statusAntes: stri
     avisos.push(`saiu da lista de ${kit.seller_name} (não havia outro lead livre com os filtros do link para repor)`);
   }
   return avisos.length ? ` Este lead ${avisos.join('; ')}.` : '';
+}
+
+/**
+ * Orquestração: manda um lead para um vendedor (Felipe, a IA…) ou tira de
+ * todos (kitId null = fica com o Arthur, sem vendedor). Sai dos outros links
+ * ativos. Para a IA, o lead precisa de e-mail (o primeiro contato dela).
+ */
+export async function moverLeadAction(leadId: string, kitId: string | null): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const { data: lead } = await supabase.from('leads').select('id, email, status').eq('id', leadId).maybeSingle();
+  if (!lead) return errResult('Lead não encontrado.');
+
+  let destino: { id: string; seller_name: string; kind: string } | null = null;
+  if (kitId) {
+    const { data } = await supabase.from('lead_seller_kits').select('id, seller_name, kind, active').eq('id', kitId).maybeSingle();
+    if (!data?.active) return errResult('Link não encontrado ou desativado.');
+    if (data.kind === 'ia' && !(lead.email && emailDeVerdade(lead.email)))
+      return errResult('Este lead não tem e-mail: a IA chega por e-mail. Mande para o Felipe.');
+    destino = data;
+  }
+
+  const { data: atuais } = await supabase
+    .from('lead_kit_items')
+    .select('kit_id, lead_seller_kits!inner(active)')
+    .eq('lead_id', leadId)
+    .eq('lead_seller_kits.active', true);
+  const sair = (atuais ?? []).map((i) => i.kit_id).filter((k) => k !== kitId);
+  if (sair.length) {
+    const { error } = await supabase.from('lead_kit_items').delete().eq('lead_id', leadId).in('kit_id', sair);
+    if (error) return errResult(friendlyDbError(error, 'Não foi possível tirar o lead do link atual.'));
+  }
+  if (destino && !(atuais ?? []).some((i) => i.kit_id === destino.id)) {
+    const itens = await montarItensDoKit(supabase, destino.id, [leadId], (await ultimaPosicao(supabase, destino.id)) + 1);
+    const { error } = await supabase.from('lead_kit_items').insert(itens);
+    if (error) return errResult(friendlyDbError(error, 'Não foi possível mandar o lead.'));
+  }
+  revalidatePath('/admin/captacao');
+  const aviso = lead.status !== 'novo' ? ' (o lead já tinha contato: o histórico continua com ele)' : '';
+  return okResult(destino ? `Lead com ${destino.seller_name}${aviso}.` : 'Lead fora dos vendedores: fica com você.');
 }
 
 /** Desativa (ou reativa) o link: desativado, a página do vendedor some. */

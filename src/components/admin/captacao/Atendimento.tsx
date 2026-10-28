@@ -1,0 +1,620 @@
+'use client';
+
+// Aba Atendimento: o placar de quem converte mais (Felipe × IA, em tempo real),
+// as conversas da atendente de IA no WhatsApp, os pedidos de desconto extra
+// esperando o "superior" e a configuração. Relê tudo a cada 10 s com a aba
+// visível; o placar usa os leads do painel (relidos a cada minuto).
+
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { Bot, CheckCircle2, CircleAlert, Hand, MessageCircle, Send, Settings, Trophy, UserRound } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
+import { LEAD_STATUS_LABEL, type Lead } from '@/lib/captacao';
+import type { KitDoVendedor } from '@/lib/data/leads';
+import {
+  MODELOS_DA_IA,
+  placar,
+  type ConfigDoAtendente,
+  type ConversaDoPainel,
+  type MensagemDoPainel,
+  type PainelDoAtendente,
+  type Vendedor,
+} from '@/lib/atendente/regras';
+import {
+  painelDoAtendenteAction,
+  mensagensDaConversaAction,
+  responderComoArthurAction,
+  alternarModoAction,
+  resolverChamadoAction,
+  decidirDescontoAction,
+  salvarConfigAtendenteAction,
+} from '@/app/actions/atendente';
+import { inputClass, semCentavos } from './comum';
+
+const RELER_A_CADA = 10_000;
+const pct = (v: number | null) => (v === null ? '–' : `${Math.round(v * 100)}%`);
+const hora = (iso: string) =>
+  new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+export function Atendimento({
+  kits,
+  leads,
+  valorDoLead,
+  aoAbrirLead,
+}: {
+  kits: KitDoVendedor[];
+  leads: Lead[];
+  /** Implementação e mensalidade em reais (mesma estimativa do painel). */
+  valorDoLead: (id: string) => { unico: number; mensal: number };
+  aoAbrirLead: (id: string) => void;
+}) {
+  const [painel, setPainel] = useState<PainelDoAtendente | null>(null);
+  const [lidoEm, setLidoEm] = useState<number | null>(null);
+  // Link do e-mail de aviso: ?conversa=<id> abre a conversa (a aba só monta no navegador).
+  const [aberta, setAberta] = useState<string | null>(() =>
+    typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('conversa')
+  );
+  const [filtro, setFiltro] = useState<'todas' | 'precisa' | 'comigo'>('todas');
+
+  const reler = useCallback(async () => {
+    const p = await painelDoAtendenteAction();
+    setPainel(p);
+    setLidoEm(Date.now());
+  }, []);
+
+  useEffect(() => {
+    const tick = () => {
+      if (document.visibilityState === 'visible') void reler();
+    };
+    tick();
+    const t = window.setInterval(tick, RELER_A_CADA);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      window.clearInterval(t);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [reler]);
+
+  // Placar: um vendedor por pessoa (links do mesmo nome somam) e a IA.
+  const linhas = useMemo(() => {
+    const porChave = new Map<string, Vendedor>();
+    for (const k of kits) {
+      const chave = k.kind === 'ia' ? 'ia' : k.sellerName.trim().toLowerCase();
+      const v = porChave.get(chave) ?? { chave, nome: k.sellerName, ia: k.kind === 'ia', leadIds: [] };
+      v.leadIds.push(...k.leadIds);
+      porChave.set(chave, v);
+    }
+    return placar([...porChave.values()], leads, valorDoLead);
+  }, [kits, leads, valorDoLead]);
+
+  const conversas = (painel?.conversas ?? []).filter((c) =>
+    filtro === 'precisa' ? c.needsHuman : filtro === 'comigo' ? c.mode === 'humano' : true
+  );
+  const aguardando = (painel?.pedidos ?? []).filter((p) => p.status === 'aguardando');
+  const precisam = (painel?.conversas ?? []).filter((c) => c.needsHuman).length;
+
+  return (
+    <div className="space-y-4">
+      <Placar linhas={linhas} lidoEm={lidoEm} />
+
+      {painel && <Situacao painel={painel} />}
+
+      {aguardando.length > 0 && (
+        <section className="rounded-[18px] border border-accent/50 bg-accent/[.06] p-4 sm:p-5">
+          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-accent">
+            Desconto extra esperando você (o &quot;superior&quot;)
+          </div>
+          <div className="space-y-2">
+            {aguardando.map((p) => (
+              <PedidoAguardando key={p.id} pedido={p} aoAbrir={() => setAberta(p.conversationId)} aoDecidir={reler} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="rounded-[18px] border border-border bg-card p-3 sm:p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+          <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+            <MessageCircle size={13} /> Conversas no WhatsApp
+          </div>
+          <div className="flex gap-1.5 text-[12px] font-bold">
+            {(
+              [
+                ['todas', 'Todas'],
+                ['precisa', `Precisam de você${precisam ? ` (${precisam})` : ''}`],
+                ['comigo', 'Com você'],
+              ] as const
+            ).map(([k, t]) => (
+              <button
+                key={k}
+                onClick={() => setFiltro(k)}
+                className={`rounded-full px-3 py-1 ${filtro === k ? 'bg-accent text-page' : 'border border-border-strong text-fg-secondary'}`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+        {!painel ? (
+          <div className="p-3 text-[13px] text-fg-tertiary">Carregando…</div>
+        ) : conversas.length === 0 ? (
+          <div className="p-3 text-[13px] text-fg-tertiary">
+            Nenhuma conversa ainda. Elas aparecem aqui quando um lead chama a atendente no WhatsApp.
+          </div>
+        ) : (
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,320px)_1fr]">
+            <ul className={`max-h-[560px] space-y-1 overflow-y-auto ${aberta ? 'hidden lg:block' : ''}`}>
+              {conversas.map((c) => (
+                <li key={c.id}>
+                  <ItemDaConversa c={c} ativa={aberta === c.id} aoAbrir={() => setAberta(c.id)} />
+                </li>
+              ))}
+            </ul>
+            {aberta ? (
+              <Conversa
+                key={aberta}
+                conversa={painel.conversas.find((c) => c.id === aberta) ?? null}
+                id={aberta}
+                versao={lidoEm}
+                aoVoltar={() => setAberta(null)}
+                aoMudar={reler}
+                aoAbrirLead={aoAbrirLead}
+              />
+            ) : (
+              <div className="hidden place-items-center rounded-[14px] border border-dashed border-border p-6 text-[13px] text-fg-tertiary lg:grid">
+                Escolha uma conversa.
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {painel && <Configuracao inicial={painel.config} aoSalvar={reler} />}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------ placar */
+
+function Placar({ linhas, lidoEm }: { linhas: ReturnType<typeof placar>; lidoEm: number | null }) {
+  if (linhas.length === 0) {
+    return (
+      <section className="rounded-[18px] border border-border bg-card p-4 text-[13px] text-fg-tertiary sm:p-5">
+        <div className="mb-1 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+          <Trophy size={13} /> Quem converte mais
+        </div>
+        Gere os links do Felipe e da IA na aba Vendedores para o placar começar.
+      </section>
+    );
+  }
+  const melhor = linhas[0];
+  return (
+    <section className="rounded-[18px] border border-border bg-card p-4 sm:p-5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+          <Trophy size={13} /> Quem converte mais
+        </div>
+        <span className="text-[11.5px] text-fg-faded">
+          ao vivo{lidoEm ? ` · lido às ${new Date(lidoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : ''}
+        </span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {linhas.map((l) => (
+          <div
+            key={l.chave}
+            className={`rounded-[14px] border p-3.5 ${l === melhor && l.fechados > 0 ? 'border-success/60 bg-success/[.06]' : 'border-border bg-page/40'}`}
+          >
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-[15px] font-extrabold">
+                {l.ia ? <Bot size={15} /> : <UserRound size={15} />} {l.nome}
+                {l.ia && <span className="rounded-full bg-accent/12 px-2 py-0.5 text-[10.5px] text-accent">IA</span>}
+              </div>
+              {l === melhor && l.fechados > 0 && <Trophy size={16} className="text-success" />}
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <Numero rotulo="fechados" valor={String(l.fechados)} destaque />
+              <Numero rotulo="conversão" valor={pct(l.taxaFechamento)} />
+              <Numero rotulo="resposta" valor={pct(l.taxaResposta)} />
+            </div>
+            <Funil l={l} />
+            <div className="mt-2 text-[12px] text-fg-tertiary">
+              {l.valorFechado > 0
+                ? `${semCentavos(l.valorFechado)} + ${semCentavos(l.mensalFechado)}/mês fechados pela tabela`
+                : 'Nenhum fechamento ainda'}
+              {` · ${l.emNegociacao} em negociação · ${l.perdidos} perdidos`}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2.5 text-[11.5px] leading-snug text-fg-faded">
+        Conversão = fechados ÷ contatados; resposta = responderam ÷ contatados. Cada um tem a sua lista de leads, então compare
+        também quantos já foram contatados.
+      </p>
+    </section>
+  );
+}
+
+function Numero({ rotulo, valor, destaque }: { rotulo: string; valor: string; destaque?: boolean }) {
+  return (
+    <div className="rounded-[10px] bg-card px-2 py-2">
+      <div className={`tabular-nums ${destaque ? 'text-[22px]' : 'text-[18px]'} font-extrabold`}>{valor}</div>
+      <div className="text-[11px] font-bold text-fg-tertiary">{rotulo}</div>
+    </div>
+  );
+}
+
+function Funil({ l }: { l: ReturnType<typeof placar>[number] }) {
+  const etapas = [
+    ['Leads', l.leads],
+    ['Contatados', l.contatados],
+    ['Responderam', l.responderam],
+    ['Reunião', l.reunioes],
+    ['Proposta', l.propostas],
+    ['Fechados', l.fechados],
+  ] as const;
+  const max = Math.max(1, l.leads);
+  return (
+    <div className="mt-3 space-y-1">
+      {etapas.map(([nome, n]) => (
+        <div key={nome} className="flex items-center gap-2 text-[11.5px]">
+          <span className="w-[84px] shrink-0 text-fg-tertiary">{nome}</span>
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-fg-faded/12">
+            <div className="h-full rounded-full bg-accent transition-[width] duration-700" style={{ width: `${(n / max) * 100}%` }} />
+          </div>
+          <span className="w-7 text-right font-bold tabular-nums">{n}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------ situação */
+
+function Situacao({ painel }: { painel: PainelDoAtendente }) {
+  const i = painel.integracoes;
+  const faltam = [
+    !i.whatsapp && 'WhatsApp (WHATSAPP_*)',
+    !i.ia && 'IA (ANTHROPIC_API_KEY)',
+    !i.banco && 'banco (ATENDENTE_SUPABASE_KEY)',
+    !i.relogio && 'relógio (ATENDENTE_TICK_SECRET)',
+    !i.email && 'e-mail (SMTP_*)',
+  ].filter(Boolean);
+  const c = painel.config;
+  return (
+    <section className="grid gap-3 sm:grid-cols-4">
+      <Cartao rotulo="Atendente" valor={c.active ? `${c.personaName} ligada` : 'Desligada'} ok={c.active} />
+      <Cartao
+        rotulo="Gasto com IA no mês"
+        valor={`US$ ${painel.gastoDoMes.toFixed(2)} de ${c.monthlyBudgetUsd.toFixed(0)}`}
+        ok={painel.gastoDoMes < c.monthlyBudgetUsd * 0.8}
+      />
+      <Cartao rotulo="Mensagens no mês (grátis até 1.000)" valor={painel.mensagensDoMes.toLocaleString('pt-BR')} ok={painel.mensagensDoMes < 900} />
+      <Cartao rotulo="E-mails de 1º contato hoje" valor={`${painel.emailsHoje} de ${c.dailyEmailCap}`} ok />
+      {faltam.length > 0 && (
+        <div className="flex items-start gap-2 rounded-[14px] border border-error/40 bg-error/[.06] px-3.5 py-2.5 text-[12.5px] sm:col-span-4">
+          <CircleAlert size={15} className="mt-0.5 shrink-0 text-error" />
+          <span>
+            <b>Falta configurar na Vercel:</b> {faltam.join(', ')}. Passo a passo em docs/ATENDENTE-IA.md.
+          </span>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function Cartao({ rotulo, valor, ok }: { rotulo: string; valor: string; ok: boolean }) {
+  return (
+    <div className="rounded-[14px] border border-border bg-card px-3.5 py-2.5">
+      <div className="text-[11px] font-bold text-fg-tertiary">{rotulo}</div>
+      <div className={`text-[14px] font-extrabold ${ok ? '' : 'text-error'}`}>{valor}</div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------ desconto */
+
+function PedidoAguardando({
+  pedido,
+  aoAbrir,
+  aoDecidir,
+}: {
+  pedido: PainelDoAtendente['pedidos'][number];
+  aoAbrir: () => void;
+  aoDecidir: () => void;
+}) {
+  const [pending, start] = useTransition();
+  const toast = useToast();
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setAgora(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  const falta = Math.max(0, new Date(pedido.releaseAt).getTime() - agora);
+  const decidir = (d: 'aprovado' | 'negado') =>
+    start(async () => {
+      toast(await decidirDescontoAction(pedido.id, d));
+      aoDecidir();
+    });
+  return (
+    <div className="flex flex-wrap items-center gap-2.5 rounded-[12px] bg-card px-3 py-2.5 text-[13px]">
+      <button onClick={aoAbrir} className="font-extrabold hover:text-accent">
+        {pedido.leadName ?? 'Contato'}: {pedido.percent}% extra
+      </button>
+      <span className="flex-1 text-fg-tertiary">{pedido.reason}</span>
+      <span className="tabular-nums text-[12px] font-bold text-accent">
+        {falta > 0 ? `libera sozinha em ${Math.floor(falta / 60000)}:${String(Math.floor((falta % 60000) / 1000)).padStart(2, '0')}` : 'liberando…'}
+      </span>
+      <button
+        disabled={pending}
+        onClick={() => decidir('aprovado')}
+        className="rounded-control bg-success px-3 py-1.5 text-[12.5px] font-extrabold text-page disabled:opacity-50"
+      >
+        Liberar agora
+      </button>
+      <button
+        disabled={pending}
+        onClick={() => decidir('negado')}
+        className="rounded-control border border-error/60 px-3 py-1.5 text-[12.5px] font-extrabold text-error disabled:opacity-50"
+      >
+        Negar
+      </button>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------ conversas */
+
+function ItemDaConversa({ c, ativa, aoAbrir }: { c: ConversaDoPainel; ativa: boolean; aoAbrir: () => void }) {
+  return (
+    <button
+      onClick={aoAbrir}
+      className={`w-full rounded-[12px] px-3 py-2.5 text-left transition-colors ${ativa ? 'bg-accent/10' : 'hover:bg-page/60'}`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate text-[13.5px] font-extrabold">{c.leadName ?? c.contactName ?? `+${c.contactId}`}</span>
+        <span className="shrink-0 text-[11px] text-fg-faded">{hora(c.lastMessageAt)}</span>
+      </div>
+      <div className="mt-0.5 flex items-center gap-1.5">
+        {c.needsHuman && <CircleAlert size={12} className="shrink-0 text-error" />}
+        {c.mode === 'humano' ? <Hand size={12} className="shrink-0 text-accent" /> : <Bot size={12} className="shrink-0 text-fg-faded" />}
+        <span className="truncate text-[12px] text-fg-tertiary">{c.ultimaMensagem ?? ''}</span>
+        {c.unread > 0 && (
+          <span className="ml-auto shrink-0 rounded-full bg-accent px-1.5 text-[10.5px] font-extrabold text-page">{c.unread}</span>
+        )}
+      </div>
+      {c.leadStatus && <div className="mt-1 text-[11px] font-bold text-accent">{LEAD_STATUS_LABEL[c.leadStatus]}</div>}
+    </button>
+  );
+}
+
+function Conversa({
+  conversa,
+  id,
+  versao,
+  aoVoltar,
+  aoMudar,
+  aoAbrirLead,
+}: {
+  conversa: ConversaDoPainel | null;
+  id: string;
+  /** Muda a cada releitura do painel: relê as mensagens junto. */
+  versao: number | null;
+  aoVoltar: () => void;
+  aoMudar: () => void;
+  aoAbrirLead: (id: string) => void;
+}) {
+  const [mensagens, setMensagens] = useState<MensagemDoPainel[] | null>(null);
+  const [texto, setTexto] = useState('');
+  const [pending, start] = useTransition();
+  const toast = useToast();
+  const fim = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    void mensagensDaConversaAction(id).then((m) => vivo && setMensagens(m));
+    return () => {
+      vivo = false;
+    };
+  }, [id, versao]);
+  useEffect(() => fim.current?.scrollIntoView({ block: 'end' }), [mensagens?.length]);
+
+  // "Agora" = hora da última leitura do painel (a cada 10 s).
+  const janelaAberta = !!conversa?.lastInboundAt && !!versao && versao - new Date(conversa.lastInboundAt).getTime() < 24 * 3600_000;
+
+  const enviar = () =>
+    start(async () => {
+      const r = await responderComoArthurAction(id, texto);
+      toast(r);
+      if (r.ok) {
+        setTexto('');
+        setMensagens(await mensagensDaConversaAction(id));
+        aoMudar();
+      }
+    });
+  const acao = (f: () => Promise<{ ok: boolean; message: string }>) =>
+    start(async () => {
+      toast(await f());
+      aoMudar();
+    });
+
+  return (
+    <div className="flex min-h-[420px] flex-col rounded-[14px] border border-border bg-page/40">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2.5">
+        <button onClick={aoVoltar} className="text-[12.5px] font-bold text-accent lg:hidden">
+          ← Conversas
+        </button>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[14px] font-extrabold">
+            {conversa?.leadName ?? conversa?.contactName ?? (conversa ? `+${conversa.contactId}` : '…')}
+          </div>
+          <div className="text-[11.5px] text-fg-tertiary">
+            {conversa ? `+${conversa.contactId}` : ''}
+            {conversa?.mode === 'humano' ? ' · com você' : ' · a IA responde'}
+            {conversa && !janelaAberta ? ' · janela de 24 h fechada' : ''}
+          </div>
+        </div>
+        {conversa?.leadId && (
+          <button
+            onClick={() => aoAbrirLead(conversa.leadId!)}
+            className="rounded-control border border-border-strong px-2.5 py-1 text-[12px] font-bold"
+          >
+            Ficha do lead
+          </button>
+        )}
+        {conversa?.needsHuman && (
+          <button
+            disabled={pending}
+            onClick={() => acao(() => resolverChamadoAction(id))}
+            className="flex items-center gap-1 rounded-control border border-success/60 px-2.5 py-1 text-[12px] font-bold text-success"
+          >
+            <CheckCircle2 size={13} /> Resolvido
+          </button>
+        )}
+        {conversa && (
+          <button
+            disabled={pending}
+            onClick={() => acao(() => alternarModoAction(id, conversa.mode === 'ia' ? 'humano' : 'ia'))}
+            className="flex items-center gap-1 rounded-control bg-accent px-2.5 py-1 text-[12px] font-extrabold text-page disabled:opacity-50"
+          >
+            {conversa.mode === 'ia' ? (
+              <>
+                <Hand size={13} /> Assumir
+              </>
+            ) : (
+              <>
+                <Bot size={13} /> Devolver para a IA
+              </>
+            )}
+          </button>
+        )}
+      </div>
+      {conversa?.needsHuman && conversa.needsHumanReason && (
+        <div className="mx-3 mt-2 rounded-[10px] border border-error/40 bg-error/[.06] px-3 py-2 text-[12.5px]">
+          <b>Precisa de você:</b> {conversa.needsHumanReason}
+        </div>
+      )}
+      {conversa?.summary && (
+        <div className="mx-3 mt-2 rounded-[10px] bg-card px-3 py-2 text-[12.5px] leading-snug text-fg-secondary">
+          <b>Resumo:</b> {conversa.summary}
+        </div>
+      )}
+      <div className="max-h-[440px] flex-1 space-y-2 overflow-y-auto p-3">
+        {!mensagens ? (
+          <div className="text-[13px] text-fg-tertiary">Carregando…</div>
+        ) : (
+          mensagens.map((m) =>
+            m.author === 'sistema' ? (
+              <div key={m.id} className="text-center text-[11.5px] text-fg-faded">
+                {m.body} · {hora(m.createdAt)}
+              </div>
+            ) : (
+              <div key={m.id} className={`flex ${m.direction === 'out' ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`max-w-[85%] whitespace-pre-wrap rounded-[14px] px-3 py-2 text-[13px] leading-snug ${
+                    m.direction === 'out' ? (m.author === 'arthur' ? 'bg-accent/20' : 'bg-accent/10') : 'bg-card'
+                  }`}
+                >
+                  {m.body}
+                  <div className="mt-1 text-right text-[10.5px] text-fg-faded">
+                    {m.author === 'ia' ? 'IA · ' : m.author === 'arthur' ? 'Você · ' : ''}
+                    {hora(m.createdAt)}
+                    {m.status === 'read' ? ' · lida' : m.status === 'failed' ? ` · não saiu: ${m.error ?? ''}` : ''}
+                  </div>
+                </div>
+              </div>
+            )
+          )
+        )}
+        <div ref={fim} />
+      </div>
+      <div className="flex items-end gap-2 border-t border-border p-2.5">
+        <textarea
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          rows={2}
+          disabled={!janelaAberta}
+          placeholder={janelaAberta ? 'Responder como Arthur (a IA para nesta conversa)' : 'Mais de 24 h sem mensagem do cliente: o WhatsApp não deixa responder por aqui.'}
+          className={`flex-1 resize-none ${inputClass}`}
+        />
+        <button
+          onClick={enviar}
+          disabled={pending || !texto.trim() || !janelaAberta}
+          aria-label="Enviar"
+          className="grid h-11 w-11 place-items-center rounded-full bg-accent text-page disabled:opacity-50"
+        >
+          <Send size={16} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------ configuração */
+
+function Configuracao({ inicial, aoSalvar }: { inicial: ConfigDoAtendente; aoSalvar: () => void }) {
+  const [c, setC] = useState(inicial);
+  const [pending, start] = useTransition();
+  const toast = useToast();
+  const mudar = <K extends keyof ConfigDoAtendente>(k: K, v: ConfigDoAtendente[K]) => setC((x) => ({ ...x, [k]: v }));
+  const num = (v: string) => Number(v.replace(',', '.')) || 0;
+  return (
+    <details className="rounded-[18px] border border-border bg-card p-4 sm:p-5">
+      <summary className="flex cursor-pointer items-center gap-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+        <Settings size={13} /> Configuração da atendente
+      </summary>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <label className="flex items-center gap-2.5 text-[13.5px] font-bold sm:col-span-2">
+          <input type="checkbox" checked={c.active} onChange={(e) => mudar('active', e.target.checked)} className="h-4 w-4" />
+          Atendente ligada (responde no WhatsApp e manda os e-mails)
+        </label>
+        <Campo rotulo="Nome com que ela se apresenta">
+          <input value={c.personaName} onChange={(e) => mudar('personaName', e.target.value)} className={inputClass} />
+        </Campo>
+        <Campo rotulo="Modelo da IA">
+          <select value={c.model} onChange={(e) => mudar('model', e.target.value as ConfigDoAtendente['model'])} className={inputClass}>
+            {MODELOS_DA_IA.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.nome}
+              </option>
+            ))}
+          </select>
+        </Campo>
+        <Campo rotulo="Teto de gasto com IA no mês (US$)">
+          <input inputMode="decimal" value={c.monthlyBudgetUsd} onChange={(e) => mudar('monthlyBudgetUsd', num(e.target.value))} className={inputClass} />
+        </Campo>
+        <Campo rotulo="Desconto extra máximo (% além do combo)">
+          <input inputMode="decimal" value={c.extraDiscountMax} onChange={(e) => mudar('extraDiscountMax', num(e.target.value))} className={inputClass} />
+        </Campo>
+        <Campo rotulo='Tempo do "vou ver com meu superior" (minutos)'>
+          <input inputMode="numeric" value={c.discountWaitMinutes} onChange={(e) => mudar('discountWaitMinutes', num(e.target.value))} className={inputClass} />
+        </Campo>
+        <Campo rotulo="E-mails de 1º contato por dia">
+          <input inputMode="numeric" value={c.dailyEmailCap} onChange={(e) => mudar('dailyEmailCap', num(e.target.value))} className={inputClass} />
+        </Campo>
+        <Campo rotulo="Seu e-mail (avisos e respostas dos e-mails)">
+          <input value={c.ownerEmail ?? ''} onChange={(e) => mudar('ownerEmail', e.target.value)} className={inputClass} />
+        </Campo>
+      </div>
+      <button
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            toast(await salvarConfigAtendenteAction(c));
+            aoSalvar();
+          })
+        }
+        className="mt-4 rounded-control bg-accent px-5 py-2.5 text-[13.5px] font-extrabold text-page disabled:opacity-50"
+      >
+        Salvar
+      </button>
+    </details>
+  );
+}
+
+function Campo({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1 text-[12px] font-bold text-fg-tertiary">
+      {rotulo}
+      {children}
+    </label>
+  );
+}

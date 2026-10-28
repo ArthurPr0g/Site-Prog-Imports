@@ -17,6 +17,8 @@ import { valoresDoItem, type ServicoDoCatalogo } from '@/lib/itens-do-kit';
 import { okResult } from '@/lib/action-result';
 import { registrarEnvioAction, updateLeadAction, salvarChecklistAction, criarPropostaAction } from '@/app/actions/leads';
 import { LeadDoVendedor, type AcoesDaFicha } from '@/components/vendedor/LeadDoVendedor';
+import type { KitDoVendedor } from '@/lib/data/leads';
+import { QuemAtende } from './QuemAtende';
 
 /** Mesmo país, cidade e ramo, sem o próprio lead (igual à função lead_kit do banco). */
 function regiaoDe(l: Lead, leads: Lead[]): LeadDoKit['regiao'] {
@@ -89,8 +91,11 @@ export function FichaDoLead({
   servicos,
   tabBRL,
   vendedor,
+  kits,
   onFechar,
 }: {
+  /** Links de vendedor (Felipe, IA…): o seletor "Quem atende". */
+  kits: KitDoVendedor[];
   lead: Lead;
   /** Vendedor com link ativo que tem este lead na lista. */
   vendedor?: string;
@@ -169,7 +174,9 @@ export function FichaDoLead({
       acoes={acoes}
       dono
       aviso={
-        vendedor && (
+        <div className="space-y-2">
+        <QuemAtende leadId={lead.id} kits={kits} />
+        {vendedor && (
           <div className="rounded-[10px] border border-accent/40 bg-accent/10 px-3 py-2 text-[12.5px] leading-snug">
             {lead.status === 'novo' ? (
               <>
@@ -182,7 +189,8 @@ export function FichaDoLead({
               </>
             )}
           </div>
-        )
+        )}
+        </div>
       }
       extraOportunidade={
         <button

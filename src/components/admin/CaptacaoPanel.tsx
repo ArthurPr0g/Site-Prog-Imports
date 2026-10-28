@@ -4,7 +4,7 @@
 // as abas Lista, Foco, Quadro, Mapa, Relatório e Buscas. Cada aba mora em
 // src/components/admin/captacao/; as peças comuns em captacao/comum.tsx.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Search, Upload, MessagesSquare, TriangleAlert, Flame } from 'lucide-react';
@@ -32,6 +32,7 @@ import { Relatorio } from './captacao/Relatorio';
 import { Buscas } from './captacao/Buscas';
 import { ImportarModal, NotasModal, ModelosModal, ChecklistModal } from './captacao/Modais';
 import { Vendedores } from './captacao/Vendedores';
+import { Atendimento } from './captacao/Atendimento';
 import { FichaDoLead } from './captacao/FichaDoLead';
 import type { ServicoDoCatalogo } from '@/lib/itens-do-kit';
 import { GraficoDaMeta } from '@/components/captacao/GraficoDaMeta';
@@ -46,6 +47,7 @@ const ABAS = [
   ['mapa', 'Mapa'],
   ['relatorio', 'Relatório'],
   ['vendedores', 'Vendedores'],
+  ['atendimento', 'Atendimento'],
   ['buscas', 'Buscas'],
 ] as const;
 type Aba = (typeof ABAS)[number][0];
@@ -137,6 +139,20 @@ export function CaptacaoPanel({
   const [abaSalva, setAbaSalva] = usePreferencia(CHAVE_ABA, 'lista');
   const aba: Aba = ABAS.some(([a]) => a === abaSalva) ? (abaSalva as Aba) : 'lista';
   const mudarAba = (a: Aba) => setAbaSalva(a);
+  // Link do aviso por e-mail da atendente: ?aba=atendimento abre a aba.
+  useEffect(() => {
+    const pedida = new URLSearchParams(window.location.search).get('aba');
+    if (pedida && ABAS.some(([a]) => a === pedida)) setAbaSalva(pedida);
+  }, [setAbaSalva]);
+  const valorDoLead = useCallback(
+    (id: string) => {
+      const l = leadsPorId.get(id);
+      if (!l) return { unico: 0, mensal: 0 };
+      const e = estimar(l.suggestedServices, l.country === 'US' ? TABELA_USD : tabBRL);
+      return { unico: emReais(e.unico, e.moeda, cotacoes) ?? 0, mensal: emReais(e.mensal, e.moeda, cotacoes) ?? 0 };
+    },
+    [leadsPorId, tabBRL, cotacoes]
+  );
 
   const [busca, setBusca] = useState('');
   const [pais, setPais] = useState<'' | 'BR' | 'US'>('');
@@ -375,7 +391,7 @@ export function CaptacaoPanel({
         ))}
       </div>
 
-      {aba !== 'buscas' && aba !== 'relatorio' && aba !== 'vendedores' && (
+      {aba !== 'buscas' && aba !== 'relatorio' && aba !== 'vendedores' && aba !== 'atendimento' && (
         <div className="mb-3.5 flex flex-wrap items-center gap-2.5">
           <div className="relative min-w-[220px] flex-1">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-fg-faded" />
@@ -544,6 +560,9 @@ export function CaptacaoPanel({
       {aba === 'mapa' && <Mapa leads={filtrados} estimativa={estimativa} agora={agora} />}
       {aba === 'relatorio' && <Relatorio leads={leads} estimativa={estimativa} cotacoes={cotacoes} />}
       {aba === 'buscas' && <Buscas pedidos={pedidos} />}
+      {aba === 'atendimento' && (
+        <Atendimento kits={kits} leads={leads} valorDoLead={valorDoLead} aoAbrirLead={(id) => setFichaDe(id)} />
+      )}
       {aba === 'vendedores' && (
         <>
           <div className="mb-3 text-[12.5px] text-fg-tertiary">
@@ -588,6 +607,7 @@ export function CaptacaoPanel({
           servicos={servicos}
           tabBRL={tabBRL}
           vendedor={vendedorPorLead.get(fichaDe)}
+          kits={kits}
           onFechar={() => setFichaDe(null)}
         />
       )}

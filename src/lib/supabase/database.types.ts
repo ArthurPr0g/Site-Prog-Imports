@@ -452,6 +452,310 @@ export type Database = {
         }
         Relationships: []
       }
+      ia_config: {
+        Row: {
+          active: boolean
+          daily_email_cap: number
+          discount_wait_minutes: number
+          extra_discount_max: number
+          id: boolean
+          model: string
+          monthly_budget_usd: number
+          owner_email: string | null
+          persona_name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          daily_email_cap?: number
+          discount_wait_minutes?: number
+          extra_discount_max?: number
+          id?: boolean
+          model?: string
+          monthly_budget_usd?: number
+          owner_email?: string | null
+          persona_name?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          daily_email_cap?: number
+          discount_wait_minutes?: number
+          extra_discount_max?: number
+          id?: boolean
+          model?: string
+          monthly_budget_usd?: number
+          owner_email?: string | null
+          persona_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ia_conversations: {
+        Row: {
+          channel: string
+          contact_id: string
+          contact_name: string | null
+          created_at: string
+          id: string
+          kit_id: string | null
+          last_inbound_at: string | null
+          last_message_at: string
+          lead_id: string | null
+          mode: string
+          needs_human: boolean
+          needs_human_reason: string | null
+          summary: string | null
+          unread: number
+        }
+        Insert: {
+          channel?: string
+          contact_id: string
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          kit_id?: string | null
+          last_inbound_at?: string | null
+          last_message_at?: string
+          lead_id?: string | null
+          mode?: string
+          needs_human?: boolean
+          needs_human_reason?: string | null
+          summary?: string | null
+          unread?: number
+        }
+        Update: {
+          channel?: string
+          contact_id?: string
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          kit_id?: string | null
+          last_inbound_at?: string | null
+          last_message_at?: string
+          lead_id?: string | null
+          mode?: string
+          needs_human?: boolean
+          needs_human_reason?: string | null
+          summary?: string | null
+          unread?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_conversations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_conversations_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "lead_seller_kits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_messages: {
+        Row: {
+          author: string
+          body: string
+          conversation_id: string
+          created_at: string
+          direction: string
+          error: string | null
+          external_id: string | null
+          id: string
+          status: string | null
+        }
+        Insert: {
+          author: string
+          body: string
+          conversation_id: string
+          created_at?: string
+          direction: string
+          error?: string | null
+          external_id?: string | null
+          id?: string
+          status?: string | null
+        }
+        Update: {
+          author?: string
+          body?: string
+          conversation_id?: string
+          created_at?: string
+          direction?: string
+          error?: string | null
+          external_id?: string | null
+          id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ia_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_discount_requests: {
+        Row: {
+          answered_at: string | null
+          conversation_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          lead_id: string | null
+          percent: number
+          reason: string | null
+          release_at: string
+          status: string
+        }
+        Insert: {
+          answered_at?: string | null
+          conversation_id: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          lead_id?: string | null
+          percent: number
+          reason?: string | null
+          release_at: string
+          status?: string
+        }
+        Update: {
+          answered_at?: string | null
+          conversation_id?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          lead_id?: string | null
+          percent?: number
+          reason?: string | null
+          release_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_discount_requests_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ia_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_discount_requests_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_emails: {
+        Row: {
+          body: string
+          created_at: string
+          error: string | null
+          id: string
+          kit_id: string | null
+          lead_id: string
+          sent_at: string | null
+          step: number
+          subject: string
+          to_email: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          kit_id?: string | null
+          lead_id: string
+          sent_at?: string | null
+          step: number
+          subject: string
+          to_email: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          kit_id?: string | null
+          lead_id?: string
+          sent_at?: string | null
+          step?: number
+          subject?: string
+          to_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_emails_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_emails_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "lead_seller_kits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_usage: {
+        Row: {
+          cache_read_tokens: number
+          cache_write_tokens: number
+          conversation_id: string | null
+          cost_usd: number
+          created_at: string
+          id: number
+          input_tokens: number
+          model: string
+          output_tokens: number
+        }
+        Insert: {
+          cache_read_tokens?: number
+          cache_write_tokens?: number
+          conversation_id?: string | null
+          cost_usd?: number
+          created_at?: string
+          id?: number
+          input_tokens?: number
+          model: string
+          output_tokens?: number
+        }
+        Update: {
+          cache_read_tokens?: number
+          cache_write_tokens?: number
+          conversation_id?: string | null
+          cost_usd?: number
+          created_at?: string
+          id?: number
+          input_tokens?: number
+          model?: string
+          output_tokens?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_usage_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ia_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_seller_kits: {
         Row: {
           active: boolean
@@ -460,6 +764,7 @@ export type Database = {
           filters: Json
           id: string
           instructions: string | null
+          kind: string
           more_requested_at: string | null
           seller_email: string | null
           seller_name: string
@@ -473,6 +778,7 @@ export type Database = {
           filters?: Json
           id?: string
           instructions?: string | null
+          kind?: string
           more_requested_at?: string | null
           seller_email?: string | null
           seller_name: string
@@ -486,6 +792,7 @@ export type Database = {
           filters?: Json
           id?: string
           instructions?: string | null
+          kind?: string
           more_requested_at?: string | null
           seller_email?: string | null
           seller_name?: string

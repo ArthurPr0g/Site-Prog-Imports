@@ -1,0 +1,179 @@
+import { NextRequest, NextResponse, after } from 'next/server';
+import { dbDoAtendente, type DbDoAtendente } from '@/lib/atendente/db';
+import { assinaturaValida, lerWebhook, marcarLidaEDigitando, type MensagemRecebida } from '@/lib/atendente/whatsapp-api';
+import { responderConversa } from '@/lib/atendente/agente';
+import { empresaDoTexto } from '@/lib/atendente/regras';
+
+// Webhook do WhatsApp Cloud API (configurado no app da Meta).
+// GET: verificação do endereço. POST: mensagens e status de entrega.
+// Responde 200 na hora (a Meta reenvia se demorar) e a IA trabalha depois
+// (after), esperando uns segundos: se o cliente mandar várias mensagens
+// seguidas, só a última dispara a resposta.
+
+export const maxDuration = 60;
+
+const ESPERA_MS = 7000;
+
+export async function GET(req: NextRequest) {
+  const p = req.nextUrl.searchParams;
+  if (p.get('hub.mode') === 'subscribe' && p.get('hub.verify_token') === process.env.WHATSAPP_VERIFY_TOKEN) {
+    return new NextResponse(p.get('hub.challenge') ?? '', { status: 200 });
+  }
+  return new NextResponse('Forbidden', { status: 403 });
+}
+
+export async function POST(req: NextRequest) {
+  const corpo = await req.text();
+  if (!assinaturaValida(corpo, req.headers.get('x-hub-signature-256'))) {
+    return new NextResponse('Assinatura inválida', { status: 401 });
+  }
+  let json: unknown;
+  try {
+    json = JSON.parse(corpo);
+  } catch {
+    return NextResponse.json({ ok: true });
+  }
+  const { mensagens, status } = lerWebhook(json);
+  const db = dbDoAtendente();
+
+  for (const s of status) {
+    await db.from('ia_messages').update({ status: s.status, error: s.erro }).eq('external_id', s.id);
+  }
+
+  const paraResponder = new Map<string, string>();
+  for (const m of mensagens) {
+    const conversaId = await gravarRecebida(db, m);
+    if (conversaId) paraResponder.set(conversaId, m.id);
+  }
+
+  if (paraResponder.size) {
+    after(async () => {
+      for (const id of paraResponder.values()) await marcarLidaEDigitando(id);
+      await new Promise((r) => setTimeout(r, ESPERA_MS));
+      for (const [conversaId, msgId] of paraResponder) {
+        // Chegou outra mensagem depois desta: a execução daquela responde tudo.
+        const { data: ultima } = await db
+          .from('ia_messages')
+          .select('external_id')
+          .eq('conversation_id', conversaId)
+          .eq('direction', 'in')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (ultima?.external_id !== msgId) continue;
+        try {
+          await responderConversa(conversaId);
+        } catch (e) {
+          console.error('[atendente] falha ao responder', conversaId, e);
+        }
+      }
+    });
+  }
+  return NextResponse.json({ ok: true });
+}
+
+/** Grava a mensagem (uma vez só) e liga a conversa ao lead. Devolve a conversa, ou null se já existia. */
+async function gravarRecebida(db: DbDoAtendente, m: MensagemRecebida): Promise<string | null> {
+  const { data: existente } = await db
+    .from('ia_conversations')
+    .select('id, lead_id, unread')
+    .eq('channel', 'whatsapp')
+    .eq('contact_id', m.de)
+    .maybeSingle();
+
+  let conversaId = existente?.id;
+  let leadId = existente?.lead_id ?? null;
+  if (!conversaId) {
+    const achado = await acharLead(db, m);
+    leadId = achado?.leadId ?? null;
+    const { data: nova, error } = await db
+      .from('ia_conversations')
+      .insert({
+        channel: 'whatsapp',
+        contact_id: m.de,
+        contact_name: m.nome,
+        lead_id: leadId,
+        kit_id: achado?.kitId ?? null,
+      })
+      .select('id')
+      .single();
+    if (error || !nova) {
+      // Corrida entre dois webhooks do mesmo contato: a outra execução criou.
+      const { data: outra } = await db.from('ia_conversations').select('id').eq('contact_id', m.de).maybeSingle();
+      if (!outra) return null;
+      conversaId = outra.id;
+    } else conversaId = nova.id;
+  }
+
+  const { error } = await db.from('ia_messages').insert({
+    conversation_id: conversaId,
+    direction: 'in',
+    author: 'lead',
+    body: m.texto,
+    external_id: m.id,
+    created_at: m.quando,
+  });
+  if (error) return null; // webhook repetido (external_id único)
+
+  await db
+    .from('ia_conversations')
+    .update({
+      last_inbound_at: m.quando,
+      last_message_at: m.quando,
+      unread: (existente?.unread ?? 0) + 1,
+      ...(m.nome ? { contact_name: m.nome } : {}),
+    })
+    .eq('id', conversaId);
+
+  // O lead respondeu: sobe para "Respondeu" (nunca volta etapa).
+  if (leadId) {
+    const { data: l } = await db.from('leads').select('status, first_contact_at, replied_at').eq('id', leadId).maybeSingle();
+    if (l && (l.status === 'novo' || l.status === 'contatado')) {
+      await db
+        .from('leads')
+        .update({
+          status: 'respondeu',
+          first_contact_at: l.first_contact_at ?? m.quando,
+          replied_at: l.replied_at ?? m.quando,
+          next_contact: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', leadId);
+    }
+  }
+  return conversaId;
+}
+
+const digitos = (s: string | null) => (s ?? '').replace(/\D/g, '');
+
+/**
+ * Lead do contato novo: pelo texto do botão ("Vi o diagnóstico de <empresa>"),
+ * preferindo os leads que estão com a IA; senão pelo telefone do Maps (últimos
+ * 8 dígitos + DDD, que é o que sobra igual com ou sem o 9).
+ */
+async function acharLead(db: DbDoAtendente, m: MensagemRecebida): Promise<{ leadId: string; kitId: string | null } | null> {
+  const { data: itens } = await db
+    .from('lead_kit_items')
+    .select('lead_id, kit_id, lead_seller_kits!inner(kind, active), leads!inner(name, phone)')
+    .eq('lead_seller_kits.kind', 'ia')
+    .eq('lead_seller_kits.active', true);
+
+  const empresa = empresaDoTexto(m.texto)?.toLowerCase();
+  if (empresa) {
+    const it = (itens ?? []).find((i) => i.leads.name.trim().toLowerCase() === empresa);
+    if (it) return { leadId: it.lead_id, kitId: it.kit_id };
+  }
+  const tel = digitos(m.de);
+  const chave = (t: string) => {
+    const nacional = t.startsWith('55') && t.length >= 12 ? t.slice(2) : t;
+    return `${nacional.slice(0, 2)}${nacional.slice(-8)}`;
+  };
+  const it = (itens ?? []).find((i) => digitos(i.leads.phone).length >= 10 && chave(digitos(i.leads.phone)) === chave(tel));
+  if (it) return { leadId: it.lead_id, kitId: it.kit_id };
+
+  if (empresa) {
+    const { data: l } = await db.from('leads').select('id').ilike('name', empresa).limit(1).maybeSingle();
+    if (l) return { leadId: l.id, kitId: null };
+  }
+  return null;
+}

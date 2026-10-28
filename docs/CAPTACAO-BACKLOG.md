@@ -55,6 +55,22 @@ telemetria do engine e o ambiente de teste local
 
 ---
 
+## Atendente de IA "Lia" no WhatsApp (28/10/2026) — feito (local)
+
+Pedido do dono: IA que atende do primeiro contato ao fechamento, Felipe × IA com placar.
+Regras em `docs/ERP.md` ("Captação: atendente de IA"); ligar em `docs/ATENDENTE-IA.md`.
+
+| # | Item | Status | Observação |
+|---|---|---|---|
+| IA1 | Migration 0067 em produção + `get_advisors` + segredo do relógio no Vault | a fazer | Sessão na pasta Prog Soluções (MCP `supabase-arthurmatos003`). |
+| IA2 | App da Meta, número 62 99636-8281, webhook, token | a fazer | O dono faz os passos com login dele; roteiro no `ATENDENTE-IA.md`. |
+| IA3 | Gmail com senha de app para os e-mails da Lia | a fazer | O dono escolhe a conta. |
+| IA4 | Variáveis na Vercel e deploy | a fazer | Lista no `ATENDENTE-IA.md`. |
+| IA5 | Link da IA na aba Vendedores e ligar a atendente | a fazer | Depois de IA1–IA4. |
+| IA6 | Teste real com o WhatsApp do dono, celular (Android e iPhone) e qualidade das respostas do modelo de verdade | a fazer | Localmente só deu para testar com a API do Claude falsa (sem chave no `.env.local`). |
+| IA7 | Instagram Direct pela mesma Lia | a fazer | Tabela já tem `channel`. Precisa de conta profissional do Instagram ligada a uma página e permissão `instagram_manage_messages`. |
+| IA8 | Áudio do cliente (transcrever) e agenda da reunião no Google Calendar | ideia | Hoje ela pede para digitar e chama o Arthur para a reunião. |
+
 ## Lead que o Arthur assume sai da lista do vendedor (28/10/2026) — no ar
 
 Pedido do dono: se ele começar a conversar com um lead que está na página do Felipe, o

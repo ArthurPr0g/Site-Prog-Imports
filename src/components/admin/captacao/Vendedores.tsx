@@ -4,10 +4,10 @@
 // um vendedor e acompanha o andamento de cada link.
 
 import { useState, useTransition } from 'react';
-import { Copy, ExternalLink, MessageCircle, Power } from 'lucide-react';
+import { Bot, Copy, ExternalLink, MessageCircle, Power } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { formatDateBR } from '@/lib/format';
-import { LEAD_STATUS_LABEL, type Lead, type LeadStatus } from '@/lib/captacao';
+import { LEAD_STATUS_LABEL, emailDeVerdade, type Lead, type LeadStatus } from '@/lib/captacao';
 import { respondidas } from '@/lib/checklist-descoberta';
 import { linkWhatsApp } from '@/lib/mensagens-lead';
 import type { KitDoVendedor } from '@/lib/data/leads';
@@ -15,6 +15,8 @@ import { criarKitAction, alternarKitAction, adicionarAoKitAction, type FiltrosDo
 import { inputClass } from './comum';
 
 const LIMITE = 20;
+/** Número de WhatsApp da atendente de IA (chip da Vivo comprado em 27/10/2026). */
+export const WHATSAPP_DA_IA = '5562996368281';
 const ETAPAS_DO_RESUMO: LeadStatus[] = ['contatado', 'respondeu', 'reuniao', 'proposta', 'fechado', 'perdido'];
 
 export function Vendedores({
@@ -39,7 +41,20 @@ export function Vendedores({
   const [email, setEmail] = useState('');
   const [recado, setRecado] = useState('');
   const [novo, setNovo] = useState<{ token: string; nome: string; whats: string } | null>(null);
-  const escolhidos = candidatos.slice(0, LIMITE);
+  // Link da IA: a atendente chega por e-mail, então só leads com e-mail.
+  const [ia, setIa] = useState(false);
+  const escolhidos = (ia ? candidatos.filter((l) => l.email && emailDeVerdade(l.email)) : candidatos).slice(0, LIMITE);
+
+  function alternarIa(v: boolean) {
+    setIa(v);
+    if (v) {
+      setNome('Lia');
+      setWhats(WHATSAPP_DA_IA);
+    } else {
+      setNome('Felipe');
+      setWhats('');
+    }
+  }
   const url = (token: string) => `${origem}/vendedor/${token}`;
 
   function gerar() {
@@ -51,6 +66,7 @@ export function Vendedores({
         sellerEmail: email,
         instructions: recado,
         filtros,
+        ia,
       });
       toast(r);
       if (r.ok && r.token) setNovo({ token: r.token, nome: nome.trim(), whats: whats.replace(/\D/g, '') });
@@ -78,6 +94,18 @@ export function Vendedores({
           como Novo e não estão com outro vendedor. As mensagens e o diagnóstico saem no nome do vendedor, e o que ele registrar
           volta para cá.
         </p>
+        <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-[12px] border border-border bg-page/40 px-3 py-2.5 text-[13px]">
+          <input type="checkbox" checked={ia} onChange={(e) => alternarIa(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--color-accent)]" />
+          <span>
+            <b className="flex items-center gap-1.5">
+              <Bot size={14} /> Link da atendente de IA
+            </b>
+            <span className="text-fg-tertiary">
+              A IA manda o 1º contato por e-mail (só leads com e-mail) e atende quem chamar no WhatsApp dela. Acompanhe na aba
+              Atendimento.
+            </span>
+          </span>
+        </label>
         <div className="grid gap-2.5 sm:grid-cols-3">
           <input
             value={nome}
@@ -181,6 +209,11 @@ export function Vendedores({
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-[14px] font-extrabold">
+                      {k.kind === 'ia' && (
+                        <span className="mr-1.5 inline-flex items-center gap-1 rounded-full bg-accent/12 px-2 py-0.5 align-middle text-[11px] text-accent">
+                          <Bot size={11} /> IA
+                        </span>
+                      )}
                       {k.sellerName}{' '}
                       <span className="text-[12px] font-bold text-fg-faded">
                         · {leads.length} lead(s) · desde {formatDateBR(k.createdAt)} {k.active ? '' : '· desativado'}

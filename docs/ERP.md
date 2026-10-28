@@ -1613,6 +1613,40 @@ para o painel, seleção pelos 20 melhores do filtro.
   na hora de gerar o link, fora de outro link ativo e que não são clientes; limpa
   o pedido.
 
+### Captação: atendente de IA (28/10/2026, "Lia") — passo a passo em `docs/ATENDENTE-IA.md`
+
+Pedido do dono: IA no WhatsApp que atende do primeiro contato ao fechamento, conversa e etapa
+no painel, e só chama o Arthur quando precisa; Felipe e IA com leads separados e placar de
+quem converte mais em tempo real.
+- **A IA é uma vendedora:** `lead_seller_kits.kind = 'ia'` (migration 0067). "Link da atendente
+  de IA" na aba Vendedores (só leads com e-mail; "Adicionar mais 20" e a reposição do
+  `assumirDoVendedor` também). Na ficha do lead, **Quem atende** (`moverLeadAction`) manda o
+  lead para o Felipe, para a IA ou para ninguém.
+- **Decisões do dono:** número novo 62 99636-8281; Claude pago com teto mensal; nome de pessoa
+  ("Lia"), mas confirma que é IA se perguntarem direto; desconto além do combo até 10%, só se o
+  cliente pedir e ela julgar necessário, com o "vou ver com meu superior": o pedido espera X
+  minutos, o Arthur pode negar ou liberar no painel, sem resposta libera sozinho.
+- **Política do WhatsApp (verificada em 28/10):** a empresa só manda a 1ª mensagem para quem
+  deu o número e aceitou; por isso o 1º contato da IA é por **e-mail** com botão para o
+  WhatsApp dela (escolha do dono). Mensagem livre só em 24 h da última do cliente. Desde
+  01/10/2026, 1.000 mensagens de atendimento grátis por mês por número.
+- **Peças:** `src/lib/atendente/` (regras puras, prompt, agente, WhatsApp, e-mail, banco),
+  `/api/whatsapp/webhook` (assinatura HMAC, `after()` com 7 s de espera para juntar mensagens
+  seguidas), `/api/atendente/tick` (pg_cron a cada minuto: libera desconto, e-mails e retornos),
+  `src/app/actions/atendente.ts`, aba **Atendimento** (`Atendimento.tsx`: placar, pedidos de
+  desconto, conversas, configuração).
+- **Banco:** `ia_config` (1 linha), `ia_conversations` (canal whatsapp/instagram, modo ia/humano,
+  precisa de você, resumo), `ia_messages` (`external_id` único = webhook repetido não grava duas
+  vezes), `ia_discount_requests`, `ia_emails` (único lead+etapa: dois ticks não mandam duas
+  vezes), `ia_usage` (custo por chamada, base do teto). RLS de admin; o servidor usa a chave
+  própria `ATENDENTE_SUPABASE_KEY` (revogável sozinha).
+- **Preço:** sempre pela ferramenta `calcular_preco` = `simular()` do simulador do vendedor
+  com o retrato do catálogo do link. Desconto extra só no trabalho, nunca na mensalidade,
+  arredondado para o final 7 mais próximo (o final 97 descia até R$ 100 e transformava 8% em 10%).
+- **Placar** (`placar()` em `regras.ts`): por vendedor (links do mesmo nome somam), leads,
+  contatados, responderam, reunião, proposta, fechados, valor pela tabela; conversão =
+  fechados ÷ contatados.
+
 ## Em aberto
 
 ### Módulos que faltam
