@@ -441,14 +441,14 @@ function Numero({
 }) {
   return (
     <div className="min-w-0 rounded-[12px] border border-border bg-page/40 p-2.5 sm:p-3">
-      <div className="flex items-center gap-1 truncate text-[10px] font-extrabold uppercase tracking-[.06em] text-fg-faded sm:text-[10.5px]">
+      <div className="flex items-start gap-1 text-[9.5px] font-extrabold uppercase leading-tight tracking-[.04em] text-fg-faded sm:text-[10.5px] sm:tracking-[.06em]">
         {icone}
         {rotulo}
       </div>
-      <div className="mt-0.5 truncate text-[14px] font-bold tabular-nums sm:text-[17px]" style={cor ? { color: cor } : undefined}>
+      <div className="mt-0.5 text-[13.5px] font-bold tabular-nums sm:text-[17px]" style={cor ? { color: cor } : undefined}>
         <NumeroAnimado valor={valor} formato={reais} />
       </div>
-      <div className="truncate text-[10.5px] text-fg-tertiary sm:text-[11.5px]">{rodape}</div>
+      <div className="line-clamp-2 text-[10.5px] leading-snug text-fg-tertiary sm:text-[11.5px]">{rodape}</div>
     </div>
   );
 }

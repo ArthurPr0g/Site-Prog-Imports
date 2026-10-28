@@ -268,7 +268,7 @@ export function PaginaDoVendedor({
       </nav>
 
       {aba === 'hoje' && (
-        <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
           <div className="space-y-3">
             {tarefasDeHoje === 0 && (
               <section className="rounded-[18px] border border-border bg-card p-5 text-[14px] text-fg-tertiary">

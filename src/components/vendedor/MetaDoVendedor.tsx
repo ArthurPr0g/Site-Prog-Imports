@@ -99,7 +99,7 @@ export function MetaDoVendedor({
             <div className="text-[12px] font-bold text-fg-tertiary">+ US$ {Math.round(meuUSD).toLocaleString('pt-BR')}</div>
           )}
           <div className="mt-1 text-[12px] text-fg-tertiary">
-            {meus.length} empresa(s) suas ainda em aberto. Cada venda sua sobe a linha dourada do gráfico.
+            {meus.length} empresa(s) suas ainda em aberto. Cada venda sua sobe a linha azul do gráfico.
           </div>
         </div>
       </motion.section>
