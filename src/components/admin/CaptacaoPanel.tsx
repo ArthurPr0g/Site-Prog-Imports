@@ -4,7 +4,9 @@
 // as abas Lista, Foco, Quadro, Mapa, Relatório e Buscas. Cada aba mora em
 // src/components/admin/captacao/; as peças comuns em captacao/comum.tsx.
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Search, Upload, MessagesSquare, TriangleAlert, Flame } from 'lucide-react';
 import {
   LEAD_STATUSES,
@@ -29,6 +31,9 @@ import { Relatorio } from './captacao/Relatorio';
 import { Buscas } from './captacao/Buscas';
 import { ImportarModal, NotasModal, ModelosModal, ChecklistModal } from './captacao/Modais';
 import { Vendedores } from './captacao/Vendedores';
+import { GraficoDaMeta } from '@/components/captacao/GraficoDaMeta';
+import { NumeroAnimado, SUAVE } from '@/components/captacao/NumeroAnimado';
+import { resumoDaMeta } from '@/lib/meta-captacao';
 
 const POR_PAGINA = 50;
 const ABAS = [
@@ -42,6 +47,8 @@ const ABAS = [
 ] as const;
 type Aba = (typeof ABAS)[number][0];
 const CHAVE_ABA = 'captacao.aba';
+/** O painel relê os dados sozinho (o que o vendedor registra aparece aqui). */
+const ATUALIZAR_A_CADA = 60_000;
 
 type FiltroEtapa = '' | 'parahoje' | 'quentes' | LeadStatus;
 
@@ -90,6 +97,25 @@ export function CaptacaoPanel({
   // Lidos uma vez na montagem: o painel não precisa virar o dia sozinho.
   const [hoje] = useState(hojeISO);
   const [agora] = useState(() => Date.now());
+  const calmo = useReducedMotion();
+
+  // Atualização automática: com a aba do navegador visível, relê os leads a
+  // cada minuto e ao voltar para a aba. A meta usa a hora da última leitura.
+  const router = useRouter();
+  const [agoraDaMeta, setAgoraDaMeta] = useState(() => Date.now());
+  useEffect(() => {
+    const atualizar = () => {
+      if (document.visibilityState !== 'visible') return;
+      router.refresh();
+      setAgoraDaMeta(Date.now());
+    };
+    const id = window.setInterval(atualizar, ATUALIZAR_A_CADA);
+    document.addEventListener('visibilitychange', atualizar);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', atualizar);
+    };
+  }, [router]);
 
   const [abaSalva, setAbaSalva] = usePreferencia(CHAVE_ABA, 'lista');
   const aba: Aba = ABAS.some(([a]) => a === abaSalva) ? (abaSalva as Aba) : 'lista';
@@ -158,6 +184,23 @@ export function CaptacaoPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leads, tabBRL, cotacoes, hoje, agora]);
 
+  const meta = useMemo(
+    () =>
+      resumoDaMeta(
+        leads.map((l) => ({
+          status: l.status,
+          unico: valor(l),
+          mensal: mensalidade(l),
+          firstContactAt: l.firstContactAt,
+          repliedAt: l.repliedAt,
+          closedAt: l.closedAt,
+        })),
+        agoraDaMeta
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [leads, tabBRL, cotacoes, agoraDaMeta]
+  );
+
   const servicosSugeridos = useMemo(() => [...new Set(leads.flatMap((l) => l.suggestedServices))].sort(), [leads]);
   // Ramos das buscas importadas, com quantos leads em aberto cada um tem.
   const ramos = useMemo(() => {
@@ -198,6 +241,7 @@ export function CaptacaoPanel({
     // color-scheme escuro: sem ele o WebKit desenha select e calendário em branco.
     <div className="[color-scheme:dark]">
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="col-span-2 grid gap-3 lg:col-span-4 xl:grid-cols-2">
         <ValorNaMesa
           implementacao={ind.naMesa}
           mensal={ind.naMesaMensal}
@@ -206,10 +250,13 @@ export function CaptacaoPanel({
             cotacoes.USD ? ' · EUA convertido pela cotação de hoje' : ' · EUA fora (sem cotação hoje)'
           }`}
         />
-        <Indicador rotulo="Na fila" valor={String(ind.fila)} rodape={`${ind.filaBoa} com nota 60 ou mais`} />
+        <GraficoDaMeta resumo={meta} aoVivo />
+        </div>
+        <Indicador i={0} rotulo="Na fila" valor={ind.fila} rodape={`${ind.filaBoa} com nota 60 ou mais`} />
         <Indicador
+          i={1}
           rotulo="Contatados (7 dias)"
-          valor={String(ind.contatados7)}
+          valor={ind.contatados7}
           rodape={
             ind.taxaResposta === null
               ? 'Taxa de resposta aparece após o 1º contato'
@@ -217,13 +264,15 @@ export function CaptacaoPanel({
           }
         />
         <Indicador
+          i={2}
           rotulo="Em negociação"
-          valor={String(ind.negociando)}
+          valor={ind.negociando}
           rodape={`${semCentavos(ind.valorNegociando)} + ${semCentavos(ind.mensalNegociando)}/mês estimados`}
         />
         <Indicador
+          i={3}
           rotulo="Fechados (30 dias)"
-          valor={String(ind.fechados30)}
+          valor={ind.fechados30}
           rodape={`${semCentavos(ind.valorFechados30)} + ${semCentavos(ind.mensalFechados30)}/mês pela tabela`}
         />
       </div>
@@ -265,7 +314,10 @@ export function CaptacaoPanel({
                     : 'border-border-strong text-fg-secondary hover:border-accent'
                 }`}
               >
-                {LEAD_STATUS_LABEL[s]} <span className="tabular-nums text-fg-tertiary">{n}</span>
+                {LEAD_STATUS_LABEL[s]}{' '}
+                <span className="tabular-nums text-fg-tertiary">
+                  <NumeroAnimado valor={n} />
+                </span>
               </button>
             ))}
           </div>
@@ -278,10 +330,17 @@ export function CaptacaoPanel({
           <button
             key={a}
             onClick={() => mudarAba(a)}
-            className={`-mb-px whitespace-nowrap border-b-2 px-3.5 py-2.5 text-[13.5px] font-bold transition-colors ${
-              aba === a ? 'border-accent text-accent' : 'border-transparent text-fg-tertiary hover:text-fg'
+            className={`relative -mb-px whitespace-nowrap px-3.5 py-2.5 text-[13.5px] font-bold transition-colors ${
+              aba === a ? 'text-accent' : 'text-fg-tertiary hover:text-fg'
             }`}
           >
+            {aba === a && (
+              <motion.span
+                layoutId="captacao-aba"
+                className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-accent"
+                transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+              />
+            )}
             {nome}
             {a === 'foco' && fila.length > 0 && <span className="ml-1.5 tabular-nums text-fg-faded">{fila.length}</span>}
             {a === 'buscas' && pedidos.some((p) => p.status === 'pendente' || p.status === 'rodando') && (
@@ -384,6 +443,12 @@ export function CaptacaoPanel({
         </div>
       )}
 
+      <motion.div
+        key={aba}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: calmo ? 0 : 0.35, ease: SUAVE }}
+      >
       {aba === 'lista' && (
         <>
           <div className="mb-2 text-[12.5px] text-fg-tertiary">
@@ -467,6 +532,7 @@ export function CaptacaoPanel({
           />
         </>
       )}
+      </motion.div>
 
       {importando && <ImportarModal onFechar={() => setImportando(false)} />}
       {editandoModelos && (

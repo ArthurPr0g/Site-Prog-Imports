@@ -40,6 +40,10 @@ import { registrarPeloVendedorAction, pedirMaisLeadsAction } from '@/app/actions
 import { Simulador } from './Simulador';
 import { PerguntasDificeis, PerguntarAoArthur } from './PerguntasDificeis';
 import { LeadDoVendedor, type AbaDoLead } from './LeadDoVendedor';
+import { MetaDoVendedor } from './MetaDoVendedor';
+import { motion } from 'framer-motion';
+import type { ResumoDaMeta } from '@/lib/meta-captacao';
+import { NumeroAnimado } from '@/components/captacao/NumeroAnimado';
 
 type Aba = 'hoje' | 'leads' | 'simulador' | 'perguntas' | 'como';
 
@@ -100,11 +104,14 @@ export function PaginaDoVendedor({
   token,
   origem,
   whatsArthur,
+  metaInicial = null,
 }: {
   kit: Kit;
   token: string;
   origem: string;
   whatsArthur: string;
+  /** Dinheiro na mesa e meta do time (atualiza sozinho). */
+  metaInicial?: ResumoDaMeta | null;
 }) {
   const toast = useToast();
   const [agora] = useState(() => Date.now());
@@ -198,24 +205,38 @@ export function PaginaDoVendedor({
           </div>
         )}
         <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          {[
-            ['Contatados', `${progresso.contatados} de ${progresso.total}`],
-            ['Em conversa', String(progresso.conversas)],
-            ['Querem proposta', String(progresso.propostas)],
-            ['Checklists feitos', String(progresso.checklists)],
-          ].map(([rotulo, valor]) => (
-            <div key={rotulo} className="rounded-[14px] border border-border bg-card p-3">
+          {(
+            [
+              ['Contatados', progresso.contatados, ` de ${progresso.total}`],
+              ['Em conversa', progresso.conversas, ''],
+              ['Querem proposta', progresso.propostas, ''],
+              ['Checklists feitos', progresso.checklists, ''],
+            ] as const
+          ).map(([rotulo, valor, resto], i) => (
+            <motion.div
+              key={rotulo}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: 0.1 + i * 0.07 }}
+              className="rounded-[14px] border border-border bg-card p-3"
+            >
               <div className="text-[10.5px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{rotulo}</div>
-              <div className="mt-1 font-display text-[22px] font-bold tabular-nums">{valor}</div>
-            </div>
+              <div className="mt-1 font-display text-[22px] font-bold tabular-nums">
+                <NumeroAnimado valor={valor} />
+                {resto}
+              </div>
+            </motion.div>
           ))}
         </div>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-fg-faded/15">
-          <div
+          <motion.div
             className="h-full rounded-full bg-accent"
-            style={{ width: `${Math.round((progresso.contatados / Math.max(1, progresso.total)) * 100)}%` }}
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.round((progresso.contatados / Math.max(1, progresso.total)) * 100)}%` }}
+            transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
           />
         </div>
+        <MetaDoVendedor token={token} metaInicial={metaInicial} leads={kit.leads} />
       </header>
 
       <nav className="sticky top-0 z-20 -mx-4 mb-4 flex gap-1 overflow-x-auto border-b border-border bg-page/95 px-4 backdrop-blur sm:-mx-6 sm:px-6">
@@ -223,8 +244,15 @@ export function PaginaDoVendedor({
           <button
             key={a}
             onClick={() => setAba(a)}
-            className={`-mb-px flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-[13.5px] font-bold ${aba === a ? 'border-accent text-accent' : 'border-transparent text-fg-tertiary hover:text-fg'}`}
+            className={`relative -mb-px flex items-center gap-1.5 whitespace-nowrap px-3 py-3 text-[13.5px] font-bold transition-colors ${aba === a ? 'text-accent' : 'text-fg-tertiary hover:text-fg'}`}
           >
+            {aba === a && (
+              <motion.span
+                layoutId="vendedor-aba"
+                className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-accent"
+                transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+              />
+            )}
             <Icone size={15} /> {nome}
           </button>
         ))}

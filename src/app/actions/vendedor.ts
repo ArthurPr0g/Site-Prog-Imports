@@ -10,6 +10,8 @@ import { type ActionResult, okResult, errResult } from '@/lib/action-result';
 import { limparRespostas, type RespostasDoChecklist } from '@/lib/checklist-descoberta';
 import { ETAPAS_QUE_O_VENDEDOR_MARCA } from '@/lib/vendedor';
 import type { LeadStatus } from '@/lib/captacao';
+import { metaDoVendedor } from '@/lib/data/meta-do-vendedor';
+import type { ResumoDaMeta } from '@/lib/meta-captacao';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -67,4 +69,10 @@ export async function salvarChecklistDoVendedorAction(
   if (data !== 'ok') return errResult(String(data));
   revalidar(token);
   return okResult('Checklist salvo. O Arthur já vê no painel.');
+}
+
+/** Meta e dinheiro na mesa, para a página do vendedor se atualizar sozinha. */
+export async function metaDoVendedorAction(token: string): Promise<ResumoDaMeta | null> {
+  if (!UUID.test(token)) return null;
+  return metaDoVendedor(token);
 }

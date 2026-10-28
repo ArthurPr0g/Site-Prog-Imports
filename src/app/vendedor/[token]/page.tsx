@@ -5,6 +5,7 @@ import { SITE_URL } from '@/lib/seo';
 import { WHATSAPP_NUMBER } from '@/lib/constants';
 import type { Kit } from '@/lib/vendedor';
 import { PaginaDoVendedor } from '@/components/vendedor/PaginaDoVendedor';
+import { metaDoVendedor } from '@/lib/data/meta-do-vendedor';
 
 // Página do vendedor (link gerado na aba Vendedores da Captação). Sem login:
 // quem tem o link lê os leads dele pela função lead_kit; link desativado = 404.
@@ -22,7 +23,15 @@ export default async function VendedorPage({ params }: { params: Promise<{ token
   const { token } = await params;
   if (!UUID.test(token)) notFound();
   const supabase = await createClient();
-  const { data } = await supabase.rpc('lead_kit', { p_token: token });
+  const [{ data }, meta] = await Promise.all([supabase.rpc('lead_kit', { p_token: token }), metaDoVendedor(token)]);
   if (!data) notFound();
-  return <PaginaDoVendedor kit={data as unknown as Kit} token={token} origem={SITE_URL} whatsArthur={WHATSAPP_NUMBER} />;
+  return (
+    <PaginaDoVendedor
+      kit={data as unknown as Kit}
+      token={token}
+      origem={SITE_URL}
+      whatsArthur={WHATSAPP_NUMBER}
+      metaInicial={meta}
+    />
+  );
 }

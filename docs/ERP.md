@@ -1480,7 +1480,7 @@ ou 90 em dólar) e entra uma mensalidade só, a maior. Fora do Brasil a tela
 mostra também em reais, pela cotação de **mercado** do dia (`buscarCotacaoMercado`,
 sem a taxa da Prog: é estimativa do que entra, não preço de compra).
 
-**Valor na mesa** (card do topo): soma de implementação e de mensalidades dos
+**Dinheiro na mesa** (card do topo; antes "Valor na mesa"): soma de implementação e de mensalidades dos
 leads em aberto (fora fechado, perdido e não contatar), total em reais e, ao
 lado, cada país na moeda dele.
 

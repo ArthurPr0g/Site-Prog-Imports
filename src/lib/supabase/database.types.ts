@@ -2518,6 +2518,7 @@ export type Database = {
       }
       lead_registrar_visita: { Args: { p_token: string }; Returns: undefined }
       lead_kit: { Args: { p_token: string }; Returns: Json }
+      lead_kit_meta: { Args: { p_token: string }; Returns: Json }
       lead_kit_atualizar: {
         Args: {
           p_etapa?: number

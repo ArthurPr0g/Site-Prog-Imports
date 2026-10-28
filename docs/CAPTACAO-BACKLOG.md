@@ -40,17 +40,28 @@ só nesta pasta do PC: trabalhe nela (não clone de novo, senão perde tudo).
 
 | # | Item | Status | Observação |
 |---|---|---|---|
-| P1 | Aplicar a migration `0062` em produção e rodar `get_advisors` | a fazer | Passo 2 acima. Só numa sessão aberta na pasta **Prog Soluções** (MCP `supabase-arthurmatos003`). |
-| P2 | Push dos commits locais e acompanhar o deploy | a fazer | Depois do P1, nunca antes (a tela sem a tabela quebra). |
-| P3 | Testar no Chrome, iPhone e Android pelo acesso do dono | a fazer | O Android ainda não foi testado em nenhuma versão (emulador não abria o Chrome após boot a frio). |
-| P4 | Conferir se `NEXT_PUBLIC_WHATSAPP_NUMBER` na Vercel é `5562982133188` | a fazer | É o número de serviços (padrão do código). |
-| P5 | Importar em produção os CSVs de `google-maps-scraper-kit\resultados` | a fazer | Passo 6 acima. Lote de Goiânia (36 nichos) e Orlando (18) rodando em 27/10. |
-| P6 | Gerar o link do Felipe e mandar para ele | a fazer | Passo 7. Falta o WhatsApp dele. |
+| P1 | Aplicar a migration `0062` em produção e rodar `get_advisors` | no ar | Aplicada em 27/10. Advisor: só os avisos esperados das funções `lead_*` públicas (security definer de propósito). |
+| P2 | Push dos commits locais e acompanhar o deploy | no ar | Deploy `dpl_2gUo392UYG1gqQmtXY3H8Qa1AWpd` READY em www.prog-imports.com (27/10). |
+| P3 | Testar no Chrome, iPhone e Android pelo acesso do dono | no ar (falta Android) | Chrome: 7 abas, diagnóstico e página do vendedor sem erro no console. iPhone: sem rolagem lateral. **Android**: o emulador tem senha na tela de bloqueio; sem destravar, o Chrome não abre (estado `RUNNING_LOCKED`). O dono destrava e o teste segue. |
+| P4 | Conferir se `NEXT_PUBLIC_WHATSAPP_NUMBER` na Vercel é `5562982133188` | no ar | Confirmado no HTML publicado (`wa.me/5562982133188`). `NEXT_PUBLIC_SITE_URL` não existe na Vercel: vale o padrão `https://prog-imports.com`, que redireciona (308) para `www` mantendo caminho e parâmetros. |
+| P5 | Importar em produção os CSVs de `google-maps-scraper-kitesultados` | no ar | 48 arquivos: 2.151 leads novos, 79 prints. Fora: `bruto-brasilia-full.csv` (versão crua do `odonto-brasilia.csv`) e `oficina-mecanica-goiania` (1 linha sem dados). 4 CSVs antigos sem `busca_*` entraram por cópia corrigida. O lote de Orlando não tinha arquivo novo; importar quando terminar. |
+| P6 | Gerar o link do Felipe e mandar para ele | no ar | Link gerado em 27/10 (Goiânia, 20 leads de nota 85–90, WhatsApp 5562995711797). Falta o dono mandar o link para ele. |
 
 Fora do repositório (só no PC, não vão no push): a alteração do kit do scraper
 (`scrape.py` lendo `GMAPS_LANG`), o `docker-compose.override.yml` que desliga a
 telemetria do engine e o ambiente de teste local
 (`3 - Ferramentas\prog-imports-local`).
+
+---
+
+## Meta e animações (27/10/2026, noite) — no ar
+
+- Card renomeado para **"Dinheiro na mesa"**; números correm até o valor, cartões entram em sequência, sublinhado da aba desliza, troca de aba suave (respeita "reduzir movimento").
+- **Meta do semestre**: R$ 100 mil de faturamento de 1º/11/2026 a 30/04/2027 (`src/lib/meta-captacao.ts`, gráfico em `src/components/captacao/GraficoDaMeta.tsx`).
+  - Realizado = implantação no mês do fechamento + mensalidade nos meses seguintes. Fechamento antes de 1º/11 conta em novembro.
+  - Rampa 25/50/75/100% (R$ 5.556 → 11.111 → 16.667 → 22.222 × 3); o que faltar num mês é redistribuído nos meses seguintes.
+  - Projeção = realizado + mensalidades já fechadas + funil × chance da etapa (proposta 60% e reunião 20% pelo padrão do HubSpot; respondeu 10% e contatado 3% de partida, ajustadas pela taxa real com peso de 20 leads).
+- O painel relê os dados a cada 60 s; a página do vendedor, a cada 30 s (função `lead_kit_meta`, migration `0063`, só etapa/país/serviços/datas, sem nome nem contato).
 
 ---
 
@@ -136,7 +147,7 @@ escolher a etapa).
 
 - **Domínio à venda**: `checar-sites.py` marca `parado` quando o site virou página de domínio estacionado (GoDaddy `/lander`, Sedo, Dan, Afternic…). Nota +40, mensagem "o endereço do site de vocês está à venda" e item no diagnóstico. Achou casos em quase todos os nichos de Goiânia.
 - **Mensagens em português sem artigo antes do nome** ("a Centro de Ensino" errava o gênero): o nome da empresa saiu do corpo do WhatsApp e foi para o assunto do e-mail.
-- **"Valor na mesa"** diz "uma vez" / "todo mês" e mostra o total em 12 meses de contrato.
+- **"Dinheiro na mesa"** (antes "Valor na mesa") diz "uma vez" / "todo mês" e mostra o total em 12 meses de contrato.
 
 ## Página do vendedor (27/10/2026) — feito (local)
 
@@ -165,7 +176,7 @@ WhatsApp dele, informado na hora de gerar o link em produção). Detalhes em
 
 | Item | Observação |
 |---|---|
-| Portugal e Espanha | Espaço reservado no card "Valor na mesa". Falta: preço em euro (`planos.ptpt.js` e `planos.eu.js` do portfólio), cotação do euro, mensagens em pt-PT e espanhol, WhatsApp +351/+34. |
+| Portugal e Espanha | Espaço reservado no card "Dinheiro na mesa". Falta: preço em euro (`planos.ptpt.js` e `planos.eu.js` do portfólio), cotação do euro, mensagens em pt-PT e espanhol, WhatsApp +351/+34. |
 | Captação para a loja Prog Imports | Revendedores, assistências técnicas, empresas com frota. O dono adiou (27/10). |
 | Domínio do diagnóstico | Hoje sai em prog-imports.com (domínio da loja). Melhor num domínio da Prog Soluções; liga com o "domínio próprio" do backlog do portfólio. |
 | Botão "Agendar 20 min" | No diagnóstico e no e-mail, quando existir o Cal.com (backlog do portfólio). |

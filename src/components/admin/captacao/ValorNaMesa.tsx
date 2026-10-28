@@ -1,11 +1,14 @@
 'use client';
 
-// Card "Valor na mesa" (total + por país, com bandeira) e os indicadores do topo.
+// Card "Dinheiro na mesa" (total + por país, com bandeira) e os indicadores do topo.
+// Números correm até o valor e os cartões entram em sequência (framer-motion).
 
+import { motion, useReducedMotion } from 'framer-motion';
 import type { Pais } from '@/lib/captacao';
 import { formatMoeda, type Moeda } from '@/lib/precos-captacao';
 import { PLAN_MONTHS_DEFAULT } from '@/lib/services';
 import { semCentavos } from './comum';
+import { NumeroAnimado, SUAVE } from '@/components/captacao/NumeroAnimado';
 
 export const PAISES: Pais[] = ['BR', 'US'];
 // Portugal e Espanha: espaço reservado (pedido de 27/10). Entram em PAISES
@@ -43,22 +46,37 @@ export function ValorNaMesa({
   porPais: ValorDoPais[];
   rodape: string;
 }) {
+  const calmo = useReducedMotion();
   return (
-    <div className="relative col-span-2 overflow-hidden rounded-[16px] border border-accent/40 bg-card p-3.5 sm:rounded-[18px] sm:p-5 lg:col-span-4">
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: calmo ? 0 : 0.5, ease: SUAVE }}
+      className="relative overflow-hidden rounded-[16px] border border-accent/40 bg-card p-3.5 sm:rounded-[18px] sm:p-5"
+    >
       <span className="absolute inset-y-0 left-0 w-[3px] bg-accent" />
-      <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-accent">Valor na mesa</div>
+      {/* Brilho dourado que passa pelo card de tempos em tempos */}
+      {!calmo && (
+        <motion.span
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-accent/[.07] to-transparent"
+          animate={{ x: ['0%', '450%'] }}
+          transition={{ duration: 2.6, repeat: Infinity, repeatDelay: 5, ease: 'easeInOut' }}
+        />
+      )}
+      <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-accent">Dinheiro na mesa</div>
       <div className="mt-1.5 flex flex-col gap-4 sm:mt-2 lg:gap-8">
         <div className="grid grid-cols-2 gap-3 lg:gap-8">
           <div className="min-w-0">
             <div className="text-[11px] text-fg-faded">Implementação (total, uma vez)</div>
             <div className="truncate font-display text-[22px] font-bold tabular-nums tracking-[-.01em] sm:text-[34px]">
-              {semCentavos(implementacao)}
+              <NumeroAnimado valor={implementacao} formato={semCentavos} />
             </div>
           </div>
           <div className="min-w-0">
             <div className="text-[11px] text-fg-faded">Mensalidades (total, todo mês)</div>
             <div className="truncate font-display text-[22px] font-bold tabular-nums tracking-[-.01em] sm:text-[34px]">
-              {semCentavos(mensal)}
+              <NumeroAnimado valor={mensal} formato={semCentavos} />
               <span className="text-[13px] font-bold text-fg-tertiary">/mês</span>
             </div>
             {/* Duração padrão do contrato nas propostas do ERP. */}
@@ -68,13 +86,17 @@ export function ValorNaMesa({
           </div>
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-2.5 border-t border-divider pt-4 lg:grid-cols-4">
-        {PAISES_DO_CARD.map((codigo) => {
+      <div className="mt-4 grid grid-cols-2 gap-2.5 border-t border-divider pt-4">
+        {PAISES_DO_CARD.map((codigo, i) => {
           const p = porPais.find((x) => x.pais === codigo);
           return (
-            <div
+            <motion.div
               key={codigo}
-              className={`flex flex-col items-start gap-2 rounded-[14px] border border-border bg-page/40 p-3 sm:flex-row sm:items-center sm:gap-3.5 sm:px-4 sm:py-4 ${p ? '' : 'opacity-60'}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: p ? 1 : 0.6, y: 0 }}
+              whileHover={calmo ? undefined : { y: -2 }}
+              transition={{ duration: calmo ? 0 : 0.45, delay: calmo ? 0 : 0.25 + i * 0.07, ease: SUAVE }}
+              className="flex flex-col items-start gap-2 rounded-[14px] border border-border bg-page/40 p-3 transition-colors hover:border-accent/40 sm:flex-row sm:items-center sm:gap-3.5 sm:px-4 sm:py-4"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -89,7 +111,7 @@ export function ValorNaMesa({
                 {p ? (
                   <>
                     <div className="mt-0.5 text-[16px] font-bold tabular-nums leading-tight sm:text-[18px]">
-                      {formatMoeda(p.unico, p.moeda)}
+                      <NumeroAnimado valor={p.unico} formato={(v) => formatMoeda(v, p.moeda)} />
                     </div>
                     <div className="text-[12.5px] font-bold tabular-nums text-fg-tertiary">
                       + {formatMoeda(p.mensal, p.moeda)}/mês
@@ -108,24 +130,43 @@ export function ValorNaMesa({
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
       <div className="mt-2 line-clamp-2 text-[11px] leading-snug text-fg-tertiary sm:text-[12.5px]">{rodape}</div>
-    </div>
+    </motion.div>
   );
 }
 
-export function Indicador({ rotulo, valor, rodape }: { rotulo: string; valor: string; rodape: string }) {
+/** Indicador do topo. Número: corre até o valor; texto: aparece como está. */
+export function Indicador({
+  rotulo,
+  valor,
+  rodape,
+  i = 0,
+}: {
+  rotulo: string;
+  valor: number | string;
+  rodape: string;
+  /** Ordem na entrada em sequência. */
+  i?: number;
+}) {
+  const calmo = useReducedMotion();
   return (
-    <div className="relative overflow-hidden rounded-[16px] border border-border bg-card p-3.5 sm:rounded-[18px] sm:p-5">
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={calmo ? undefined : { y: -3 }}
+      transition={{ duration: calmo ? 0 : 0.45, delay: calmo ? 0 : 0.15 + i * 0.07, ease: SUAVE }}
+      className="relative overflow-hidden rounded-[16px] border border-border bg-card p-3.5 transition-colors hover:border-accent/40 sm:rounded-[18px] sm:p-5"
+    >
       <span className="absolute inset-y-0 left-0 w-[3px] bg-accent" />
       <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{rotulo}</div>
       <div className="mt-1.5 font-display text-[21px] font-bold tabular-nums tracking-[-.01em] sm:mt-2 sm:text-[28px]">
-        {valor}
+        {typeof valor === 'number' ? <NumeroAnimado valor={valor} /> : valor}
       </div>
       <div className="mt-1 line-clamp-2 text-[11px] leading-snug text-fg-tertiary sm:text-[12.5px]">{rodape}</div>
-    </div>
+    </motion.div>
   );
 }
