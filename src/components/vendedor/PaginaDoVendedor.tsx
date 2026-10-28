@@ -192,7 +192,8 @@ export function PaginaDoVendedor({
   ];
 
   return (
-    <main className="mx-auto max-w-[1280px] px-4 py-6 [color-scheme:dark] sm:px-6 sm:py-8">
+    <main className="tema-apple mx-auto min-h-screen max-w-[1280px] overflow-x-clip px-4 py-6 [color-scheme:dark] sm:px-6 sm:py-8">
+      <div className="aurora" aria-hidden />
       <header className="mb-5">
         <div className="text-[12px] font-extrabold uppercase tracking-[.14em] text-accent">Prog Soluções · área do vendedor</div>
         <h1 className="mt-1 font-display text-[26px] font-bold leading-tight sm:text-[32px]">Olá, {vendedor}!</h1>
@@ -207,20 +208,28 @@ export function PaginaDoVendedor({
         <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           {(
             [
-              ['Contatados', progresso.contatados, ` de ${progresso.total}`],
-              ['Em conversa', progresso.conversas, ''],
-              ['Querem proposta', progresso.propostas, ''],
-              ['Checklists feitos', progresso.checklists, ''],
+              ['Contatados', progresso.contatados, ` de ${progresso.total}`, '#0a84ff'],
+              ['Em conversa', progresso.conversas, '', '#64d2ff'],
+              ['Querem proposta', progresso.propostas, '', '#ff9f0a'],
+              ['Checklists feitos', progresso.checklists, '', '#30d158'],
             ] as const
-          ).map(([rotulo, valor, resto], i) => (
+          ).map(([rotulo, valor, resto, cor], i) => (
             <motion.div
               key={rotulo}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, delay: 0.1 + i * 0.07 }}
-              className="rounded-[14px] border border-border bg-card p-3"
+              className="relative overflow-hidden rounded-[18px] border border-border bg-card p-3.5"
             >
-              <div className="text-[10.5px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{rotulo}</div>
+              <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: cor }} />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -right-6 -top-8 h-20 w-20 rounded-full opacity-25 blur-2xl"
+                style={{ background: cor }}
+              />
+              <div className="relative text-[10.5px] font-extrabold uppercase tracking-[.08em]" style={{ color: cor }}>
+                {rotulo}
+              </div>
               <div className="mt-1 font-display text-[22px] font-bold tabular-nums">
                 <NumeroAnimado valor={valor} />
                 {resto}
@@ -230,7 +239,7 @@ export function PaginaDoVendedor({
         </div>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-fg-faded/15">
           <motion.div
-            className="h-full rounded-full bg-accent"
+            className="barra-cor h-full rounded-full"
             initial={{ width: 0 }}
             animate={{ width: `${Math.round((progresso.contatados / Math.max(1, progresso.total)) * 100)}%` }}
             transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
@@ -239,7 +248,7 @@ export function PaginaDoVendedor({
         <MetaDoVendedor token={token} metaInicial={metaInicial} leads={kit.leads} />
       </header>
 
-      <nav className="sticky top-0 z-20 -mx-4 mb-4 flex gap-1 overflow-x-auto border-b border-border bg-page/95 px-4 backdrop-blur sm:-mx-6 sm:px-6">
+      <nav className="vidro sticky top-0 z-20 -mx-4 mb-4 flex gap-1 overflow-x-auto border-b border-border px-4 sm:-mx-6 sm:px-6">
         {abas.map(([a, nome, Icone]) => (
           <button
             key={a}
@@ -249,7 +258,7 @@ export function PaginaDoVendedor({
             {aba === a && (
               <motion.span
                 layoutId="vendedor-aba"
-                className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-accent"
+                className="barra-cor absolute inset-x-0 bottom-0 h-[2px] rounded-full"
                 transition={{ type: 'spring', stiffness: 420, damping: 34 }}
               />
             )}

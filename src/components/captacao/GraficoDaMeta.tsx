@@ -11,7 +11,7 @@ import { Target, TrendingUp, Wallet } from 'lucide-react';
 import { META, type ResumoDaMeta } from '@/lib/meta-captacao';
 import { NumeroAnimado, SUAVE, reais } from './NumeroAnimado';
 
-const COR_REALIZADO = 'var(--color-accent)';
+const COR_REALIZADO = '#0a84ff';
 const COR_META = 'var(--color-fg-tertiary)';
 const COR_BOA = 'var(--color-success)';
 const COR_ALERTA = '#ff8a5c';
@@ -103,11 +103,11 @@ export function GraficoDaMeta({
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: calmo ? 0 : 0.5, ease: SUAVE }}
-      className={`relative overflow-hidden rounded-[16px] border border-accent/40 bg-card p-3.5 sm:rounded-[18px] sm:p-5 ${className}`}
+      className={`borda-degrade relative overflow-hidden rounded-[18px] border bg-card p-3.5 sm:rounded-[22px] sm:p-5 ${className}`}
     >
-      <span className="absolute inset-y-0 left-0 w-[3px] bg-accent" />
+      <span className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-[#64d2ff] via-[#0a84ff] to-[#bf5af2]" />
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-accent">
+        <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#64d2ff]">
           <Target size={14} /> {rotulo}
         </div>
         <div className="flex items-center gap-2 text-[11px] font-bold text-fg-tertiary">
@@ -127,7 +127,7 @@ export function GraficoDaMeta({
       </div>
 
       <div className="mt-2 flex flex-wrap items-end gap-x-3 gap-y-1">
-        <div className="font-display text-[26px] font-bold tabular-nums tracking-[-.01em] sm:text-[34px]">
+        <div className="texto-degrade font-display text-[26px] font-bold tabular-nums tracking-[-.01em] sm:text-[34px]">
           <NumeroAnimado valor={realizado} formato={reais} />
         </div>
         <div className="pb-1 text-[13px] font-bold text-fg-tertiary">de {reais(valor)}</div>
@@ -135,7 +135,7 @@ export function GraficoDaMeta({
           key={Math.round(progresso)}
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="mb-1 rounded-full bg-accent/15 px-2 py-0.5 text-[12px] font-extrabold tabular-nums text-accent"
+          className="mb-1 rounded-full bg-[#0a84ff]/20 px-2 py-0.5 text-[12px] font-extrabold tabular-nums text-[#64d2ff]"
         >
           <NumeroAnimado valor={progresso} formato={pct} />
         </motion.span>
@@ -144,7 +144,7 @@ export function GraficoDaMeta({
       {/* Barra do total, com o brilho correndo e a marca da projeção */}
       <div className="relative mt-2 h-2.5 overflow-hidden rounded-full bg-fg-faded/15">
         <motion.div
-          className="relative h-full overflow-hidden rounded-full bg-accent"
+          className="barra-cor relative h-full overflow-hidden rounded-full shadow-[0_0_12px_rgba(10,132,255,.6)]"
           initial={{ width: 0 }}
           animate={{ width: `${Math.min(100, Math.max(progresso, progresso > 0 ? 1.5 : 0))}%` }}
           transition={{ duration: calmo ? 0 : 1.2, ease: SUAVE }}
@@ -201,9 +201,26 @@ export function GraficoDaMeta({
           <svg width={W} height={H} className="block overflow-visible" role="img" aria-label={`Meta de ${reais(valor)}: ${reais(realizado)} realizados, projeção de ${reais(projecao)}`}>
             <defs>
               <linearGradient id="meta-area" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={COR_REALIZADO} stopOpacity={0.35} />
-                <stop offset="100%" stopColor={COR_REALIZADO} stopOpacity={0} />
+                <stop offset="0%" stopColor="#0a84ff" stopOpacity={0.4} />
+                <stop offset="60%" stopColor="#bf5af2" stopOpacity={0.12} />
+                <stop offset="100%" stopColor="#bf5af2" stopOpacity={0} />
               </linearGradient>
+              <linearGradient id="meta-linha" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#64d2ff" />
+                <stop offset="50%" stopColor="#0a84ff" />
+                <stop offset="100%" stopColor="#bf5af2" />
+              </linearGradient>
+              <linearGradient id="meta-barra" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#64d2ff" />
+                <stop offset="100%" stopColor="#0a84ff" />
+              </linearGradient>
+              <filter id="meta-brilho" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="3" result="b" />
+                <feMerge>
+                  <feMergeNode in="b" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
             </defs>
 
             {/* Grade e eixo */}
@@ -226,7 +243,7 @@ export function GraficoDaMeta({
               strokeOpacity={0.45}
               strokeDasharray="2 4"
             />
-            <text x={g.x(n)} y={g.y(valor) - 6} textAnchor="end" className="fill-accent text-[10.5px] font-bold">
+            <text x={g.x(n)} y={g.y(valor) - 6} textAnchor="end" className="fill-[#64d2ff] text-[10.5px] font-bold">
               meta {eixo(valor)}
             </text>
 
@@ -242,10 +259,10 @@ export function GraficoDaMeta({
                     x={cx - barra - 1}
                     width={barra}
                     rx={3}
-                    fill={COR_REALIZADO}
-                    fillOpacity={destaque ? 0.22 : 0.1}
-                    stroke={COR_REALIZADO}
-                    strokeOpacity={destaque ? 0.8 : 0.35}
+                    fill="#ffffff"
+                    fillOpacity={destaque ? 0.1 : 0.04}
+                    stroke="#ffffff"
+                    strokeOpacity={destaque ? 0.5 : 0.18}
                     initial={{ y: g.base, height: 0 }}
                     animate={{ y: g.base - hMeta, height: hMeta }}
                     transition={{ duration: calmo ? 0 : 0.8, delay: calmo ? 0 : 0.2 + i * 0.08, ease: SUAVE }}
@@ -254,7 +271,7 @@ export function GraficoDaMeta({
                     x={cx + 1}
                     width={barra}
                     rx={3}
-                    fill={COR_REALIZADO}
+                    fill="url(#meta-barra)"
                     initial={{ y: g.base, height: 0 }}
                     animate={{ y: g.base - hReal, height: hReal }}
                     transition={{ duration: calmo ? 0 : 0.9, delay: calmo ? 0 : 0.45 + i * 0.08, ease: SUAVE }}
@@ -263,7 +280,7 @@ export function GraficoDaMeta({
                     x={cx}
                     y={H - 8}
                     textAnchor="middle"
-                    className={`text-[11px] font-bold ${i === atual ? 'fill-accent' : 'fill-fg-tertiary'}`}
+                    className={`text-[11px] font-bold ${i === atual ? 'fill-[#64d2ff]' : 'fill-fg-tertiary'}`}
                   >
                     {m.rotulo}
                   </text>
@@ -290,8 +307,9 @@ export function GraficoDaMeta({
             />
             <motion.path
               fill="none"
-              stroke={COR_REALIZADO}
-              strokeWidth={2.6}
+              stroke="url(#meta-linha)"
+              filter="url(#meta-brilho)"
+              strokeWidth={2.8}
               strokeLinecap="round"
               strokeLinejoin="round"
               initial={{ d: g.real, pathLength: 0 }}
@@ -370,7 +388,7 @@ export function GraficoDaMeta({
             className="pointer-events-none absolute top-0 z-10 w-[168px] rounded-[10px] border border-border-strong bg-page/95 p-2.5 text-[11.5px] shadow-lg backdrop-blur"
             style={{ left: Math.min(Math.max(0, g.x(foco + 0.5) - 84), W - 168) }}
           >
-            <div className="mb-1 font-extrabold uppercase tracking-[.08em] text-accent">{tooltip.rotulo}</div>
+            <div className="mb-1 font-extrabold uppercase tracking-[.08em] text-[#64d2ff]">{tooltip.rotulo}</div>
             <div className="flex justify-between gap-2">
               <span className="text-fg-tertiary">Meta</span>
               <b className="tabular-nums">{reais(tooltip.meta)}</b>
@@ -383,7 +401,7 @@ export function GraficoDaMeta({
             )}
             <div className="flex justify-between gap-2">
               <span className="text-fg-tertiary">Realizado</span>
-              <b className="tabular-nums text-accent">{reais(tooltip.realizado)}</b>
+              <b className="tabular-nums text-[#64d2ff]">{reais(tooltip.realizado)}</b>
             </div>
           </motion.div>
         )}

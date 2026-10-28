@@ -292,3 +292,150 @@ textarea::placeholder {
   input, select, textarea { font-size: 16px !important; }
 }
 :where(a, button, input, select, textarea, label, summary, [role="button"]) { touch-action: manipulation; }
+/* ===== Tema "Apple" da Captação e da página do vendedor (27/10/2026) =====
+   Pedido do dono: mais cor, profundidade e movimento nessas duas telas, na
+   linha do Hub (cores de sistema da Apple no escuro, cartões em camadas,
+   vidro, sombras em duas camadas). Vale só dentro de .tema-apple: o resto do
+   site continua no design system da Prog Imports. */
+.tema-apple {
+  --color-page: #000;
+  --color-card: #161618;
+  --color-card-hover: #1c1c1f;
+  --color-input: #1c1c1e;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+  --color-divider: rgba(255, 255, 255, 0.08);
+  --color-fg: #f5f5f7;
+  --color-fg-secondary: #d1d1d6;
+  --color-fg-tertiary: #98989d;
+  --color-fg-faded: #6e6e73;
+  --color-success: #30d158;
+  --color-error: #ff453a;
+  --color-warning: #ff9f0a;
+  --color-info: #0a84ff;
+  /* Cores de sistema (escuro) */
+  --azul: #0a84ff;
+  --verde: #30d158;
+  --laranja: #ff9f0a;
+  --vermelho: #ff453a;
+  --roxo: #bf5af2;
+  --rosa: #ff375f;
+  --ciano: #64d2ff;
+  --amarelo: #ffd60a;
+  --indigo: #5e5ce6;
+  --menta: #66d4cf;
+  /* Profundidade: contato curto + sombra longa e macia */
+  --sombra: 0 1px 2px rgba(0, 0, 0, 0.45), 0 10px 30px rgba(0, 0, 0, 0.38);
+  --sombra-2: 0 2px 6px rgba(0, 0, 0, 0.45), 0 22px 54px rgba(0, 0, 0, 0.55);
+  --brilho-borda: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  position: relative;
+  isolation: isolate;
+}
+
+/* Cartões ganham camada: sombra, luz na borda de cima e leve elevação no hover. */
+.tema-apple .bg-card {
+  box-shadow: var(--sombra), var(--brilho-borda);
+  transition:
+    box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.35s;
+}
+.tema-apple .bg-card:hover {
+  box-shadow: var(--sombra-2), var(--brilho-borda);
+}
+.tema-apple .bg-page\/40,
+.tema-apple .bg-page\/50,
+.tema-apple .bg-page\/60 {
+  background-color: rgba(255, 255, 255, 0.035);
+}
+
+/* Vidro (barras e cabeçalhos fixos) */
+.tema-apple .vidro {
+  background: rgba(22, 22, 24, 0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+/* Aurora: manchas de cor bem suaves atrás do topo, se movendo devagar. */
+.tema-apple .aurora {
+  position: absolute;
+  inset: -80px -40px auto -40px;
+  height: 560px;
+  z-index: -1;
+  pointer-events: none;
+  filter: blur(70px);
+  opacity: 0.55;
+  background:
+    radial-gradient(38% 46% at 18% 30%, rgba(10, 132, 255, 0.35), transparent 70%),
+    radial-gradient(34% 42% at 62% 18%, rgba(191, 90, 242, 0.28), transparent 70%),
+    radial-gradient(30% 40% at 88% 42%, rgba(48, 209, 88, 0.22), transparent 70%),
+    radial-gradient(26% 36% at 42% 70%, rgba(255, 159, 10, 0.16), transparent 70%);
+  animation: aurora-mover 18s ease-in-out infinite alternate;
+}
+@keyframes aurora-mover {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(3%, 2%, 0) scale(1.06); }
+  100% { transform: translate3d(-3%, 1%, 0) scale(1.02); }
+}
+
+/* Texto com degradê (números de destaque) */
+.tema-apple .texto-degrade {
+  background: linear-gradient(92deg, #64d2ff 0%, #0a84ff 35%, #bf5af2 70%, #ff375f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.tema-apple .texto-dinheiro {
+  background: linear-gradient(92deg, #30d158 0%, #66d4cf 55%, #64d2ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Borda em degradê para os cartões principais */
+.tema-apple .borda-degrade {
+  border-color: transparent !important;
+  background:
+    linear-gradient(var(--color-card), var(--color-card)) padding-box,
+    linear-gradient(135deg, rgba(10, 132, 255, 0.7), rgba(191, 90, 242, 0.55), rgba(48, 209, 88, 0.55)) border-box;
+}
+.tema-apple .borda-dinheiro {
+  border-color: transparent !important;
+  background:
+    linear-gradient(var(--color-card), var(--color-card)) padding-box,
+    linear-gradient(135deg, rgba(48, 209, 88, 0.75), rgba(102, 212, 207, 0.5), rgba(255, 214, 10, 0.45)) border-box;
+}
+
+/* Entrada em sequência sem JavaScript (diagnóstico é renderizado no servidor). */
+.tema-apple .entrar {
+  animation: tema-entrar 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes tema-entrar {
+  from { opacity: 0; transform: translateY(16px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+.tema-apple .crescer {
+  transform-origin: left center;
+  animation: tema-crescer 1.3s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
+}
+@keyframes tema-crescer {
+  from { transform: scaleX(0); }
+}
+.tema-apple .barra-cor {
+  background: linear-gradient(90deg, #64d2ff, #0a84ff 45%, #bf5af2);
+}
+.tema-apple .cta-verde {
+  background: linear-gradient(180deg, #34d65c, #28b84c);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(48, 209, 88, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.tema-apple .cta-verde:hover {
+  box-shadow: 0 12px 32px rgba(48, 209, 88, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tema-apple .aurora,
+  .tema-apple .entrar,
+  .tema-apple .crescer { animation: none; }
+  .tema-apple .bg-card { transition: none; }
+}

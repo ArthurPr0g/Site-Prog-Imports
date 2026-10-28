@@ -52,9 +52,9 @@ export function ValorNaMesa({
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: calmo ? 0 : 0.5, ease: SUAVE }}
-      className="relative overflow-hidden rounded-[16px] border border-accent/40 bg-card p-3.5 sm:rounded-[18px] sm:p-5"
+      className="borda-dinheiro relative overflow-hidden rounded-[18px] border bg-card p-3.5 sm:rounded-[22px] sm:p-5"
     >
-      <span className="absolute inset-y-0 left-0 w-[3px] bg-accent" />
+      <span className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-[#30d158] via-[#66d4cf] to-[#64d2ff]" />
       {/* Brilho dourado que passa pelo card de tempos em tempos */}
       {!calmo && (
         <motion.span
@@ -64,18 +64,18 @@ export function ValorNaMesa({
           transition={{ duration: 2.6, repeat: Infinity, repeatDelay: 5, ease: 'easeInOut' }}
         />
       )}
-      <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-accent">Dinheiro na mesa</div>
+      <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-[#30d158]">Dinheiro na mesa</div>
       <div className="mt-1.5 flex flex-col gap-4 sm:mt-2 lg:gap-8">
         <div className="grid grid-cols-2 gap-3 lg:gap-8">
           <div className="min-w-0">
             <div className="text-[11px] text-fg-faded">Implementação (total, uma vez)</div>
-            <div className="truncate font-display text-[22px] font-bold tabular-nums tracking-[-.01em] sm:text-[34px]">
+            <div className="texto-dinheiro truncate font-display text-[22px] font-bold tabular-nums tracking-[-.01em] sm:text-[34px]">
               <NumeroAnimado valor={implementacao} formato={semCentavos} />
             </div>
           </div>
           <div className="min-w-0">
             <div className="text-[11px] text-fg-faded">Mensalidades (total, todo mês)</div>
-            <div className="truncate font-display text-[22px] font-bold tabular-nums tracking-[-.01em] sm:text-[34px]">
+            <div className="texto-dinheiro truncate font-display text-[22px] font-bold tabular-nums tracking-[-.01em] sm:text-[34px]">
               <NumeroAnimado valor={mensal} formato={semCentavos} />
               <span className="text-[13px] font-bold text-fg-tertiary">/mês</span>
             </div>
@@ -150,12 +150,15 @@ export function Indicador({
   valor,
   rodape,
   i = 0,
+  cor = 'var(--color-accent)',
 }: {
   rotulo: string;
   valor: number | string;
   rodape: string;
   /** Ordem na entrada em sequência. */
   i?: number;
+  /** Cor do indicador (barra, rótulo e brilho). */
+  cor?: string;
 }) {
   const calmo = useReducedMotion();
   return (
@@ -164,10 +167,18 @@ export function Indicador({
       animate={{ opacity: 1, y: 0 }}
       whileHover={calmo ? undefined : { y: -3 }}
       transition={{ duration: calmo ? 0 : 0.45, delay: calmo ? 0 : 0.15 + i * 0.07, ease: SUAVE }}
-      className="relative overflow-hidden rounded-[16px] border border-border bg-card p-3.5 transition-colors hover:border-accent/40 sm:rounded-[18px] sm:p-5"
+      className="relative overflow-hidden rounded-[18px] border border-border bg-card p-3.5 sm:rounded-[22px] sm:p-5"
     >
-      <span className="absolute inset-y-0 left-0 w-[3px] bg-accent" />
-      <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{rotulo}</div>
+      <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: cor }} />
+      {/* Brilho da cor do indicador no canto */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full opacity-25 blur-2xl"
+        style={{ background: cor }}
+      />
+      <div className="relative text-[11px] font-extrabold uppercase tracking-[.08em]" style={{ color: cor }}>
+        {rotulo}
+      </div>
       <div className="mt-1.5 font-display text-[21px] font-bold tabular-nums tracking-[-.01em] sm:mt-2 sm:text-[28px]">
         {typeof valor === 'number' ? <NumeroAnimado valor={valor} /> : valor}
       </div>

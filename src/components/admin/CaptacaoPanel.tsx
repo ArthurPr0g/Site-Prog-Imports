@@ -50,6 +50,17 @@ const ABAS = [
 ] as const;
 type Aba = (typeof ABAS)[number][0];
 const CHAVE_ABA = 'captacao.aba';
+/** Cor de cada etapa do funil (cores de sistema da Apple). */
+const COR_DA_ETAPA: Record<LeadStatus, string> = {
+  novo: '#8e8e93',
+  contatado: '#0a84ff',
+  respondeu: '#64d2ff',
+  reuniao: '#bf5af2',
+  proposta: '#ff9f0a',
+  fechado: '#30d158',
+  perdido: '#ff453a',
+  nao_contatar: '#636366',
+};
 /** O painel relê os dados sozinho (o que o vendedor registra aparece aqui). */
 const ATUALIZAR_A_CADA = 60_000;
 
@@ -248,7 +259,9 @@ export function CaptacaoPanel({
 
   return (
     // color-scheme escuro: sem ele o WebKit desenha select e calendário em branco.
-    <div className="[color-scheme:dark]">
+    // tema-apple: cores de sistema, profundidade e aurora (globals.css).
+    <div className="tema-apple [color-scheme:dark]">
+      <div className="aurora" aria-hidden />
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="col-span-2 grid gap-3 lg:col-span-4 xl:grid-cols-2">
         <ValorNaMesa
@@ -261,9 +274,10 @@ export function CaptacaoPanel({
         />
         <GraficoDaMeta resumo={meta} aoVivo />
         </div>
-        <Indicador i={0} rotulo="Na fila" valor={ind.fila} rodape={`${ind.filaBoa} com nota 60 ou mais`} />
+        <Indicador i={0} cor="#0a84ff" rotulo="Na fila" valor={ind.fila} rodape={`${ind.filaBoa} com nota 60 ou mais`} />
         <Indicador
           i={1}
+          cor="#64d2ff"
           rotulo="Contatados (7 dias)"
           valor={ind.contatados7}
           rodape={
@@ -274,12 +288,14 @@ export function CaptacaoPanel({
         />
         <Indicador
           i={2}
+          cor="#ff9f0a"
           rotulo="Em negociação"
           valor={ind.negociando}
           rodape={`${semCentavos(ind.valorNegociando)} + ${semCentavos(ind.mensalNegociando)}/mês estimados`}
         />
         <Indicador
           i={3}
+          cor="#30d158"
           rotulo="Fechados (30 dias)"
           valor={ind.fechados30}
           rodape={`${semCentavos(ind.valorFechados30)} + ${semCentavos(ind.mensalFechados30)}/mês pela tabela`}
@@ -317,12 +333,12 @@ export function CaptacaoPanel({
               <button
                 key={s}
                 onClick={() => filtrar(etapa === s ? '' : s)}
-                className={`rounded-full border px-3 py-1.5 text-[12.5px] font-bold transition-colors ${
-                  etapa === s
-                    ? 'border-accent bg-accent/15 text-accent'
-                    : 'border-border-strong text-fg-secondary hover:border-accent'
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-bold transition-all hover:-translate-y-0.5 ${
+                  etapa === s ? 'text-fg' : 'border-border-strong text-fg-secondary'
                 }`}
+                style={etapa === s ? { borderColor: COR_DA_ETAPA[s], background: `${COR_DA_ETAPA[s]}26` } : undefined}
               >
+                <span className="h-2 w-2 rounded-full" style={{ background: COR_DA_ETAPA[s], boxShadow: `0 0 8px ${COR_DA_ETAPA[s]}` }} />
                 {LEAD_STATUS_LABEL[s]}{' '}
                 <span className="tabular-nums text-fg-tertiary">
                   <NumeroAnimado valor={n} />
@@ -346,7 +362,7 @@ export function CaptacaoPanel({
             {aba === a && (
               <motion.span
                 layoutId="captacao-aba"
-                className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-accent"
+                className="barra-cor absolute inset-x-0 bottom-0 h-[2px] rounded-full"
                 transition={{ type: 'spring', stiffness: 420, damping: 34 }}
               />
             )}

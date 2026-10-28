@@ -60,9 +60,9 @@ export function MetaDoVendedor({
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: calmo ? 0 : 0.5, ease: SUAVE }}
-        className="relative overflow-hidden rounded-[16px] border border-accent/40 bg-card p-4 sm:rounded-[18px] sm:p-5"
+        className="borda-dinheiro relative overflow-hidden rounded-[18px] border bg-card p-4 sm:rounded-[22px] sm:p-5"
       >
-        <span className="absolute inset-y-0 left-0 w-[3px] bg-accent" />
+        <span className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-[#30d158] via-[#66d4cf] to-[#64d2ff]" />
         {!calmo && (
           <motion.span
             aria-hidden
@@ -71,10 +71,10 @@ export function MetaDoVendedor({
             transition={{ duration: 2.6, repeat: Infinity, repeatDelay: 5, ease: 'easeInOut' }}
           />
         )}
-        <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-accent">
+        <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#30d158]">
           <Coins size={14} /> Dinheiro na mesa
         </div>
-        <div className="mt-2 font-display text-[28px] font-bold tabular-nums tracking-[-.01em] sm:text-[34px]">
+        <div className="texto-dinheiro mt-2 font-display text-[28px] font-bold tabular-nums tracking-[-.01em] sm:text-[34px]">
           <NumeroAnimado valor={meta.naMesa.unico} formato={reais} />
         </div>
         <div className="text-[14px] font-bold tabular-nums text-fg-secondary">
