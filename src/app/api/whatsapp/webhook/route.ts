@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse, after } from 'next/server';
 import { dbDoAtendente, type DbDoAtendente } from '@/lib/atendente/db';
-import { assinaturaValida, lerWebhook, marcarLidaEDigitando, type MensagemRecebida } from '@/lib/atendente/whatsapp-api';
+import { assinaturaValida, baixarMidia, lerWebhook, marcarLidaEDigitando, type MensagemRecebida } from '@/lib/atendente/whatsapp-api';
+import { transcrever, transcricaoConfigurada } from '@/lib/atendente/transcricao';
 import { responderConversa } from '@/lib/atendente/agente';
 import { empresaDoTexto } from '@/lib/atendente/regras';
 
@@ -41,14 +42,19 @@ export async function POST(req: NextRequest) {
   }
 
   const paraResponder = new Map<string, string>();
+  const audios: MensagemRecebida[] = [];
   for (const m of mensagens) {
     const conversaId = await gravarRecebida(db, m);
-    if (conversaId) paraResponder.set(conversaId, m.id);
+    // Reação (emoji numa mensagem) fica no histórico, mas não pede resposta.
+    if (conversaId && !m.reacao) paraResponder.set(conversaId, m.id);
+    if (conversaId && m.midia?.tipo === 'audio') audios.push(m);
   }
 
   if (paraResponder.size) {
     after(async () => {
       for (const id of paraResponder.values()) await marcarLidaEDigitando(id);
+      // Áudio vira texto antes de a IA ler (o Claude não recebe áudio).
+      for (const a of audios) await transcreverAudio(db, a);
       await new Promise((r) => setTimeout(r, ESPERA_MS));
       for (const [conversaId, msgId] of paraResponder) {
         // Chegou outra mensagem depois desta: a execução daquela responde tudo.
@@ -112,6 +118,10 @@ async function gravarRecebida(db: DbDoAtendente, m: MensagemRecebida): Promise<s
     body: m.texto,
     external_id: m.id,
     created_at: m.quando,
+    media_type: m.midia?.tipo ?? null,
+    media_id: m.midia?.id ?? null,
+    media_mime: m.midia?.mime ?? null,
+    media_name: m.midia?.nome ?? null,
   });
   if (error) return null; // webhook repetido (external_id único)
 
@@ -142,6 +152,18 @@ async function gravarRecebida(db: DbDoAtendente, m: MensagemRecebida): Promise<s
     }
   }
   return conversaId;
+}
+
+/** Troca o "[o cliente mandou um áudio]" pela transcrição (ou por um aviso para a IA pedir texto). */
+async function transcreverAudio(db: DbDoAtendente, m: MensagemRecebida): Promise<void> {
+  const arquivo = m.midia ? await baixarMidia(m.midia.id) : null;
+  const texto = arquivo ? await transcrever(arquivo.dados, arquivo.mime || m.midia!.mime) : null;
+  const corpo = texto
+    ? `[Áudio do cliente, transcrito] ${texto}`
+    : transcricaoConfigurada()
+      ? '[o cliente mandou um áudio que não consegui transcrever: peça com gentileza para escrever ou mandar de novo]'
+      : '[o cliente mandou um áudio, mas ainda não consigo ouvir áudios: peça com gentileza para escrever]';
+  await db.from('ia_messages').update({ body: corpo }).eq('external_id', m.id);
 }
 
 const digitos = (s: string | null) => (s ?? '').replace(/\D/g, '');

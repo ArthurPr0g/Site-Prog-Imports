@@ -42,3 +42,7 @@ next-env.d.ts
 
 # Cópia local da coleta do Bench Promos (backup; dados de terceiros, fora do git)
 scripts/benchmarks/dados/
+
+# Cache do Python
+__pycache__/
+*.pyc

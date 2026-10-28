@@ -567,6 +567,10 @@ export type Database = {
           error: string | null
           external_id: string | null
           id: string
+          media_id: string | null
+          media_mime: string | null
+          media_name: string | null
+          media_type: string | null
           status: string | null
         }
         Insert: {
@@ -578,6 +582,10 @@ export type Database = {
           error?: string | null
           external_id?: string | null
           id?: string
+          media_id?: string | null
+          media_mime?: string | null
+          media_name?: string | null
+          media_type?: string | null
           status?: string | null
         }
         Update: {
@@ -589,6 +597,10 @@ export type Database = {
           error?: string | null
           external_id?: string | null
           id?: string
+          media_id?: string | null
+          media_mime?: string | null
+          media_name?: string | null
+          media_type?: string | null
           status?: string | null
         }
         Relationships: [

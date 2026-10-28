@@ -7,7 +7,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { dbDoAtendente, type DbDoAtendente } from '@/lib/atendente/db';
-import { enviarTexto, JANELA_MS } from '@/lib/atendente/whatsapp-api';
+import { enviarTexto, baixarMidia, JANELA_MS } from '@/lib/atendente/whatsapp-api';
 import { enviarEmail } from '@/lib/atendente/email';
 import { siteAbreAgora } from '@/lib/atendente/site-agora';
 import { instrucoesFixas, contextoDaConversa } from '@/lib/atendente/prompt';
@@ -335,7 +335,7 @@ export async function responderConversa(conversaId: string, avisoInterno?: strin
     db.from('ia_discount_requests').select('status, percent').eq('conversation_id', conversaId),
     db
       .from('ia_messages')
-      .select('direction, author, body, created_at')
+      .select('direction, author, body, created_at, media_type, media_id, media_mime')
       .eq('conversation_id', conversaId)
       .order('created_at', { ascending: false })
       .limit(HISTORICO),
@@ -407,23 +407,44 @@ export async function responderConversa(conversaId: string, avisoInterno?: strin
       : null,
   });
 
+  // Imagens e PDFs que o cliente mandou por último vão para o Claude ver (no
+  // máximo 2, entre as 8 mensagens mais recentes: o histórico não fica no
+  // cache, então cada imagem é paga de novo a cada resposta).
+  const anexos = new Map<string, Anthropic.Beta.BetaContentBlockParam>();
+  const recentes = (historico ?? []).slice(0, 8).filter(
+    (m) => m.direction === 'in' && m.media_id && (m.media_type === 'image' || (m.media_type === 'document' && m.media_mime === 'application/pdf'))
+  );
+  for (const m of recentes.slice(0, 2)) {
+    const arq = await baixarMidia(m.media_id!);
+    if (!arq || arq.dados.length > 8 * 1024 * 1024) continue;
+    const data = arq.dados.toString('base64');
+    const mime = arq.mime || m.media_mime || '';
+    if (m.media_type === 'document') {
+      anexos.set(m.media_id!, { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data } });
+    } else if (['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(mime)) {
+      anexos.set(m.media_id!, {
+        type: 'image',
+        source: { type: 'base64', media_type: mime as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data },
+      });
+    }
+  }
+
   // Histórico em turnos alternados: cliente = user; IA e Arthur = assistant.
   const mensagens: Anthropic.Beta.BetaMessageParam[] = [];
+  const acrescentar = (papel: 'user' | 'assistant', blocos: Anthropic.Beta.BetaContentBlockParam[]) => {
+    const ultimo = mensagens.at(-1);
+    if (ultimo && ultimo.role === papel) (ultimo.content as Anthropic.Beta.BetaContentBlockParam[]).push(...blocos);
+    else mensagens.push({ role: papel, content: blocos });
+  };
   for (const m of [...(historico ?? [])].reverse()) {
     const papel: 'user' | 'assistant' = m.direction === 'in' || m.author === 'sistema' ? 'user' : 'assistant';
     const texto =
       m.author === 'arthur' ? `[Arthur escreveu] ${m.body}` : m.author === 'sistema' ? `[Aviso interno] ${m.body}` : m.body;
-    const ultimo = mensagens.at(-1);
-    if (ultimo && ultimo.role === papel) ultimo.content = `${ultimo.content as string}\n\n${texto}`;
-    else mensagens.push({ role: papel, content: texto });
+    const anexo = m.media_id ? anexos.get(m.media_id) : undefined;
+    acrescentar(papel, [...(anexo ? [anexo] : []), { type: 'text', text: texto }]);
   }
   while (mensagens[0]?.role === 'assistant') mensagens.shift();
-  if (avisoInterno) {
-    const ultimo = mensagens.at(-1);
-    const texto = `[Aviso interno] ${avisoInterno}`;
-    if (ultimo?.role === 'user') ultimo.content = `${ultimo.content as string}\n\n${texto}`;
-    else mensagens.push({ role: 'user', content: texto });
-  }
+  if (avisoInterno) acrescentar('user', [{ type: 'text', text: `[Aviso interno] ${avisoInterno}` }]);
   if (mensagens.at(-1)?.role !== 'user') return 'nada novo para responder';
 
   const system: Anthropic.Beta.BetaTextBlockParam[] = [
