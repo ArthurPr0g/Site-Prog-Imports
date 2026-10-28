@@ -8,12 +8,14 @@ import { variaveisDoLead, linkWhatsApp } from '@/lib/mensagens-lead';
 import { emailDeVerdade } from '@/lib/captacao';
 import { SITE_URL } from '@/lib/seo';
 import { guardarArquivosDeClientes } from '@/lib/atendente/arquivos-clientes';
+import { aprenderComConversas } from '@/lib/atendente/aprender';
 
 // Relógio do atendente: o pg_cron do Supabase chama a cada minuto (migration
 // 0067) com o segredo ATENDENTE_TICK_SECRET. Cada chamada:
 // 1. libera o desconto que esperou o tempo do "superior" e manda a IA responder;
 // 2. manda no máximo 1 e-mail de primeiro contato (horário comercial, até o
-//    limite do dia) e 1 retorno para quem não respondeu.
+//    limite do dia) e 1 retorno para quem não respondeu;
+// 3. relê 1 conversa encerrada para a Lia aprender (lições vão para aprovação).
 
 export const maxDuration = 60;
 
@@ -32,7 +34,8 @@ export async function POST(req: NextRequest) {
 
   const descontos = await resolverDescontos(db);
   const emails = emailConfigurado() && horarioComercial() ? await mandarEmails(db, cfg) : 0;
-  return NextResponse.json({ ok: true, descontos, emails, arquivos });
+  const licoes = await aprenderComConversas(db, cfg);
+  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes });
 }
 
 async function resolverDescontos(db: DbDoAtendente): Promise<number> {

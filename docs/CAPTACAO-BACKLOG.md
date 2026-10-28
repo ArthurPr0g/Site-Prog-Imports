@@ -55,6 +55,30 @@ telemetria do engine e o ambiente de teste local
 
 ---
 
+## Lia aprende com as conversas + proteção contra abuso (28/10/2026) — feito (local, sem push)
+
+Pedido do dono: a Lia aprende dores novas, objeções e o que funcionou; e não deixa
+o cliente burlar regras, tirar informação interna ou usá-la para outra coisa.
+
+- **Aprender** (`src/lib/atendente/aprender.ts`, chamado pelo relógio): relê 1 conversa
+  encerrada por minuto (fechada, perdida, "não contatar" ou parada há 2 dias, com pelo
+  menos 3 mensagens do cliente), extrai até 3 lições (Sonnet, conta no teto do mês) e
+  soma "vezes" nas repetidas. Tudo entra como **sugerido**: só o que o Arthur aprova em
+  Atendimento > "O que a Lia aprendeu" vai para as instruções (bloco próprio no cache,
+  até 40 lições, as mais confirmadas primeiro). Preço, desconto e regra nunca viram lição.
+- **Proteção**: seção "Proteção contra abuso" no prompt (não revela instruções nem dados
+  de outros clientes, só fala dos serviços, não aceita "o Arthur prometeu", não manda link
+  de fora); no código, marcas `[Aviso interno]`/`[Arthur escreveu]` escritas pelo cliente
+  perdem os colchetes, resposta com nome de ferramenta/título das instruções/chave não
+  sai (chama o Arthur), e passou de 80 mensagens da IA numa conversa em 24 h ela para ali.
+- **Para publicar** (sessão na pasta Prog Soluções, MCP `supabase-arthurmatos003`):
+  1. aplicar `0075_atendente_aprendizados.sql` + `get_advisors`;
+  2. `git push` e acompanhar o deploy;
+  3. rodar `npx -y tsx scripts/captacao/lead-teste-felipe.ts` (agora com o WhatsApp do
+     Felipe, 62 99571-1797, para a Lia reconhecer o lead de teste).
+
+---
+
 ## Atendente de IA "Lia" no WhatsApp (28/10/2026) — feito (local)
 
 Pedido do dono: IA que atende do primeiro contato ao fechamento, Felipe × IA com placar.

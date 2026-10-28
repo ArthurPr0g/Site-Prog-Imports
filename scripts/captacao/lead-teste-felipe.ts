@@ -33,6 +33,8 @@ const LEAD = {
   website: 'https://felipesousa-forceperform.netlify.app',
   site_check: 'ok',
   instagram: 'https://www.instagram.com/felipesousam_',
+  // WhatsApp de onde o Felipe chama a Lia: é por ele que a Lia reconhece o lead.
+  phone: '(62) 99571-1797',
   source: 'teste-lia',
   score: 70,
   porte: 'pequena',

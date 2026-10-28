@@ -348,10 +348,30 @@ export type PedidoDeDesconto = {
   createdAt: string;
 };
 
+/** Lição que a Lia tirou de uma conversa; só as 'ativo' entram nas instruções dela. */
+export type LicaoDaLia = {
+  id: string;
+  tipo: 'dor' | 'objecao' | 'abordagem' | 'evitar';
+  ramo: string | null;
+  texto: string;
+  exemplo: string | null;
+  status: 'sugerido' | 'ativo' | 'descartado';
+  vezes: number;
+  createdAt: string;
+};
+
+export const TIPO_DA_LICAO: Record<LicaoDaLia['tipo'], string> = {
+  dor: 'Dor nova',
+  objecao: 'Objeção',
+  abordagem: 'Funcionou',
+  evitar: 'Evitar',
+};
+
 export type PainelDoAtendente = {
   config: ConfigDoAtendente;
   conversas: ConversaDoPainel[];
   pedidos: PedidoDeDesconto[];
+  licoes: LicaoDaLia[];
   gastoDoMes: number;
   mensagensDoMes: number;
   emailsHoje: number;

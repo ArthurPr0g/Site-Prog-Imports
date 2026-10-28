@@ -2,11 +2,11 @@
 
 // Aba Atendimento: o placar de quem converte mais (Felipe × IA, em tempo real),
 // as conversas da atendente de IA no WhatsApp, os pedidos de desconto extra
-// esperando o "superior" e a configuração. Relê tudo a cada 10 s com a aba
+// esperando o "superior", o que a Lia aprendeu (para aprovar) e a configuração. Relê tudo a cada 10 s com a aba
 // visível; o placar usa os leads do painel (relidos a cada minuto).
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { Bot, CheckCircle2, CircleAlert, Hand, MessageCircle, Send, Settings, Trophy, UserRound } from 'lucide-react';
+import { Bot, CheckCircle2, CircleAlert, GraduationCap, Hand, MessageCircle, Send, Settings, Trophy, UserRound } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { LEAD_STATUS_LABEL, type Lead } from '@/lib/captacao';
 import { TrilhaDaVenda, BarraDaEtapa } from './TrilhaDaVenda';
@@ -14,7 +14,9 @@ import type { KitDoVendedor } from '@/lib/data/leads';
 import {
   MODELOS_DA_IA,
   placar,
+  TIPO_DA_LICAO,
   type ConfigDoAtendente,
+  type LicaoDaLia,
   type ConversaDoPainel,
   type MensagemDoPainel,
   type PainelDoAtendente,
@@ -27,6 +29,7 @@ import {
   alternarModoAction,
   resolverChamadoAction,
   decidirDescontoAction,
+  decidirLicaoAction,
   salvarConfigAtendenteAction,
 } from '@/app/actions/atendente';
 import { inputClass, semCentavos } from './comum';
@@ -191,6 +194,8 @@ export function Atendimento({
           </div>
         )}
       </section>
+
+      {painel && <Aprendizados licoes={painel.licoes} aoMudar={reler} />}
 
       {painel && <Configuracao inicial={painel.config} aoSalvar={reler} />}
     </div>
@@ -384,6 +389,97 @@ function PedidoAguardando({
       >
         Negar
       </button>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------ aprendizados */
+
+function Aprendizados({ licoes, aoMudar }: { licoes: LicaoDaLia[]; aoMudar: () => void }) {
+  const sugeridas = licoes.filter((l) => l.status === 'sugerido');
+  const ativas = licoes.filter((l) => l.status === 'ativo');
+  return (
+    <details open={sugeridas.length > 0} className="rounded-[18px] border border-border bg-card p-4 sm:p-5">
+      <summary className="flex cursor-pointer items-center gap-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
+        <GraduationCap size={13} /> O que a Lia aprendeu
+        {sugeridas.length > 0 && (
+          <span className="rounded-full bg-accent px-2 py-0.5 text-[10.5px] normal-case tracking-normal text-page">
+            {sugeridas.length} para aprovar
+          </span>
+        )}
+      </summary>
+      <p className="mt-2 text-[12.5px] text-fg-tertiary">
+        A cada conversa encerrada, a Lia anota dores novas, objeções e o que funcionou. Só o que você aprovar entra no jeito dela de atender.
+      </p>
+      {licoes.length === 0 && (
+        <div className="mt-3 text-[13px] text-fg-tertiary">Nada ainda: as lições aparecem depois das primeiras conversas encerradas.</div>
+      )}
+      {sugeridas.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {sugeridas.map((l) => (
+            <Licao key={l.id} licao={l} aoMudar={aoMudar} />
+          ))}
+        </div>
+      )}
+      {ativas.length > 0 && (
+        <>
+          <div className="mb-2 mt-4 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">Em uso ({ativas.length})</div>
+          <div className="space-y-2">
+            {ativas.map((l) => (
+              <Licao key={l.id} licao={l} aoMudar={aoMudar} />
+            ))}
+          </div>
+        </>
+      )}
+    </details>
+  );
+}
+
+function Licao({ licao, aoMudar }: { licao: LicaoDaLia; aoMudar: () => void }) {
+  const [pending, start] = useTransition();
+  const toast = useToast();
+  const [texto, setTexto] = useState(licao.texto);
+  const sugerida = licao.status === 'sugerido';
+  const decidir = (status: 'ativo' | 'descartado') =>
+    start(async () => {
+      const r = await seguro(
+        () => decidirLicaoAction(licao.id, status, status === 'ativo' && texto !== licao.texto ? texto : undefined),
+        (m) => toast({ ok: false, message: m })
+      );
+      if (r) toast(r);
+      aoMudar();
+    });
+  return (
+    <div className="rounded-[12px] border border-border px-3 py-2.5 text-[13px]">
+      <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
+        <span className="rounded-full bg-accent/12 px-2 py-0.5 text-accent">{TIPO_DA_LICAO[licao.tipo]}</span>
+        {licao.ramo && <span className="rounded-full border border-border-strong px-2 py-0.5 text-fg-secondary">{licao.ramo}</span>}
+        {licao.vezes > 1 && <span className="text-fg-tertiary">apareceu em {licao.vezes} conversas</span>}
+      </div>
+      {sugerida ? (
+        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={2} maxLength={400} className={`${inputClass} w-full resize-y`} />
+      ) : (
+        <div>{licao.texto}</div>
+      )}
+      {licao.exemplo && <div className="mt-1 text-[12px] italic text-fg-tertiary">&ldquo;{licao.exemplo}&rdquo;</div>}
+      <div className="mt-2 flex gap-2">
+        {sugerida && (
+          <button
+            disabled={pending}
+            onClick={() => decidir('ativo')}
+            className="rounded-control bg-success px-3 py-1.5 text-[12.5px] font-extrabold text-page disabled:opacity-50"
+          >
+            Aprovar
+          </button>
+        )}
+        <button
+          disabled={pending}
+          onClick={() => decidir('descartado')}
+          className="rounded-control border border-error/60 px-3 py-1.5 text-[12.5px] font-extrabold text-error disabled:opacity-50"
+        >
+          {sugerida ? 'Descartar' : 'Desativar'}
+        </button>
+      </div>
     </div>
   );
 }

@@ -515,6 +515,45 @@ export type Database = {
           },
         ]
       }
+      ia_aprendizados: {
+        Row: {
+          conversation_ids: string[]
+          created_at: string
+          decided_at: string | null
+          exemplo: string | null
+          id: string
+          ramo: string | null
+          status: string
+          texto: string
+          tipo: string
+          vezes: number
+        }
+        Insert: {
+          conversation_ids?: string[]
+          created_at?: string
+          decided_at?: string | null
+          exemplo?: string | null
+          id?: string
+          ramo?: string | null
+          status?: string
+          texto: string
+          tipo: string
+          vezes?: number
+        }
+        Update: {
+          conversation_ids?: string[]
+          created_at?: string
+          decided_at?: string | null
+          exemplo?: string | null
+          id?: string
+          ramo?: string | null
+          status?: string
+          texto?: string
+          tipo?: string
+          vezes?: number
+        }
+        Relationships: []
+      }
       ia_config: {
         Row: {
           active: boolean
@@ -567,6 +606,7 @@ export type Database = {
           kit_id: string | null
           last_inbound_at: string | null
           last_message_at: string
+          learned_at: string | null
           lead_id: string | null
           mode: string
           needs_human: boolean
@@ -583,6 +623,7 @@ export type Database = {
           kit_id?: string | null
           last_inbound_at?: string | null
           last_message_at?: string
+          learned_at?: string | null
           lead_id?: string | null
           mode?: string
           needs_human?: boolean
@@ -599,6 +640,7 @@ export type Database = {
           kit_id?: string | null
           last_inbound_at?: string | null
           last_message_at?: string
+          learned_at?: string | null
           lead_id?: string | null
           mode?: string
           needs_human?: boolean

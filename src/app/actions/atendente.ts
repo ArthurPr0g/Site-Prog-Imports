@@ -15,6 +15,7 @@ import {
   MODELOS_DA_IA,
   type ConfigDoAtendente,
   type ConversaDoPainel,
+  type LicaoDaLia,
   type MensagemDoPainel,
   type ModeloDaIA,
   type PainelDoAtendente,
@@ -42,7 +43,7 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
   const supabase = await adminClient();
   if (!supabase) return null;
 
-  const [cfg, conversas, pedidos, uso, saidas, emails] = await Promise.all([
+  const [cfg, conversas, pedidos, uso, saidas, emails, licoes] = await Promise.all([
     supabase.from('ia_config').select('*').eq('id', true).maybeSingle(),
     supabase
       .from('ia_conversations')
@@ -66,6 +67,13 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
       .in('author', ['ia', 'arthur'])
       .gte('created_at', inicioDoMes()),
     supabase.from('ia_emails').select('id', { count: 'exact', head: true }).eq('step', 0).gte('sent_at', inicioDoDia()),
+    supabase
+      .from('ia_aprendizados')
+      .select('id, tipo, ramo, texto, exemplo, status, vezes, created_at')
+      .neq('status', 'descartado')
+      .order('vezes', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(100),
   ]);
 
   const c = cfg.data;
@@ -126,6 +134,18 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
         status: p.status as PedidoDeDesconto['status'],
         releaseAt: p.release_at,
         createdAt: p.created_at,
+      })
+    ),
+    licoes: (licoes.data ?? []).map(
+      (a): LicaoDaLia => ({
+        id: a.id,
+        tipo: a.tipo as LicaoDaLia['tipo'],
+        ramo: a.ramo,
+        texto: a.texto,
+        exemplo: a.exemplo,
+        status: a.status as LicaoDaLia['status'],
+        vezes: a.vezes,
+        createdAt: a.created_at,
       })
     ),
     gastoDoMes: (uso.data ?? []).reduce((s, u) => s + Number(u.cost_usd), 0),
@@ -213,6 +233,20 @@ export async function resolverChamadoAction(conversaId: string): Promise<ActionR
     .eq('id', conversaId);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível marcar.'));
   return okResult('Marcado como resolvido.');
+}
+
+/** Aprovar (com o texto editado), descartar ou desativar uma lição da Lia. Vale a partir da próxima resposta dela. */
+export async function decidirLicaoAction(id: string, status: 'ativo' | 'descartado', texto?: string): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const limpo = texto?.trim();
+  if (limpo !== undefined && (limpo.length < 5 || limpo.length > 400)) return errResult('A lição precisa ter entre 5 e 400 caracteres.');
+  const { error } = await supabase
+    .from('ia_aprendizados')
+    .update({ status, decided_at: new Date().toISOString(), ...(limpo ? { texto: limpo } : {}) })
+    .eq('id', id);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar.'));
+  return okResult(status === 'ativo' ? 'Aprovada: a Lia usa a partir da próxima resposta.' : 'Descartada: a Lia não usa mais.');
 }
 
 /** Liberar já ou negar o desconto extra. A IA responde ao cliente no próximo minuto (tick). */
