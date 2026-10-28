@@ -32,6 +32,25 @@ import {
 import { inputClass, semCentavos } from './comum';
 
 const RELER_A_CADA = 10_000;
+
+// Site atualizado com a aba aberta: a página antiga chama ações que o servidor
+// novo não tem mais. Recarrega em vez de derrubar a tela; outras falhas de rede
+// mantêm os dados que já estão na tela e avisam.
+const VERSAO_NOVA = /Server Action .* was not found|UnrecognizedActionError|Failed to find Server Action/i;
+async function seguro<T>(f: () => Promise<T>, aoFalhar?: (msg: string) => void): Promise<T | undefined> {
+  try {
+    return await f();
+  } catch (e) {
+    const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    if (VERSAO_NOVA.test(msg)) {
+      window.location.reload();
+      return undefined;
+    }
+    console.error('[atendimento]', e);
+    aoFalhar?.('Não deu para falar com o servidor agora. Tente de novo em instantes.');
+    return undefined;
+  }
+}
 const pct = (v: number | null) => (v === null ? '–' : `${Math.round(v * 100)}%`);
 const hora = (iso: string) =>
   new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -60,7 +79,8 @@ export function Atendimento({
   const [filtro, setFiltro] = useState<'todas' | 'precisa' | 'comigo'>('todas');
 
   const reler = useCallback(async () => {
-    const p = await painelDoAtendenteAction();
+    const p = await seguro(() => painelDoAtendenteAction());
+    if (p === undefined) return; // falhou: fica com o que já está na tela
     setPainel(p);
     setLidoEm(Date.now());
   }, []);
@@ -337,7 +357,8 @@ function PedidoAguardando({
   const falta = Math.max(0, new Date(pedido.releaseAt).getTime() - agora);
   const decidir = (d: 'aprovado' | 'negado') =>
     start(async () => {
-      toast(await decidirDescontoAction(pedido.id, d));
+      const r = await seguro(() => decidirDescontoAction(pedido.id, d), (m) => toast({ ok: false, message: m }));
+      if (r) toast(r);
       aoDecidir();
     });
   return (
@@ -416,29 +437,38 @@ function Conversa({
 
   useEffect(() => {
     let vivo = true;
-    void mensagensDaConversaAction(id).then((m) => vivo && setMensagens(m));
+    void seguro(() => mensagensDaConversaAction(id)).then((m) => vivo && m && setMensagens(m));
     return () => {
       vivo = false;
     };
   }, [id, versao]);
-  useEffect(() => fim.current?.scrollIntoView({ block: 'end' }), [mensagens?.length]);
+  // Mensagem nova: rola só a caixa da conversa até o fim (scrollIntoView rolava
+  // a página inteira e brigava com a rolagem de quem estava lendo).
+  useEffect(() => {
+    const caixa = fim.current?.parentElement;
+    if (caixa) caixa.scrollTop = caixa.scrollHeight;
+  }, [mensagens?.length]);
 
   // "Agora" = hora da última leitura do painel (a cada 10 s).
   const janelaAberta = !!conversa?.lastInboundAt && !!versao && versao - new Date(conversa.lastInboundAt).getTime() < 24 * 3600_000;
 
   const enviar = () =>
     start(async () => {
-      const r = await responderComoArthurAction(id, texto);
+      const falhou = (m: string) => toast({ ok: false, message: m });
+      const r = await seguro(() => responderComoArthurAction(id, texto), falhou);
+      if (!r) return;
       toast(r);
       if (r.ok) {
         setTexto('');
-        setMensagens(await mensagensDaConversaAction(id));
+        const m = await seguro(() => mensagensDaConversaAction(id));
+        if (m) setMensagens(m);
         aoMudar();
       }
     });
   const acao = (f: () => Promise<{ ok: boolean; message: string }>) =>
     start(async () => {
-      toast(await f());
+      const r = await seguro(f, (m) => toast({ ok: false, message: m }));
+      if (r) toast(r);
       aoMudar();
     });
 
@@ -615,7 +645,8 @@ function Configuracao({ inicial, aoSalvar }: { inicial: ConfigDoAtendente; aoSal
         disabled={pending}
         onClick={() =>
           start(async () => {
-            toast(await salvarConfigAtendenteAction(c));
+            const r = await seguro(() => salvarConfigAtendenteAction(c), (m) => toast({ ok: false, message: m }));
+            if (r) toast(r);
             aoSalvar();
           })
         }
