@@ -41,7 +41,10 @@ export function Atendimento({
   leads,
   valorDoLead,
   aoAbrirLead,
+  cotacaoDolar,
 }: {
+  /** Dólar do dia (mercado), para mostrar o gasto com IA em reais. null = sem cotação. */
+  cotacaoDolar: number | null;
   kits: KitDoVendedor[];
   leads: Lead[];
   /** Implementação e mensalidade em reais (mesma estimativa do painel). */
@@ -97,7 +100,7 @@ export function Atendimento({
     <div className="space-y-4">
       <Placar linhas={linhas} lidoEm={lidoEm} />
 
-      {painel && <Situacao painel={painel} />}
+      {painel && <Situacao painel={painel} cotacaoDolar={cotacaoDolar} />}
 
       {aguardando.length > 0 && (
         <section className="rounded-[18px] border border-accent/50 bg-accent/[.06] p-4 sm:p-5">
@@ -270,7 +273,9 @@ function Funil({ l }: { l: ReturnType<typeof placar>[number] }) {
 
 /* ------------------------------------------------------------ situação */
 
-function Situacao({ painel }: { painel: PainelDoAtendente }) {
+function Situacao({ painel, cotacaoDolar }: { painel: PainelDoAtendente; cotacaoDolar: number | null }) {
+  const emReais = (usd: number) =>
+    cotacaoDolar ? ` (R$ ${(usd * cotacaoDolar).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})` : '';
   const i = painel.integracoes;
   const faltam = [
     !i.whatsapp && 'WhatsApp (WHATSAPP_*)',
@@ -285,7 +290,7 @@ function Situacao({ painel }: { painel: PainelDoAtendente }) {
       <Cartao rotulo="Atendente" valor={c.active ? `${c.personaName} ligada` : 'Desligada'} ok={c.active} />
       <Cartao
         rotulo="Gasto com IA no mês"
-        valor={`US$ ${painel.gastoDoMes.toFixed(2)} de ${c.monthlyBudgetUsd.toFixed(0)}`}
+        valor={`US$ ${painel.gastoDoMes.toFixed(2)}${emReais(painel.gastoDoMes)} de US$ ${c.monthlyBudgetUsd.toFixed(0)}${emReais(c.monthlyBudgetUsd)}`}
         ok={painel.gastoDoMes < c.monthlyBudgetUsd * 0.8}
       />
       <Cartao rotulo="Mensagens no mês (grátis até 1.000)" valor={painel.mensagensDoMes.toLocaleString('pt-BR')} ok={painel.mensagensDoMes < 900} />

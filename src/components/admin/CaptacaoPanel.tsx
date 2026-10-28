@@ -564,7 +564,13 @@ export function CaptacaoPanel({
       {aba === 'relatorio' && <Relatorio leads={leads} estimativa={estimativa} cotacoes={cotacoes} agora={agoraDaMeta} />}
       {aba === 'buscas' && <Buscas pedidos={pedidos} />}
       {aba === 'atendimento' && (
-        <Atendimento kits={kits} leads={leads} valorDoLead={valorDoLead} aoAbrirLead={(id) => setFichaDe(id)} />
+        <Atendimento
+          kits={kits}
+          leads={leads}
+          valorDoLead={valorDoLead}
+          aoAbrirLead={(id) => setFichaDe(id)}
+          cotacaoDolar={cotacoes.USD}
+        />
       )}
       {aba === 'vendedores' && (
         <>
