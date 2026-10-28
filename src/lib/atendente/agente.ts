@@ -225,6 +225,14 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
         e.prazos
       );
       if (p.total <= 0) return 'Pacote sem preço no catálogo. Não passe valor: use chamar_arthur.';
+      // Guarda a última proposta passada: vira o valor negociado quando o lead fechar
+      // (a meta só usa closed_* com o lead em "fechado"; antes disso, a estimativa).
+      if (leadId) {
+        await db
+          .from('leads')
+          .update({ closed_value: p.totalComExtra, closed_monthly: p.mensal, closed_currency: e.tabela.moeda })
+          .eq('id', leadId);
+      }
       return p.texto;
     }
     case 'registrar_descoberta': {

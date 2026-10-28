@@ -21,6 +21,7 @@ import {
   type PedidoDeDesconto,
 } from '@/lib/atendente/regras';
 import type { LeadStatus } from '@/lib/captacao';
+import { respondidas, type RespostasDoChecklist } from '@/lib/checklist-descoberta';
 
 async function adminClient() {
   const admin = await requireAdmin();
@@ -45,7 +46,7 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
     supabase.from('ia_config').select('*').eq('id', true).maybeSingle(),
     supabase
       .from('ia_conversations')
-      .select('*, leads(name, status), ia_messages(body, created_at)')
+      .select('*, leads(name, status, first_contact_at, replied_at, closed_at, diag_last_view_at, discovery), ia_messages(body, created_at)')
       .order('last_message_at', { ascending: false })
       .order('created_at', { referencedTable: 'ia_messages', ascending: false })
       .limit(1, { referencedTable: 'ia_messages' })
@@ -98,6 +99,13 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
         lastMessageAt: v.last_message_at,
         unread: v.unread,
         ultimaMensagem: v.ia_messages?.[0]?.body ?? null,
+        marcos: {
+          contatado: v.leads?.first_contact_at ?? null,
+          respondeu: v.leads?.replied_at ?? null,
+          fechado: v.leads?.closed_at ?? null,
+          diagnosticoVisto: v.leads?.diag_last_view_at ?? null,
+          descoberta: respondidas((v.leads?.discovery ?? {}) as RespostasDoChecklist),
+        },
       })
     ),
     pedidos: (pedidos.data ?? []).map(

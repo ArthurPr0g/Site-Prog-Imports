@@ -996,6 +996,9 @@ export type Database = {
           reasons: string[]
           replied_at: string | null
           responsible_name: string | null
+          closed_value: number | null
+          closed_monthly: number | null
+          closed_currency: string | null
           review_count: number | null
           score: number
           screenshot_url: string | null
@@ -1057,6 +1060,9 @@ export type Database = {
           reasons?: string[]
           replied_at?: string | null
           responsible_name?: string | null
+          closed_value?: number | null
+          closed_monthly?: number | null
+          closed_currency?: string | null
           review_count?: number | null
           score?: number
           screenshot_url?: string | null
@@ -1118,6 +1124,9 @@ export type Database = {
           reasons?: string[]
           replied_at?: string | null
           responsible_name?: string | null
+          closed_value?: number | null
+          closed_monthly?: number | null
+          closed_currency?: string | null
           review_count?: number | null
           score?: number
           screenshot_url?: string | null

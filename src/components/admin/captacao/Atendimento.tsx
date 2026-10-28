@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { Bot, CheckCircle2, CircleAlert, Hand, MessageCircle, Send, Settings, Trophy, UserRound } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { LEAD_STATUS_LABEL, type Lead } from '@/lib/captacao';
+import { TrilhaDaVenda, BarraDaEtapa } from './TrilhaDaVenda';
 import type { KitDoVendedor } from '@/lib/data/leads';
 import {
   MODELOS_DA_IA,
@@ -381,7 +382,7 @@ function ItemDaConversa({ c, ativa, aoAbrir }: { c: ConversaDoPainel; ativa: boo
           <span className="ml-auto shrink-0 rounded-full bg-accent px-1.5 text-[10.5px] font-extrabold text-page">{c.unread}</span>
         )}
       </div>
-      {c.leadStatus && <div className="mt-1 text-[11px] font-bold text-accent">{LEAD_STATUS_LABEL[c.leadStatus]}</div>}
+      <BarraDaEtapa status={c.leadStatus} />
     </button>
   );
 }
@@ -487,6 +488,7 @@ function Conversa({
           </button>
         )}
       </div>
+      {conversa && <TrilhaDaVenda conversa={conversa} />}
       {conversa?.needsHuman && conversa.needsHumanReason && (
         <div className="mx-3 mt-2 rounded-[10px] border border-error/40 bg-error/[.06] px-3 py-2 text-[12.5px]">
           <b>Precisa de você:</b> {conversa.needsHumanReason}

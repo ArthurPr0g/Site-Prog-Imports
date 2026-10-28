@@ -8,7 +8,18 @@ import { TABELA_USD, tabelaBRL, estimar, emReais, type Cotacoes } from '@/lib/pr
 import { resumoDaMeta, type LeadDaMeta, type ResumoDaMeta } from '@/lib/meta-captacao';
 import type { LeadStatus } from '@/lib/captacao';
 
-type Linha = { s: LeadStatus; c: string; sv: string[]; fc: string | null; ra: string | null; ca: string | null };
+type Linha = {
+  s: LeadStatus;
+  c: string;
+  sv: string[];
+  fc: string | null;
+  ra: string | null;
+  ca: string | null;
+  /** Valor negociado no fechamento (migration 0073). */
+  cv?: number | null;
+  cm?: number | null;
+  cc?: 'BRL' | 'USD' | null;
+};
 
 // A página atualiza a cada 30 s: a cotação do dólar fica guardada por 30 min
 // em vez de consultar a API externa a cada atualização.
@@ -33,10 +44,14 @@ export async function metaDoVendedor(token: string): Promise<ResumoDaMeta | null
   const tabBRL = tabelaBRL(new Map(catalogo.map(([n, p]) => [n, Number(p)])));
   const daMeta: LeadDaMeta[] = leads.map((l) => {
     const e = estimar(l.sv ?? [], l.c === 'US' ? TABELA_USD : tabBRL);
+    const negociado = l.s === 'fechado' && l.cv !== null && l.cv !== undefined;
     return {
       status: l.s,
-      unico: emReais(e.unico, e.moeda, cot) ?? 0,
-      mensal: emReais(e.mensal, e.moeda, cot) ?? 0,
+      unico: negociado ? (emReais(Number(l.cv), l.cc ?? 'BRL', cot) ?? 0) : (emReais(e.unico, e.moeda, cot) ?? 0),
+      mensal:
+        negociado && l.cm !== null && l.cm !== undefined
+          ? (emReais(Number(l.cm), l.cc ?? 'BRL', cot) ?? 0)
+          : (emReais(e.mensal, e.moeda, cot) ?? 0),
       firstContactAt: l.fc,
       repliedAt: l.ra,
       closedAt: l.ca,

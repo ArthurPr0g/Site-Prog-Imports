@@ -314,6 +314,15 @@ export type ConversaDoPainel = {
   lastMessageAt: string;
   unread: number;
   ultimaMensagem: string | null;
+  /** Datas de cada passo do lead (trilha da venda no painel, relida a cada 10 s). */
+  marcos: {
+    contatado: string | null;
+    respondeu: string | null;
+    fechado: string | null;
+    diagnosticoVisto: string | null;
+    /** Perguntas do checklist de descoberta já respondidas. */
+    descoberta: number;
+  };
 };
 
 export type MensagemDoPainel = {

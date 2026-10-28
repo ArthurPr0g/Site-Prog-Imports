@@ -67,6 +67,10 @@ export type Lead = {
   firstContactAt: string | null;
   repliedAt: string | null;
   closedAt: string | null;
+  /** Valor negociado no fechamento (null = usar a estimativa do pacote). */
+  closedValue: number | null;
+  closedMonthly: number | null;
+  closedCurrency: 'BRL' | 'USD' | null;
   notes: string | null;
   customerId: string | null;
   createdAt: string;

@@ -97,11 +97,14 @@ export function CaptacaoPanel({
   const tabBRL = useMemo(() => tabelaBRL(new Map(catalogo)), [catalogo]);
   const estimativa = (l: Lead) => estimar(l.suggestedServices, l.country === 'US' ? TABELA_USD : tabBRL);
   // Totais sempre em reais; lead de fora sem cotação do dia fica de fora da soma.
+  // Fechado com valor negociado gravado: usa o negociado; senão, a estimativa do pacote.
   const valor = (l: Lead) => {
+    if (l.status === 'fechado' && l.closedValue !== null) return emReais(l.closedValue, l.closedCurrency ?? 'BRL', cotacoes) ?? 0;
     const e = estimativa(l);
     return emReais(e.unico, e.moeda, cotacoes) ?? 0;
   };
   const mensalidade = (l: Lead) => {
+    if (l.status === 'fechado' && l.closedMonthly !== null) return emReais(l.closedMonthly, l.closedCurrency ?? 'BRL', cotacoes) ?? 0;
     const e = estimativa(l);
     return emReais(e.mensal, e.moeda, cotacoes) ?? 0;
   };
