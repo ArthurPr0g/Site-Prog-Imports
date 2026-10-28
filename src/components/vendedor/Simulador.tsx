@@ -7,7 +7,7 @@
 // vendedor saber qual pacote indicar sem decorar a página de planos.
 
 import { useMemo, useState, type ReactNode } from 'react';
-import { Copy, Check, Lightbulb, CircleCheck, CircleSlash, Info } from 'lucide-react';
+import { Copy, Check, Lightbulb, CircleCheck, CircleSlash, Info, Clock } from 'lucide-react';
 import { tabelaBRL, formatMoeda, type Moeda } from '@/lib/precos-captacao';
 import { simular, parcela, tabelaDaMoeda, NOMES, type Escolha, type Produto } from '@/lib/simulador';
 import {
@@ -195,9 +195,24 @@ export function Simulador({
     combo && e.nivel === e.nivelGestao
       ? catalogo.find((c) => c.nome.includes(`(${nomesBR[e.produto][e.nivel]} + Gestão ${NIVEIS.BRL.erp[e.nivelGestao]})`))
       : undefined;
-  const prazo =
-    (itemCombo ? itemCombo.prazoDias : itens.slice(0, combo ? 2 : 1).reduce((soma, i) => soma + (porNome.get(i.nome)?.prazoDias || 0), 0)) +
-    (e.marca ? porNome.get(nomesBR.marca[e.marca - 1])?.prazoDias || 0 : 0);
+  // Prazo total (regra do Arthur, 28/10/2026): a marca é feita AO MESMO TEMPO que o
+  // site/loja/sistema, então vale o maior dos dois; combo de níveis diferentes soma.
+  const dias = (nome: string) => porNome.get(nome)?.prazoDias || 0;
+  const nomeProjeto = nomesBR[e.produto][e.nivel];
+  const nomeGestao = nomesBR.erp[e.nivelGestao];
+  const prazoProjeto = itemCombo
+    ? itemCombo.prazoDias
+    : dias(nomeProjeto) + (combo ? dias(nomeGestao) : 0);
+  const prazoMarca = e.marca ? dias(nomesBR.marca[e.marca - 1]) : 0;
+  const prazo = Math.max(prazoProjeto, prazoMarca);
+  const comoContou = [
+    itemCombo
+      ? `${nomeProjeto} + ${nomeGestao} em combo: ${prazoProjeto}`
+      : combo
+        ? `${nomeProjeto} (${dias(nomeProjeto)}) + ${nomeGestao} (${dias(nomeGestao)}): ${prazoProjeto}`
+        : `${nomeProjeto}: ${prazoProjeto}`,
+    ...(e.marca ? [`${nomesBR.marca[e.marca - 1]}: ${prazoMarca}, feita ao mesmo tempo`] : []),
+  ];
   const mensalidade =
     e.produto === 'erp'
       ? porNome.get(`Mensalidade Gestão ${NIVEIS.BRL.erp[e.nivel]}`)
@@ -213,6 +228,11 @@ export function Simulador({
     `Depois: ${m(s.mensal)}/mês (hospedagem, segurança, backups e suporte)` +
     (s.mensalSeparadas
       ? `, em vez de ${m(s.mensalSeparadas)}: economia de ${m(s.mensalSeparadas - s.mensal)}/mês por contratar os 2 juntos`
+      : '') +
+    (prazo > 0
+      ? moeda === 'BRL'
+        ? `\nPrazo total: até ${prazo} dias úteis, contados a partir do sinal pago e do envio do material (textos, fotos e acessos).`
+        : `\nTimeline: up to ${prazo} business days, starting once the deposit and all materials (texts, photos and access) are in.`
       : '') +
     (moeda === 'BRL'
       ? `\nPagamento: 50% no fechamento e 50% na entrega, ou 2x de ${m(s.total / 2)} sem juros no cartão, ou ${n}x de ${m(parcela(s.total, n))}.` +
@@ -395,8 +415,18 @@ export function Simulador({
             <div className="text-[13px] text-fg-tertiary">
               Depois, <b className="text-fg">{m(s.mensal)}/mês</b>
               {s.mensalSeparadas && <s className="ml-1">{m(s.mensalSeparadas)}</s>} · domínio grátis no 1º ano
-              {prazo > 0 && moeda === 'BRL' && <> · prazo de até {prazo} dias úteis</>}
             </div>
+            {prazo > 0 && (
+              <div className="mt-2 rounded-[12px] border border-border bg-page/40 p-2.5 text-[13px]">
+                <div className="flex items-center gap-1.5">
+                  <Clock size={14} className="shrink-0 text-accent" />
+                  <b>Prazo total: até {prazo} dias úteis</b>
+                </div>
+                <div className="mt-1 text-[12px] leading-snug text-fg-tertiary">
+                  {comoContou.join(' · ')}. Conta a partir do sinal pago e do envio do material (textos, fotos e acessos).
+                </div>
+              </div>
+            )}
             {s.mensalSeparadas && (
               <div className="mt-2 rounded-[12px] border border-success/30 bg-success/10 p-2.5 text-[13px] text-success">
                 <b>Economia de {m(s.mensalSeparadas - s.mensal)}/mês</b> na mensalidade por contratar os 2 juntos (separados
