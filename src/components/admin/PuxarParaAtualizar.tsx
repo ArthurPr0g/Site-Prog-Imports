@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowDown, RefreshCw } from 'lucide-react';
 
@@ -18,20 +18,27 @@ const MAXIMO = 110;
  *  (vendas, caixa, atividades) sem recarregar o app nem perder estado. Não
  *  dispara com o toque começando dentro de janela aberta (modal, menu lateral):
  *  lá o dedo está rolando outra coisa. */
+// Aberto como app (tela inicial): no servidor é sempre falso; no navegador
+// acompanha a mudança do modo de exibição.
+function assinarModoDeExibicao(avisar: () => void) {
+  const mq = window.matchMedia('(display-mode: standalone)');
+  mq.addEventListener('change', avisar);
+  return () => mq.removeEventListener('change', avisar);
+}
+function abertoComoApp() {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
 export function PuxarParaAtualizar() {
   const router = useRouter();
-  const [ativo, setAtivo] = useState(false);
+  const ativo = useSyncExternalStore(assinarModoDeExibicao, abertoComoApp, () => false);
   const [puxado, setPuxado] = useState(0);
   const [pending, startTransition] = useTransition();
   const inicio = useRef<number | null>(null);
   const puxadoRef = useRef(0);
-
-  useEffect(() => {
-    const standalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (navigator as Navigator & { standalone?: boolean }).standalone === true;
-    setAtivo(standalone);
-  }, []);
 
   useEffect(() => {
     if (!ativo) return;

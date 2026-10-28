@@ -115,12 +115,10 @@ function Contador({ valor, formato = formatBRL }: { valor: number; formato?: (v:
   const calmo = useReducedMotion();
   const [mostrado, setMostrado] = useState(0);
   useEffect(() => {
-    if (calmo) {
-      setMostrado(valor);
-      return;
-    }
+    // Com "reduzir movimento", duração zero: pula direto para o valor. Começa
+    // em 0 nos dois lados (servidor e navegador) para a hidratação bater.
     const c = animate(0, valor, {
-      duration: 0.9,
+      duration: calmo ? 0 : 0.9,
       ease: SUAVE,
       onUpdate: setMostrado,
       // Animação pulada ou interrompida não pode deixar o número no meio do caminho

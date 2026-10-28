@@ -130,6 +130,8 @@ export function ServiceOrdersTable({
   atividades,
   modelos,
   hoje,
+  abrirAtividades,
+  perguntarFimAoAbrir,
 }: {
   orders: ServiceOrder[];
   services: InternalService[];
@@ -140,22 +142,24 @@ export function ServiceOrdersTable({
   modelos: Modelo[];
   /** Hoje no fuso da loja, vindo do servidor (a Vercel roda em UTC). */
   hoje: string;
+  /** Prestação a abrir já nas atividades (link do Painel: ?atividades=<id>). */
+  abrirAtividades: string | null;
+  /** Veio do Painel depois de concluir a última atividade (?finalizar=1). */
+  perguntarFimAoAbrir: boolean;
 }) {
   const [busca, setBusca] = useState('');
   const [form, setForm] = useState<ServiceOrderInput | null>(null);
-  const [atividadesDe, setAtividadesDe] = useState<string | null>(null);
+  const [atividadesDe, setAtividadesDe] = useState<string | null>(abrirAtividades);
   // Veio do Painel depois de concluir a última atividade: abre já perguntando
-  const [perguntarFim, setPerguntarFim] = useState(false);
+  const [perguntarFim, setPerguntarFim] = useState(perguntarFimAoAbrir);
   const [pending, startTransition] = useTransition();
   const toast = useToast();
 
-  // O Painel linka para cá com ?atividades=<id>: abre direto na prestação certa
+  // O link do Painel (?atividades=<id>) já abriu a prestação no estado inicial;
+  // aqui só tira os parâmetros da URL, para recarregar não reabrir.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const id = params.get('atividades');
-    if (!id) return;
-    setAtividadesDe(id);
-    setPerguntarFim(params.get('finalizar') === '1');
+    if (!params.has('atividades')) return;
     params.delete('atividades');
     params.delete('finalizar');
     const resto = params.toString();

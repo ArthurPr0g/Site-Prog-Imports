@@ -7,7 +7,13 @@ import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { ServiceOrdersTable } from '@/components/admin/ServiceOrdersTable';
 import { ModelosDeTrabalho } from '@/components/admin/ModelosDeTrabalho';
 
-export default async function AdminPrestacaoServicoPage() {
+export default async function AdminPrestacaoServicoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ atividades?: string; finalizar?: string }>;
+}) {
+  // O Painel linka para cá com ?atividades=<id>(&finalizar=1): abre direto na prestação certa
+  const { atividades: abrirAtividades, finalizar } = await searchParams;
   const [orders, services, customers, modelos] = await Promise.all([
     listServiceOrders(),
     listInternalServices(),
@@ -32,6 +38,8 @@ export default async function AdminPrestacaoServicoPage() {
         atividades={atividades}
         modelos={modelos}
         hoje={hojeEmSaoPaulo()}
+        abrirAtividades={abrirAtividades ?? null}
+        perguntarFimAoAbrir={finalizar === '1'}
       />
     </div>
   );
