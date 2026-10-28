@@ -26,6 +26,7 @@ import {
   mapsDoLead,
   ehQuente,
   motivoFantasma,
+  NOME_DO_PORTE,
   type Lead,
   type LeadStatus,
 } from '@/lib/captacao';
@@ -94,6 +95,11 @@ export function LinhaDoLead({
                 </Selo>
               )}
               {vendedor && <Selo titulo="Está no link de um vendedor">com {vendedor}</Selo>}
+              {l.porte && (
+                <Selo tom={l.porte === 'grande' ? 'ok' : 'neutro'} titulo="Porte estimado: define o nível do pacote sugerido">
+                  {NOME_DO_PORTE[l.porte].toLowerCase()} empresa{l.unidades > 1 ? ` · ${l.unidades} unidades` : ''}
+                </Selo>
+              )}
               {fantasma && (
                 <Selo tom="alerta" titulo="Fica fora do link do vendedor e do modo foco">
                   possível fantasma: {fantasma.toLowerCase()}

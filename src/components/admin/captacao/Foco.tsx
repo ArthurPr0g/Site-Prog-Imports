@@ -232,15 +232,25 @@ function CartaoDoFoco({
       )}
 
       <div className="mt-5 flex flex-wrap items-center gap-2.5">
+        {canal === 'whatsapp' && c.linkWhats && c.wa && !c.wa.celular && (
+          <div className="w-full rounded-[10px] border border-warning/40 bg-warning/10 p-2.5 text-[12.5px] text-fg-secondary">
+            <b className="text-warning">{l.phone} é telefone fixo</b> e quase nunca tem WhatsApp. Melhor ligar
+            {c.linkEmail ? ' ou mandar o e-mail' : ''}; se o WhatsApp avisar que o número não existe, marque “sem WhatsApp”.
+          </div>
+        )}
         {canal === 'whatsapp' && c.linkWhats && (
           <a
             href={c.linkWhats}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => c.setAbriu('whatsapp')}
-            className="flex items-center gap-2 rounded-control bg-accent px-5 py-3 text-[14px] font-extrabold text-page"
+            className={
+              c.wa?.celular
+                ? 'flex items-center gap-2 rounded-control bg-accent px-5 py-3 text-[14px] font-extrabold text-page'
+                : 'flex items-center gap-2 rounded-control border border-border-strong px-5 py-3 text-[13.5px] font-bold text-fg-secondary'
+            }
           >
-            <MessageCircle size={16} /> Abrir no WhatsApp
+            <MessageCircle size={16} /> {c.wa?.celular ? 'Abrir no WhatsApp' : 'Tentar no WhatsApp (fixo)'}
           </a>
         )}
         {canal === 'email' && c.linkEmail && (

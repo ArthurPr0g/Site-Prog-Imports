@@ -599,6 +599,8 @@ export type Database = {
           online_booking: string | null
           rating_dist: Json | null
           recent_reviews: Json | null
+          porte: string | null
+          unidades: number
           discovery_by: string | null
           email: string | null
           facebook: string | null
@@ -657,6 +659,8 @@ export type Database = {
           online_booking?: string | null
           rating_dist?: Json | null
           recent_reviews?: Json | null
+          porte?: string | null
+          unidades?: number
           discovery_by?: string | null
           email?: string | null
           facebook?: string | null
@@ -715,6 +719,8 @@ export type Database = {
           online_booking?: string | null
           rating_dist?: Json | null
           recent_reviews?: Json | null
+          porte?: string | null
+          unidades?: number
           discovery_by?: string | null
           email?: string | null
           facebook?: string | null

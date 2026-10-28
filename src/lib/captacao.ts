@@ -94,7 +94,13 @@ export type Lead = {
   onlineBooking: string | null;
   ratingDist: Record<string, number> | null;
   recentReviews: AvaliacaoRecente[];
+  /** Porte estimado (migration 0065) e quantas unidades da mesma marca há na cidade. */
+  porte: Porte | null;
+  unidades: number;
 };
+
+export type Porte = 'pequena' | 'media' | 'grande';
+export const NOME_DO_PORTE: Record<Porte, string> = { pequena: 'Pequena', media: 'Média', grande: 'Grande' };
 
 /** Avaliação do Google guardada no lead: nota, data (AAAA-MM-DD) e trecho. */
 export type AvaliacaoRecente = { n: number | null; d: string | null; t: string };
@@ -511,7 +517,127 @@ export function situacaoDoSite(website: string | null, siteCheck: string | null)
   return 'ok';
 }
 
-export type Avaliacao = { score: number; suggestedServices: string[]; reasons: string[] };
+export type Avaliacao = { score: number; suggestedServices: string[]; reasons: string[]; porte: Porte; rede: boolean };
+
+/* ------------------------------------------------------------ porte */
+
+// Palavras do nome que não identificam a marca (o ramo, ligações, "unidade").
+const GENERICAS = new Set(
+  ('a o as os e de da do das dos em no na com para por the and of ' +
+    'loja lojas pet shop petshop clinica clinicas consultorio odontologia odonto odontologica dental dentista ' +
+    'salao studio estudio espaco centro instituto academia escola colegio curso cursos idiomas ' +
+    'otica oticas farmacia drogaria mercado supermercado restaurante bar cafe padaria ' +
+    'imobiliaria escritorio advocacia advogados contabilidade contabil arquitetura lavanderia ' +
+    'buffet festas floricultura flores joalheria moda boutique calcados moveis decoracao materiais construcao ' +
+    'distribuidora bebidas conveniencia auto escola cfc barbearia beleza estetica fisioterapia ' +
+    'unidade filial matriz loja1 loja2 goiania brasilia gyn go df sp rj')
+    .split(' ')
+);
+
+/**
+ * Chave da marca para contar unidades: duas primeiras palavras do nome que não
+ * sejam o ramo (ex.: "Óticas Diniz Rua 83" e "Óticas Diniz Setor Bueno" → "diniz").
+ * null quando o nome é só o ramo.
+ */
+export function chaveDaMarca(nome: string): string | null {
+  const palavras = nome
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .split(/[\s\-|–,()/.&]+/)
+    .filter((p) => p.length >= 2 && !GENERICAS.has(p) && !/^\d+$/.test(p));
+  const chave = palavras.slice(0, 2).join(' ');
+  return chave.length >= 4 ? chave : null;
+}
+
+// Redes e franquias nacionais: site, loja e sistema vêm da marca (decisão da matriz).
+const REDES = [
+  'cobasi', 'petz', 'petland', 'oticas diniz', 'oticas carol', 'chilli beans', 'boticario', 'natura', 'drogasil',
+  'pague menos', 'smart fit', 'smartfit', 'bluefit', 'selfit', 'bodytech', 'wizard', 'ccaa', 'fisk', 'cna',
+  'wise up', 'wiseup', 'kumon', 'cacau show', 'kopenhagen', 'havaianas', 'renner', 'riachuelo', 'c&a', 'centauro',
+  'leroy merlin', 'telhanorte', 'magazine luiza', 'casas bahia', '5asec', '5 a sec', 'omo lavanderia', 'lavateria',
+  'odontocompany', 'sorridents', 'oral sin', 'amor saude', 'dr consulta', 'dr. consulta', 'hering', 'vivara',
+  'pandora', 'sodie', 'mcdonald', 'subway', 'burger king', 'cvc', 'localiza', 'unimed', 'hapvida', 'sabin',
+  'fleury', 'hermes pardini', 'uniodonto', 'grupo boticario', 'quem disse berenice',
+];
+
+const ALTO_TICKET = ['imobili', 'buffet', 'escola', 'colégio', 'colegio', 'advoca', 'arquitet', 'construç', 'construc', 'distribuidora', 'clínica médica', 'clinica medica', 'real estate', 'construction', 'lawyer'];
+
+/**
+ * Porte estimado pelo que é público no Google. Não é faturamento: é um
+ * indicador de tamanho para escolher o nível do pacote.
+ * - Avaliações no Google acompanham o volume de clientes (≥1.000 +3, ≥300 +2, ≥100 +1, <30 −1).
+ * - Mais de uma unidade da marca na cidade: +2.
+ * - Site próprio funcionando (já investe em presença): +1.
+ * - Ramo de ticket alto (imobiliária, buffet, escola, advocacia...): +1.
+ * Soma ≤ 1 pequena, 2 a 3 média, ≥ 4 grande. Média pede dois sinais: muitas
+ * avaliações sozinhas não fazem uma empresa média (salão com 150 avaliações e
+ * sem site continua pequeno).
+ */
+export function estimarPorte(
+  l: Pick<LinhaImportada, 'name' | 'reviewCount' | 'website' | 'siteCheck' | 'category'>,
+  niche: string | null,
+  unidades = 1
+): { porte: Porte; sinais: string[]; rede: boolean } {
+  const sinais: string[] = [];
+  let p = 0;
+  const av = l.reviewCount ?? 0;
+  if (av >= 1000) p += 3;
+  else if (av >= 300) p += 2;
+  else if (av >= 100) p += 1;
+  else if (av < 30) p -= 1;
+  sinais.push(`${av} avaliações`);
+  if (unidades > 1) {
+    p += 2;
+    sinais.push(`${unidades} unidades na cidade`);
+  }
+  const sit = situacaoDoSite(l.website, l.siteCheck);
+  if (sit === 'ok' || sit === 'vende_online' || sit === 'sem_https') {
+    p += 1;
+    sinais.push('site próprio no ar');
+  }
+  const tipo = `${l.category ?? ''} ${niche ?? ''}`.toLowerCase();
+  if (contem(tipo, ALTO_TICKET)) {
+    p += 1;
+    sinais.push('ramo de ticket alto');
+  }
+  // Palavra inteira: "Petzito" n\u00e3o \u00e9 a rede Petz. V\u00e1rias unidades de uma marca
+  // local \u00e9 empresa grande, n\u00e3o franquia.
+  const nome = palavras(l.name);
+  const rede = REDES.some((r) => nome.includes(palavras(r)));
+  return { porte: p >= 4 ? 'grande' : p >= 2 ? 'media' : 'pequena', sinais, rede };
+}
+
+/** Texto em palavras, sem acento e pontua\u00e7\u00e3o, com espa\u00e7o nas pontas (compara palavra inteira). */
+function palavras(t: string): string {
+  const limpo = t
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  return ` ${limpo} `;
+}
+
+const NIVEIS_SITE = ['Essencial', 'Profissional', 'Premium'];
+const NIVEIS_GESTAO = ['Básico', 'Intermediário', 'Avançado'];
+
+/**
+ * Nível do pacote pelo porte: pequena fica no básico (ou no intermediário, se o
+ * problema pede), média sobe para o intermediário, grande vai para o completo.
+ */
+function nivelPeloPorte(servico: string, porte: Porte): string {
+  const site = servico.match(/^(Site|Loja) (Essencial|Profissional|Premium)$/);
+  if (site) {
+    const atual = NIVEIS_SITE.indexOf(site[2]);
+    const nivel = porte === 'grande' ? 2 : porte === 'media' ? Math.max(atual, 1) : Math.min(atual, 1);
+    return `${site[1]} ${NIVEIS_SITE[nivel]}`;
+  }
+  if (/^Sistema de Gestão /.test(servico)) {
+    return `Sistema de Gestão ${NIVEIS_GESTAO[porte === 'grande' ? 2 : porte === 'media' ? 1 : 0]}`;
+  }
+  return servico;
+}
 
 /** Status do Google que indicam negócio fechado (permanente ou temporário). */
 const FECHADO = /clos|fechad|encerrad/i;
@@ -531,7 +657,7 @@ export function motivoFantasma(
   return null;
 }
 
-export function avaliarLead(l: LinhaImportada, niche: string | null): Avaliacao {
+export function avaliarLead(l: LinhaImportada, niche: string | null, unidades = 1): Avaliacao {
   const tipo = `${l.category ?? ''} ${niche ?? ''}`.toLowerCase();
   const varejo = contem(tipo, VAREJO);
   const gestao = contem(tipo, GESTAO);
@@ -594,6 +720,11 @@ export function avaliarLead(l: LinhaImportada, niche: string | null): Avaliacao 
 
   if (l.phone) nota += 10;
   if (l.email) nota += 5;
+  // Fixo brasileiro quase nunca tem WhatsApp: o contato vai ser por ligação ou e-mail.
+  if (l.phone && l.buscaPais !== 'US' && whatsappDoLead(l.phone, 'BR')?.celular === false) {
+    nota -= 5;
+    motivos.push('Só telefone fixo: contato por ligação ou e-mail');
+  }
   if (!l.phone && !l.email) {
     nota -= 20;
     motivos.push('Sem telefone nem e-mail');
@@ -616,12 +747,21 @@ export function avaliarLead(l: LinhaImportada, niche: string | null): Avaliacao 
   if (l.perfilReivindicado === true) nota += 5;
   else if (l.perfilReivindicado === false) motivos.push('Perfil do Google sem dono');
   if (l.agendamento) motivos.push(`Já agenda/vende online por ${l.agendamento}`);
-  if (l.mapsStatus && FECHADO.test(l.mapsStatus)) {
-    // Fechado no Google: fica na base (para não voltar como novo), mas com nota zero.
-    return { score: 0, suggestedServices: servicos, reasons: ['Fechado no Google', ...motivos] };
+  // Porte: nível do pacote e prioridade (rede/franquia decide na matriz).
+  const { porte, sinais, rede } = estimarPorte(l, niche, unidades);
+  const pacotes = [...new Set(servicos.map((s) => nivelPeloPorte(s, porte)))];
+  motivos.push(`Porte ${NOME_DO_PORTE[porte].toLowerCase()} (${sinais.join(', ')})`);
+  if (rede) {
+    nota -= 30;
+    motivos.push('Rede ou franquia: site e sistema costumam vir da marca');
   }
 
-  return { score: Math.max(0, Math.min(100, nota)), suggestedServices: servicos, reasons: motivos };
+  if (l.mapsStatus && FECHADO.test(l.mapsStatus)) {
+    // Fechado no Google: fica na base (para não voltar como novo), mas com nota zero.
+    return { score: 0, suggestedServices: pacotes, reasons: ['Fechado no Google', ...motivos], porte, rede };
+  }
+
+  return { score: Math.max(0, Math.min(100, nota)), suggestedServices: pacotes, reasons: motivos, porte, rede };
 }
 
 /* ------------------------------------------------------------ contato */
@@ -712,10 +852,20 @@ export type PadroesDaImportacao = {
  */
 export function registrosDaImportacao(linhas: LinhaImportada[], padroes: PadroesDaImportacao) {
   const agora = new Date().toISOString();
+  // Unidades da mesma marca na mesma cidade, dentro do arquivo (a limpeza da base,
+  // scripts/captacao/reavaliar-base.ts, conta na base inteira).
+  const cidadeDe = (l: LinhaImportada) => (l.buscaCidade ?? padroes.city ?? '').toLowerCase();
+  const contagem = new Map<string, number>();
+  for (const l of linhas) {
+    const m = chaveDaMarca(l.name);
+    if (m) contagem.set(`${cidadeDe(l)}|${m}`, (contagem.get(`${cidadeDe(l)}|${m}`) ?? 0) + 1);
+  }
   return linhas.map((l) => {
     const pais: Pais = l.buscaPais === 'US' || l.buscaPais === 'BR' ? l.buscaPais : padroes.pais;
     const niche = l.buscaRamo ?? padroes.niche;
-    const { score, suggestedServices, reasons } = avaliarLead(l, niche);
+    const marca = chaveDaMarca(l.name);
+    const unidades = marca ? (contagem.get(`${cidadeDe(l)}|${marca}`) ?? 1) : 1;
+    const { score, suggestedServices, reasons, porte } = avaliarLead(l, niche, unidades);
     return {
       dedupe_key: chaveDoLead(l),
       place_id: l.placeId,
@@ -748,6 +898,8 @@ export function registrosDaImportacao(linhas: LinhaImportada[], padroes: Padroes
       ...(l.notas !== undefined && { rating_dist: l.notas }),
       ...(l.avaliacoes !== undefined && { recent_reviews: l.avaliacoes }),
       score,
+      porte,
+      unidades,
       suggested_services: suggestedServices,
       reasons,
       source: padroes.source,

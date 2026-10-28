@@ -73,6 +73,14 @@ telemetria do engine e o ambiente de teste local
 - **Ficha do vendedor** (aba Análise): sinais de atividade, como é o negócio (horário, atributos, agendamento online), o que os clientes dizem, comparação com a região e "Conheça o ramo" (`src/lib/conhecer-o-ramo.ts`, 8 grupos).
 - Leads importados antes de 27/10 ficam sem esses dados até a próxima busca. Reimportar não apaga nada (só grava as colunas que o CSV traz).
 
+## Porte do cliente, limpeza da base e telefone fixo (27/10/2026, noite) — no ar
+
+- **Porte** (\`estimarPorte\`, migration \`0065\`): avaliações no Google (≥1.000 +3, ≥300 +2, ≥100 +1, <30 −1), unidades da marca na cidade (+2), site próprio no ar (+1), ramo de ticket alto (+1). ≤1 pequena, 2–3 média, ≥4 grande.
+- **Pacote pelo porte**: pequena fica no Essencial (ou Profissional, se o problema pede) e Gestão Básico; média sobe para Profissional e Intermediário; grande vai para Premium e Avançado.
+- **Rede/franquia nacional** (lista \`REDES\`, palavra inteira): −30 na nota; site e sistema vêm da marca.
+- **Só telefone fixo**: −5 e aviso; no modo foco e na página do vendedor o botão principal vira "Ligar" e o WhatsApp fica como "tentar mesmo assim".
+- **Limpeza da base** (\`scripts/captacao/reavaliar-base.ts\`, com \`--simular\`): rodada em 27/10 nos 2.151 leads (1.330 pequenas, 643 médias, 178 grandes; 62 redes; 861 só fixo; 19 possíveis fantasmas). Atualizou 8 itens do link do Felipe (pacote e preço pelo porte). Rode de novo sempre que mudar a regra.
+
 ---
 
 ## Melhorias pedidas (27/10/2026)

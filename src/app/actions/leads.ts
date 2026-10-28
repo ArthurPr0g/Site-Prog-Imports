@@ -15,7 +15,8 @@ import { ajustarCombosEMensalidades } from '@/lib/combo-servicos';
 import { PLAN_MONTHS_DEFAULT, type ServiceOrderItem } from '@/lib/services';
 import { SEM_DESCONTO } from '@/lib/discount';
 import { NICHOS, type ListaDeNichos } from '@/lib/nichos';
-import { TABELA_USD, tabelaBRL, estimar } from '@/lib/precos-captacao';
+import { tabelaBRL } from '@/lib/precos-captacao';
+import { mensalidadeDoServico, valoresDoItem } from '@/lib/itens-do-kit';
 import { limparRespostas, type RespostasDoChecklist } from '@/lib/checklist-descoberta';
 
 async function adminClient() {
@@ -238,12 +239,6 @@ export async function registrarEnvioAction(id: string, etapa: number, variante: 
 }
 
 // Mensalidade de cada produto no catálogo (nomes de 0045–0049).
-function mensalidadeDoServico(nome: string): string | null {
-  if (nome.startsWith('Site ')) return 'Mensalidade Site';
-  if (nome.startsWith('Loja ')) return 'Mensalidade Loja';
-  const gestao = nome.match(/^Sistema de Gestão (Básico|Intermediário|Avançado)$/);
-  return gestao ? `Mensalidade Gestão ${gestao[1]}` : null;
-}
 
 /**
  * Proposta em um clique: garante o cliente e cria o Orçamento de Serviço com
@@ -400,33 +395,12 @@ async function montarItensDoKit(
   const { data: leads } = await supabase.from('leads').select('id, country, suggested_services').in('id', ids);
   const { porNome, tabBRL } = await catalogoAtivo();
   const ordem = new Map(ids.map((id, i) => [id, primeiraPosicao + i]));
-  return (leads ?? []).map((l) => {
-    const e = estimar(l.suggested_services, l.country === 'US' ? TABELA_USD : tabBRL);
-    const nomes = [...l.suggested_services];
-    for (const n of l.suggested_services) {
-      const m = mensalidadeDoServico(n);
-      if (m && !nomes.includes(m)) nomes.push(m);
-    }
-    return {
-      kit_id: kitId,
-      lead_id: l.id,
-      position: ordem.get(l.id) ?? primeiraPosicao,
-      currency: e.moeda,
-      one_time: e.unico,
-      monthly: e.mensal,
-      combo: e.combo,
-      services: nomes
-        .map((n) => porNome.get(n))
-        .filter((s): s is NonNullable<typeof s> => !!s)
-        .map((s) => ({
-          nome: s.name,
-          descricao: s.description,
-          preco: s.price,
-          mensal: s.billingType === 'mensal',
-          prazoDias: s.leadTimeDays,
-        })),
-    };
-  });
+  return (leads ?? []).map((l) => ({
+    kit_id: kitId,
+    lead_id: l.id,
+    position: ordem.get(l.id) ?? primeiraPosicao,
+    ...valoresDoItem(l, porNome, tabBRL),
+  }));
 }
 
 /** Gera o link do vendedor com até 20 leads (os escolhidos na tela, pelos filtros). */

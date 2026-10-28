@@ -52,6 +52,8 @@ export type LeadDoKit = {
   rating_dist?: Record<string, number> | null;
   recent_reviews?: { n: number | null; d: string | null; t: string }[] | null;
   /** Mesmo país, cidade e ramo (sem o próprio lead). */
+  porte?: 'pequena' | 'media' | 'grande' | null;
+  unidades?: number;
   regiao?: { total: number; com_site: number; nota_media: number | null; avaliacoes_media: number | null } | null;
   currency: 'BRL' | 'USD';
   one_time: number;

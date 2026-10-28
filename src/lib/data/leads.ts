@@ -59,6 +59,8 @@ function toLead(r: Row): Lead {
     onlineBooking: r.online_booking,
     ratingDist: (r.rating_dist as Lead['ratingDist']) ?? null,
     recentReviews: (r.recent_reviews as Lead['recentReviews']) ?? [],
+    porte: (r.porte as Lead['porte']) ?? null,
+    unidades: r.unidades ?? 1,
   };
 }
 

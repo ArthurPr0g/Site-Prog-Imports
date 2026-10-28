@@ -132,13 +132,15 @@ export function LeadDoVendedor({
   const variante = varianteDoLead(adaptado, kit.templates);
   const prox = proximaEtapa(adaptado);
   const [etapa, setEtapa] = useState(prox?.etapa ?? 0);
-  const canal = CANAL_DA_ETAPA[etapa];
+  const wa = l.sem_whatsapp ? null : whatsappDoLead(l.phone, l.country);
+  // Telefone fixo quase nunca tem WhatsApp: o canal sugerido passa a ser e-mail ou ligação.
+  const fixo = !!wa && !wa.celular;
+  const canal = fixo && CANAL_DA_ETAPA[etapa] === 'whatsapp' ? (l.email ? 'email' : 'ligacao') : CANAL_DA_ETAPA[etapa];
   const mW = escolherModelo(kit.templates, 'whatsapp', lang, etapa, variante);
   const mE = escolherModelo(kit.templates, 'email', lang, etapa, variante);
   const textoW = mW ? preencher(mW.body, vars) : '';
   const assunto = mE ? preencher(mE.subject ?? '', vars) : '';
   const textoE = mE ? preencher(mE.body, vars) : '';
-  const wa = l.sem_whatsapp ? null : whatsappDoLead(l.phone, l.country);
   const roteiro = roteiroDoLead(l, vendedor);
   const cases = casesDoLead(l);
   const eua = l.country === 'US';
@@ -356,22 +358,40 @@ export function LeadDoVendedor({
                   </div>
                 )}
                 <div className="text-[12px] font-bold text-fg-faded">
-                  Canal sugerido: {canal === 'whatsapp' ? 'WhatsApp' : 'e-mail'}
+                  Canal sugerido: {canal === 'whatsapp' ? 'WhatsApp' : canal === 'email' ? 'e-mail' : 'ligação'}
                 </div>
+                {fixo && (
+                  <div className="mt-2 rounded-[10px] border border-warning/40 bg-warning/10 p-2.5 text-[12.5px] leading-snug text-fg-secondary">
+                    <b className="text-warning">{l.phone} é telefone fixo.</b> Fixo quase nunca tem WhatsApp: ligue
+                    {l.email ? ' ou mande o e-mail abaixo' : ''} e, na ligação, peça o WhatsApp de quem decide.
+                  </div>
+                )}
 
                 <div className="mt-2 text-[12px] font-extrabold text-fg-faded">WhatsApp</div>
                 <div className="mt-1 max-h-[200px] overflow-y-auto whitespace-pre-wrap rounded-[12px] border border-border bg-page/50 p-3 text-[13.5px] leading-relaxed text-fg-secondary">
                   {textoW || 'Sem modelo para esta etapa.'}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
+                  {fixo && l.phone && (
+                    <a
+                      href={`tel:${l.phone.replace(/[^\d+]/g, '')}`}
+                      className="inline-flex items-center gap-1.5 rounded-control bg-accent px-4 py-2 text-[13px] font-extrabold text-page"
+                    >
+                      <Phone size={14} /> Ligar para {l.phone}
+                    </a>
+                  )}
                   {wa && textoW && (
                     <a
                       href={linkWhatsApp(wa.numero, textoW)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-control bg-accent px-4 py-2 text-[13px] font-extrabold text-page"
+                      className={
+                        fixo
+                          ? 'inline-flex items-center gap-1.5 rounded-control border border-border-strong px-4 py-2 text-[13px] font-bold text-fg-secondary'
+                          : 'inline-flex items-center gap-1.5 rounded-control bg-accent px-4 py-2 text-[13px] font-extrabold text-page'
+                      }
                     >
-                      <MessageCircle size={14} /> Abrir no WhatsApp
+                      <MessageCircle size={14} /> {fixo ? 'Tentar no WhatsApp mesmo assim' : 'Abrir no WhatsApp'}
                     </a>
                   )}
                   {textoW && <Copiar texto={textoW} />}

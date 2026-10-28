@@ -134,6 +134,22 @@ export function NegocioDoLead({ l, agora }: { l: LeadDoKit; agora: number }) {
             <dt className="inline font-bold text-fg-tertiary">Ramo: </dt>
             <dd className="inline">{[l.category, l.niche && l.niche !== l.category?.toLowerCase() ? `busca "${l.niche}"` : null].filter(Boolean).join(' · ') || '—'}</dd>
           </div>
+          {l.porte && (
+            <div>
+              <dt className="inline font-bold text-fg-tertiary">Porte estimado: </dt>
+              <dd className="inline">
+                {{ pequena: 'pequena empresa', media: 'empresa média', grande: 'empresa grande' }[l.porte]}
+                {(l.unidades ?? 1) > 1 ? ` (${l.unidades} unidades na cidade)` : ''}.{' '}
+                <span className="text-fg-tertiary">
+                  {l.porte === 'pequena'
+                    ? 'Comece pelo pacote essencial: preço de entrada e resultado rápido.'
+                    : l.porte === 'media'
+                      ? 'Pacote intermediário: já tem estrutura para aproveitar mais recursos.'
+                      : 'Pacote completo: fale com quem decide e mostre o projeto inteiro.'}
+                </span>
+              </dd>
+            </div>
+          )}
           {l.address && (
             <div>
               <dt className="inline font-bold text-fg-tertiary">Endereço: </dt>
