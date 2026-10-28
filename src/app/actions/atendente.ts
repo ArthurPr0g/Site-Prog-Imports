@@ -325,11 +325,12 @@ export async function orientarLiaAction(conversaId: string, instrucao: string): 
     conversation_id: conversaId,
     direction: 'out',
     author: 'sistema',
-    body: `Orientação do Arthur (o cliente não vê; siga agora): ${texto}`,
+    body: `Orientação do Arthur (o cliente não vê). Siga agora escrevendo SÓ a próxima mensagem para o cliente, falando com ele; não responda ao Arthur nem conte o que fez: ${texto}`,
   });
   if (error) return errResult(friendlyDbError(error, 'Não foi possível registrar a orientação.'));
   const motivo = await responderConversa(conversaId);
   revalidatePath('/admin/captacao');
+  if (motivo?.startsWith('outra resposta')) return okResult('A Lia está terminando uma resposta; ela segue a orientação logo em seguida.');
   return motivo ? errResult(`A Lia não respondeu: ${motivo}.`) : okResult('A Lia respondeu seguindo a orientação.');
 }
 

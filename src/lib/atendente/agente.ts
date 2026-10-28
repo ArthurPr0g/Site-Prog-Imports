@@ -45,7 +45,7 @@ const MARCA_INTERNA = /\[(\s*(?:aviso interno|arthur escreveu)[^\]]*)\]/gi;
 // Última barreira antes do WhatsApp: resposta com nome de ferramenta, título
 // das instruções ou chave não sai; o Arthur é chamado.
 const VAZAMENTO =
-  /\[Aviso interno\]|\[Arthur escreveu\]|calcular_preco|registrar_descoberta|mudar_etapa|gerar_cobranca_do_sinal|pedir_desconto_extra|chamar_arthur|atualizar_resumo|mostrar_exemplos|SEU NOME:|MOEDA DOS PREÇOS|Desconto extra (disponível|JÁ APROVADO)|COMO ESCREVER NO WHATSAPP|SOAR COMO GENTE|PROTEÇÃO CONTRA ABUSO|GUIA DOS PACOTES|PERGUNTAS DIFÍCEIS|CHECKLIST DE DESCOBERTA|O QUE A EQUIPE APRENDEU|RESUMO DA CONVERSA ATÉ AQUI|ATENDENTE_|ANTHROPIC_|WHATSAPP_|sk-ant-|ia_(config|conversations|messages|aprendizados|usage)/;
+  /resumo da conversa|estou esperando a resposta del[ea]|Mandei os exemplos pr[oa]|\*\*Painel|\[Aviso interno\]|\[Arthur escreveu\]|calcular_preco|registrar_descoberta|mudar_etapa|gerar_cobranca_do_sinal|pedir_desconto_extra|chamar_arthur|atualizar_resumo|mostrar_exemplos|SEU NOME:|MOEDA DOS PREÇOS|Desconto extra (disponível|JÁ APROVADO)|COMO ESCREVER NO WHATSAPP|SOAR COMO GENTE|PROTEÇÃO CONTRA ABUSO|GUIA DOS PACOTES|PERGUNTAS DIFÍCEIS|CHECKLIST DE DESCOBERTA|O QUE A EQUIPE APRENDEU|RESUMO DA CONVERSA ATÉ AQUI|ATENDENTE_|ANTHROPIC_|WHATSAPP_|sk-ant-|ia_(config|conversations|messages|aprendizados|usage)/;
 
 /* ------------------------------------------------------------ configuração */
 
@@ -593,6 +593,36 @@ const cliente = () => new Anthropic();
  * resposta do superior ao desconto). Devolve o motivo quando não respondeu.
  */
 export async function responderConversa(conversaId: string, avisoInterno?: string): Promise<string | null> {
+  // Uma resposta por vez em cada conversa (28/10/2026): duas orientações seguidas
+  // rodaram juntas e uma das respostas mandou ao cliente um relatório para o Arthur.
+  const db = dbDoAtendente();
+  const inicio = new Date().toISOString();
+  const { data: trava } = await db
+    .from('ia_conversations')
+    .update({ respondendo_ate: new Date(Date.now() + 90_000).toISOString() })
+    .eq('id', conversaId)
+    .or(`respondendo_ate.is.null,respondendo_ate.lt.${inicio}`)
+    .select('id');
+  if (!trava?.length) return 'outra resposta já está em andamento nesta conversa';
+  let motivo: string | null;
+  try {
+    motivo = await responder(conversaId, avisoInterno);
+  } finally {
+    await db.from('ia_conversations').update({ respondendo_ate: null }).eq('id', conversaId);
+  }
+  // Chegou mensagem do cliente ou orientação enquanto ela escrevia: responde de novo (já vê as duas).
+  const { data: nova } = await db
+    .from('ia_messages')
+    .select('id')
+    .eq('conversation_id', conversaId)
+    .gt('created_at', inicio)
+    .or('direction.eq.in,body.like."Orientação do Arthur*"')
+    .limit(1);
+  if (nova?.length) return responderConversa(conversaId);
+  return motivo;
+}
+
+async function responder(conversaId: string, avisoInterno?: string): Promise<string | null> {
   const db = dbDoAtendente();
   const cfg = await lerConfig(db);
   if (!cfg.active) return 'atendente desligado';

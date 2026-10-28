@@ -721,6 +721,7 @@ export type Database = {
           learned_at: string | null
           lead_id: string | null
           mode: string
+          respondendo_ate: string | null
           needs_human: boolean
           needs_human_reason: string | null
           summary: string | null
@@ -739,6 +740,7 @@ export type Database = {
           learned_at?: string | null
           lead_id?: string | null
           mode?: string
+          respondendo_ate?: string | null
           needs_human?: boolean
           needs_human_reason?: string | null
           summary?: string | null
@@ -757,6 +759,7 @@ export type Database = {
           learned_at?: string | null
           lead_id?: string | null
           mode?: string
+          respondendo_ate?: string | null
           needs_human?: boolean
           needs_human_reason?: string | null
           summary?: string | null
