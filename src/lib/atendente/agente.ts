@@ -646,7 +646,10 @@ export async function responderConversa(conversaId: string, avisoInterno?: strin
     .map((p) => p.trim())
     .filter(Boolean)
     .slice(0, 4);
-  for (const parte of partes) {
+  for (const [i, parte] of partes.entries()) {
+    // Pausa de "quem está digitando" entre uma mensagem e outra (1,2 s a 4 s,
+    // pelo tamanho), para não chegarem todas no mesmo segundo.
+    if (i > 0) await new Promise((r) => setTimeout(r, Math.min(4000, 1200 + parte.length * 30)));
     const env = await enviarTexto(conversa.contact_id, parte);
     await registrar(db, conversaId, 'ia', parte, env.ok ? { external_id: env.id, status: 'sent' } : { status: 'failed', error: env.erro });
     if (!env.ok) {
