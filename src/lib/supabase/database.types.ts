@@ -591,6 +591,14 @@ export type Database = {
           diag_views: number
           discovery: Json
           discovery_at: string | null
+          maps_status: string | null
+          last_review_at: string | null
+          owner_claimed: boolean | null
+          opening_hours: Json | null
+          attributes: string[] | null
+          online_booking: string | null
+          rating_dist: Json | null
+          recent_reviews: Json | null
           discovery_by: string | null
           email: string | null
           facebook: string | null
@@ -641,6 +649,14 @@ export type Database = {
           diag_views?: number
           discovery?: Json
           discovery_at?: string | null
+          maps_status?: string | null
+          last_review_at?: string | null
+          owner_claimed?: boolean | null
+          opening_hours?: Json | null
+          attributes?: string[] | null
+          online_booking?: string | null
+          rating_dist?: Json | null
+          recent_reviews?: Json | null
           discovery_by?: string | null
           email?: string | null
           facebook?: string | null
@@ -691,6 +707,14 @@ export type Database = {
           diag_views?: number
           discovery?: Json
           discovery_at?: string | null
+          maps_status?: string | null
+          last_review_at?: string | null
+          owner_claimed?: boolean | null
+          opening_hours?: Json | null
+          attributes?: string[] | null
+          online_booking?: string | null
+          rating_dist?: Json | null
+          recent_reviews?: Json | null
           discovery_by?: string | null
           email?: string | null
           facebook?: string | null

@@ -51,6 +51,14 @@ function toLead(r: Row): Lead {
     discovery: (r.discovery as Lead['discovery']) ?? {},
     discoveryBy: r.discovery_by,
     discoveryAt: r.discovery_at,
+    mapsStatus: r.maps_status,
+    lastReviewAt: r.last_review_at,
+    ownerClaimed: r.owner_claimed,
+    openingHours: (r.opening_hours as Lead['openingHours']) ?? null,
+    attributes: r.attributes ?? [],
+    onlineBooking: r.online_booking,
+    ratingDist: (r.rating_dist as Lead['ratingDist']) ?? null,
+    recentReviews: (r.recent_reviews as Lead['recentReviews']) ?? [],
   };
 }
 

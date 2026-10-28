@@ -6,7 +6,7 @@
 
 import { useMemo, useState } from 'react';
 import { MessageCircle, Mail, Phone, Flame, SkipForward, Ban, Star, Target } from 'lucide-react';
-import { ehQuente, proximaEtapa, NOME_DA_ETAPA, type Lead } from '@/lib/captacao';
+import { ehQuente, proximaEtapa, NOME_DA_ETAPA, type Lead, motivoFantasma } from '@/lib/captacao';
 import type { Cotacoes, Estimativa } from '@/lib/precos-captacao';
 import type { ModeloMensagem } from '@/lib/mensagens-lead';
 import { inputClass, corDaNota, haQuanto, diaLocal, ValorDoLead, Selo, useContatoDoLead, usePreferencia } from './comum';
@@ -18,6 +18,8 @@ const LOTE = 10;
 export function filaDoFoco(leads: Lead[], hoje: string, agora: number, clientes: Set<string>): Lead[] {
   const candidatos = leads.filter((l) => {
     if (clientes.has(l.id)) return false;
+    // Possível empresa fantasma: só entra se já estiver em conversa.
+    if (l.status === 'novo' && motivoFantasma(l, agora)) return false;
     const p = proximaEtapa(l);
     if (!p) return false;
     if (p.etapa > 0 && p.vence && p.vence > hoje) return false;

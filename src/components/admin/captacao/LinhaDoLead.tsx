@@ -25,6 +25,7 @@ import {
   urlComProtocolo,
   mapsDoLead,
   ehQuente,
+  motivoFantasma,
   type Lead,
   type LeadStatus,
 } from '@/lib/captacao';
@@ -62,6 +63,7 @@ export function LinhaDoLead({
   const c = useContatoDoLead(l, modelos, origem);
   const vencido = !ENCERRADOS.includes(l.status) && !!l.nextContact && l.nextContact <= hoje;
   const quente = ehQuente(l, agora);
+  const fantasma = motivoFantasma(l, agora);
   const local = [l.city, l.state].filter(Boolean).join(' / ');
   const respondeu = ['respondeu', 'reuniao', 'proposta', 'fechado'].includes(l.status);
 
@@ -92,6 +94,14 @@ export function LinhaDoLead({
                 </Selo>
               )}
               {vendedor && <Selo titulo="Está no link de um vendedor">com {vendedor}</Selo>}
+              {fantasma && (
+                <Selo tom="alerta" titulo="Fica fora do link do vendedor e do modo foco">
+                  possível fantasma: {fantasma.toLowerCase()}
+                </Selo>
+              )}
+              {l.lastReviewAt && !fantasma && (
+                <Selo titulo="Avaliação mais recente no Google">última avaliação {haQuanto(l.lastReviewAt, agora)}</Selo>
+              )}
             </div>
             <div className="mt-0.5 text-[12px] text-fg-tertiary">
               {[l.niche, l.category !== l.niche ? l.category : null, local].filter(Boolean).join(' · ') || '—'}

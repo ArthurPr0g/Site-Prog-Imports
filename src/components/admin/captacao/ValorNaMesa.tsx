@@ -110,18 +110,23 @@ export function ValorNaMesa({
                 <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{NOME_PAIS[codigo]}</div>
                 {p ? (
                   <>
+                    {/* Moeda estrangeira: a conversão em reais vem logo ao lado de cada valor. */}
                     <div className="mt-0.5 text-[16px] font-bold tabular-nums leading-tight sm:text-[18px]">
                       <NumeroAnimado valor={p.unico} formato={(v) => formatMoeda(v, p.moeda)} />
+                      {p.moeda !== 'BRL' && p.unicoBRL !== null && (
+                        <span className="ml-1.5 text-[12.5px] font-bold text-fg-tertiary sm:text-[13px]">
+                          ≈ <NumeroAnimado valor={p.unicoBRL} formato={semCentavos} />
+                        </span>
+                      )}
                     </div>
                     <div className="text-[12.5px] font-bold tabular-nums text-fg-tertiary">
                       + {formatMoeda(p.mensal, p.moeda)}/mês
+                      {p.moeda !== 'BRL' && p.mensalBRL !== null && (
+                        <span className="ml-1.5 font-semibold">≈ {semCentavos(p.mensalBRL)}/mês</span>
+                      )}
                     </div>
-                    {p.moeda !== 'BRL' && (
-                      <div className="text-[12px] tabular-nums text-fg-tertiary">
-                        {p.unicoBRL === null
-                          ? 'sem cotação hoje'
-                          : `≈ ${semCentavos(p.unicoBRL)} + ${semCentavos(p.mensalBRL ?? 0)}/mês`}
-                      </div>
+                    {p.moeda !== 'BRL' && p.unicoBRL === null && (
+                      <div className="text-[12px] text-fg-tertiary">sem cotação hoje para converter</div>
                     )}
                   </>
                 ) : (

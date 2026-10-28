@@ -85,7 +85,19 @@ export type Lead = {
   discovery: Record<string, string | string[]>;
   discoveryBy: string | null;
   discoveryAt: string | null;
+  /** Sinais de atividade e dados do negócio no Google (migration 0064). */
+  mapsStatus: string | null;
+  lastReviewAt: string | null;
+  ownerClaimed: boolean | null;
+  openingHours: Record<string, string[]> | null;
+  attributes: string[];
+  onlineBooking: string | null;
+  ratingDist: Record<string, number> | null;
+  recentReviews: AvaliacaoRecente[];
 };
+
+/** Avaliação do Google guardada no lead: nota, data (AAAA-MM-DD) e trecho. */
+export type AvaliacaoRecente = { n: number | null; d: string | null; t: string };
 
 /* ------------------------------------------------------------ CSV */
 
@@ -150,7 +162,28 @@ const COLUNAS: Record<string, string[]> = {
   buscaCidade: ['busca_cidade'],
   buscaEstado: ['busca_estado'],
   buscaPais: ['busca_pais'],
+  // Calculadas pelo kit (scrape.py, derive): sinais de atividade e dados do negócio.
+  mapsStatus: ['status', 'maps_status'],
+  ultimaAvaliacao: ['ultima_avaliacao'],
+  perfilReivindicado: ['perfil_reivindicado'],
+  horario: ['horario'],
+  atributos: ['atributos'],
+  agendamento: ['agendamento_online'],
+  notas: ['notas'],
+  avaliacoes: ['avaliacoes'],
 };
+
+/**
+ * E-mail que não é da empresa: modelo de site (info@example.com), endereço
+ * técnico (sentry, wixpress), de plataforma (linktr.ee, doctoralia) ou nome de
+ * arquivo de imagem (nuvempago@2x.png). Mesma regra da migration 0064 e do kit.
+ */
+const EMAIL_LIXO = [
+  /@([a-z0-9-]+\.)*(example|exemplo|sentry|wixpress|yourdomain|seudominio|seusite|suaempresa|linktr\.ee|doctoralia|domain\.com|dominio\.com|email\.com$|mail\.com$)/i,
+  /\.(png|jpe?g|gif|webp|svg)$/i,
+  /^(name|email|user|you|someone|seuemail|seu-email|seunome|nome|seu|voce|você|exemplo|johndoe|john\.doe)@/i,
+];
+export const emailDeVerdade = (e: string) => !EMAIL_LIXO.some((r) => r.test(e));
 
 export type LinhaImportada = {
   name: string;
@@ -173,7 +206,25 @@ export type LinhaImportada = {
   buscaCidade: string | null;
   buscaEstado: string | null;
   buscaPais: string | null;
+  // undefined = o CSV não tem a coluna (reimportar um CSV antigo não apaga o que já existe).
+  mapsStatus?: string | null;
+  ultimaAvaliacao?: string | null;
+  perfilReivindicado?: boolean | null;
+  horario?: Record<string, string[]> | null;
+  atributos?: string[] | null;
+  agendamento?: string | null;
+  notas?: Record<string, number> | null;
+  avaliacoes?: AvaliacaoRecente[] | null;
 };
+
+function json<T>(v: string | null): T | null {
+  if (!v) return null;
+  try {
+    return JSON.parse(v) as T;
+  } catch {
+    return null;
+  }
+}
 
 function numero(v: string | undefined): number | null {
   if (!v) return null;
@@ -199,6 +250,10 @@ export function linhasDoCsv(texto: string): LinhaImportada[] {
     const v = i >= 0 ? linha[i]?.trim() : '';
     return v ? v : null;
   };
+  /** Campo opcional: undefined quando o CSV não tem a coluna. */
+  function opcional<T>(linha: string[], campo: string, conv: (v: string | null) => T): T | undefined {
+    return pos[campo] >= 0 ? conv(ler(linha, campo)) : undefined;
+  }
 
   return dados
     .map((l) => ({
@@ -208,7 +263,8 @@ export function linhasDoCsv(texto: string): LinhaImportada[] {
       email:
         ler(l, 'email')
           ?.split(/[,;\s]+/)
-          .find((e) => e.includes('@')) ?? null,
+          .map((e) => e.replace(/^(%20)+/, '').toLowerCase())
+          .find((e) => e.includes('@') && emailDeVerdade(e)) ?? null,
       website: ler(l, 'website'),
       category: ler(l, 'category'),
       address: ler(l, 'address'),
@@ -225,6 +281,14 @@ export function linhasDoCsv(texto: string): LinhaImportada[] {
       buscaCidade: ler(l, 'buscaCidade'),
       buscaEstado: ler(l, 'buscaEstado'),
       buscaPais: ler(l, 'buscaPais'),
+      mapsStatus: opcional(l, 'mapsStatus', (v) => v),
+      ultimaAvaliacao: opcional(l, 'ultimaAvaliacao', (v) => (v && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : null)),
+      perfilReivindicado: opcional(l, 'perfilReivindicado', (v) => v === 'sim'),
+      horario: opcional(l, 'horario', (v) => json<Record<string, string[]>>(v)),
+      atributos: opcional(l, 'atributos', (v) => (v ? v.split(';').map((a) => a.trim()).filter(Boolean) : null)),
+      agendamento: opcional(l, 'agendamento', (v) => v),
+      notas: opcional(l, 'notas', (v) => json<Record<string, number>>(v)),
+      avaliacoes: opcional(l, 'avaliacoes', (v) => json<AvaliacaoRecente[]>(v)),
     }))
     .filter((l) => l.name);
 }
@@ -449,6 +513,24 @@ export function situacaoDoSite(website: string | null, siteCheck: string | null)
 
 export type Avaliacao = { score: number; suggestedServices: string[]; reasons: string[] };
 
+/** Status do Google que indicam negócio fechado (permanente ou temporário). */
+const FECHADO = /clos|fechad|encerrad/i;
+
+/**
+ * Possível "empresa fantasma": fechada no Google, sem avaliação nova há mais de
+ * 2 anos, ou sem contato e quase sem avaliações. Fica fora do link do vendedor
+ * e do modo foco; o motivo aparece no painel.
+ */
+export function motivoFantasma(
+  l: Pick<Lead, 'mapsStatus' | 'lastReviewAt' | 'reviewCount' | 'phone' | 'email'>,
+  agora = Date.now()
+): string | null {
+  if (l.mapsStatus && FECHADO.test(l.mapsStatus)) return 'Fechado no Google';
+  if (l.lastReviewAt && agora - Date.parse(l.lastReviewAt) > 730 * 24 * 3600 * 1000) return 'Sem avaliação nova há mais de 2 anos';
+  if ((l.reviewCount ?? 0) < 3 && !l.phone && !l.email) return 'Sem contato e quase sem avaliações';
+  return null;
+}
+
 export function avaliarLead(l: LinhaImportada, niche: string | null): Avaliacao {
   const tipo = `${l.category ?? ''} ${niche ?? ''}`.toLowerCase();
   const varejo = contem(tipo, VAREJO);
@@ -515,6 +597,28 @@ export function avaliarLead(l: LinhaImportada, niche: string | null): Avaliacao 
   if (!l.phone && !l.email) {
     nota -= 20;
     motivos.push('Sem telefone nem e-mail');
+  }
+
+  // Sinais de atividade (só quando a busca trouxe esses dados).
+  const dias = l.ultimaAvaliacao ? (Date.now() - Date.parse(l.ultimaAvaliacao)) / (24 * 3600 * 1000) : null;
+  if (dias !== null) {
+    if (dias > 730) {
+      nota -= 30;
+      motivos.push('Última avaliação há mais de 2 anos: pode estar parado');
+    } else if (dias > 365) {
+      nota -= 15;
+      motivos.push('Sem avaliação nova há mais de 1 ano');
+    } else if (dias <= 90) {
+      nota += 5;
+      motivos.push('Avaliação nos últimos 3 meses: em atividade');
+    }
+  }
+  if (l.perfilReivindicado === true) nota += 5;
+  else if (l.perfilReivindicado === false) motivos.push('Perfil do Google sem dono');
+  if (l.agendamento) motivos.push(`Já agenda/vende online por ${l.agendamento}`);
+  if (l.mapsStatus && FECHADO.test(l.mapsStatus)) {
+    // Fechado no Google: fica na base (para não voltar como novo), mas com nota zero.
+    return { score: 0, suggestedServices: servicos, reasons: ['Fechado no Google', ...motivos] };
   }
 
   return { score: Math.max(0, Math.min(100, nota)), suggestedServices: servicos, reasons: motivos };
@@ -634,6 +738,15 @@ export function registrosDaImportacao(linhas: LinhaImportada[], padroes: Padroes
       longitude: l.longitude,
       rating: l.rating,
       review_count: l.reviewCount,
+      // Só leva os campos que o CSV trouxe: reimportar um CSV antigo não apaga nada.
+      ...(l.mapsStatus !== undefined && { maps_status: l.mapsStatus }),
+      ...(l.ultimaAvaliacao !== undefined && { last_review_at: l.ultimaAvaliacao }),
+      ...(l.perfilReivindicado !== undefined && { owner_claimed: l.perfilReivindicado }),
+      ...(l.horario !== undefined && { opening_hours: l.horario }),
+      ...(l.atributos !== undefined && { attributes: l.atributos }),
+      ...(l.agendamento !== undefined && { online_booking: l.agendamento }),
+      ...(l.notas !== undefined && { rating_dist: l.notas }),
+      ...(l.avaliacoes !== undefined && { recent_reviews: l.avaliacoes }),
       score,
       suggested_services: suggestedServices,
       reasons,

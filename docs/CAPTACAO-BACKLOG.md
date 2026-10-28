@@ -44,7 +44,8 @@ só nesta pasta do PC: trabalhe nela (não clone de novo, senão perde tudo).
 | P2 | Push dos commits locais e acompanhar o deploy | no ar | Deploy `dpl_2gUo392UYG1gqQmtXY3H8Qa1AWpd` READY em www.prog-imports.com (27/10). |
 | P3 | Testar no Chrome, iPhone e Android pelo acesso do dono | no ar (falta Android) | Chrome: 7 abas, diagnóstico e página do vendedor sem erro no console. iPhone: sem rolagem lateral. **Android**: o emulador tem senha na tela de bloqueio; sem destravar, o Chrome não abre (estado `RUNNING_LOCKED`). O dono destrava e o teste segue. |
 | P4 | Conferir se `NEXT_PUBLIC_WHATSAPP_NUMBER` na Vercel é `5562982133188` | no ar | Confirmado no HTML publicado (`wa.me/5562982133188`). `NEXT_PUBLIC_SITE_URL` não existe na Vercel: vale o padrão `https://prog-imports.com`, que redireciona (308) para `www` mantendo caminho e parâmetros. |
-| P5 | Importar em produção os CSVs de `google-maps-scraper-kitesultados` | no ar | 48 arquivos: 2.151 leads novos, 79 prints. Fora: `bruto-brasilia-full.csv` (versão crua do `odonto-brasilia.csv`) e `oficina-mecanica-goiania` (1 linha sem dados). 4 CSVs antigos sem `busca_*` entraram por cópia corrigida. O lote de Orlando não tinha arquivo novo; importar quando terminar. |
+| P5 | Importar em produção os CSVs de `google-maps-scraper-kit
+esultados` | no ar | 48 arquivos: 2.151 leads novos, 79 prints. Fora: `bruto-brasilia-full.csv` (versão crua do `odonto-brasilia.csv`) e `oficina-mecanica-goiania` (1 linha sem dados). 4 CSVs antigos sem `busca_*` entraram por cópia corrigida. O lote de Orlando não tinha arquivo novo; importar quando terminar. |
 | P6 | Gerar o link do Felipe e mandar para ele | no ar | Link gerado em 27/10 (Goiânia, 20 leads de nota 85–90, WhatsApp 5562995711797). Falta o dono mandar o link para ele. |
 
 Fora do repositório (só no PC, não vão no push): a alteração do kit do scraper
@@ -62,6 +63,15 @@ telemetria do engine e o ambiente de teste local
   - Rampa 25/50/75/100% (R$ 5.556 → 11.111 → 16.667 → 22.222 × 3); o que faltar num mês é redistribuído nos meses seguintes.
   - Projeção = realizado + mensalidades já fechadas + funil × chance da etapa (proposta 60% e reunião 20% pelo padrão do HubSpot; respondeu 10% e contatado 3% de partida, ajustadas pela taxa real com peso de 20 leads).
 - O painel relê os dados a cada 60 s; a página do vendedor, a cada 30 s (função `lead_kit_meta`, migration `0063`, só etapa/país/serviços/datas, sem nome nem contato).
+
+## Leads fantasma e ficha do vendedor (27/10/2026, noite) — no ar
+
+- **Sinais de atividade** (migration `0064`): o kit do scraper (`scrape.py`, função `derive`, só no PC) calcula status do Google, data da última avaliação, dono do perfil, horário, atributos, agendamento online, notas por estrela e 3 avaliações recentes; o `captar.ps1` já pede essas colunas.
+- Nota: fechado no Google = 0; última avaliação > 2 anos −30, > 1 ano −15, ≤ 3 meses +5; perfil com dono +5.
+- **Possível fantasma** (`motivoFantasma` em `src/lib/captacao.ts`): fechado no Google, sem avaliação há mais de 2 anos, ou sem contato e com menos de 3 avaliações. Fica fora do link do vendedor, do "adicionar mais 20" e do modo foco; selo vermelho na lista.
+- **E-mails falsos**: 86 limpos em produção (info@example.com, press@linktr.ee, sentry/wixpress, nomes de imagem...). A mesma regra roda no kit e na importação.
+- **Ficha do vendedor** (aba Análise): sinais de atividade, como é o negócio (horário, atributos, agendamento online), o que os clientes dizem, comparação com a região e "Conheça o ramo" (`src/lib/conhecer-o-ramo.ts`, 8 grupos).
+- Leads importados antes de 27/10 ficam sem esses dados até a próxima busca. Reimportar não apaga nada (só grava as colunas que o CSV traz).
 
 ---
 

@@ -44,7 +44,7 @@ param(
 $ErrorActionPreference = 'Continue'
 $Engine = 'http://localhost:8080/api/v1/jobs'
 # place_id e link vêm só pedindo as colunas; o painel usa o place_id para não duplicar.
-$Colunas = 'title,phone,emails,website,category,address,review_rating,review_count,link,place_id'
+$Colunas = 'title,phone,emails,website,category,address,review_rating,review_count,link,place_id,status,ultima_avaliacao,perfil_reivindicado,horario,atributos,agendamento_online,notas,avaliacoes'
 
 function Esperar-Docker {
   docker info *> $null

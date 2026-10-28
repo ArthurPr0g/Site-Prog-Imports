@@ -14,6 +14,7 @@ import {
   EM_NEGOCIACAO,
   ENCERRADOS,
   ehQuente,
+  motivoFantasma,
   proximaEtapa,
   type Lead,
   type LeadStatus,
@@ -518,7 +519,9 @@ export function CaptacaoPanel({
             Os filtros da aba Lista (ramo, cidade, país, nota) definem quais leads vão no próximo link.
           </div>
           <Vendedores
-            candidatos={filtrados.filter((l) => l.status === 'novo' && !vendedorPorLead.has(l.id) && !clientes.has(l.id))}
+            candidatos={filtrados.filter(
+              (l) => l.status === 'novo' && !vendedorPorLead.has(l.id) && !clientes.has(l.id) && !motivoFantasma(l, agora)
+            )}
             kits={kits}
             leadsPorId={leadsPorId}
             origem={origem}

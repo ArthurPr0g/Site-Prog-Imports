@@ -6,7 +6,7 @@ import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
 import type { TablesInsert, TablesUpdate } from '@/lib/supabase/database.types';
 import type { ModeloMensagem } from '@/lib/mensagens-lead';
-import { LEAD_STATUSES, linhasDoCsv, registrosDaImportacao, retornoDepoisDe, type LeadStatus, type Pais } from '@/lib/captacao';
+import { LEAD_STATUSES, linhasDoCsv, registrosDaImportacao, retornoDepoisDe, type LeadStatus, type Pais, motivoFantasma } from '@/lib/captacao';
 import { gravarLeads } from '@/lib/captacao-gravar';
 import { saveServiceQuoteAction } from '@/app/actions/service-quotes';
 import { listInternalServices } from '@/lib/data/internal-services';
@@ -500,7 +500,7 @@ export async function adicionarAoKitAction(kitId: string): Promise<ActionResult>
 
   let q = supabase
     .from('leads')
-    .select('id, name, city, niche, state, phone, email, customer_id, score')
+    .select('id, name, city, niche, state, phone, email, customer_id, score, maps_status, last_review_at, review_count')
     .eq('status', 'novo')
     .is('customer_id', null)
     .gte('score', f.notaMin ?? 0)
@@ -513,7 +513,11 @@ export async function adicionarAoKitAction(kitId: string): Promise<ActionResult>
   const { data: candidatos } = await q;
   const termo = (f.busca ?? '').trim().toLowerCase();
   const livres = (candidatos ?? []).filter(
-    (l) => !ocupados.has(l.id) && (!termo || [l.name, l.city, l.niche, l.state].some((c) => c?.toLowerCase().includes(termo)))
+    (l) =>
+      !ocupados.has(l.id) &&
+      // Possível empresa fantasma (fechada ou parada) não vai para o vendedor.
+      !motivoFantasma({ mapsStatus: l.maps_status, lastReviewAt: l.last_review_at, reviewCount: l.review_count, phone: l.phone, email: l.email }) &&
+      (!termo || [l.name, l.city, l.niche, l.state].some((c) => c?.toLowerCase().includes(termo)))
   );
   // Mesma regra do painel para "já é cliente" (telefone ou e-mail de um cliente).
   const clientes = new Set(

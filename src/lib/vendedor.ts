@@ -42,6 +42,17 @@ export type LeadDoKit = {
   screenshot_url: string | null;
   discovery: RespostasDoChecklist;
   discovery_at: string | null;
+  // Sinais de atividade e dados do negócio (migration 0064; vazios até a próxima busca).
+  maps_status?: string | null;
+  last_review_at?: string | null;
+  owner_claimed?: boolean | null;
+  opening_hours?: Record<string, string[]> | null;
+  attributes?: string[] | null;
+  online_booking?: string | null;
+  rating_dist?: Record<string, number> | null;
+  recent_reviews?: { n: number | null; d: string | null; t: string }[] | null;
+  /** Mesmo país, cidade e ramo (sem o próprio lead). */
+  regiao?: { total: number; com_site: number; nota_media: number | null; avaliacoes_media: number | null } | null;
   currency: 'BRL' | 'USD';
   one_time: number;
   monthly: number;

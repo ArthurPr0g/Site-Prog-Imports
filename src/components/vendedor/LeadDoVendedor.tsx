@@ -44,6 +44,7 @@ import {
 } from '@/lib/vendedor';
 import { registrarPeloVendedorAction, salvarChecklistDoVendedorAction } from '@/app/actions/vendedor';
 import { PerguntarAoArthur } from './PerguntasDificeis';
+import { NegocioDoLead } from './NegocioDoLead';
 
 const ABAS = [
   ['analise', 'Análise'],
@@ -241,6 +242,7 @@ export function LeadDoVendedor({
                   <p className="mt-1 text-[13px] font-bold text-[#ff8a5c]">Abriu o diagnóstico {l.diag_views}x.</p>
                 )}
               </Bloco>
+              <NegocioDoLead l={l} agora={agora} />
               {l.screenshot_url && (
                 <Bloco titulo="O site deles no celular hoje">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
