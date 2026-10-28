@@ -191,7 +191,7 @@ WhatsApp dele, informado na hora de gerar o link em produção). Detalhes em
 | V11 | **Linha do tempo do lead** (mensagens enviadas, mudanças de etapa, checklist) | O Arthur e o vendedor veem a história inteira sem ler anotações soltas |
 | V12 | **Ranking entre vendedores** (contatos, respostas, propostas) quando houver mais de um | Competição saudável e visão de quem converte melhor |
 
-## Pós-venda: rodadas de ajustes, avisos e reuniões (pedido do dono em 28/10/2026) — a fazer
+## Pós-venda: rodadas de ajustes, avisos e reuniões (pedido do dono em 28/10/2026) — a fazer (decisões tomadas)
 
 Pedido: quando o Felipe ou o Arthur marcar que **a venda foi feita**, o sistema monta
 sozinho o acompanhamento do cliente. Depois da compra o cliente tem **rodadas de
@@ -210,7 +210,7 @@ Regras que já existem e devem ser a fonte (não duplicar números):
 
 | # | Ideia | Por quê |
 |---|---|---|
-| P1 | **Marcar "venda feita"** pelo painel do Arthur **e pela página do vendedor**, escolhendo os serviços vendidos (os do simulador) | Ponto de partida de todo o acompanhamento. Hoje só o Arthur marca "Fechado" (`ETAPAS_QUE_O_VENDEDOR_MARCA`): decidir se o Felipe passa a marcar ou se ele pede e o Arthur confirma |
+| P1 | **Marcar "venda feita"** pelo painel do Arthur **e pela página do vendedor**, escolhendo os serviços vendidos (os do simulador) | Ponto de partida de todo o acompanhamento. **Decidido: o Felipe também fecha** → incluir `fechado` em `ETAPAS_QUE_O_VENDEDOR_MARCA` (hoje só o Arthur marca) |
 | P2 | **Projeto criado sozinho** a partir da venda: serviços, prazo total, data de entrega prevista e **contador de rodadas por serviço** (ex.: "Loja Profissional: 0 de 2 usadas") | Saber na hora quantas rodadas o cliente ainda tem e quando o prazo vence |
 | P3 | **Registro de cada rodada**: data do pedido, o que o cliente pediu (texto, print ou áudio), quem atendeu, data da entrega e o aceite do cliente | Histórico do que foi pedido e entregue; evita "eu pedi isso e não fizeram" |
 | P4 | **Aviso quando passar das rodadas**: o pedido seguinte vira orçamento de alteração antes de ser feito | Cumpre o contrato sem constrangimento e não dá trabalho de graça sem querer |
@@ -220,12 +220,30 @@ Regras que já existem e devem ser a fonte (não duplicar números):
 | P8 | **Linha do tempo do cliente** com venda, pagamentos, rodadas, reuniões e feedbacks (liga com o V11) | O Arthur e o Felipe veem a história inteira num lugar só |
 | P9 | **Painel de pós-venda**: projetos em andamento, rodadas abertas, reuniões da semana e entregas atrasadas | Visão do dia a dia da produção, como o quadro da captação |
 
-Perguntas para o dono antes de começar:
-- O Felipe marca a venda sozinho ou só pede e o Arthur confirma (P1)?
-- Os avisos vão por WhatsApp, e-mail ou só no painel? O cliente também recebe?
-- As reuniões ficam no Google Agenda do Arthur (liga com V3 / Cal.com) ou só no sistema?
-- O pós-venda fica no ERP da Prog Imports (onde já estão clientes, contratos e
-  mensalidades) ou num módulo à parte da Prog Soluções?
+Decisões do dono (28/10/2026):
+1. **O Felipe também fecha a venda** (não precisa do Arthur confirmar).
+2. **Avisos por e-mail, para a equipe e para o cliente**, "bem bonito e profissional",
+   no **design system do portfólio** (Arthur Prog). Vale para P6 e P7 e para a confirmação
+   de reunião (P5).
+3. **Reuniões nos dois lugares**: no sistema e no Google Agenda do Arthur (com convite
+   para o cliente). Liga com V3 / Cal.com.
+4. **Pós-venda separado** do ERP da Prog Imports (módulo da Prog Soluções), mas
+   **reaproveitando os contratos e as mensalidades gerados lá**: contrato a partir do
+   orçamento (`service_quotes` → PDF de proposta com contrato, `src/lib/contract.ts`,
+   `docs/ERP.md` "PDF de proposta com contrato") e mensalidades/parcelas
+   (`payment_installments`, `finance_entries`, `docs/ERP.md` "Financeiro (M5)"). Nada de
+   cadastrar contrato ou mensalidade duas vezes: o pós-venda lê de lá.
+
+O que falta resolver antes de construir:
+- **Envio de e-mail**: o site ainda não envia e-mail nenhum. Escolher o serviço (com
+  domínio próprio da Prog Soluções verificado, para não cair no spam) e onde guardar a chave.
+- **Design system do portfólio**: não está em `3 - Ferramentas\design-systems` (lá só tem
+  VitaliTI e o modelo). Extrair cores, fontes e componentes do app do portfólio para lá e
+  montar os modelos de e-mail a partir dele (testar no Gmail, Outlook e celular,
+  claro e escuro).
+- **Google Agenda**: autorização da conta do Arthur para criar eventos e convites.
+- **Onde mora o módulo separado** (outro projeto/rota e mesmo Supabase da Prog Imports,
+  para ler contratos e mensalidades sem copiar dados?) — propor ao dono com prós e contras.
 
 ## Pendências e ideias levantadas antes
 
