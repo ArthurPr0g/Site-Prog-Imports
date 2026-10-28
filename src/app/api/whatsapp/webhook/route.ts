@@ -5,6 +5,9 @@ import { transcrever, transcricaoConfigurada } from '@/lib/atendente/transcricao
 import { responderConversa } from '@/lib/atendente/agente';
 import { empresaDoTexto } from '@/lib/atendente/regras';
 import { mesmoTelefone, reenviarAvisoPeloModelo } from '@/lib/atendente/avisos';
+import { PEDIDO_DE_RELATORIO, relatorioDaCaptacao } from '@/lib/atendente/relatorio';
+import { lerConfig } from '@/lib/atendente/agente';
+import { enviarTexto } from '@/lib/atendente/whatsapp-api';
 
 // Webhook do WhatsApp Cloud API (configurado no app da Meta).
 // GET: verificação do endereço. POST: mensagens e status de entrega.
@@ -56,6 +59,21 @@ export async function POST(req: NextRequest) {
     // lead: só abre a janela de 24 h para os próximos avisos saírem como texto.
     if (mesmoTelefone(m.de, cfg?.owner_whatsapp)) {
       await db.from('ia_config').update({ owner_last_inbound_at: m.quando }).eq('id', true);
+      // "relatório" / "como está a captação?": responde ao dono com funil, meta e custo da IA.
+      if (PEDIDO_DE_RELATORIO.test(m.texto)) {
+        const para = m.de;
+        after(async () => {
+          await marcarLidaEDigitando(m.id);
+          const texto = await relatorioDaCaptacao(db, await lerConfig(db));
+          const r = await enviarTexto(para, texto);
+          await db.from('ia_avisos').insert({
+            titulo: 'Relatório da captação',
+            texto: texto.slice(0, 2000),
+            via: 'texto',
+            ...(r.ok ? { external_id: r.id, status: 'sent' } : { status: 'failed', error: r.erro }),
+          });
+        });
+      }
       continue;
     }
     const conversaId = await gravarRecebida(db, m);
