@@ -7,7 +7,7 @@ import type { ConfigDoAtendente } from '@/lib/atendente/regras';
 import { emailDeVerdade } from '@/lib/captacao';
 import { guardarArquivosDeClientes } from '@/lib/atendente/arquivos-clientes';
 import { aprenderComConversas } from '@/lib/atendente/aprender';
-import { SELECT_DO_ITEM, emailDoLead, type ItemComLead } from '@/lib/atendente/email-do-lead';
+import { SELECT_DO_ITEM, emailDoLead, regiaoDoLead, type ItemComLead } from '@/lib/atendente/email-do-lead';
 import { garantirModeloDoAviso } from '@/lib/atendente/avisos';
 
 // Relógio do atendente: o pg_cron do Supabase chama a cada minuto (migration
@@ -133,9 +133,15 @@ async function mandarEmails(db: DbDoAtendente, cfg: ConfigDoAtendente): Promise<
 
 async function mandar(db: DbDoAtendente, cfg: ConfigDoAtendente, i: ItemComLead, etapa: number): Promise<boolean> {
   const l = i.leads;
-  const email = l.email ? emailDoLead(cfg, i, etapa) : null;
+  const { data: primeiro } =
+    etapa === 1 ? await db.from('ia_emails').select('subject').match({ lead_id: l.id, step: 0 }).maybeSingle() : { data: null };
+  const email = l.email
+    ? emailDoLead(cfg, i, etapa, { regiao: etapa === 0 ? await regiaoDoLead(db, l) : null, assuntoDoPrimeiro: primeiro?.subject })
+    : null;
   if (!l.email || !email) return false;
   const { assunto, corpo, html } = email;
+  // Formato escolhido depois do teste de spam (28/10/2026): 'texto' manda só o texto puro.
+  const { data: formato } = await db.from('ia_config').select('email_formato').eq('id', true).maybeSingle();
 
   // Reserva a etapa antes de enviar (unique lead+etapa): dois ticks não mandam duas vezes.
   const { data: reg, error } = await db
@@ -151,7 +157,7 @@ async function mandar(db: DbDoAtendente, cfg: ConfigDoAtendente, i: ItemComLead,
     texto: corpo,
     nomeDoRemetente: `${cfg.personaName} | Prog Soluções`,
     responderPara: cfg.ownerEmail,
-    html,
+    ...(formato?.email_formato === 'texto' ? {} : { html }),
   });
   const agora = new Date().toISOString();
   await db.from('ia_emails').update(r.ok ? { sent_at: agora } : { error: r.erro }).eq('id', reg.id);

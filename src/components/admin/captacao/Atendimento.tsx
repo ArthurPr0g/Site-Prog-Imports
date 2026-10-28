@@ -335,7 +335,12 @@ function Situacao({ painel, cotacaoDolar }: { painel: PainelDoAtendente; cotacao
       <Cartao rotulo="E-mails de 1º contato hoje" valor={`${painel.emailsHoje} de ${c.dailyEmailCap}`} ok />
       <AvisosNoWhatsapp avisos={painel.avisos} />
       <AgendaDoGoogle estado={painel.agenda} />
-      {i.email && <EmailDeTeste padrao={c.ownerEmail ?? ''} limite={c.dailyEmailCap} />}
+      {i.email && (
+        <EmailDeTeste
+          padrao={[c.ownerEmail, 'arthur.matos@liberdademedicaedu.com.br', 'progimports01@gmail.com'].filter(Boolean).join(', ')}
+          limite={c.dailyEmailCap}
+        />
+      )}
       {faltam.length > 0 && (
         <div className="flex items-start gap-2 rounded-[14px] border border-error/40 bg-error/[.06] px-3.5 py-2.5 text-[12.5px] sm:col-span-4">
           <CircleAlert size={15} className="mt-0.5 shrink-0 text-error" />
@@ -364,8 +369,8 @@ function EmailDeTeste({ padrao, limite }: { padrao: string; limite: number }) {
         <input
           value={para}
           onChange={(e) => setPara(e.target.value)}
-          placeholder="seu e-mail"
-          className={`min-w-[200px] flex-1 sm:max-w-[260px] ${inputClass}`}
+          placeholder="seus e-mails, separados por vírgula"
+          className={`min-w-[220px] flex-1 sm:max-w-[420px] ${inputClass}`}
         />
         <button
           disabled={pending || !para.trim()}
@@ -377,7 +382,7 @@ function EmailDeTeste({ padrao, limite }: { padrao: string; limite: number }) {
           }
           className="rounded-full bg-accent px-3 py-1.5 text-[12px] font-extrabold text-page disabled:opacity-50"
         >
-          {pending ? 'Enviando…' : 'Enviar e-mail de teste'}
+          {pending ? 'Enviando…' : 'Enviar teste (2 versões)'}
         </button>
       </span>
     </div>

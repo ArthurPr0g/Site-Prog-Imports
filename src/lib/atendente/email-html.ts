@@ -28,7 +28,8 @@ export type PartesDoEmail = {
   saudacao: string;
   paragrafos: string[];
   /** Cartão de destaque (o achado do diagnóstico). */
-  destaque?: { titulo: string; texto: string };
+  /** extra: o dado da região (concorrentes ou nota), numa segunda linha do cartão. */
+  destaque?: { titulo: string; texto: string; extra?: string };
   botao: { texto: string; url: string };
   linkSecundario?: { texto: string; url: string };
   notaDoBotao?: string;
@@ -53,6 +54,7 @@ export function htmlDoEmail(p: PartesDoEmail): string {
           <tr><td style="padding:14px 18px;">
             <div style="font-family:${FONTE};font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:${COR.destaque};margin-bottom:6px;">${esc(p.destaque.titulo)}</div>
             <div style="font-family:${FONTE};font-size:15px;line-height:1.55;color:${COR.texto};">${esc(maiuscula(p.destaque.texto))}.</div>
+            ${p.destaque.extra ? `<div style="font-family:${FONTE};font-size:14px;line-height:1.55;color:${COR.texto};margin-top:8px;padding-top:8px;border-top:1px solid ${COR.linha};"><strong>${esc(maiuscula(p.destaque.extra))}.</strong></div>` : ''}
           </td></tr>
         </table>
       </td></tr>`

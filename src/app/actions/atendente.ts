@@ -26,7 +26,7 @@ import { respondidas, type RespostasDoChecklist } from '@/lib/checklist-descober
 import { responderConversa, SIMULADOR } from '@/lib/atendente/agente';
 import { dbDoAtendente } from '@/lib/atendente/db';
 import { agendaConectada, googleConfigurado } from '@/lib/google-agenda';
-import { SELECT_DO_ITEM, emailDoLead, type ItemComLead } from '@/lib/atendente/email-do-lead';
+import { SELECT_DO_ITEM, emailDoLead, regiaoDoLead, type ItemComLead } from '@/lib/atendente/email-do-lead';
 import { enviarEmail } from '@/lib/atendente/email';
 import { lerConfig } from '@/lib/atendente/agente';
 import { emailDeVerdade } from '@/lib/captacao';
@@ -481,14 +481,16 @@ export async function resultadosDaLiaAction(): Promise<ResultadosDaLia | null> {
 }
 
 /**
- * "Enviar e-mail de teste": manda para o e-mail do Arthur exatamente o 1º e-mail
- * que o próximo lead da lista da Lia vai receber. Não registra envio nem mexe no lead.
+ * "Enviar e-mail de teste": manda para as caixas do Arthur o mesmo 1º e-mail que
+ * um lead do Brasil da lista da Lia vai receber, nas 2 versões (bonita e só texto),
+ * igual ao real (sem marca de teste no assunto, que também pesa no filtro de spam).
+ * Não registra envio nem mexe no lead.
  */
-export async function enviarEmailDeTesteAction(para: string): Promise<ActionResult> {
+export async function enviarEmailDeTesteAction(paraLista: string): Promise<ActionResult> {
   const supabase = await adminClient();
   if (!supabase) return errResult('Sem permissão.');
-  const destino = para.trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(destino)) return errResult('E-mail inválido.');
+  const destinos = [...new Set(paraLista.split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean))].slice(0, 5);
+  if (!destinos.length || destinos.some((d) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d))) return errResult('Confira os e-mails.');
   if (!emailConfigurado()) return errResult('O e-mail ainda não está configurado na Vercel (SMTP_*).');
   const db = dbDoAtendente();
   const cfg = await lerConfig(db);
@@ -499,21 +501,31 @@ export async function enviarEmailDeTesteAction(para: string): Promise<ActionResu
     .eq('lead_seller_kits.active', true)
     .order('position');
   const lista = (itens ?? []) as unknown as ItemComLead[];
+  // O teste é para o Arthur ler: lead do Brasil primeiro (em português).
+  const comEmail = lista.filter((x) => x.leads.email && emailDeVerdade(x.leads.email));
   const item =
-    lista.find((x) => x.leads.status === 'novo' && x.leads.email && emailDeVerdade(x.leads.email)) ??
-    lista.find((x) => x.leads.email);
+    comEmail.find((x) => x.leads.country !== 'US' && x.leads.status === 'novo') ??
+    comEmail.find((x) => x.leads.country !== 'US') ??
+    comEmail[0];
   if (!item) return errResult('Nenhum lead com e-mail na lista da Lia.');
-  const email = emailDoLead(cfg, item, 0);
+  const email = emailDoLead(cfg, item, 0, { regiao: await regiaoDoLead(db, item.leads) });
   if (!email) return errResult('O link da Lia está sem o WhatsApp dela: gere o link de novo na aba Vendedores.');
-  const r = await enviarEmail({
-    para: destino,
-    assunto: `[TESTE] ${email.assunto}`,
-    texto: email.corpo,
-    html: email.html,
-    nomeDoRemetente: `${cfg.personaName} | Prog Soluções`,
-    responderPara: cfg.ownerEmail,
-  });
-  return r.ok
-    ? okResult(`Enviado para ${destino} (o e-mail de ${item.leads.name}). Confira se caiu na caixa de entrada e não no spam.`)
-    : errResult(`O Gmail recusou: ${r.erro}`);
+  const falhas: string[] = [];
+  for (const para of destinos) {
+    for (const versao of ['bonita', 'texto'] as const) {
+      const r = await enviarEmail({
+        para,
+        assunto: email.assunto,
+        texto: email.corpo,
+        ...(versao === 'bonita' ? { html: email.html } : {}),
+        nomeDoRemetente: `${cfg.personaName} | Prog Soluções`,
+        responderPara: cfg.ownerEmail,
+      });
+      if (!r.ok) falhas.push(`${para} (${versao}): ${r.erro}`);
+    }
+  }
+  if (falhas.length) return errResult(`Falhou: ${falhas.join('; ')}`);
+  return okResult(
+    `2 versões (bonita e só texto) enviadas para ${destinos.join(', ')}, com o e-mail de ${item.leads.name}. Veja em qual pasta cada uma caiu.`
+  );
 }

@@ -659,6 +659,7 @@ export type Database = {
           auto_model: boolean
           daily_email_cap: number
           discount_wait_minutes: number
+          email_formato: string
           extra_discount_max: number
           id: boolean
           model: string
@@ -676,6 +677,7 @@ export type Database = {
           auto_model?: boolean
           daily_email_cap?: number
           discount_wait_minutes?: number
+          email_formato?: string
           extra_discount_max?: number
           id?: boolean
           model?: string
@@ -693,6 +695,7 @@ export type Database = {
           auto_model?: boolean
           daily_email_cap?: number
           discount_wait_minutes?: number
+          email_formato?: string
           extra_discount_max?: number
           id?: boolean
           model?: string
