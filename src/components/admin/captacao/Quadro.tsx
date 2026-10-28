@@ -30,12 +30,15 @@ export function Quadro({
   estimativa,
   agora,
   vendedorDe,
+  aoAbrir,
 }: {
   leads: Lead[];
   estimativa: (l: Lead) => Estimativa;
   agora: number;
   /** Nome do vendedor com quem o lead está (link ativo), se houver. */
   vendedorDe: (id: string) => string | undefined;
+  /** Clique no cartão: abre a ficha completa. */
+  aoAbrir?: (l: Lead) => void;
 }) {
   const toast = useToast();
 
@@ -45,6 +48,7 @@ export function Quadro({
       itens={leads}
       idDe={(l) => l.id}
       colunaDe={(l) => l.status}
+      aoAbrir={aoAbrir}
       aoMover={async (l, status) => {
         const r = await updateLeadAction(l.id, { status });
         if (!r.ok) toast(r);

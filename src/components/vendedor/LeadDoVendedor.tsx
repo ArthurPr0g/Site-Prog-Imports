@@ -1,9 +1,10 @@
 'use client';
 
 // Detalhe de um lead na página do vendedor, em abas: Análise, Contato e
-// mensagens, Oportunidade, Como agir, Checklist e Registro.
+// mensagens, Oportunidade, Como agir, Checklist e Registro. O painel do dono
+// (/admin/captacao) abre a mesma ficha, com as ações dele (prop `dono`).
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, type ReactNode } from 'react';
 import {
   X,
   MessageCircle,
@@ -22,6 +23,9 @@ import {
 import { casesDoLead, linkDoCase } from '@/lib/cases-portfolio';
 import { useToast } from '@/components/ui/Toast';
 import { ChecklistForm } from '@/components/checklist/ChecklistForm';
+import { LEAD_STATUSES, type LeadStatus } from '@/lib/captacao';
+import type { ActionResult } from '@/lib/action-result';
+import type { RespostasDoChecklist } from '@/lib/checklist-descoberta';
 import { whatsappDoLead, proximaEtapa, situacaoDoSite, urlComProtocolo, NOME_DA_ETAPA, CANAL_DA_ETAPA } from '@/lib/captacao';
 import { formatMoeda } from '@/lib/precos-captacao';
 import {
@@ -98,6 +102,12 @@ function Copiar({ texto }: { texto: string }) {
   );
 }
 
+/** Como a ficha grava. Padrão: as funções do link do vendedor (pelo token). */
+export type AcoesDaFicha = {
+  registrar: (dados: { status?: LeadStatus; nota?: string; etapaEnviada?: number }) => Promise<ActionResult>;
+  salvarChecklist: (respostas: RespostasDoChecklist) => Promise<ActionResult>;
+};
+
 export function LeadDoVendedor({
   lead: l,
   kit,
@@ -107,6 +117,9 @@ export function LeadDoVendedor({
   onFechar,
   onSimular,
   abaInicial = 'analise',
+  acoes,
+  dono = false,
+  extraOportunidade,
 }: {
   lead: LeadDoKit;
   kit: Kit;
@@ -114,9 +127,15 @@ export function LeadDoVendedor({
   origem: string;
   whatsArthur: string;
   onFechar: () => void;
-  onSimular: () => void;
+  /** Sem ela, o botão do simulador não aparece. */
+  onSimular?: () => void;
   /** Aba que abre primeiro (a tela Hoje abre direto em Contato ou Ligação). */
   abaInicial?: AbaDoLead;
+  acoes?: AcoesDaFicha;
+  /** Ficha aberta pelo dono no painel: todas as etapas, sem "pergunte ao Arthur". */
+  dono?: boolean;
+  /** Botões extras na aba Oportunidade (ex.: criar a proposta no painel). */
+  extraOportunidade?: ReactNode;
 }) {
   const toast = useToast();
   const [aba, setAba] = useState<Aba>(abaInicial);
@@ -127,7 +146,7 @@ export function LeadDoVendedor({
   const vendedor = primeiroNome(kit.seller_name);
   const adaptado = comoLeadDoPainel(l);
   const lang = idiomaDoLead(adaptado);
-  const remetente = { nome: vendedor, assinatura: kit.seller_name, kit: token };
+  const remetente = { nome: vendedor, assinatura: kit.seller_name, kit: token || undefined };
   const vars = variaveisDoLead(adaptado, lang, origem, remetente);
   const variante = varianteDoLead(adaptado, kit.templates);
   const prox = proximaEtapa(adaptado);
@@ -150,7 +169,7 @@ export function LeadDoVendedor({
 
   function registrar(dados: Parameters<typeof registrarPeloVendedorAction>[2], aviso = true) {
     startTransition(async () => {
-      const r = await registrarPeloVendedorAction(token, l.id, dados);
+      const r = acoes ? await acoes.registrar(dados) : await registrarPeloVendedorAction(token, l.id, dados);
       if (aviso || !r.ok) toast(r);
       if (r.ok && dados.nota) setNota('');
     });
@@ -257,7 +276,7 @@ export function LeadDoVendedor({
                 </Bloco>
               )}
               <a
-                href={`/diagnostico/${l.public_token}?k=${token}&previa=1`}
+                href={`/diagnostico/${l.public_token}?${token ? `k=${token}&` : ''}previa=1`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-control border border-border-strong px-4 py-2.5 text-[13.5px] font-bold"
@@ -477,12 +496,15 @@ export function LeadDoVendedor({
                     Cliente dos EUA: preço em dólar da tabela do portfólio. As descrições acima valem para os mesmos planos.
                   </p>
                 )}
-                <button
-                  onClick={onSimular}
-                  className="mt-3 rounded-control bg-accent px-4 py-2.5 text-[13.5px] font-extrabold text-page"
-                >
-                  Simular com o que o cliente precisa
-                </button>
+                {onSimular && (
+                  <button
+                    onClick={onSimular}
+                    className="mt-3 rounded-control bg-accent px-4 py-2.5 text-[13.5px] font-extrabold text-page"
+                  >
+                    Simular com o que o cliente precisa
+                  </button>
+                )}
+                {extraOportunidade}
               </Bloco>
               <Bloco titulo="Trabalhos parecidos para mostrar">
                 <div className="space-y-2.5">
@@ -604,9 +626,11 @@ export function LeadDoVendedor({
               <Bloco titulo="5. Próximo passo">
                 <p className="text-[14px] leading-relaxed">{roteiro.proximoPasso}</p>
               </Bloco>
-              <Bloco titulo="Pergunta que você não sabe responder?">
-                <PerguntarAoArthur whatsArthur={whatsArthur} vendedor={vendedor} cliente={l.name} />
-              </Bloco>
+              {!dono && (
+                <Bloco titulo="Pergunta que você não sabe responder?">
+                  <PerguntarAoArthur whatsArthur={whatsArthur} vendedor={vendedor} cliente={l.name} />
+                </Bloco>
+              )}
             </>
           )}
 
@@ -615,7 +639,7 @@ export function LeadDoVendedor({
               <ChecklistForm
                 inicial={l.discovery ?? {}}
                 aoSalvar={async (r) => {
-                  const res = await salvarChecklistDoVendedorAction(token, l.id, r);
+                  const res = acoes ? await acoes.salvarChecklist(r) : await salvarChecklistDoVendedorAction(token, l.id, r);
                   toast(res);
                   return res.ok;
                 }}
@@ -627,7 +651,7 @@ export function LeadDoVendedor({
             <>
               <Bloco titulo="Em que etapa está">
                 <div className="flex flex-wrap gap-1.5">
-                  {ETAPAS_QUE_O_VENDEDOR_MARCA.map((s) => (
+                  {(dono ? LEAD_STATUSES : ETAPAS_QUE_O_VENDEDOR_MARCA).map((s) => (
                     <button
                       key={s}
                       onClick={() => registrar({ status: s })}

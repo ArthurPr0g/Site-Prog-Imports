@@ -41,7 +41,7 @@ export function valoresDoItem(
       .filter((s): s is ServicoDoCatalogo => !!s)
       .map((s) => ({
         nome: s.name,
-        descricao: s.description,
+        descricao: s.description ?? '',
         preco: s.price,
         mensal: s.billingType === 'mensal',
         prazoDias: s.leadTimeDays,

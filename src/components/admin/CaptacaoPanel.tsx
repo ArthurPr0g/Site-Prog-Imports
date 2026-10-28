@@ -32,6 +32,8 @@ import { Relatorio } from './captacao/Relatorio';
 import { Buscas } from './captacao/Buscas';
 import { ImportarModal, NotasModal, ModelosModal, ChecklistModal } from './captacao/Modais';
 import { Vendedores } from './captacao/Vendedores';
+import { FichaDoLead } from './captacao/FichaDoLead';
+import type { ServicoDoCatalogo } from '@/lib/itens-do-kit';
 import { GraficoDaMeta } from '@/components/captacao/GraficoDaMeta';
 import { NumeroAnimado, SUAVE } from '@/components/captacao/NumeroAnimado';
 import { resumoDaMeta } from '@/lib/meta-captacao';
@@ -56,6 +58,7 @@ type FiltroEtapa = '' | 'parahoje' | 'quentes' | LeadStatus;
 export function CaptacaoPanel({
   leads,
   catalogo,
+  servicos,
   cotacoes,
   modelos,
   origem,
@@ -66,6 +69,8 @@ export function CaptacaoPanel({
   leads: Lead[];
   /** Nome → preço de todos os serviços do catálogo (únicos e mensalidades). */
   catalogo: [string, number][];
+  /** Catálogo com descrição e prazo (ficha do lead, aba Oportunidade). */
+  servicos: ServicoDoCatalogo[];
   cotacoes: Cotacoes;
   modelos: ModeloMensagem[];
   /** Endereço do site em produção, para o link do diagnóstico. */
@@ -132,6 +137,9 @@ export function CaptacaoPanel({
   const [importando, setImportando] = useState(false);
   const [notasDe, setNotasDe] = useState<Lead | null>(null);
   const [checklistDe, setChecklistDe] = useState<Lead | null>(null);
+  // Ficha completa (a mesma do vendedor). Guarda o id: depois de salvar, a
+  // atualização da página traz o lead novo e a ficha mostra na hora.
+  const [fichaDe, setFichaDe] = useState<string | null>(null);
   const [editandoModelos, setEditandoModelos] = useState(false);
 
   // Para hoje: retorno marcado à mão ou etapa da sequência vencida.
@@ -481,6 +489,7 @@ export function CaptacaoPanel({
                 vendedor={vendedorPorLead.get(l.id)}
                 onNotas={() => setNotasDe(l)}
                 onChecklist={() => setChecklistDe(l)}
+                onAbrir={() => setFichaDe(l.id)}
               />
             ))}
           </div>
@@ -508,7 +517,13 @@ export function CaptacaoPanel({
         />
       )}
       {aba === 'quadro' && (
-        <Quadro leads={filtrados} estimativa={estimativa} agora={agora} vendedorDe={(id) => vendedorPorLead.get(id)} />
+        <Quadro
+          leads={filtrados}
+          estimativa={estimativa}
+          agora={agora}
+          vendedorDe={(id) => vendedorPorLead.get(id)}
+          aoAbrir={(l) => setFichaDe(l.id)}
+        />
       )}
       {aba === 'mapa' && <Mapa leads={filtrados} estimativa={estimativa} agora={agora} />}
       {aba === 'relatorio' && <Relatorio leads={leads} estimativa={estimativa} cotacoes={cotacoes} />}
@@ -548,6 +563,17 @@ export function CaptacaoPanel({
       )}
       {notasDe && <NotasModal lead={notasDe} onFechar={() => setNotasDe(null)} />}
       {checklistDe && <ChecklistModal lead={checklistDe} onFechar={() => setChecklistDe(null)} />}
+      {fichaDe && leadsPorId.get(fichaDe) && (
+        <FichaDoLead
+          lead={leadsPorId.get(fichaDe)!}
+          leads={leads}
+          modelos={modelos}
+          origem={origem}
+          servicos={servicos}
+          tabBRL={tabBRL}
+          onFechar={() => setFichaDe(null)}
+        />
+      )}
     </div>
   );
 }

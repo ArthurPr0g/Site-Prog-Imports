@@ -47,6 +47,7 @@ export function LinhaDoLead({
   vendedor,
   onNotas,
   onChecklist,
+  onAbrir,
 }: {
   lead: Lead;
   estimativa: Estimativa;
@@ -60,6 +61,8 @@ export function LinhaDoLead({
   vendedor?: string;
   onNotas: () => void;
   onChecklist: () => void;
+  /** Abre a ficha completa (a mesma do vendedor). */
+  onAbrir?: () => void;
 }) {
   const c = useContatoDoLead(l, modelos, origem);
   const vencido = !ENCERRADOS.includes(l.status) && !!l.nextContact && l.nextContact <= hoje;
@@ -82,7 +85,18 @@ export function LinhaDoLead({
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5 font-bold leading-snug">
-              {l.name} <span className="text-[11px] font-extrabold text-fg-faded">{l.country === 'US' ? 'EUA' : 'BR'}</span>
+              {onAbrir ? (
+                <button
+                  onClick={onAbrir}
+                  title="Abrir a ficha completa do lead"
+                  className="text-left underline decoration-accent/40 decoration-2 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+                >
+                  {l.name}
+                </button>
+              ) : (
+                l.name
+              )}{' '}
+              <span className="text-[11px] font-extrabold text-fg-faded">{l.country === 'US' ? 'EUA' : 'BR'}</span>
               {quente && (
                 <Selo tom="quente" titulo="Abriu o diagnóstico nas últimas 48 h: bom momento para ligar">
                   <Flame size={11} /> abriu {l.diagViews}x · {haQuanto(l.diagLastViewAt!, agora)}
