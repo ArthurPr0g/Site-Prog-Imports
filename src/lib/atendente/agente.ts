@@ -627,7 +627,10 @@ export async function responderConversa(conversaId: string, avisoInterno?: strin
     primeiraResposta: !(historico ?? []).some((m) => m.direction === 'out'),
   });
 
-  const respostas: string[] = [];
+  // Só vale o texto da última rodada que escreveu algo: quando a IA escreve e chama
+  // uma ferramenta, ela reescreve a resposta depois de ver o resultado. Somar as
+  // rodadas mandava a mesma mensagem duas vezes (conversa do Felipe, 28/10/2026).
+  let resposta = '';
   const anthropic = cliente();
   for (let rodada = 0; rodada < RODADAS; rodada++) {
     let r: Anthropic.Beta.BetaMessage;
@@ -685,7 +688,7 @@ export async function responderConversa(conversaId: string, avisoInterno?: strin
       .map((b) => b.text)
       .join('\n')
       .trim();
-    if (texto) respostas.push(texto);
+    if (texto) resposta = texto;
 
     const usos = r.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === 'tool_use');
     if (r.stop_reason !== 'tool_use' || usos.length === 0) break;
@@ -705,8 +708,7 @@ export async function responderConversa(conversaId: string, avisoInterno?: strin
   }
 
   // Manda as mensagens (separadas por "---") pelo WhatsApp e grava.
-  const partes = respostas
-    .join('\n---\n')
+  const partes = resposta
     .split(/^\s*---\s*$/m)
     .map((p) => p.trim())
     .filter(Boolean)
