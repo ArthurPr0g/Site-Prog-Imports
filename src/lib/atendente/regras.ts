@@ -28,12 +28,39 @@ export type ConfigDoAtendente = {
   personaName: string;
   active: boolean;
   model: ModeloDaIA;
+  /** Escolhe o modelo pelo momento da conversa; `model` fica para os momentos decisivos. */
+  autoModel: boolean;
   monthlyBudgetUsd: number;
   extraDiscountMax: number;
   discountWaitMinutes: number;
   dailyEmailCap: number;
   ownerEmail: string | null;
 };
+
+/* ------------------------------------------------------------ modelo pelo momento */
+
+// Pedido do dono (28/10/2026): não gastar API à toa. O modelo forte (o da
+// configuração) só nos momentos que decidem a venda; a descoberta vai no médio
+// e as confirmações curtas no leve. Nunca passa do modelo da configuração.
+const DECISIVO =
+  /caro|barat|desconto|pre[cç]o|valor|quanto (custa|fica|sai|é)|or[cç]amento|invest|parcel|pagar|pagamento|pix|boleto|cart[aã]o|contrato|fech|prazo|quando fica pronto|concorr|outra empresa|vou pensar|pensar melhor|n[aã]o sei|garantia|cancel|reuni|liga[cç][aã]o|falar com|humano|pessoa|rob[oô]|reclama|absurdo|price|discount|cost|expensive|deal|contract|\bmil\b|reais|r\$|\d+\s?k\b|metade|entrada|sinal|[àa] vista|m[eê]s que vem|pr[oó]xim[oa] (m[eê]s|semana)|semana que vem|urgente|at[eé] (o )?dia|quando (d[aá]|consegue|fica)|budget|deadline|next (month|week)/i;
+const CONFIRMACAO = /^(ok+|okay|blz|beleza|certo|sim|s|show|top|massa|perfeito|entendi|obrigad[oa]|valeu|vlw|tmj|joia|👍|🙏|😊|🙂|thanks?|thank you|great|cool)[\s!.,😊🙂👍🙏]*$/i;
+
+const ORDEM_DOS_MODELOS: ModeloDaIA[] = ['claude-haiku-5-5', 'claude-sonnet-5-5', 'claude-opus-5-5'];
+const noMaximo = (m: ModeloDaIA, teto: ModeloDaIA) =>
+  ORDEM_DOS_MODELOS.indexOf(m) <= ORDEM_DOS_MODELOS.indexOf(teto) ? m : teto;
+
+export function modeloDoMomento(
+  cfg: Pick<ConfigDoAtendente, 'model' | 'autoModel'>,
+  s: { ultimaDoCliente: string; etapa: LeadStatus | null; avisoInterno: boolean; descontoPendente: boolean; primeiraResposta: boolean }
+): ModeloDaIA {
+  if (!cfg.autoModel) return cfg.model;
+  const texto = s.ultimaDoCliente.trim();
+  const etapaDecisiva = s.etapa === 'proposta' || s.etapa === 'reuniao' || s.etapa === 'fechado';
+  if (s.avisoInterno || s.descontoPendente || etapaDecisiva || DECISIVO.test(texto)) return cfg.model;
+  if (!s.primeiraResposta && texto.length <= 25 && CONFIRMACAO.test(texto)) return noMaximo('claude-haiku-5-5', cfg.model);
+  return noMaximo('claude-sonnet-5-5', cfg.model);
+}
 
 /* ------------------------------------------------------------ preço */
 

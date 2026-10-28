@@ -11,7 +11,7 @@ import { enviarTexto, baixarMidia, JANELA_MS } from '@/lib/atendente/whatsapp-ap
 import { enviarEmail } from '@/lib/atendente/email';
 import { siteAbreAgora } from '@/lib/atendente/site-agora';
 import { instrucoesFixas, contextoDaConversa } from '@/lib/atendente/prompt';
-import { calcularProposta, custoDaChamada, type ConfigDoAtendente, type ModeloDaIA } from '@/lib/atendente/regras';
+import { calcularProposta, custoDaChamada, modeloDoMomento, type ConfigDoAtendente, type ModeloDaIA } from '@/lib/atendente/regras';
 import { tabelaBRL, TABELA_USD } from '@/lib/precos-captacao';
 import { situacaoDoSite, LEAD_STATUS_LABEL, type LeadStatus } from '@/lib/captacao';
 import { limparRespostas, CHECKLIST, type RespostasDoChecklist } from '@/lib/checklist-descoberta';
@@ -29,6 +29,7 @@ export async function lerConfig(db: DbDoAtendente = dbDoAtendente()): Promise<Co
     personaName: data?.persona_name ?? 'Lia',
     active: data?.active ?? false,
     model: (data?.model ?? 'claude-opus-5-5') as ModeloDaIA,
+    autoModel: data?.auto_model ?? true,
     monthlyBudgetUsd: Number(data?.monthly_budget_usd ?? 30),
     extraDiscountMax: Number(data?.extra_discount_max ?? 10),
     discountWaitMinutes: data?.discount_wait_minutes ?? 6,
@@ -453,20 +454,30 @@ export async function responderConversa(conversaId: string, avisoInterno?: strin
     { type: 'text', text: contexto },
   ];
 
+  // Modelo pelo momento (o mesmo em todas as rodadas desta resposta, para aproveitar o cache).
+  const ultimaDoCliente = (historico ?? []).find((m) => m.direction === 'in')?.body ?? '';
+  const modelo = modeloDoMomento(cfg, {
+    ultimaDoCliente,
+    etapa: estado.leadStatus,
+    avisoInterno: !!avisoInterno,
+    descontoPendente: estado.descontoPendente,
+    primeiraResposta: !(historico ?? []).some((m) => m.direction === 'out'),
+  });
+
   const respostas: string[] = [];
   const anthropic = cliente();
   for (let rodada = 0; rodada < RODADAS; rodada++) {
     let r: Anthropic.Beta.BetaMessage;
     try {
       r = await anthropic.beta.messages.create({
-        model: cfg.model,
+        model: modelo,
         max_tokens: 8000,
         system,
         tools,
         messages: mensagens,
         output_config: { effort: 'low' },
         // Recusa do modelo por engano: a própria API tenta de novo em outro modelo.
-        ...(cfg.model === 'claude-haiku-5-5'
+        ...(modelo === 'claude-haiku-5-5'
           ? {}
           : { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const }),
       });

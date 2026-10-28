@@ -455,6 +455,7 @@ export type Database = {
       ia_config: {
         Row: {
           active: boolean
+          auto_model: boolean
           daily_email_cap: number
           discount_wait_minutes: number
           extra_discount_max: number
@@ -467,6 +468,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          auto_model?: boolean
           daily_email_cap?: number
           discount_wait_minutes?: number
           extra_discount_max?: number
@@ -479,6 +481,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          auto_model?: boolean
           daily_email_cap?: number
           discount_wait_minutes?: number
           extra_discount_max?: number

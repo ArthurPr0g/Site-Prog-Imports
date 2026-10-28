@@ -569,7 +569,7 @@ function Configuracao({ inicial, aoSalvar }: { inicial: ConfigDoAtendente; aoSal
         <Campo rotulo="Nome com que ela se apresenta">
           <input value={c.personaName} onChange={(e) => mudar('personaName', e.target.value)} className={inputClass} />
         </Campo>
-        <Campo rotulo="Modelo da IA">
+        <Campo rotulo={c.autoModel ? 'Modelo nos momentos decisivos (preço, objeção, fechamento)' : 'Modelo da IA'}>
           <select value={c.model} onChange={(e) => mudar('model', e.target.value as ConfigDoAtendente['model'])} className={inputClass}>
             {MODELOS_DA_IA.map((m) => (
               <option key={m.id} value={m.id}>
@@ -578,6 +578,16 @@ function Configuracao({ inicial, aoSalvar }: { inicial: ConfigDoAtendente; aoSal
             ))}
           </select>
         </Campo>
+        <label className="flex items-start gap-2.5 text-[13px] leading-snug sm:col-span-2">
+          <input type="checkbox" checked={c.autoModel} onChange={(e) => mudar('autoModel', e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            <b>Economizar: escolher o modelo pelo momento</b>
+            <span className="block text-fg-tertiary">
+              Confirmações curtas (&quot;ok&quot;, &quot;obrigado&quot;) no Haiku, a descoberta no Sonnet e o modelo acima só no preço,
+              objeção, desconto, prazo e fechamento.
+            </span>
+          </span>
+        </label>
         <Campo rotulo="Teto de gasto com IA no mês (US$)">
           <input inputMode="decimal" value={c.monthlyBudgetUsd} onChange={(e) => mudar('monthlyBudgetUsd', num(e.target.value))} className={inputClass} />
         </Campo>
