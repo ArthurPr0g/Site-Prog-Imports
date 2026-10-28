@@ -109,6 +109,14 @@ async function gravarRecebida(db: DbDoAtendente, m: MensagemRecebida): Promise<s
       if (!outra) return null;
       conversaId = outra.id;
     } else conversaId = nova.id;
+  } else if (!leadId) {
+    // Conversa que começou sem lead (ex.: o telefone só foi gravado no lead depois,
+    // caso do Felipe em 28/10/2026): tenta ligar de novo a cada mensagem.
+    const achado = await acharLead(db, m);
+    if (achado) {
+      leadId = achado.leadId;
+      await db.from('ia_conversations').update({ lead_id: achado.leadId, kit_id: achado.kitId }).eq('id', conversaId).is('lead_id', null);
+    }
   }
 
   const { error } = await db.from('ia_messages').insert({
