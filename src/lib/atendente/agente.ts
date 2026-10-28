@@ -256,11 +256,30 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
       if (p.total <= 0) return 'Pacote sem preço no catálogo. Não passe valor: use chamar_arthur.';
       // Guarda a última proposta passada: vira o valor negociado quando o lead fechar
       // (a meta só usa closed_* com o lead em "fechado"; antes disso, a estimativa).
+      // Preço passado = lead em Proposta, sem depender de a IA lembrar do mudar_etapa
+      // (o caso da Bebidas 85, 28/10/2026). Nunca volta etapa nem mexe em perdido/fechado.
+      const subirParaProposta =
+        !!e.leadStatus && ORDEM.includes(e.leadStatus) && ORDEM.indexOf(e.leadStatus) < ORDEM.indexOf('proposta');
       if (leadId) {
+        const { data: l } = subirParaProposta ? await db.from('leads').select('notes').eq('id', leadId).maybeSingle() : { data: null };
+        const hoje = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
         await db
           .from('leads')
-          .update({ closed_value: p.totalComExtra, closed_monthly: p.mensal, closed_currency: e.tabela.moeda })
+          .update({
+            closed_value: p.totalComExtra,
+            closed_monthly: p.mensal,
+            closed_currency: e.tabela.moeda,
+            ...(subirParaProposta
+              ? {
+                  status: 'proposta',
+                  notes: [l?.notes, `[${cfg.personaName} ${hoje}] ${LEAD_STATUS_LABEL.proposta}: preço apresentado`].filter(Boolean).join('\n'),
+                  next_contact: null,
+                  updated_at: new Date().toISOString(),
+                }
+              : {}),
+          })
           .eq('id', leadId);
+        if (subirParaProposta) e.leadStatus = 'proposta';
       }
       return p.texto;
     }
