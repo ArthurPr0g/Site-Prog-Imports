@@ -247,7 +247,7 @@ export function CaptacaoPanel({
           implementacao={ind.naMesa}
           mensal={ind.naMesaMensal}
           porPais={ind.naMesaPorPais}
-          rodape={`${ind.naMesaLeads} lead(s) em aberto, pelos serviços sugeridos${
+          rodape={`${ind.naMesaLeads} lead(s) em aberto · estimativa pelo pacote provável (a necessidade real sai da conversa)${
             cotacoes.USD ? ' · EUA convertido pela cotação de hoje' : ' · EUA fora (sem cotação hoje)'
           }`}
         />

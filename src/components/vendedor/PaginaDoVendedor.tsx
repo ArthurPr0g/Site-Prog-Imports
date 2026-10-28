@@ -78,7 +78,7 @@ function CartaoDoLead({ l, agora }: { l: LeadDoKit; agora: number }) {
           </div>
           <div className="truncate text-[11.5px] text-fg-tertiary">{[l.niche, l.city].filter(Boolean).join(' · ')}</div>
           <div className="text-[12px] font-bold text-fg-secondary">
-            {formatMoeda(l.one_time, l.currency)}
+            ≈ {formatMoeda(l.one_time, l.currency)}
             {l.monthly > 0 && ` + ${formatMoeda(l.monthly, l.currency)}/mês`}
           </div>
           <div className="mt-1 flex flex-wrap gap-1 text-[10.5px] font-bold">

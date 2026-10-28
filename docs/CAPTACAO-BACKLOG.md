@@ -76,6 +76,7 @@ telemetria do engine e o ambiente de teste local
 ## Porte do cliente, limpeza da base e telefone fixo (27/10/2026, noite) — no ar
 
 - **Porte** (`estimarPorte`, migration `0065`): avaliações no Google (≥1.000 +3, ≥300 +2, ≥100 +1, <30 −1), unidades da marca na cidade (+2), site próprio no ar (+1), ramo de ticket alto (+1). ≤1 pequena, 2–3 média, ≥4 grande.
+- **Pacote provável, não proposta** (pedido do dono, 27/10): o pacote e o valor são uma previsão com o que é público no Google. Painel e página do vendedor mostram "≈" e "estimativa"; a necessidade real sai da conversa e do checklist de descoberta, e só então se monta a proposta.
 - **Pacote pelo porte**: pequena fica no Essencial (ou Profissional, se o problema pede) e Gestão Básico; média sobe para Profissional e Intermediário; grande vai para Premium e Avançado.
 - **Rede/franquia nacional** (lista `REDES`, palavra inteira): −30 na nota; site e sistema vêm da marca.
 - **Só telefone fixo**: −5 e aviso; no modo foco e na página do vendedor o botão principal vira "Ligar" e o WhatsApp fica como "tentar mesmo assim".

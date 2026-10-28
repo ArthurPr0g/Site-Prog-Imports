@@ -433,8 +433,17 @@ export function LeadDoVendedor({
 
           {aba === 'oportunidade' && (
             <>
-              <Bloco titulo="O que oferecer">
+              <Bloco titulo="Pacote provável (estimativa)">
+                <div className="mb-3 rounded-[10px] border border-warning/40 bg-warning/10 p-2.5 text-[12.5px] leading-snug text-fg-secondary">
+                  <b className="text-warning">É uma previsão, não a proposta.</b> Foi montada só com o que é público no Google
+                  (porte da empresa e problemas do site). A necessidade real aparece na conversa: preencha o{' '}
+                  <button onClick={() => setAba('checklist')} className="font-bold text-accent underline">
+                    checklist de descoberta
+                  </button>{' '}
+                  e só então monte a proposta no simulador ou com o Arthur. Use o valor abaixo como referência, sem prometer.
+                </div>
                 <div className="font-display text-[24px] font-bold tabular-nums">
+                  <span className="mr-1 text-[15px] font-bold text-fg-tertiary">≈</span>
                   {m(l.one_time)}
                   {l.monthly > 0 && <span className="text-[14px] font-bold text-fg-tertiary"> + {m(l.monthly)}/mês</span>}
                 </div>
@@ -472,7 +481,7 @@ export function LeadDoVendedor({
                   onClick={onSimular}
                   className="mt-3 rounded-control bg-accent px-4 py-2.5 text-[13.5px] font-extrabold text-page"
                 >
-                  Simular outras opções
+                  Simular com o que o cliente precisa
                 </button>
               </Bloco>
               <Bloco titulo="Trabalhos parecidos para mostrar">

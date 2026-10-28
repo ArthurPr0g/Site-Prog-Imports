@@ -142,10 +142,10 @@ export function NegocioDoLead({ l, agora }: { l: LeadDoKit; agora: number }) {
                 {(l.unidades ?? 1) > 1 ? ` (${l.unidades} unidades na cidade)` : ''}.{' '}
                 <span className="text-fg-tertiary">
                   {l.porte === 'pequena'
-                    ? 'Comece pelo pacote essencial: preço de entrada e resultado rápido.'
+                    ? 'Provável ponto de partida: pacote essencial (confirme a necessidade na conversa).'
                     : l.porte === 'media'
-                      ? 'Pacote intermediário: já tem estrutura para aproveitar mais recursos.'
-                      : 'Pacote completo: fale com quem decide e mostre o projeto inteiro.'}
+                      ? 'Provável: pacote intermediário, se a conversa confirmar a necessidade.'
+                      : 'Provável: pacote completo. Fale com quem decide e entenda o projeto antes de propor.'}
                 </span>
               </dd>
             </div>

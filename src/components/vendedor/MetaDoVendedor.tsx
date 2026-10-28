@@ -82,11 +82,11 @@ export function MetaDoVendedor({
           <span className="text-fg-tertiary">/mês em mensalidades</span>
         </div>
         <div className="mt-1 text-[12px] text-fg-tertiary">
-          <NumeroAnimado valor={meta.naMesa.leads} /> empresas em aberto, pelos serviços que cada uma precisa.
+          <NumeroAnimado valor={meta.naMesa.leads} /> empresas em aberto. Estimativa pelo pacote provável de cada uma; o valor real sai da conversa.
         </div>
 
         <div className="mt-4 rounded-[14px] border border-border bg-page/40 p-3.5">
-          <div className="text-[10.5px] font-extrabold uppercase tracking-[.08em] text-fg-faded">Nos seus leads</div>
+          <div className="text-[10.5px] font-extrabold uppercase tracking-[.08em] text-fg-faded">Nos seus leads (estimativa)</div>
           <div className="mt-1 text-[20px] font-bold tabular-nums">
             <NumeroAnimado valor={meuUnico} formato={reais} />
             <span className="text-[13px] text-fg-tertiary">
