@@ -515,6 +515,105 @@ export type Database = {
           },
         ]
       }
+      ia_avisos: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          error: string | null
+          external_id: string | null
+          id: string
+          lead_id: string | null
+          status: string | null
+          texto: string
+          titulo: string
+          via: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          error?: string | null
+          external_id?: string | null
+          id?: string
+          lead_id?: string | null
+          status?: string | null
+          texto: string
+          titulo: string
+          via: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          error?: string | null
+          external_id?: string | null
+          id?: string
+          lead_id?: string | null
+          status?: string | null
+          texto?: string
+          titulo?: string
+          via?: string
+        }
+        Relationships: []
+      }
+      reunioes: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          email_cliente: string | null
+          fim: string
+          google_event_id: string | null
+          id: string
+          inicio: string
+          lead_id: string | null
+          meet_link: string | null
+          status: string
+          titulo: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          email_cliente?: string | null
+          fim: string
+          google_event_id?: string | null
+          id?: string
+          inicio: string
+          lead_id?: string | null
+          meet_link?: string | null
+          status?: string
+          titulo: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          email_cliente?: string | null
+          fim?: string
+          google_event_id?: string | null
+          id?: string
+          inicio?: string
+          lead_id?: string | null
+          meet_link?: string | null
+          status?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
+      integracoes: {
+        Row: {
+          chave: string
+          dados: Json
+          updated_at: string
+        }
+        Insert: {
+          chave: string
+          dados?: Json
+          updated_at?: string
+        }
+        Update: {
+          chave?: string
+          dados?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ia_aprendizados: {
         Row: {
           conversation_ids: string[]
@@ -563,10 +662,14 @@ export type Database = {
           extra_discount_max: number
           id: boolean
           model: string
+          aviso_template_status: string | null
           monthly_budget_usd: number
           owner_email: string | null
+          owner_last_inbound_at: string | null
+          owner_whatsapp: string | null
           persona_name: string
           updated_at: string
+          waba_id: string | null
         }
         Insert: {
           active?: boolean
@@ -580,6 +683,10 @@ export type Database = {
           owner_email?: string | null
           persona_name?: string
           updated_at?: string
+          aviso_template_status?: string | null
+          owner_last_inbound_at?: string | null
+          owner_whatsapp?: string | null
+          waba_id?: string | null
         }
         Update: {
           active?: boolean
@@ -593,6 +700,10 @@ export type Database = {
           owner_email?: string | null
           persona_name?: string
           updated_at?: string
+          aviso_template_status?: string | null
+          owner_last_inbound_at?: string | null
+          owner_whatsapp?: string | null
+          waba_id?: string | null
         }
         Relationships: []
       }
@@ -603,6 +714,7 @@ export type Database = {
           contact_name: string | null
           created_at: string
           id: string
+          is_test: boolean
           kit_id: string | null
           last_inbound_at: string | null
           last_message_at: string
@@ -620,6 +732,7 @@ export type Database = {
           contact_name?: string | null
           created_at?: string
           id?: string
+          is_test?: boolean
           kit_id?: string | null
           last_inbound_at?: string | null
           last_message_at?: string
@@ -637,6 +750,7 @@ export type Database = {
           contact_name?: string | null
           created_at?: string
           id?: string
+          is_test?: boolean
           kit_id?: string | null
           last_inbound_at?: string | null
           last_message_at?: string
@@ -3017,7 +3131,22 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ia_gasto_por_conversa: {
+        Row: {
+          chamadas: number | null
+          conversation_id: string | null
+          custo_usd: number | null
+        }
+        Relationships: []
+      }
+      ia_gasto_por_mes: {
+        Row: {
+          chamadas: number | null
+          custo_usd: number | null
+          mes: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       keepalive: { Args: never; Returns: string }

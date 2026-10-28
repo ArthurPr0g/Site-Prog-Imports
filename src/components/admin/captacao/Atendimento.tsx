@@ -6,7 +6,7 @@
 // visível; o placar usa os leads do painel (relidos a cada minuto).
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { Bot, CheckCircle2, CircleAlert, GraduationCap, Hand, MessageCircle, Send, Settings, Trophy, UserRound } from 'lucide-react';
+import { Bell, Bot, CheckCircle2, CircleAlert, FlaskConical, GraduationCap, Hand, MessageCircle, Send, Settings, Sparkles, Trophy, UserRound } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { LEAD_STATUS_LABEL, type Lead } from '@/lib/captacao';
 import { TrilhaDaVenda, BarraDaEtapa } from './TrilhaDaVenda';
@@ -31,6 +31,7 @@ import {
   decidirDescontoAction,
   decidirLicaoAction,
   salvarConfigAtendenteAction,
+  orientarLiaAction,
 } from '@/app/actions/atendente';
 import { inputClass, semCentavos } from './comum';
 
@@ -55,6 +56,9 @@ async function seguro<T>(f: () => Promise<T>, aoFalhar?: (msg: string) => void):
   }
 }
 const pct = (v: number | null) => (v === null ? '–' : `${Math.round(v * 100)}%`);
+/** Gasto da IA em dólar e, com a cotação do dia, em reais. */
+const gasto = (usd: number, cotacao: number | null) =>
+  `US$ ${usd.toFixed(2).replace('.', ',')}${cotacao ? ` · R$ ${(usd * cotacao).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}`;
 const hora = (iso: string) =>
   new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
@@ -172,7 +176,7 @@ export function Atendimento({
             <ul className={`max-h-[560px] space-y-1 overflow-y-auto ${aberta ? 'hidden lg:block' : ''}`}>
               {conversas.map((c) => (
                 <li key={c.id}>
-                  <ItemDaConversa c={c} ativa={aberta === c.id} aoAbrir={() => setAberta(c.id)} />
+                  <ItemDaConversa c={c} ativa={aberta === c.id} aoAbrir={() => setAberta(c.id)} cotacaoDolar={cotacaoDolar} />
                 </li>
               ))}
             </ul>
@@ -182,6 +186,7 @@ export function Atendimento({
                 conversa={painel.conversas.find((c) => c.id === aberta) ?? null}
                 id={aberta}
                 versao={lidoEm}
+                cotacaoDolar={cotacaoDolar}
                 aoVoltar={() => setAberta(null)}
                 aoMudar={reler}
                 aoAbrirLead={aoAbrirLead}
@@ -320,6 +325,7 @@ function Situacao({ painel, cotacaoDolar }: { painel: PainelDoAtendente; cotacao
       />
       <Cartao rotulo="Mensagens no mês (grátis até 1.000)" valor={painel.mensagensDoMes.toLocaleString('pt-BR')} ok={painel.mensagensDoMes < 900} />
       <Cartao rotulo="E-mails de 1º contato hoje" valor={`${painel.emailsHoje} de ${c.dailyEmailCap}`} ok />
+      <AvisosNoWhatsapp avisos={painel.avisos} />
       {faltam.length > 0 && (
         <div className="flex items-start gap-2 rounded-[14px] border border-error/40 bg-error/[.06] px-3.5 py-2.5 text-[12.5px] sm:col-span-4">
           <CircleAlert size={15} className="mt-0.5 shrink-0 text-error" />
@@ -329,6 +335,50 @@ function Situacao({ painel, cotacaoDolar }: { painel: PainelDoAtendente; cotacao
         </div>
       )}
     </section>
+  );
+}
+
+const VIA: Record<string, string> = { texto: 'WhatsApp', modelo: 'WhatsApp (modelo)', email: 'e-mail', nenhum: 'não saiu' };
+
+function AvisosNoWhatsapp({ avisos }: { avisos: PainelDoAtendente['avisos'] }) {
+  const janela = avisos.janelaAberta;
+  const modelo =
+    avisos.modelo === 'APPROVED'
+      ? 'modelo aprovado pela Meta: avisa a qualquer hora'
+      : avisos.modelo === null
+        ? 'modelo ainda não criado (o relógio cria quando o WhatsApp mandar a primeira mensagem)'
+        : avisos.modelo.startsWith('ERRO')
+          ? `a Meta recusou criar o modelo (${avisos.modelo.slice(6)})`
+          : `modelo aguardando aprovação da Meta (${avisos.modelo})`;
+  const fone = avisos.whatsappDoDono?.replace(/^55(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3') ?? 'sem número';
+  return (
+    <div className="rounded-[14px] border border-border bg-card px-3.5 py-2.5 text-[12.5px] sm:col-span-4">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <Bell size={13} className="text-accent" />
+        <b>Avisos no seu WhatsApp {fone}</b>
+        <span className="text-fg-tertiary">
+          · {janela ? 'janela aberta: sai como mensagem normal' : modelo}
+        </span>
+      </div>
+      {!janela && avisos.modelo !== 'APPROVED' && (
+        <div className="mt-1 text-[12px] text-fg-tertiary">
+          Enquanto o modelo não é aprovado, mande um &quot;oi&quot; do seu WhatsApp para o número da Lia: isso abre 24 h de avisos.
+        </div>
+      )}
+      {avisos.ultimos.length > 0 && (
+        <ul className="mt-1.5 space-y-0.5 text-[12px] text-fg-secondary">
+          {avisos.ultimos.slice(0, 4).map((a, i) => (
+            <li key={i} className="truncate">
+              {hora(a.criadoEm)} · {a.titulo} ·{' '}
+              <span className={a.status === 'failed' ? 'text-error' : 'text-fg-faded'}>
+                {VIA[a.via] ?? a.via}
+                {a.status === 'failed' ? `: ${a.erro ?? 'falhou'}` : a.status === 'read' ? ', lido' : ''}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -486,7 +536,17 @@ function Licao({ licao, aoMudar }: { licao: LicaoDaLia; aoMudar: () => void }) {
 
 /* ------------------------------------------------------------ conversas */
 
-function ItemDaConversa({ c, ativa, aoAbrir }: { c: ConversaDoPainel; ativa: boolean; aoAbrir: () => void }) {
+function ItemDaConversa({
+  c,
+  ativa,
+  aoAbrir,
+  cotacaoDolar,
+}: {
+  c: ConversaDoPainel;
+  ativa: boolean;
+  aoAbrir: () => void;
+  cotacaoDolar: number | null;
+}) {
   return (
     <button
       onClick={aoAbrir}
@@ -505,6 +565,16 @@ function ItemDaConversa({ c, ativa, aoAbrir }: { c: ConversaDoPainel; ativa: boo
         )}
       </div>
       <BarraDaEtapa status={c.leadStatus} />
+      <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-fg-faded">
+        <span className="tabular-nums" title="Quanto a IA já gastou nesta conversa">
+          IA gastou {gasto(c.gastoUsd, cotacaoDolar)}
+        </span>
+        {c.isTest && (
+          <span className="flex items-center gap-1 rounded-full bg-fg-faded/12 px-1.5 py-0.5 font-bold">
+            <FlaskConical size={10} /> teste
+          </span>
+        )}
+      </div>
     </button>
   );
 }
@@ -513,6 +583,7 @@ function Conversa({
   conversa,
   id,
   versao,
+  cotacaoDolar,
   aoVoltar,
   aoMudar,
   aoAbrirLead,
@@ -521,12 +592,15 @@ function Conversa({
   id: string;
   /** Muda a cada releitura do painel: relê as mensagens junto. */
   versao: number | null;
+  cotacaoDolar: number | null;
   aoVoltar: () => void;
   aoMudar: () => void;
   aoAbrirLead: (id: string) => void;
 }) {
   const [mensagens, setMensagens] = useState<MensagemDoPainel[] | null>(null);
   const [texto, setTexto] = useState('');
+  // Responder como Arthur (a IA para) ou orientar a Lia (ela responde seguindo a instrução).
+  const [modoDoTexto, setModoDoTexto] = useState<'arthur' | 'lia'>('arthur');
   const [pending, start] = useTransition();
   const toast = useToast();
   const fim = useRef<HTMLDivElement>(null);
@@ -551,7 +625,10 @@ function Conversa({
   const enviar = () =>
     start(async () => {
       const falhou = (m: string) => toast({ ok: false, message: m });
-      const r = await seguro(() => responderComoArthurAction(id, texto), falhou);
+      const r = await seguro(
+        () => (modoDoTexto === 'lia' && conversa?.mode === 'ia' ? orientarLiaAction(id, texto) : responderComoArthurAction(id, texto)),
+        falhou
+      );
       if (!r) return;
       toast(r);
       if (r.ok) {
@@ -582,6 +659,7 @@ function Conversa({
             {conversa ? `+${conversa.contactId}` : ''}
             {conversa?.mode === 'humano' ? ' · com você' : ' · a IA responde'}
             {conversa && !janelaAberta ? ' · janela de 24 h fechada' : ''}
+            {conversa ? ` · IA gastou ${gasto(conversa.gastoUsd, cotacaoDolar)}` : ''}
           </div>
         </div>
         {conversa?.leadId && (
@@ -659,13 +737,39 @@ function Conversa({
         )}
         <div ref={fim} />
       </div>
-      <div className="flex items-end gap-2 border-t border-border p-2.5">
+      {janelaAberta && conversa?.mode === 'ia' && (
+        <div className="flex gap-1.5 border-t border-border px-2.5 pt-2.5 text-[12px] font-bold">
+          {(
+            [
+              ['arthur', 'Responder como você', <UserRound key="a" size={12} />],
+              ['lia', 'Orientar a Lia', <Sparkles key="l" size={12} />],
+            ] as const
+          ).map(([k, t, icone]) => (
+            <button
+              key={k}
+              onClick={() => setModoDoTexto(k)}
+              className={`flex items-center gap-1 rounded-full px-3 py-1 ${
+                modoDoTexto === k ? 'bg-accent text-page' : 'border border-border-strong text-fg-secondary'
+              }`}
+            >
+              {icone} {t}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className={`flex items-end gap-2 p-2.5 ${janelaAberta && conversa?.mode === 'ia' ? '' : 'border-t border-border'}`}>
         <textarea
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           rows={2}
           disabled={!janelaAberta}
-          placeholder={janelaAberta ? 'Responder como Arthur (a IA para nesta conversa)' : 'Mais de 24 h sem mensagem do cliente: o WhatsApp não deixa responder por aqui.'}
+          placeholder={
+            !janelaAberta
+              ? 'Mais de 24 h sem mensagem do cliente: o WhatsApp não deixa responder por aqui.'
+              : modoDoTexto === 'lia' && conversa?.mode === 'ia'
+                ? 'Diga à Lia o que fazer (ex.: mande você mesma 2 exemplos de site). O cliente não vê isto.'
+                : 'Responder como Arthur (a IA para nesta conversa)'
+          }
           className={`flex-1 resize-none ${inputClass}`}
         />
         <button

@@ -314,6 +314,10 @@ export type ConversaDoPainel = {
   lastMessageAt: string;
   unread: number;
   ultimaMensagem: string | null;
+  /** Quanto a IA já gastou nesta conversa (US$). */
+  gastoUsd: number;
+  /** Lead de teste ou simulador: fora do placar, do custo e do aprendizado. */
+  isTest: boolean;
   /** Datas de cada passo do lead (trilha da venda no painel, relida a cada 10 s). */
   marcos: {
     contatado: string | null;
@@ -376,4 +380,13 @@ export type PainelDoAtendente = {
   mensagensDoMes: number;
   emailsHoje: number;
   integracoes: { whatsapp: boolean; email: boolean; ia: boolean; banco: boolean; relogio: boolean };
+  /** Avisos ao Arthur no WhatsApp dele. */
+  avisos: {
+    whatsappDoDono: string | null;
+    /** Status do modelo "aviso_ao_arthur" na Meta (null = ainda não criado). */
+    modelo: string | null;
+    /** Até quando o texto livre funciona (24 h da última mensagem do Arthur para a Lia). */
+    janelaAberta: boolean;
+    ultimos: { titulo: string; via: string; status: string | null; erro: string | null; criadoEm: string }[];
+  };
 };

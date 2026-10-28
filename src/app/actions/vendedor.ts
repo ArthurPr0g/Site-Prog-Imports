@@ -12,6 +12,9 @@ import { ETAPAS_QUE_O_VENDEDOR_MARCA } from '@/lib/vendedor';
 import type { LeadStatus } from '@/lib/captacao';
 import { metaDoVendedor } from '@/lib/data/meta-do-vendedor';
 import type { ResumoDaMeta } from '@/lib/meta-captacao';
+import { dbDoAtendente } from '@/lib/atendente/db';
+import { lerConfig } from '@/lib/atendente/agente';
+import { avisarArthur } from '@/lib/atendente/avisos';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -39,6 +42,8 @@ export async function registrarPeloVendedorAction(
   if (error) return errResult('Não foi possível salvar. Tente de novo.');
   if (data !== 'ok') return errResult(String(data));
   revalidar(token);
+  // V2: lead quente com o vendedor (pediu proposta ou marcou reunião) avisa o Arthur na hora.
+  if (dados.status === 'reuniao' || dados.status === 'proposta') await avisarDoVendedor(token, leadId, dados.status, dados.nota);
   return okResult(dados.etapaEnviada !== undefined ? 'Envio registrado.' : 'Salvo.');
 }
 
@@ -75,4 +80,22 @@ export async function salvarChecklistDoVendedorAction(
 export async function metaDoVendedorAction(token: string): Promise<ResumoDaMeta | null> {
   if (!UUID.test(token)) return null;
   return metaDoVendedor(token);
+}
+
+async function avisarDoVendedor(token: string, leadId: string, status: 'reuniao' | 'proposta', nota?: string) {
+  try {
+    const db = dbDoAtendente();
+    const [{ data: kit }, { data: lead }] = await Promise.all([
+      db.from('lead_seller_kits').select('seller_name').eq('token', token).maybeSingle(),
+      db.from('leads').select('name').eq('id', leadId).maybeSingle(),
+    ]);
+    const quem = kit?.seller_name ?? 'O vendedor';
+    await avisarArthur(db, await lerConfig(db), {
+      titulo: status === 'reuniao' ? 'Reunião marcada pelo vendedor' : 'Cliente quer proposta',
+      texto: `${quem} marcou ${lead?.name ?? 'um lead'} como ${status === 'reuniao' ? 'reunião marcada' : 'quer proposta'}.${nota?.trim() ? ` Nota: ${nota.trim().slice(0, 200)}` : ''}`,
+      leadId,
+    });
+  } catch (e) {
+    console.error('[vendedor] aviso ao Arthur falhou', e);
+  }
 }

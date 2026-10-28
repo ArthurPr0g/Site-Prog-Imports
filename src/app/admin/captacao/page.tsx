@@ -5,6 +5,9 @@ import { buscarCotacaoMercado } from '@/lib/usd-rate';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { CaptacaoPanel } from '@/components/admin/CaptacaoPanel';
 
+// "Orientar a Lia" roda a resposta da IA dentro da ação (várias chamadas ao Claude).
+export const maxDuration = 60;
+
 export default async function AdminCaptacaoPage() {
   const [leads, servicos, modelos, cotacao, pedidos] = await Promise.all([
     listLeads(),

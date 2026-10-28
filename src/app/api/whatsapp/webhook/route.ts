@@ -4,6 +4,7 @@ import { assinaturaValida, baixarMidia, lerWebhook, marcarLidaEDigitando, type M
 import { transcrever, transcricaoConfigurada } from '@/lib/atendente/transcricao';
 import { responderConversa } from '@/lib/atendente/agente';
 import { empresaDoTexto } from '@/lib/atendente/regras';
+import { mesmoTelefone, reenviarAvisoPeloModelo } from '@/lib/atendente/avisos';
 
 // Webhook do WhatsApp Cloud API (configurado no app da Meta).
 // GET: verificação do endereço. POST: mensagens e status de entrega.
@@ -34,16 +35,29 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ ok: true });
   }
-  const { mensagens, status } = lerWebhook(json);
+  const { mensagens, status, wabaId } = lerWebhook(json);
   const db = dbDoAtendente();
+
+  // Id da conta do WhatsApp Business: o relógio precisa dele para criar o modelo do aviso ao Arthur.
+  if (wabaId) await db.from('ia_config').update({ waba_id: wabaId }).eq('id', true).is('waba_id', null);
 
   for (const s of status) {
     await db.from('ia_messages').update({ status: s.status, error: s.erro }).eq('external_id', s.id);
+    await db.from('ia_avisos').update({ status: s.status, error: s.erro }).eq('external_id', s.id);
+    // Aviso em texto livre com a janela do Arthur fechada (131047): vai pelo modelo aprovado.
+    if (s.status === 'failed' && s.codigo === 131047) await reenviarAvisoPeloModelo(db, s.id);
   }
 
+  const { data: cfg } = await db.from('ia_config').select('owner_whatsapp').eq('id', true).maybeSingle();
   const paraResponder = new Map<string, string>();
   const audios: MensagemRecebida[] = [];
   for (const m of mensagens) {
+    // O Arthur escrevendo para o número da Lia (ex.: respondendo a um aviso) não é
+    // lead: só abre a janela de 24 h para os próximos avisos saírem como texto.
+    if (mesmoTelefone(m.de, cfg?.owner_whatsapp)) {
+      await db.from('ia_config').update({ owner_last_inbound_at: m.quando }).eq('id', true);
+      continue;
+    }
     const conversaId = await gravarRecebida(db, m);
     // Reação (emoji numa mensagem) fica no histórico, mas não pede resposta.
     if (conversaId && !m.reacao) paraResponder.set(conversaId, m.id);

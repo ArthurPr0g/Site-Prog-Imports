@@ -60,6 +60,67 @@ export async function marcarLidaEDigitando(mensagemId: string): Promise<void> {
   }
 }
 
+/* ------------------------------------------------------------ modelos (templates) */
+
+/**
+ * Manda um modelo aprovado (fora da janela de 24 h). Os parâmetros não podem ter
+ * quebra de linha, tab nem mais de 4 espaços seguidos (regra da Meta).
+ */
+export async function enviarModelo(para: string, nome: string, parametros: string[]): Promise<ResultadoDoEnvio> {
+  if (!whatsappConfigurado()) return { ok: false, erro: 'WhatsApp não configurado' };
+  const limpo = (t: string) => t.replace(/\s*\n+\s*/g, ' · ').replace(/\t/g, ' ').replace(/ {4,}/g, ' ').trim().slice(0, 900);
+  try {
+    const r = await chamar({
+      recipient_type: 'individual',
+      to: para,
+      type: 'template',
+      template: {
+        name: nome,
+        language: { code: 'pt_BR' },
+        components: [{ type: 'body', parameters: parametros.map((p) => ({ type: 'text', text: limpo(p) })) }],
+      },
+    });
+    const j = (await r.json()) as { messages?: { id: string }[]; error?: { message?: string } };
+    if (!r.ok || !j.messages?.[0]?.id) return { ok: false, erro: j.error?.message ?? `HTTP ${r.status}` };
+    return { ok: true, id: j.messages[0].id };
+  } catch (e) {
+    return { ok: false, erro: e instanceof Error ? e.message : 'falha de rede' };
+  }
+}
+
+/** Status do modelo na conta (APPROVED, PENDING, REJECTED...). null = não existe. */
+export async function statusDoModelo(wabaId: string, nome: string): Promise<string | null> {
+  try {
+    const r = await fetch(`${BASE}/${VERSAO}/${wabaId}/message_templates?name=${encodeURIComponent(nome)}&fields=name,status`, {
+      headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` },
+      signal: AbortSignal.timeout(15000),
+    });
+    const j = (await r.json()) as { data?: { name: string; status: string }[] };
+    return j.data?.find((t) => t.name === nome)?.status ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function criarModelo(
+  wabaId: string,
+  modelo: Record<string, unknown>
+): Promise<{ ok: true; status: string | null } | { ok: false; erro: string }> {
+  try {
+    const r = await fetch(`${BASE}/${VERSAO}/${wabaId}/message_templates`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(modelo),
+      signal: AbortSignal.timeout(15000),
+    });
+    const j = (await r.json()) as { id?: string; status?: string; error?: { message?: string; error_user_msg?: string } };
+    if (!r.ok || !j.id) return { ok: false, erro: j.error?.error_user_msg ?? j.error?.message ?? `HTTP ${r.status}` };
+    return { ok: true, status: j.status ?? null };
+  } catch (e) {
+    return { ok: false, erro: e instanceof Error ? e.message : 'falha de rede' };
+  }
+}
+
 /* ------------------------------------------------------------ webhook */
 
 export type TipoDeMidia = 'image' | 'document' | 'audio' | 'video' | 'sticker';
@@ -94,10 +155,12 @@ export async function baixarMidia(id: string): Promise<{ dados: Buffer; mime: st
     return null;
   }
 }
-export type StatusRecebido = { id: string; status: string; erro: string | null };
+export type StatusRecebido = { id: string; status: string; erro: string | null; codigo: number | null };
 
 type CorpoDoWebhook = {
   entry?: {
+    /** Id da conta do WhatsApp Business (WABA). */
+    id?: string;
     changes?: {
       value?: {
         contacts?: { wa_id?: string; profile?: { name?: string } }[];
@@ -118,7 +181,7 @@ type CorpoDoWebhook = {
           contacts?: { name?: { formatted_name?: string }; phones?: { phone?: string }[] }[];
           reaction?: { emoji?: string };
         }[];
-        statuses?: { id: string; status: string; errors?: { title?: string; message?: string }[] }[];
+        statuses?: { id: string; status: string; errors?: { code?: number; title?: string; message?: string }[] }[];
       };
     }[];
   }[];
@@ -178,10 +241,12 @@ function conteudo(m: MensagemDoWebhook): { texto: string; midia: MidiaRecebida |
   return { texto, midia: null };
 }
 
-export function lerWebhook(corpo: unknown): { mensagens: MensagemRecebida[]; status: StatusRecebido[] } {
+export function lerWebhook(corpo: unknown): { mensagens: MensagemRecebida[]; status: StatusRecebido[]; wabaId: string | null } {
   const mensagens: MensagemRecebida[] = [];
   const status: StatusRecebido[] = [];
+  let wabaId: string | null = null;
   for (const entry of (corpo as CorpoDoWebhook)?.entry ?? []) {
+    if (entry.id) wabaId = entry.id;
     for (const change of entry.changes ?? []) {
       const v = change.value;
       if (!v) continue;
@@ -200,9 +265,9 @@ export function lerWebhook(corpo: unknown): { mensagens: MensagemRecebida[]; sta
       }
       for (const s of v.statuses ?? []) {
         const e = s.errors?.[0];
-        status.push({ id: s.id, status: s.status, erro: e ? (e.message ?? e.title ?? 'erro') : null });
+        status.push({ id: s.id, status: s.status, erro: e ? (e.message ?? e.title ?? 'erro') : null, codigo: e?.code ?? null });
       }
     }
   }
-  return { mensagens, status };
+  return { mensagens, status, wabaId };
 }

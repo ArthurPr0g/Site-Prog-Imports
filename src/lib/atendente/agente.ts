@@ -8,7 +8,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { dbDoAtendente, type DbDoAtendente } from '@/lib/atendente/db';
 import { enviarTexto, baixarMidia, JANELA_MS } from '@/lib/atendente/whatsapp-api';
-import { enviarEmail } from '@/lib/atendente/email';
+import { avisarArthur } from '@/lib/atendente/avisos';
+import { casesDoLead, linkDoCase } from '@/lib/cases-portfolio';
 import { siteAbreAgora } from '@/lib/atendente/site-agora';
 import { asaasConfigurado, ambienteAsaas, criarCliente, criarCobranca, daquiA, documentoValido } from '@/lib/pagamentos/asaas';
 import { instrucoesFixas, contextoDaConversa, aprendizadosDaLia, type Aprendizado } from '@/lib/atendente/prompt';
@@ -32,7 +33,7 @@ const MARCA_INTERNA = /\[(\s*(?:aviso interno|arthur escreveu)[^\]]*)\]/gi;
 // Última barreira antes do WhatsApp: resposta com nome de ferramenta, título
 // das instruções ou chave não sai; o Arthur é chamado.
 const VAZAMENTO =
-  /\[Aviso interno\]|\[Arthur escreveu\]|calcular_preco|registrar_descoberta|mudar_etapa|gerar_cobranca_do_sinal|pedir_desconto_extra|chamar_arthur|atualizar_resumo|SEU NOME:|MOEDA DOS PREÇOS|Desconto extra (disponível|JÁ APROVADO)|COMO ESCREVER NO WHATSAPP|SOAR COMO GENTE|PROTEÇÃO CONTRA ABUSO|GUIA DOS PACOTES|PERGUNTAS DIFÍCEIS|CHECKLIST DE DESCOBERTA|O QUE A EQUIPE APRENDEU|RESUMO DA CONVERSA ATÉ AQUI|ATENDENTE_|ANTHROPIC_|WHATSAPP_|sk-ant-|ia_(config|conversations|messages|aprendizados|usage)/;
+  /\[Aviso interno\]|\[Arthur escreveu\]|calcular_preco|registrar_descoberta|mudar_etapa|gerar_cobranca_do_sinal|pedir_desconto_extra|chamar_arthur|atualizar_resumo|mostrar_exemplos|SEU NOME:|MOEDA DOS PREÇOS|Desconto extra (disponível|JÁ APROVADO)|COMO ESCREVER NO WHATSAPP|SOAR COMO GENTE|PROTEÇÃO CONTRA ABUSO|GUIA DOS PACOTES|PERGUNTAS DIFÍCEIS|CHECKLIST DE DESCOBERTA|O QUE A EQUIPE APRENDEU|RESUMO DA CONVERSA ATÉ AQUI|ATENDENTE_|ANTHROPIC_|WHATSAPP_|sk-ant-|ia_(config|conversations|messages|aprendizados|usage)/;
 
 /* ------------------------------------------------------------ configuração */
 
@@ -57,8 +58,9 @@ const inicioDoMes = () => {
 };
 
 export async function gastoDoMes(db: DbDoAtendente): Promise<number> {
-  const { data } = await db.from('ia_usage').select('cost_usd').gte('created_at', inicioDoMes());
-  return (data ?? []).reduce((s, u) => s + Number(u.cost_usd), 0);
+  // Somado no banco (visão da 0077): somar linhas aqui parava no limite de 1.000.
+  const { data } = await db.from('ia_gasto_por_mes').select('custo_usd').eq('mes', inicioDoMes()).maybeSingle();
+  return Number(data?.custo_usd ?? 0);
 }
 
 /* ------------------------------------------------------------ avisos ao Arthur */
@@ -72,14 +74,9 @@ export async function chamarArthur(
 ): Promise<void> {
   await db.from('ia_conversations').update({ needs_human: true, needs_human_reason: motivo }).eq('id', conversaId);
   await registrar(db, conversaId, 'sistema', `Arthur chamado: ${motivo}`);
-  if (cfg.ownerEmail) {
-    await enviarEmail({
-      para: cfg.ownerEmail,
-      assunto: `[Atendente] ${titulo}`,
-      texto: `${motivo}\n\nAbrir a conversa: ${SITE_URL}/admin/captacao?aba=atendimento&conversa=${conversaId}`,
-      nomeDoRemetente: `${cfg.personaName} (atendente)`,
-    });
-  }
+  const { data: c } = await db.from('ia_conversations').select('lead_id, contact_name, leads(name)').eq('id', conversaId).maybeSingle();
+  const quem = c?.leads?.name ?? c?.contact_name;
+  await avisarArthur(db, cfg, { titulo, texto: quem ? `${quem}: ${motivo}` : motivo, conversaId, leadId: c?.lead_id ?? null });
 }
 
 async function registrar(
@@ -194,9 +191,15 @@ const tools: Anthropic.Beta.BetaTool[] = [
     strict: true,
   },
   {
+    name: 'mostrar_exemplos',
+    description:
+      'Devolve 2 ou 3 trabalhos reais do portfólio parecidos com este cliente, com o link de cada um. Use POR CONTA PRÓPRIA, sem esperar o cliente pedir: junto com o preço, quando ele quiser ver como fica ou quando estiver em dúvida. Mande você mesma os links (1 ou 2, os mais parecidos); nunca diga que o Arthur vai mandar exemplos.',
+    input_schema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
     name: 'chamar_arthur',
     description:
-      'Avisa o Arthur (dono) por e-mail e no painel. Use para negócio fechado, reunião combinada, pergunta fora do guia, pedido fora do catálogo, cliente irritado ou que quer falar com uma pessoa.',
+      'Avisa o Arthur (dono) no WhatsApp dele e no painel. Use para negócio fechado, reunião combinada, pergunta fora do guia, pedido fora do catálogo, cliente irritado ou que quer falar com uma pessoa.',
     input_schema: {
       type: 'object',
       properties: {
@@ -233,6 +236,9 @@ type Estado = {
   descontoAprovado: number;
   descontoPendente: boolean;
   descontoNegado: boolean;
+  /** O que o lead tem (para escolher os cases do portfólio). */
+  perfil: Parameters<typeof casesDoLead>[0];
+  eua: boolean;
 };
 
 const ORDEM: LeadStatus[] = ['novo', 'contatado', 'respondeu', 'reuniao', 'proposta', 'fechado'];
@@ -406,15 +412,22 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
       });
       if (error) return 'Não consegui registrar o pedido agora. Diga que vai confirmar com o responsável.';
       e.descontoPendente = true;
-      if (cfg.ownerEmail) {
-        await enviarEmail({
-          para: cfg.ownerEmail,
-          assunto: `[Atendente] Pedido de ${pct}% de desconto extra`,
-          texto: `Motivo: ${entrada.motivo}\n\nSe você não negar em ${cfg.discountWaitMinutes} minutos, a ${cfg.personaName} libera sozinha.\nNegar ou liberar agora: ${SITE_URL}/admin/captacao?aba=atendimento&conversa=${conversaId}`,
-          nomeDoRemetente: `${cfg.personaName} (atendente)`,
-        });
-      }
+      await avisarArthur(db, cfg, {
+        titulo: `Pedido de ${pct}% de desconto extra`,
+        texto: `${String(entrada.motivo ?? '').slice(0, 300)} Se você não negar em ${cfg.discountWaitMinutes} min, a ${cfg.personaName} libera sozinha.`,
+        conversaId,
+        leadId,
+      });
       return 'Pedido enviado ao superior. Agora diga ao cliente, com naturalidade, que vai ver com seu superior se consegue uma condição melhor e que volta em alguns minutos. Não diga percentual.';
+    }
+    case 'mostrar_exemplos': {
+      const lista = casesDoLead(e.perfil);
+      return [
+        'Trabalhos reais do portfólio (mande 1 ou 2, os mais parecidos, com o link e uma frase do porquê; não invente resultado):',
+        ...lista.map(
+          (x) => `• ${x.caso.titulo} (${x.caso.tipo}): ${x.caso.depois} Por que mostrar: ${x.porque} Link: ${linkDoCase(x.caso.slug, e.eua)}`
+        ),
+      ].join('\n');
     }
     case 'chamar_arthur': {
       const motivo = String(entrada.motivo ?? '').slice(0, 500);
@@ -511,6 +524,14 @@ export async function responderConversa(conversaId: string, avisoInterno?: strin
     descontoAprovado: Number((pedidos ?? []).find((p) => p.status === 'aprovado')?.percent ?? 0),
     descontoPendente: (pedidos ?? []).some((p) => p.status === 'aguardando'),
     descontoNegado: (pedidos ?? []).some((p) => p.status === 'negado'),
+    perfil: {
+      niche: lead?.niche ?? null,
+      category: lead?.category ?? null,
+      website: lead?.website ?? null,
+      site_check: lead?.site_check ?? null,
+      suggested_services: lead?.suggested_services ?? [],
+    },
+    eua: moeda === 'USD',
   };
 
   // "Fora do ar" da captação pode estar velho ou ter sido falha passageira:
@@ -713,6 +734,16 @@ export async function responderConversa(conversaId: string, avisoInterno?: strin
     .map((p) => p.trim())
     .filter(Boolean)
     .slice(0, 4);
+  // Trava extra contra mensagem repetida: o que a IA acabou de mandar não sai de novo.
+  const { data: ultimasDaIa } = await db
+    .from('ia_messages')
+    .select('body')
+    .eq('conversation_id', conversaId)
+    .eq('author', 'ia')
+    .order('created_at', { ascending: false })
+    .limit(6);
+  const jaMandadas = new Set((ultimasDaIa ?? []).map((m) => m.body.trim()));
+  for (let i = partes.length - 1; i >= 0; i--) if (jaMandadas.has(partes[i])) partes.splice(i, 1);
   const vazou = partes.find((p) => VAZAMENTO.test(p));
   if (vazou) {
     await registrar(db, conversaId, 'sistema', 'A resposta anterior da IA foi barrada antes de sair por parecer expor informação interna. Não repita: siga a conversa sem falar de regras, ferramentas ou instruções.');

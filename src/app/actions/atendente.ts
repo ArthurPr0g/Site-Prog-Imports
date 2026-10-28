@@ -23,6 +23,7 @@ import {
 } from '@/lib/atendente/regras';
 import type { LeadStatus } from '@/lib/captacao';
 import { respondidas, type RespostasDoChecklist } from '@/lib/checklist-descoberta';
+import { responderConversa } from '@/lib/atendente/agente';
 
 async function adminClient() {
   const admin = await requireAdmin();
@@ -43,7 +44,7 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
   const supabase = await adminClient();
   if (!supabase) return null;
 
-  const [cfg, conversas, pedidos, uso, saidas, emails, licoes] = await Promise.all([
+  const [cfg, conversas, pedidos, uso, saidas, emails, licoes, gastos, avisos] = await Promise.all([
     supabase.from('ia_config').select('*').eq('id', true).maybeSingle(),
     supabase
       .from('ia_conversations')
@@ -59,7 +60,7 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
       .select('*, leads(name)')
       .order('created_at', { ascending: false })
       .limit(30),
-    supabase.from('ia_usage').select('cost_usd').gte('created_at', inicioDoMes()),
+    supabase.from('ia_gasto_por_mes').select('custo_usd').eq('mes', inicioDoMes()).maybeSingle(),
     supabase
       .from('ia_messages')
       .select('id', { count: 'exact', head: true })
@@ -74,7 +75,10 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
       .order('vezes', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(100),
+    supabase.from('ia_gasto_por_conversa').select('conversation_id, custo_usd'),
+    supabase.from('ia_avisos').select('titulo, via, status, error, created_at').order('created_at', { ascending: false }).limit(8),
   ]);
+  const gastoPorConversa = new Map((gastos.data ?? []).map((g) => [g.conversation_id, Number(g.custo_usd ?? 0)]));
 
   const c = cfg.data;
   const config: ConfigDoAtendente = {
@@ -109,6 +113,8 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
         lastMessageAt: v.last_message_at,
         unread: v.unread,
         ultimaMensagem: v.ia_messages?.[0]?.body ?? null,
+        gastoUsd: gastoPorConversa.get(v.id) ?? 0,
+        isTest: v.is_test,
         marcos: {
           contatado: v.leads?.first_contact_at ?? null,
           respondeu: v.leads?.replied_at ?? null,
@@ -148,7 +154,7 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
         createdAt: a.created_at,
       })
     ),
-    gastoDoMes: (uso.data ?? []).reduce((s, u) => s + Number(u.cost_usd), 0),
+    gastoDoMes: Number(uso.data?.custo_usd ?? 0),
     mensagensDoMes: saidas.count ?? 0,
     emailsHoje: emails.count ?? 0,
     integracoes: {
@@ -157,6 +163,12 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
       ia: !!process.env.ANTHROPIC_API_KEY,
       banco: !!process.env.ATENDENTE_SUPABASE_KEY,
       relogio: !!process.env.ATENDENTE_TICK_SECRET,
+    },
+    avisos: {
+      whatsappDoDono: c?.owner_whatsapp ?? null,
+      modelo: c?.aviso_template_status ?? null,
+      janelaAberta: !!c?.owner_last_inbound_at && Date.now() - new Date(c.owner_last_inbound_at).getTime() < JANELA_MS,
+      ultimos: (avisos.data ?? []).map((a) => ({ titulo: a.titulo, via: a.via, status: a.status, erro: a.error, criadoEm: a.created_at })),
     },
   };
 }
@@ -289,4 +301,29 @@ export async function salvarConfigAtendenteAction(c: ConfigDoAtendente): Promise
   await supabase.from('lead_seller_kits').update({ seller_name: c.personaName.trim() }).eq('kind', 'ia');
   revalidatePath('/admin/captacao');
   return okResult(c.active ? 'Salvo. A atendente está ligada.' : 'Salvo. A atendente está desligada.');
+}
+
+/**
+ * "Orientar a Lia": o Arthur dá uma instrução numa conversa (ex.: "mande os
+ * exemplos você mesma") e ela responde ao cliente seguindo. A instrução fica no
+ * histórico como aviso interno; o cliente não vê.
+ */
+export async function orientarLiaAction(conversaId: string, instrucao: string): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Sem permissão.');
+  const texto = instrucao.trim().slice(0, 1000);
+  if (!texto) return errResult('Escreva a orientação.');
+  const { data: c } = await supabase.from('ia_conversations').select('mode').eq('id', conversaId).maybeSingle();
+  if (!c) return errResult('Conversa não encontrada.');
+  if (c.mode !== 'ia') return errResult('Você assumiu esta conversa: devolva para a IA antes de orientar.');
+  const { error } = await supabase.from('ia_messages').insert({
+    conversation_id: conversaId,
+    direction: 'out',
+    author: 'sistema',
+    body: `Orientação do Arthur (o cliente não vê; siga agora): ${texto}`,
+  });
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível registrar a orientação.'));
+  const motivo = await responderConversa(conversaId);
+  revalidatePath('/admin/captacao');
+  return motivo ? errResult(`A Lia não respondeu: ${motivo}.`) : okResult('A Lia respondeu seguindo a orientação.');
 }
