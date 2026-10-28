@@ -558,7 +558,7 @@ export function CaptacaoPanel({
         />
       )}
       {aba === 'mapa' && <Mapa leads={filtrados} estimativa={estimativa} agora={agora} />}
-      {aba === 'relatorio' && <Relatorio leads={leads} estimativa={estimativa} cotacoes={cotacoes} />}
+      {aba === 'relatorio' && <Relatorio leads={leads} estimativa={estimativa} cotacoes={cotacoes} agora={agoraDaMeta} />}
       {aba === 'buscas' && <Buscas pedidos={pedidos} />}
       {aba === 'atendimento' && (
         <Atendimento kits={kits} leads={leads} valorDoLead={valorDoLead} aoAbrirLead={(id) => setFichaDe(id)} />
