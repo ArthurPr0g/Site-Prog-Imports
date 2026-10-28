@@ -662,8 +662,8 @@ export async function passarParaLiaAction(
   const link = `${SITE_URL}/diagnostico/${lead.public_token}?k=${kit.token}`;
   const ingles = lead.country === 'US';
   const texto = ingles
-    ? `Hi! This is Arthur from Prog Soluções. I put together a free review of ${lead.name}'s online presence: ${link}\n\nIf it makes sense, the button at the end of the page takes you straight to ${kit.seller_name}, our assistant, who can answer your questions right away.`
-    : `Oi, tudo bem? Aqui é o Arthur, da Prog Soluções. Fiz um diagnóstico gratuito da presença online da ${lead.name}: ${link}\n\nSe fizer sentido, o botão no fim da página te leva direto para a ${kit.seller_name}, nossa assistente, que tira suas dúvidas na hora.`;
+    ? `Hi! This is Arthur from Prog Soluções. I put together a free review of ${lead.name}'s online presence: ${link}\n\nFrom here on, ${kit.seller_name}, our assistant, takes care of everything with you: answering questions, putting together the proposal and the whole process. Just tap the button at the end of the page to start chatting with her. I follow everything closely and step in whenever needed.`
+    : `Oi, tudo bem? Aqui é o Arthur, da Prog Soluções. Fiz um diagnóstico gratuito da presença online da ${lead.name}: ${link}\n\nA partir daqui, quem segue com você é a ${kit.seller_name}, nossa assistente: ela tira suas dúvidas, monta a proposta e cuida de todo o atendimento. É só tocar no botão do fim da página que você já cai na conversa com ela. Eu acompanho tudo de perto e entro sempre que precisar. 😊`;
   const wa = whatsappDoLead(lead.phone, lead.country as Pais);
   return { ...okResult(`Lead na lista da ${kit.seller_name}. Mande a mensagem pelo seu WhatsApp.`), whatsapp: wa?.numero ?? null, texto };
 }
