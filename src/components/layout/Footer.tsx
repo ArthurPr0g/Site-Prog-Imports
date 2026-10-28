@@ -52,6 +52,7 @@ export function Footer() {
             >
               Garantia e trocas
             </a>
+            <Link href="/privacidade" className="footer-link">Política de privacidade</Link>
           </div>
         </div>
         <div>
