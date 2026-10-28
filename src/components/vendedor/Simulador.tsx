@@ -63,7 +63,7 @@ function Seg<T extends string | number>({
   );
 }
 
-type Cartao<T> = { valor: T; titulo: string; texto?: string; preco?: string; selo?: string };
+type Cartao<T> = { valor: T; titulo: string; texto?: string; preco?: string; selo?: string; economia?: string };
 
 /** Opções em cartões: nome, preço e para quem é, para escolher sem decorar. */
 function Cartoes<T extends string | number>({
@@ -97,6 +97,7 @@ function Cartoes<T extends string | number>({
               )}
             </span>
             {o.preco && <span className="text-[12.5px] font-bold tabular-nums text-fg-secondary">{o.preco}</span>}
+            {o.economia && <span className="text-[12px] font-bold tabular-nums text-success">{o.economia}</span>}
             {o.texto && <span className="text-[12px] leading-snug text-fg-tertiary">{o.texto}</span>}
           </button>
         );
@@ -286,36 +287,45 @@ export function Simulador({
           </div>
 
           {e.produto !== 'erp' && (
-            <div>
-              <div className={ROTULO}>3. Sistema de gestão junto?</div>
-              <label className="flex items-center gap-2 text-[13.5px] font-bold">
-                <input
-                  type="checkbox"
-                  checked={e.comGestao}
-                  onChange={(ev) => set('comGestao', ev.target.checked)}
-                  className="h-4 w-4 accent-[var(--color-accent)]"
-                />
-                Junto com sistema de gestão (combo com desconto)
-              </label>
+            // Bloco destacado: o combo é a venda maior, então não pode ficar escondido numa caixinha.
+            <div className="rounded-[16px] border border-accent/50 bg-accent/[0.06] p-3 sm:p-4">
+              <div className="mb-1 flex flex-wrap items-center gap-2">
+                <span className="text-[12px] font-extrabold uppercase tracking-[.06em] text-accent">
+                  3. Adicionar sistema de gestão
+                </span>
+                <span className="rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-bold text-success">
+                  combo: até 20% off + 1 mensalidade só
+                </span>
+              </div>
+              <div className="mb-2.5 text-[12.5px] leading-snug text-fg-secondary">
+                {COMBO_INTEGRACAO[e.produto]}
+              </div>
+              <Cartoes<number>
+                colunas="sm:grid-cols-2"
+                opcoes={[
+                  {
+                    valor: -1,
+                    titulo: 'Sem sistema',
+                    texto: `Só ${e.produto === 'site' ? 'o site' : 'a loja'}.`,
+                  },
+                  ...NIVEIS[moeda].erp.map((r, i) => ({
+                    valor: i,
+                    titulo: r,
+                    preco: precoDoNivel('erp', i),
+                    economia: `Economiza ${m(simular({ ...e, comGestao: true, nivelGestao: i as 0 | 1 | 2 }, t).desconto)} no combo`,
+                    texto: GUIA_DO_PRODUTO.erp.niveis[i].ideal,
+                    selo: GUIA_DO_PRODUTO.erp.niveis[i].maisEscolhido ? 'Mais escolhido' : undefined,
+                  })),
+                ]}
+                valor={e.comGestao ? e.nivelGestao : -1}
+                onChange={(v) =>
+                  setE((x) => (v < 0 ? { ...x, comGestao: false } : { ...x, comGestao: true, nivelGestao: v as 0 | 1 | 2 }))
+                }
+              />
               <Dica>
-                Ofereça quando ele controla clientes, estoque ou financeiro em planilha ou caderno. {COMBO_INTEGRACAO[e.produto]}{' '}
-                Desconto de 15% (20% no Premium + Avançado) e <b>uma mensalidade só</b>, a maior das duas.
+                Ofereça quando ele controla clientes, estoque ou financeiro em planilha ou caderno. Desconto de 15% (20% no
+                Premium + Avançado) e <b>uma mensalidade só</b>, a maior das duas.
               </Dica>
-              {e.comGestao && (
-                <div className="mt-2">
-                  <Cartoes<0 | 1 | 2>
-                    opcoes={NIVEIS[moeda].erp.map((r, i) => ({
-                      valor: i as 0 | 1 | 2,
-                      titulo: r,
-                      preco: precoDoNivel('erp', i),
-                      texto: GUIA_DO_PRODUTO.erp.niveis[i].ideal,
-                      selo: GUIA_DO_PRODUTO.erp.niveis[i].maisEscolhido ? 'Mais escolhido' : undefined,
-                    }))}
-                    valor={e.nivelGestao}
-                    onChange={(v) => set('nivelGestao', v)}
-                  />
-                </div>
-              )}
             </div>
           )}
 
