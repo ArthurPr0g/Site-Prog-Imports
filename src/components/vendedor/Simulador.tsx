@@ -351,7 +351,7 @@ export function Simulador({
         </div>
 
         <div className="space-y-4">
-          <div id="resumo-do-simulador" className="scroll-mt-20rounded-[18px] border border-accent/40 bg-card p-4 sm:p-5">
+          <div id="resumo-do-simulador" className="scroll-mt-20 rounded-[18px] border border-accent/40 bg-card p-4 sm:p-5">
             <div className="mb-2 text-[12px] font-extrabold uppercase tracking-[.06em] text-accent">Resumo para o cliente</div>
             {s.linhas.map((l) => (
               <div key={l.nome} className="flex justify-between gap-3 border-b border-divider py-1.5 text-[13.5px]">
