@@ -105,6 +105,29 @@ escolher a etapa).
 - **Mensagens em português sem artigo antes do nome** ("a Centro de Ensino" errava o gênero): o nome da empresa saiu do corpo do WhatsApp e foi para o assunto do e-mail.
 - **"Valor na mesa"** diz "uma vez" / "todo mês" e mostra o total em 12 meses de contrato.
 
+## Página do vendedor (27/10/2026) — feito (local)
+
+Link `/vendedor/<token>` gerado na aba Vendedores (primeiro: **Felipe**; falta o
+WhatsApp dele, informado na hora de gerar o link em produção). Detalhes em
+`docs/ERP.md`, seção "Captação — página do vendedor".
+
+### Melhorias para a página do vendedor (levantadas a pedido do dono) — a fazer
+
+| # | Ideia | Por quê |
+|---|---|---|
+| V1 | Aba **Hoje**: retornos vencidos e quentes primeiro, com a mensagem pronta (o modo foco do painel, para o vendedor) | Abrir a página e saber o que fazer agora, sem procurar no quadro |
+| V2 | **Aviso para o Arthur** quando o vendedor marcar "Quer proposta" ou "Reunião marcada" (WhatsApp/e-mail) | Proposta rápida enquanto o cliente está quente |
+| V3 | **Agendar reunião** com o Arthur direto da página (link do Cal.com, já no backlog do portfólio) | O vendedor fecha a conversa marcando horário, não "vou ver e te falo" |
+| V4 | **Roteiro de ligação** (além do WhatsApp): o que falar nos primeiros 30 segundos e como pedir o WhatsApp | Lead quente se liga, não se manda texto |
+| V5 | **Cases do mesmo ramo**: 2–3 trabalhos do portfólio parecidos com o lead (clínica, loja, academia) | Prova social na hora da objeção |
+| V6 | **Pré-proposta em PDF** a partir do simulador (logo, itens, valor, validade) para o vendedor mandar | O cliente que quer "algo por escrito" recebe na hora; a proposta oficial segue com o Arthur |
+| V7 | **Comissão e meta do vendedor** (quanto ganha por fechamento, quanto falta para a meta) | Motivação e transparência; o dono define as regras antes |
+| V8 | **Recarregar leads**: quando ele terminar os 20, botão "pedir mais" que avisa o Arthur (ou gera sozinho do mesmo filtro) | O vendedor nunca fica parado |
+| V9 | **Anotação por áudio** (grava e transcreve no checklist) | No celular, falar é mais rápido que digitar depois da ligação |
+| V10 | **Instalar como app** (PWA, ícone na tela inicial) | Abrir em 1 toque, como um app de verdade |
+| V11 | **Linha do tempo do lead** (mensagens enviadas, mudanças de etapa, checklist) | O Arthur e o vendedor veem a história inteira sem ler anotações soltas |
+| V12 | **Ranking entre vendedores** (contatos, respostas, propostas) quando houver mais de um | Competição saudável e visão de quem converte melhor |
+
 ## Pendências e ideias levantadas antes
 
 | Item | Observação |

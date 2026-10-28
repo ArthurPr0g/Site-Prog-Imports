@@ -1559,6 +1559,44 @@ Mapa, Relatório, Buscas; peças comuns em `comum.tsx`):
   para o bucket público `diagnosticos`. O `captar.ps1` só apaga job "working"
   com mais de 20 min, para não matar uma busca que outra janela está rodando.
 
+### Captação — página do vendedor (27/10/2026, primeiro vendedor: Felipe)
+
+O dono gera, na aba **Vendedores**, um link `/vendedor/<token>` com os 20 leads
+de maior nota do filtro atual (status Novo, sem link ativo, que não são
+clientes). Pedido do dono: tudo no nome do vendedor, o que ele registra volta
+para o painel, seleção pelos 20 melhores do filtro.
+- **Banco:** `lead_seller_kits` (vendedor, WhatsApp, recado, `catalog` = retrato
+  do catálogo no envio) e `lead_kit_items` (lead + retrato do valor e dos
+  serviços com descrição e preço). O vendedor não lê tabela nenhuma: tudo por
+  `lead_kit` (leitura), `lead_kit_atualizar` (etapa, anotação com o nome dele,
+  etapa da sequência enviada) e `lead_kit_descoberta` (checklist), todas
+  security definer, conferindo link ativo e lead do link.
+- **Página:** Leads (quadro arrastável no mouse e no dedo, ou lista), detalhe do
+  lead em abas (Análise, Contato e mensagens, Oportunidade, Como agir, Checklist,
+  Registro), Simulador (igual ao do portfólio: combo 15/15/20%, mensalidade
+  única, Pix/boleto 50/50, 2x sem juros, 3x–12x com a fórmula `parcela` do
+  portfólio; EUA 50/50), Perguntas difíceis e Como vender.
+- **Mensagens no nome do vendedor:** variáveis `{remetente}` e `{assinatura}`
+  nos modelos (no painel valem Arthur / Arthur Matos). O link do diagnóstico
+  enviado pelo vendedor leva `?k=<token>`, e o botão de WhatsApp do diagnóstico
+  vai para o vendedor (`lead_diagnostico(p_token, p_kit)`).
+- **Perguntas difíceis** (`src/lib/perguntas-dificeis.ts`): respostas tiradas do
+  contrato do ERP (`REGRAS_DO_CONTRATO`) e do catálogo; o que não estiver lá o
+  vendedor não responde de cabeça (frase pronta + botão "Perguntar ao Arthur").
+- **Roteiro de venda** (`src/lib/roteiro-venda.ts`): abertura, perguntas,
+  argumentos, objeções e próximo passo a partir do achado do site e dos
+  serviços; só fatos do próprio lead, sem estatística inventada.
+- **Checklist de descoberta** (`src/lib/checklist-descoberta.ts`, coluna
+  `leads.discovery`): decisor, origem dos clientes, dores, o que usam,
+  tentativas, interesse, urgência, investimento, melhor contato. Aparece no card
+  do painel como "Contexto do cliente" e pode ser preenchido pelo dono também.
+- **Kanban** (`src/components/kanban/Kanban.tsx`, dnd-kit): o mesmo no Quadro do
+  painel e na página do vendedor. No dedo, segurar 220 ms e arrastar; rolagem
+  automática suave; mudança otimista que cede ao dado do servidor; `id` estável
+  (sem ele o dnd-kit dá erro de hidratação). No quadro do vendedor "Não
+  contatar" não é coluna (fica junto de "Sem interesse"; marca-se no Registro) e
+  "Fechado" é só com o dono.
+
 ## Em aberto
 
 ### Módulos que faltam

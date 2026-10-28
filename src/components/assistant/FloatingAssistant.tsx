@@ -146,8 +146,8 @@ export function FloatingAssistant() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, open]);
 
-  // O diagnóstico da Captação é página da Prog Soluções para quem não é cliente da loja.
-  if (pathname?.startsWith('/admin') || pathname?.startsWith('/diagnostico')) return null;
+  // Diagnóstico e página do vendedor são da Prog Soluções, não da loja.
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/diagnostico') || pathname?.startsWith('/vendedor')) return null;
 
   async function send() {
     const text = input.trim();

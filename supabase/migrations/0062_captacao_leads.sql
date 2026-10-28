@@ -91,7 +91,7 @@ create policy lead_templates_admin_all on public.lead_templates for all using (p
 
 insert into public.lead_templates (channel, lang, subject, body) values
 ('whatsapp', 'pt', null,
-'Oi, tudo bem? Aqui é o Arthur, da Prog Soluções.
+'Oi, tudo bem? Meu nome é {remetente}, sou da Prog Soluções.
 
 Encontrei o perfil de vocês no Google Maps{elogio} e {problema}.
 
@@ -99,7 +99,7 @@ Eu crio {servico} para negócios como o de vocês. Montei um diagnóstico rápid
 
 Posso te mandar uma proposta sem compromisso?'),
 ('whatsapp', 'en', null,
-'Hi! This is Arthur from Prog Soluções.
+'Hi! This is {remetente} from Prog Soluções.
 
 I found {empresa} on Google Maps{elogio} and {problema}.
 
@@ -109,7 +109,7 @@ Would you like a no-strings proposal?'),
 ('email', 'pt', '{empresa}: uma ideia para o site de vocês',
 'Olá! Tudo bem?
 
-Meu nome é Arthur, da Prog Soluções. Encontrei o perfil de vocês no Google Maps{elogio} e {problema}.
+Meu nome é {remetente}, sou da Prog Soluções. Encontrei o perfil de vocês no Google Maps{elogio} e {problema}.
 
 Hoje a maior parte dos clientes pesquisa no celular antes de escolher. Eu crio {servico} para negócios como o de vocês, e montei um diagnóstico gratuito da presença online de vocês:
 {diagnostico}
@@ -118,13 +118,13 @@ Alguns trabalhos meus: {portfolio}
 
 Se fizer sentido, te mando uma proposta sem compromisso. Se não for o momento, é só responder "não" que eu não volto a escrever.
 
-Arthur Matos
+{assinatura}
 Prog Soluções
 Alameda Botafogo, Quadra 36B, Lote 16-21, Setor Pedro Ludovico, Goiânia - GO, Brasil'),
 ('email', 'en', 'A quick idea for {empresa}',
 'Hi {empresa} team,
 
-My name is Arthur, from Prog Soluções. I found you on Google Maps{elogio} and {problema}.
+My name is {remetente}, from Prog Soluções. I found you on Google Maps{elogio} and {problema}.
 
 Most customers check a business on their phone before choosing. I build {servico} for businesses like yours, and I put together a free review of {empresa}''s online presence:
 {diagnostico}
@@ -133,7 +133,7 @@ Some of my work: {portfolio}
 
 If it makes sense, I can send you a no-strings proposal. If now isn''t a good time, just reply "no" and I won''t reach out again.
 
-Arthur Matos
+{assinatura}
 Prog Soluções
 Alameda Botafogo, Quadra 36B, Lote 16-21, Setor Pedro Ludovico, Goiânia - GO, Brazil')
 on conflict (channel, lang, step, variant) do nothing;
@@ -156,7 +156,7 @@ Passando só para saber se você viu o diagnóstico que montei para vocês:
 
 Se fizer sentido, te mando uma proposta sem compromisso. Se não for o momento, é só responder "não".
 
-Arthur Matos
+{assinatura}
 Prog Soluções
 Alameda Botafogo, Quadra 36B, Lote 16-21, Setor Pedro Ludovico, Goiânia - GO, Brasil'),
 (1, 'email', 'en', 'Re: A quick idea for {empresa}',
@@ -167,7 +167,7 @@ Just checking whether you saw the review I put together for {empresa}:
 
 If it makes sense, I can send you a no-strings proposal. If now isn''t a good time, just reply "no".
 
-Arthur Matos
+{assinatura}
 Prog Soluções
 Alameda Botafogo, Quadra 36B, Lote 16-21, Setor Pedro Ludovico, Goiânia - GO, Brazil'),
 (2, 'whatsapp', 'pt', null,
@@ -188,7 +188,7 @@ Eu crio {servico} e cuido de tudo: hospedagem, segurança e ajustes do dia a dia
 
 Se não for o momento, é só responder "não" que eu não volto a escrever.
 
-Arthur Matos
+{assinatura}
 Prog Soluções
 Alameda Botafogo, Quadra 36B, Lote 16-21, Setor Pedro Ludovico, Goiânia - GO, Brasil'),
 (2, 'email', 'en', 'A few examples for {empresa}',
@@ -201,7 +201,7 @@ I build {servico} and take care of everything: hosting, security and day-to-day 
 
 If now isn''t a good time, just reply "no" and I won''t reach out again.
 
-Arthur Matos
+{assinatura}
 Prog Soluções
 Alameda Botafogo, Quadra 36B, Lote 16-21, Setor Pedro Ludovico, Goiânia - GO, Brazil'),
 (3, 'whatsapp', 'pt', null,
@@ -215,7 +215,7 @@ Esta é minha última mensagem, não quero ser insistente. Se um dia quiserem {s
 
 Sucesso!
 
-Arthur Matos
+{assinatura}
 Prog Soluções
 Alameda Botafogo, Quadra 36B, Lote 16-21, Setor Pedro Ludovico, Goiânia - GO, Brasil'),
 (3, 'email', 'en', 'Last note about {empresa}',
@@ -225,7 +225,7 @@ This is my last note, I don''t want to be pushy. If you ever want {servico} for 
 
 All the best!
 
-Arthur Matos
+{assinatura}
 Prog Soluções
 Alameda Botafogo, Quadra 36B, Lote 16-21, Setor Pedro Ludovico, Goiânia - GO, Brazil')
 on conflict (channel, lang, step, variant) do nothing;
@@ -250,7 +250,12 @@ alter table public.leads
   -- Print do site no celular (Storage, bucket diagnosticos).
   add column if not exists screenshot_url text,
   -- Orçamento criado pela "Proposta em um clique".
-  add column if not exists quote_id uuid references public.service_quotes(id) on delete set null;
+  add column if not exists quote_id uuid references public.service_quotes(id) on delete set null,
+  -- Checklist de descoberta (decisor, dores, urgência...): chaves em
+  -- src/lib/checklist-descoberta.ts. Preenchido pelo vendedor ou pelo dono.
+  add column if not exists discovery jsonb not null default '{}',
+  add column if not exists discovery_by text,
+  add column if not exists discovery_at timestamptz;
 
 create index if not exists leads_quentes_idx on public.leads (diag_last_view_at desc) where diag_views > 0;
 
@@ -298,9 +303,188 @@ insert into storage.buckets (id, name, public)
 values ('diagnosticos', 'diagnosticos', true)
 on conflict (id) do nothing;
 
+-- ===== Página do vendedor (27/10/2026) =====
+-- O dono gera um link com até 20 leads para um vendedor (ex.: Felipe). A
+-- página /vendedor/<token> mostra contatos, análise, oportunidades com preço,
+-- roteiro de venda e mensagens no nome do vendedor; o que ele registra volta
+-- para o lead (etapa e anotação com o nome dele). Tudo pelas funções abaixo:
+-- quem tem o link não lê nem escreve nas tabelas diretamente.
+
+create table if not exists public.lead_seller_kits (
+  id uuid primary key default gen_random_uuid(),
+  token uuid not null unique default gen_random_uuid(),
+  seller_name text not null check (length(trim(seller_name)) > 0),
+  seller_whatsapp text,       -- só dígitos, com DDI (ex.: 5562999999999)
+  seller_email text,
+  instructions text,          -- recado do dono no topo da página
+  -- Catálogo de serviços no momento do envio (simulador e "o que inclui").
+  catalog jsonb not null default '[]',
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+-- Retrato de cada lead no momento do envio: serviços com descrição e preço do
+-- catálogo (o vendedor vende pelo preço que recebeu, mesmo se o catálogo mudar).
+create table if not exists public.lead_kit_items (
+  kit_id uuid not null references public.lead_seller_kits(id) on delete cascade,
+  lead_id uuid not null references public.leads(id) on delete cascade,
+  position integer not null default 0,
+  currency text not null default 'BRL' check (currency in ('BRL', 'USD')),
+  one_time numeric(12,2) not null default 0,
+  monthly numeric(12,2) not null default 0,
+  combo boolean not null default false,
+  services jsonb not null default '[]',   -- [{nome, descricao, preco, mensal}]
+  primary key (kit_id, lead_id)
+);
+create index if not exists lead_kit_items_lead_idx on public.lead_kit_items (lead_id);
+
+alter table public.lead_seller_kits enable row level security;
+alter table public.lead_kit_items enable row level security;
+create policy lead_seller_kits_admin_all on public.lead_seller_kits for all using (public.is_admin()) with check (public.is_admin());
+create policy lead_kit_items_admin_all on public.lead_kit_items for all using (public.is_admin()) with check (public.is_admin());
+
+-- Tudo que a página do vendedor precisa, num JSON só. Link desativado = null.
+create or replace function public.lead_kit(p_token uuid)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'seller_name', k.seller_name,
+    'seller_whatsapp', k.seller_whatsapp,
+    'seller_email', k.seller_email,
+    'instructions', k.instructions,
+    'catalog', k.catalog,
+    'created_at', k.created_at,
+    'templates', (
+      select coalesce(jsonb_agg(jsonb_build_object(
+        'channel', t.channel, 'lang', t.lang, 'step', t.step, 'variant', t.variant, 'subject', t.subject, 'body', t.body
+      )), '[]') from public.lead_templates t
+    ),
+    'leads', (
+      select coalesce(jsonb_agg(jsonb_build_object(
+        'id', l.id, 'public_token', l.public_token, 'name', l.name, 'category', l.category, 'niche', l.niche,
+        'city', l.city, 'state', l.state, 'country', l.country, 'address', l.address, 'phone', l.phone,
+        'sem_whatsapp', l.sem_whatsapp, 'email', l.email, 'website', l.website, 'site_check', l.site_check,
+        'instagram', l.instagram, 'facebook', l.facebook, 'maps_url', l.maps_url, 'rating', l.rating,
+        'review_count', l.review_count, 'score', l.score, 'reasons', l.reasons,
+        'suggested_services', l.suggested_services, 'status', l.status, 'notes', l.notes,
+        'first_contact_at', l.first_contact_at, 'followup_step', l.followup_step, 'ab_variant', l.ab_variant,
+        'diag_views', l.diag_views, 'diag_last_view_at', l.diag_last_view_at, 'screenshot_url', l.screenshot_url,
+        'discovery', l.discovery, 'discovery_at', l.discovery_at,
+        'currency', i.currency, 'one_time', i.one_time, 'monthly', i.monthly, 'combo', i.combo, 'services', i.services
+      ) order by i.position), '[]')
+      from public.lead_kit_items i join public.leads l on l.id = i.lead_id
+      where i.kit_id = k.id
+    )
+  )
+  from public.lead_seller_kits k
+  where k.token = p_token and k.active;
+$$;
+
+-- O vendedor registra o andamento de um lead do link dele: etapa, anotação
+-- (com o nome dele e a data) e, ao mandar mensagem, qual etapa da sequência
+-- saiu (0 = primeiro contato, 1–3 = retornos dos dias 3, 7 e 14). Mesmas
+-- regras de datas do painel.
+create or replace function public.lead_kit_atualizar(
+  p_token uuid,
+  p_lead uuid,
+  p_status text default null,
+  p_nota text default null,
+  p_etapa integer default null
+)
+returns text
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  v_kit public.lead_seller_kits;
+  v_lead public.leads;
+  v_agora timestamptz := now();
+  v_nota text := nullif(trim(coalesce(p_nota, '')), '');
+begin
+  select * into v_kit from public.lead_seller_kits where token = p_token and active;
+  if not found then return 'Link desativado.'; end if;
+  if not exists (select 1 from public.lead_kit_items where kit_id = v_kit.id and lead_id = p_lead) then
+    return 'Lead fora deste link.';
+  end if;
+  if p_status is not null and p_status not in ('contatado', 'respondeu', 'reuniao', 'proposta', 'perdido', 'nao_contatar') then
+    return 'Etapa inválida.';
+  end if;
+  select * into v_lead from public.leads where id = p_lead for update;
+
+  if p_etapa is not null and (p_etapa < 0 or p_etapa > 3) then return 'Etapa da sequência inválida.'; end if;
+
+  update public.leads set
+    -- Mandar retorno não tira o lead de "respondeu" ou adiante.
+    status = case
+      when p_status = 'contatado' and status in ('respondeu', 'reuniao', 'proposta', 'fechado') then status
+      else coalesce(p_status, status) end,
+    first_contact_at = case when p_status is not null and first_contact_at is null then v_agora else first_contact_at end,
+    last_contact_at = case when p_status = 'contatado' then v_agora else last_contact_at end,
+    followup_step = case
+      when p_etapa is not null then greatest(followup_step, p_etapa + 1)
+      when p_status = 'contatado' and followup_step = 0 then 1
+      else followup_step end,
+    -- Próximo retorno: dias 3, 7 e 14 contados do primeiro contato.
+    next_contact = case
+      when p_status in ('perdido', 'nao_contatar') then null
+      when p_status = 'contatado' then
+        case coalesce(p_etapa, case when followup_step = 0 then 0 end)
+          when 0 then (coalesce(first_contact_at, v_agora) + interval '3 days')::date
+          when 1 then (coalesce(first_contact_at, v_agora) + interval '7 days')::date
+          when 2 then (coalesce(first_contact_at, v_agora) + interval '14 days')::date
+          when 3 then null
+          else next_contact end
+      else next_contact end,
+    replied_at = case when p_status in ('respondeu', 'reuniao', 'proposta') and replied_at is null then v_agora else replied_at end,
+    notes = case when v_nota is null then notes
+      else concat_ws(E'\n', notes, '[' || v_kit.seller_name || ' ' || to_char(v_agora at time zone 'America/Sao_Paulo', 'DD/MM') || '] ' || v_nota) end,
+    updated_at = v_agora
+  where id = p_lead;
+  return 'ok';
+end;
+$$;
+
+-- Checklist de descoberta salvo pelo vendedor (substitui o anterior inteiro).
+create or replace function public.lead_kit_descoberta(p_token uuid, p_lead uuid, p_dados jsonb)
+returns text
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  v_kit public.lead_seller_kits;
+begin
+  select * into v_kit from public.lead_seller_kits where token = p_token and active;
+  if not found then return 'Link desativado.'; end if;
+  if not exists (select 1 from public.lead_kit_items where kit_id = v_kit.id and lead_id = p_lead) then
+    return 'Lead fora deste link.';
+  end if;
+  if jsonb_typeof(p_dados) <> 'object' or length(p_dados::text) > 20000 then return 'Checklist inválido.'; end if;
+  update public.leads
+  set discovery = p_dados, discovery_by = v_kit.seller_name, discovery_at = now(), updated_at = now()
+  where id = p_lead;
+  return 'ok';
+end;
+$$;
+
+revoke all on function public.lead_kit_descoberta(uuid, uuid, jsonb) from public;
+grant execute on function public.lead_kit_descoberta(uuid, uuid, jsonb) to anon, authenticated;
+
+revoke all on function public.lead_kit(uuid) from public;
+revoke all on function public.lead_kit_atualizar(uuid, uuid, text, text, integer) from public;
+grant execute on function public.lead_kit(uuid) to anon, authenticated;
+grant execute on function public.lead_kit_atualizar(uuid, uuid, text, text, integer) to anon, authenticated;
+
 -- Diagnóstico público: o lead + a comparação com os concorrentes da mesma
 -- busca (mesmo país, cidade e ramo). Só campos que já são públicos no Google.
-create or replace function public.lead_diagnostico(p_token uuid)
+create or replace function public.lead_diagnostico(p_token uuid, p_kit uuid default null)
 returns jsonb
 language sql
 stable
@@ -317,6 +501,11 @@ as $$
     'website', l.website,
     'site_check', l.site_check,
     'screenshot_url', l.screenshot_url,
+    'vendedor', (
+      select jsonb_build_object('nome', k.seller_name, 'whatsapp', k.seller_whatsapp)
+      from public.lead_seller_kits k join public.lead_kit_items i on i.kit_id = k.id
+      where p_kit is not null and k.token = p_kit and k.active and i.lead_id = l.id
+    ),
     'instagram', l.instagram is not null,
     'rating', l.rating,
     'review_count', l.review_count,
@@ -343,5 +532,5 @@ as $$
   where l.public_token = p_token and l.status <> 'nao_contatar';
 $$;
 
-revoke all on function public.lead_diagnostico(uuid) from public;
-grant execute on function public.lead_diagnostico(uuid) to anon, authenticated;
+revoke all on function public.lead_diagnostico(uuid, uuid) from public;
+grant execute on function public.lead_diagnostico(uuid, uuid) to anon, authenticated;

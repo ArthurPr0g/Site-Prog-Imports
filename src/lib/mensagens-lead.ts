@@ -3,7 +3,7 @@
 // lead, e abre o WhatsApp ou o Gmail já preenchidos.
 //
 // Variáveis aceitas nos modelos: {empresa} {cidade} {elogio} {problema}
-// {servico} {diagnostico} {portfolio}. Variável desconhecida fica como está,
+// {servico} {diagnostico} {portfolio} {remetente} {assinatura}. Variável desconhecida fica como está,
 // para o dono ver o erro de digitação em vez de sumir com o texto.
 
 import { ehVarejo, situacaoDoSite, type Lead, type SituacaoDoSite } from '@/lib/captacao';
@@ -50,7 +50,21 @@ export function varianteDoLead(l: Pick<Lead, 'id' | 'abVariant' | 'country'>, mo
   return parseInt(l.id.replace(/-/g, '').slice(-2), 16) % 2 === 0 ? 'A' : 'B';
 }
 
-export const VARIAVEIS = ['empresa', 'cidade', 'elogio', 'problema', 'servico', 'diagnostico', 'portfolio'] as const;
+export const VARIAVEIS = [
+  'empresa',
+  'cidade',
+  'elogio',
+  'problema',
+  'servico',
+  'diagnostico',
+  'portfolio',
+  'remetente',
+  'assinatura',
+] as const;
+
+/** Quem envia: o dono no painel; o vendedor na página dele (com o link do kit). */
+export type Remetente = { nome: string; assinatura: string; kit?: string };
+export const DONO: Remetente = { nome: 'Arthur', assinatura: 'Arthur Matos' };
 
 const PORTFOLIO: Record<Idioma, string> = {
   pt: 'https://portfolio-arthur-prog.vercel.app/pt',
@@ -101,7 +115,7 @@ const PROBLEMA_VAREJO: Record<Idioma, string> = {
   en: "noticed you don't sell online yet",
 };
 
-function servicoPrincipal(l: Lead, lang: Idioma): string {
+function servicoPrincipal(l: Pick<Lead, 'suggestedServices'>, lang: Idioma): string {
   const s = l.suggestedServices.join(' ');
   if (s.includes('Loja')) return lang === 'pt' ? 'lojas virtuais' : 'online stores';
   if (s.includes('Site')) return lang === 'pt' ? 'sites profissionais' : 'professional websites';
@@ -113,7 +127,24 @@ function servicoPrincipal(l: Lead, lang: Idioma): string {
   return lang === 'pt' ? 'sites e sistemas' : 'websites and systems';
 }
 
-export function variaveisDoLead(l: Lead, lang: Idioma, origem: string): Record<string, string> {
+export function variaveisDoLead(
+  l: Pick<
+    Lead,
+    | 'website'
+    | 'siteCheck'
+    | 'category'
+    | 'niche'
+    | 'reviewCount'
+    | 'rating'
+    | 'name'
+    | 'city'
+    | 'publicToken'
+    | 'suggestedServices'
+  >,
+  lang: Idioma,
+  origem: string,
+  remetente: Remetente = DONO
+): Record<string, string> {
   const situacao = situacaoDoSite(l.website, l.siteCheck);
   const problema = situacao === 'ok' && ehVarejo(l.category, l.niche) ? PROBLEMA_VAREJO[lang] : PROBLEMA[situacao][lang];
   // Elogio só quando é verdade e vale citar: muita avaliação e nota boa.
@@ -130,8 +161,11 @@ export function variaveisDoLead(l: Lead, lang: Idioma, origem: string): Record<s
     elogio,
     problema,
     servico: servicoPrincipal(l, lang),
-    diagnostico: `${origem}/diagnostico/${l.publicToken}`,
+    // Pelo link do vendedor, o diagnóstico leva ?k=: o botão de WhatsApp vai para ele.
+    diagnostico: `${origem}/diagnostico/${l.publicToken}${remetente.kit ? `?k=${remetente.kit}` : ''}`,
     portfolio: PORTFOLIO[lang],
+    remetente: remetente.nome,
+    assinatura: remetente.assinatura,
   };
 }
 

@@ -18,7 +18,7 @@ import {
 } from '@/lib/captacao';
 import { TABELA_USD, tabelaBRL, estimar, emReais, type Cotacoes } from '@/lib/precos-captacao';
 import type { ModeloMensagem } from '@/lib/mensagens-lead';
-import type { PedidoDeBusca } from '@/lib/data/leads';
+import type { PedidoDeBusca, KitDoVendedor } from '@/lib/data/leads';
 import { inputClass, hojeISO, semCentavos, DIA, usePreferencia } from './captacao/comum';
 import { ValorNaMesa, Indicador, PAISES } from './captacao/ValorNaMesa';
 import { LinhaDoLead } from './captacao/LinhaDoLead';
@@ -27,7 +27,8 @@ import { Quadro } from './captacao/Quadro';
 import { Mapa } from './captacao/Mapa';
 import { Relatorio } from './captacao/Relatorio';
 import { Buscas } from './captacao/Buscas';
-import { ImportarModal, NotasModal, ModelosModal } from './captacao/Modais';
+import { ImportarModal, NotasModal, ModelosModal, ChecklistModal } from './captacao/Modais';
+import { Vendedores } from './captacao/Vendedores';
 
 const POR_PAGINA = 50;
 const ABAS = [
@@ -36,6 +37,7 @@ const ABAS = [
   ['quadro', 'Quadro'],
   ['mapa', 'Mapa'],
   ['relatorio', 'Relatório'],
+  ['vendedores', 'Vendedores'],
   ['buscas', 'Buscas'],
 ] as const;
 type Aba = (typeof ABAS)[number][0];
@@ -51,6 +53,7 @@ export function CaptacaoPanel({
   origem,
   pedidos,
   clientes: clientesLista,
+  kits,
 }: {
   leads: Lead[];
   /** Nome → preço de todos os serviços do catálogo (únicos e mensalidades). */
@@ -62,6 +65,8 @@ export function CaptacaoPanel({
   pedidos: PedidoDeBusca[];
   /** Ids dos leads que já são clientes do ERP. */
   clientes: string[];
+  /** Links de vendedor (página /vendedor/<token>). */
+  kits: KitDoVendedor[];
 }) {
   const tabBRL = useMemo(() => tabelaBRL(new Map(catalogo)), [catalogo]);
   const estimativa = (l: Lead) => estimar(l.suggestedServices, l.country === 'US' ? TABELA_USD : tabBRL);
@@ -75,6 +80,13 @@ export function CaptacaoPanel({
     return emReais(e.mensal, e.moeda, cotacoes) ?? 0;
   };
   const clientes = useMemo(() => new Set(clientesLista), [clientesLista]);
+  // Lead → vendedor com link ativo (o mais recente, se estiver em mais de um).
+  const vendedorPorLead = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const k of [...kits].reverse()) if (k.active) for (const id of k.leadIds) m.set(id, k.sellerName);
+    return m;
+  }, [kits]);
+  const leadsPorId = useMemo(() => new Map(leads.map((l) => [l.id, l])), [leads]);
   // Lidos uma vez na montagem: o painel não precisa virar o dia sozinho.
   const [hoje] = useState(hojeISO);
   const [agora] = useState(() => Date.now());
@@ -92,6 +104,7 @@ export function CaptacaoPanel({
   const [limite, setLimite] = useState(POR_PAGINA);
   const [importando, setImportando] = useState(false);
   const [notasDe, setNotasDe] = useState<Lead | null>(null);
+  const [checklistDe, setChecklistDe] = useState<Lead | null>(null);
   const [editandoModelos, setEditandoModelos] = useState(false);
 
   // Para hoje: retorno marcado à mão ou etapa da sequência vencida.
@@ -278,7 +291,7 @@ export function CaptacaoPanel({
         ))}
       </div>
 
-      {aba !== 'buscas' && aba !== 'relatorio' && (
+      {aba !== 'buscas' && aba !== 'relatorio' && aba !== 'vendedores' && (
         <div className="mb-3.5 flex flex-wrap items-center gap-2.5">
           <div className="relative min-w-[220px] flex-1">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-fg-faded" />
@@ -399,7 +412,9 @@ export function CaptacaoPanel({
                 modelos={modelos}
                 origem={origem}
                 jaCliente={clientes.has(l.id)}
+                vendedor={vendedorPorLead.get(l.id)}
                 onNotas={() => setNotasDe(l)}
+                onChecklist={() => setChecklistDe(l)}
               />
             ))}
           </div>
@@ -426,10 +441,25 @@ export function CaptacaoPanel({
           agora={agora}
         />
       )}
-      {aba === 'quadro' && <Quadro leads={filtrados} estimativa={estimativa} agora={agora} />}
+      {aba === 'quadro' && (
+        <Quadro leads={filtrados} estimativa={estimativa} agora={agora} vendedorDe={(id) => vendedorPorLead.get(id)} />
+      )}
       {aba === 'mapa' && <Mapa leads={filtrados} estimativa={estimativa} agora={agora} />}
       {aba === 'relatorio' && <Relatorio leads={leads} estimativa={estimativa} cotacoes={cotacoes} />}
       {aba === 'buscas' && <Buscas pedidos={pedidos} />}
+      {aba === 'vendedores' && (
+        <>
+          <div className="mb-3 text-[12.5px] text-fg-tertiary">
+            Os filtros da aba Lista (ramo, cidade, país, nota) definem quais leads vão no próximo link.
+          </div>
+          <Vendedores
+            candidatos={filtrados.filter((l) => l.status === 'novo' && !vendedorPorLead.has(l.id) && !clientes.has(l.id))}
+            kits={kits}
+            leadsPorId={leadsPorId}
+            origem={origem}
+          />
+        </>
+      )}
 
       {importando && <ImportarModal onFechar={() => setImportando(false)} />}
       {editandoModelos && (
@@ -441,6 +471,7 @@ export function CaptacaoPanel({
         />
       )}
       {notasDe && <NotasModal lead={notasDe} onFechar={() => setNotasDe(null)} />}
+      {checklistDe && <ChecklistModal lead={checklistDe} onFechar={() => setChecklistDe(null)} />}
     </div>
   );
 }

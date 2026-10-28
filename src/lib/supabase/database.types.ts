@@ -452,6 +452,90 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_seller_kits: {
+        Row: {
+          active: boolean
+          catalog: Json
+          created_at: string
+          id: string
+          instructions: string | null
+          seller_email: string | null
+          seller_name: string
+          seller_whatsapp: string | null
+          token: string
+        }
+        Insert: {
+          active?: boolean
+          catalog?: Json
+          created_at?: string
+          id?: string
+          instructions?: string | null
+          seller_email?: string | null
+          seller_name: string
+          seller_whatsapp?: string | null
+          token?: string
+        }
+        Update: {
+          active?: boolean
+          catalog?: Json
+          created_at?: string
+          id?: string
+          instructions?: string | null
+          seller_email?: string | null
+          seller_name?: string
+          seller_whatsapp?: string | null
+          token?: string
+        }
+        Relationships: []
+      }
+      lead_kit_items: {
+        Row: {
+          combo: boolean
+          currency: string
+          kit_id: string
+          lead_id: string
+          monthly: number
+          one_time: number
+          position: number
+          services: Json
+        }
+        Insert: {
+          combo?: boolean
+          currency?: string
+          kit_id: string
+          lead_id: string
+          monthly?: number
+          one_time?: number
+          position?: number
+          services?: Json
+        }
+        Update: {
+          combo?: boolean
+          currency?: string
+          kit_id?: string
+          lead_id?: string
+          monthly?: number
+          one_time?: number
+          position?: number
+          services?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_kit_items_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "lead_seller_kits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_kit_items_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_templates: {
         Row: {
           body: string
@@ -499,6 +583,9 @@ export type Database = {
           diag_first_view_at: string | null
           diag_last_view_at: string | null
           diag_views: number
+          discovery: Json
+          discovery_at: string | null
+          discovery_by: string | null
           email: string | null
           facebook: string | null
           first_contact_at: string | null
@@ -546,6 +633,9 @@ export type Database = {
           diag_first_view_at?: string | null
           diag_last_view_at?: string | null
           diag_views?: number
+          discovery?: Json
+          discovery_at?: string | null
+          discovery_by?: string | null
           email?: string | null
           facebook?: string | null
           first_contact_at?: string | null
@@ -593,6 +683,9 @@ export type Database = {
           diag_first_view_at?: string | null
           diag_last_view_at?: string | null
           diag_views?: number
+          discovery?: Json
+          discovery_at?: string | null
+          discovery_by?: string | null
           email?: string | null
           facebook?: string | null
           first_contact_at?: string | null
@@ -2413,8 +2506,26 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
-      lead_diagnostico: { Args: { p_token: string }; Returns: Json }
+      lead_diagnostico: {
+        Args: { p_kit?: string; p_token: string }
+        Returns: Json
+      }
       lead_registrar_visita: { Args: { p_token: string }; Returns: undefined }
+      lead_kit: { Args: { p_token: string }; Returns: Json }
+      lead_kit_atualizar: {
+        Args: {
+          p_etapa?: number
+          p_lead: string
+          p_nota?: string
+          p_status?: string
+          p_token: string
+        }
+        Returns: string
+      }
+      lead_kit_descoberta: {
+        Args: { p_dados: Json; p_lead: string; p_token: string }
+        Returns: string
+      }
       my_installments: {
         Args: never
         Returns: {

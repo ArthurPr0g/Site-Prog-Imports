@@ -1,4 +1,4 @@
-import { listLeads, listLeadTemplates, listSearchRequests, leadsQueJaSaoClientes } from '@/lib/data/leads';
+import { listLeads, listLeadTemplates, listSearchRequests, leadsQueJaSaoClientes, listKits } from '@/lib/data/leads';
 import { listInternalServices } from '@/lib/data/internal-services';
 import { SITE_URL } from '@/lib/seo';
 import { buscarCotacaoMercado } from '@/lib/usd-rate';
@@ -13,6 +13,7 @@ export default async function AdminCaptacaoPage() {
     buscarCotacaoMercado(),
     listSearchRequests(),
   ]);
+  const kits = await listKits();
   const clientes = await leadsQueJaSaoClientes(leads);
   // Preço por nome (trabalhos e mensalidades): base do valor dos leads do Brasil.
   const catalogo = servicos.filter((s) => s.active).map((s) => [s.name, s.price] as [string, number]);
@@ -35,6 +36,7 @@ export default async function AdminCaptacaoPage() {
         origem={SITE_URL}
         pedidos={pedidos}
         clientes={clientes}
+        kits={kits}
       />
     </div>
   );

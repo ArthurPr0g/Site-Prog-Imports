@@ -3,7 +3,8 @@
 import { useState, useTransition } from 'react';
 import { useToast } from '@/components/ui/Toast';
 import { NOME_DA_ETAPA, type Lead } from '@/lib/captacao';
-import { importLeadsAction, updateLeadAction, saveLeadTemplatesAction } from '@/app/actions/leads';
+import { importLeadsAction, updateLeadAction, saveLeadTemplatesAction, salvarChecklistAction } from '@/app/actions/leads';
+import { ChecklistForm } from '@/components/checklist/ChecklistForm';
 import {
   VARIAVEIS,
   variaveisDoLead,
@@ -251,6 +252,29 @@ export function ModelosModal({
           Salvar mensagens
         </button>
       </div>
+    </Modal>
+  );
+}
+
+export function ChecklistModal({ lead, onFechar }: { lead: Lead; onFechar: () => void }) {
+  const toast = useToast();
+  return (
+    <Modal titulo={`Checklist de descoberta: ${lead.name}`} onFechar={onFechar}>
+      {lead.discoveryBy && (
+        <div className="mb-3 text-[12px] text-fg-tertiary">
+          Preenchido por {lead.discoveryBy}
+          {lead.discoveryAt && ` em ${new Date(lead.discoveryAt).toLocaleDateString('pt-BR')}`}.
+        </div>
+      )}
+      <ChecklistForm
+        inicial={lead.discovery}
+        aoSalvar={async (r) => {
+          const res = await salvarChecklistAction(lead.id, r);
+          toast(res);
+          if (res.ok) onFechar();
+          return res.ok;
+        }}
+      />
     </Modal>
   );
 }

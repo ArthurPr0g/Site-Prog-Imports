@@ -14,6 +14,8 @@ import { ajustarCombosEMensalidades } from '@/lib/combo-servicos';
 import { PLAN_MONTHS_DEFAULT, type ServiceOrderItem } from '@/lib/services';
 import { SEM_DESCONTO } from '@/lib/discount';
 import { NICHOS, type ListaDeNichos } from '@/lib/nichos';
+import { TABELA_USD, tabelaBRL, estimar } from '@/lib/precos-captacao';
+import { limparRespostas, type RespostasDoChecklist } from '@/lib/checklist-descoberta';
 
 async function adminClient() {
   const admin = await requireAdmin();
@@ -357,4 +359,122 @@ export async function cancelarBuscaAction(id: string): Promise<ActionResult> {
   if (error) return errResult(friendlyDbError(error, 'Não foi possível cancelar.'));
   revalidatePath('/admin/captacao');
   return okResult('Busca cancelada.');
+}
+
+/* ------------------------------------------------------------ página do vendedor */
+
+export type NovoKit = {
+  leadIds: string[];
+  sellerName: string;
+  sellerWhatsapp: string;
+  sellerEmail: string;
+  instructions: string;
+};
+
+const LIMITE_DO_KIT = 20;
+
+/**
+ * Gera o link do vendedor com até 20 leads. Guarda o retrato dos preços e das
+ * descrições do catálogo de agora: o vendedor vende pelo preço que recebeu.
+ */
+export async function criarKitAction(input: NovoKit): Promise<ActionResult & { token?: string }> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const nome = input.sellerName.trim();
+  if (!nome) return errResult('Informe o nome do vendedor.');
+  const ids = [...new Set(input.leadIds)].slice(0, LIMITE_DO_KIT);
+  if (ids.length === 0) return errResult('Nenhum lead para enviar com esses filtros.');
+  let whats = input.sellerWhatsapp.replace(/\D/g, '');
+  if (whats && whats.length <= 11) whats = `55${whats}`;
+
+  const { data: leads } = await supabase.from('leads').select('id, country, suggested_services').in('id', ids);
+  if (!leads?.length) return errResult('Leads não encontrados.');
+
+  const catalogo = (await listInternalServices()).filter((s) => s.active);
+  const porNome = new Map(catalogo.map((s) => [s.name, s]));
+  const tabBRL = tabelaBRL(new Map(catalogo.map((s) => [s.name, s.price])));
+
+  const { data: kit, error } = await supabase
+    .from('lead_seller_kits')
+    .insert({
+      seller_name: nome,
+      seller_whatsapp: whats || null,
+      seller_email: input.sellerEmail.trim() || null,
+      instructions: input.instructions.trim() || null,
+      catalog: catalogo.map((s) => ({
+        nome: s.name,
+        categoria: s.category,
+        descricao: s.description,
+        preco: s.price,
+        mensal: s.billingType === 'mensal',
+        prazoDias: s.leadTimeDays,
+      })),
+    })
+    .select('id, token')
+    .single();
+  if (error || !kit) return errResult(friendlyDbError(error, 'Não foi possível criar o link.'));
+
+  const ordem = new Map(ids.map((id, i) => [id, i]));
+  const itens = leads.map((l) => {
+    const e = estimar(l.suggested_services, l.country === 'US' ? TABELA_USD : tabBRL);
+    const nomes = [...l.suggested_services];
+    for (const n of l.suggested_services) {
+      const m = mensalidadeDoServico(n);
+      if (m && !nomes.includes(m)) nomes.push(m);
+    }
+    return {
+      kit_id: kit.id,
+      lead_id: l.id,
+      position: ordem.get(l.id) ?? 0,
+      currency: e.moeda,
+      one_time: e.unico,
+      monthly: e.mensal,
+      combo: e.combo,
+      services: nomes
+        .map((n) => porNome.get(n))
+        .filter((s): s is NonNullable<typeof s> => !!s)
+        .map((s) => ({
+          nome: s.name,
+          descricao: s.description,
+          preco: s.price,
+          mensal: s.billingType === 'mensal',
+          prazoDias: s.leadTimeDays,
+        })),
+    };
+  });
+  const { error: erroItens } = await supabase.from('lead_kit_items').insert(itens);
+  if (erroItens) {
+    await supabase.from('lead_seller_kits').delete().eq('id', kit.id);
+    return errResult(friendlyDbError(erroItens, 'Não foi possível montar o link.'));
+  }
+  revalidatePath('/admin/captacao');
+  return { ...okResult(`Link criado com ${itens.length} lead(s) para ${nome}.`), token: kit.token };
+}
+
+/** Desativa (ou reativa) o link: desativado, a página do vendedor some. */
+export async function alternarKitAction(id: string, ativo: boolean): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const { error } = await supabase.from('lead_seller_kits').update({ active: ativo }).eq('id', id);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível alterar o link.'));
+  revalidatePath('/admin/captacao');
+  return okResult(ativo ? 'Link reativado.' : 'Link desativado: a página do vendedor não abre mais.');
+}
+
+/** Checklist de descoberta preenchido pelo dono no painel. */
+export async function salvarChecklistAction(id: string, respostas: RespostasDoChecklist): Promise<ActionResult> {
+  const supabase = await adminClient();
+  if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const { error } = await supabase
+    .from('leads')
+    .update({
+      discovery: limparRespostas(respostas),
+      discovery_by: 'Arthur',
+      discovery_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar o checklist.'));
+  revalidatePath('/admin/captacao');
+  return okResult('Checklist salvo.');
 }

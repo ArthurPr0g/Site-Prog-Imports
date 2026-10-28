@@ -14,7 +14,9 @@ import {
   FileSearch,
   Flame,
   FileText,
+  ClipboardList,
 } from 'lucide-react';
+import { resumoDoChecklist } from '@/lib/checklist-descoberta';
 import { formatDateBR } from '@/lib/format';
 import {
   LEAD_STATUSES,
@@ -40,7 +42,9 @@ export function LinhaDoLead({
   modelos,
   origem,
   jaCliente,
+  vendedor,
   onNotas,
+  onChecklist,
 }: {
   lead: Lead;
   estimativa: Estimativa;
@@ -50,7 +54,10 @@ export function LinhaDoLead({
   modelos: ModeloMensagem[];
   origem: string;
   jaCliente: boolean;
+  /** Vendedor com link ativo que tem este lead. */
+  vendedor?: string;
   onNotas: () => void;
+  onChecklist: () => void;
 }) {
   const c = useContatoDoLead(l, modelos, origem);
   const vencido = !ENCERRADOS.includes(l.status) && !!l.nextContact && l.nextContact <= hoje;
@@ -84,6 +91,7 @@ export function LinhaDoLead({
                   já é cliente
                 </Selo>
               )}
+              {vendedor && <Selo titulo="Está no link de um vendedor">com {vendedor}</Selo>}
             </div>
             <div className="mt-0.5 text-[12px] text-fg-tertiary">
               {[l.niche, l.category !== l.niche ? l.category : null, local].filter(Boolean).join(' · ') || '—'}
@@ -110,7 +118,29 @@ export function LinhaDoLead({
                 {c.vence && ` · ${c.vence <= hoje ? 'vence hoje ou já venceu' : `em ${formatDateBR(`${c.vence}T12:00:00`)}`}`}
               </div>
             )}
-            {l.notes && <div className="mt-1.5 line-clamp-2 text-[12px] italic text-fg-tertiary">{l.notes}</div>}
+            {resumoDoChecklist(l.discovery).length > 0 && (
+              <button
+                onClick={onChecklist}
+                className="mt-2 block w-full rounded-[12px] border border-success/30 bg-success/[.06] px-3 py-2 text-left text-[12px] leading-relaxed text-fg-secondary hover:border-success/60"
+              >
+                <span className="font-extrabold text-success">Contexto do cliente</span>
+                {l.discoveryBy && (
+                  <span className="text-fg-faded">
+                    {' '}
+                    · {l.discoveryBy}
+                    {l.discoveryAt && ` em ${formatDateBR(l.discoveryAt)}`}
+                  </span>
+                )}
+                {resumoDoChecklist(l.discovery).map((linha) => (
+                  <span key={linha} className="block">
+                    {linha}
+                  </span>
+                ))}
+              </button>
+            )}
+            {l.notes && (
+              <div className="mt-1.5 line-clamp-3 whitespace-pre-line text-[12px] italic text-fg-tertiary">{l.notes}</div>
+            )}
           </div>
         </div>
 
@@ -169,6 +199,14 @@ export function LinhaDoLead({
               className="grid h-8 w-8 place-items-center rounded-full border border-border-strong text-fg-tertiary hover:border-accent hover:text-accent"
             >
               <StickyNote size={14} />
+            </button>
+            <button
+              onClick={onChecklist}
+              title="Checklist de descoberta"
+              aria-label="Checklist de descoberta"
+              className="grid h-8 w-8 place-items-center rounded-full border border-border-strong text-fg-tertiary hover:border-accent hover:text-accent"
+            >
+              <ClipboardList size={14} />
             </button>
           </div>
 

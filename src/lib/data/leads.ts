@@ -48,6 +48,9 @@ function toLead(r: Row): Lead {
     longitude: r.longitude === null ? null : Number(r.longitude),
     screenshotUrl: r.screenshot_url,
     quoteId: r.quote_id,
+    discovery: (r.discovery as Lead['discovery']) ?? {},
+    discoveryBy: r.discovery_by,
+    discoveryAt: r.discovery_at,
   };
 }
 
@@ -100,11 +103,7 @@ export type PedidoDeBusca = {
 /** Pedidos de busca: pendentes e rodando, mais os 30 últimos terminados. */
 export async function listSearchRequests(): Promise<PedidoDeBusca[]> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from('lead_search_requests')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(200);
+  const { data } = await supabase.from('lead_search_requests').select('*').order('created_at', { ascending: false }).limit(200);
   const todos = (data ?? []).map((r) => ({
     id: r.id,
     niche: r.niche,
@@ -140,4 +139,32 @@ export async function leadsQueJaSaoClientes(leads: Lead[]): Promise<string[]> {
         (!!l.email && emails.has(l.email.trim().toLowerCase()))
     )
     .map((l) => l.id);
+}
+
+export type KitDoVendedor = {
+  id: string;
+  token: string;
+  sellerName: string;
+  sellerWhatsapp: string | null;
+  active: boolean;
+  createdAt: string;
+  leadIds: string[];
+};
+
+/** Links de vendedor, os mais novos primeiro, com os leads de cada um. */
+export async function listKits(): Promise<KitDoVendedor[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('lead_seller_kits')
+    .select('id, token, seller_name, seller_whatsapp, active, created_at, lead_kit_items(lead_id, position)')
+    .order('created_at', { ascending: false });
+  return (data ?? []).map((k) => ({
+    id: k.id,
+    token: k.token,
+    sellerName: k.seller_name,
+    sellerWhatsapp: k.seller_whatsapp,
+    active: k.active,
+    createdAt: k.created_at,
+    leadIds: [...(k.lead_kit_items ?? [])].sort((a, b) => a.position - b.position).map((i) => i.lead_id),
+  }));
 }

@@ -81,6 +81,10 @@ export type Lead = {
   longitude: number | null;
   screenshotUrl: string | null;
   quoteId: string | null;
+  /** Checklist de descoberta (src/lib/checklist-descoberta.ts). */
+  discovery: Record<string, string | string[]>;
+  discoveryBy: string | null;
+  discoveryAt: string | null;
 };
 
 /* ------------------------------------------------------------ CSV */

@@ -13,7 +13,7 @@ import { getCurrentUser } from '@/lib/auth';
 // que já são públicos no Google). Fora do índice dos buscadores.
 
 export const metadata: Metadata = {
-  title: 'Diagnóstico de presença digital · Prog Soluções',
+  title: { absolute: 'Diagnóstico de presença digital · Prog Soluções' },
   robots: { index: false, follow: false },
 };
 
@@ -32,6 +32,8 @@ type Diagnostico = {
   suggested_services: string[];
   concorrentes: { total: number; com_site: number; nota_media: number | null };
   screenshot_url: string | null;
+  /** Aberto pelo link do vendedor (?k=): o botão vai para o WhatsApp dele. */
+  vendedor: { nome: string; whatsapp: string | null } | null;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -72,7 +74,7 @@ const T = {
     cta: 'Conversar no WhatsApp',
     portfolio: 'Ver trabalhos',
     rodape: 'Análise feita com informações públicas do Google Maps e do site da empresa.',
-    msg: (empresa: string) => `Oi, Arthur! Vi o diagnóstico da ${empresa} e quero conversar.`,
+    msg: (empresa: string, quem: string) => `Oi, ${quem}! Vi o diagnóstico de ${empresa} e quero conversar.`,
     portfolioUrl: 'https://portfolio-arthur-prog.vercel.app/pt',
   },
   en: {
@@ -105,7 +107,7 @@ const T = {
     cta: 'Chat on WhatsApp',
     portfolio: 'See my work',
     rodape: "Review based on public information from Google Maps and the company's website.",
-    msg: (empresa: string) => `Hi Arthur! I saw the review for ${empresa} and I'd like to talk.`,
+    msg: (empresa: string, quem: string) => `Hi ${quem}! I saw the review for ${empresa} and I'd like to talk.`,
     portfolioUrl: 'https://portfolio-arthur-prog.vercel.app/en',
   },
 };
@@ -147,19 +149,20 @@ export default async function DiagnosticoPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ previa?: string }>;
+  searchParams: Promise<{ previa?: string; k?: string }>;
 }) {
   const { token } = await params;
   if (!UUID.test(token)) notFound();
 
   const supabase = await createClient();
-  const { data } = await supabase.rpc('lead_diagnostico', { p_token: token });
+  const { previa, k } = await searchParams;
+  const kit = k && UUID.test(k) ? k : undefined;
+  const { data } = await supabase.rpc('lead_diagnostico', { p_token: token, p_kit: kit });
   if (!data) notFound();
   const d = data as unknown as Diagnostico;
 
   // Conta a abertura (lead quente no painel), menos quando é o próprio dono
   // (link do painel com ?previa=1 ou sessão de admin) ou um robô de prévia.
-  const { previa } = await searchParams;
   const ua = (await headers()).get('user-agent') ?? '';
   if (!previa && ua && !ROBO.test(ua)) {
     const usuario = await getCurrentUser();
@@ -276,7 +279,10 @@ export default async function DiagnosticoPage({
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <a
-          href={linkWhatsApp(WHATSAPP_NUMBER, t.msg(d.name))}
+          href={linkWhatsApp(
+            d.vendedor?.whatsapp || WHATSAPP_NUMBER,
+            t.msg(d.name, d.vendedor?.whatsapp ? d.vendedor.nome.split(' ')[0] : 'Arthur')
+          )}
           target="_blank"
           rel="noopener noreferrer"
           className="flex flex-1 items-center justify-center gap-2 rounded-control bg-accent px-6 py-3.5 text-[15px] font-extrabold text-page transition-all hover:-translate-y-0.5"
