@@ -185,10 +185,11 @@ export function Simulador({
   const guia = GUIA_DO_PRODUTO[e.produto];
 
   // O que entra no pacote, com o guia de cada item (mesmos serviços nos dois países).
-  const itens: { nome: string; guia: GuiaDoNivel }[] = [
-    { nome: nomesBR[e.produto][e.nivel], guia: guia.niveis[e.nivel] },
-    ...(combo ? [{ nome: nomesBR.erp[e.nivelGestao], guia: GUIA_DO_PRODUTO.erp.niveis[e.nivelGestao] }] : []),
-    ...(e.marca ? [{ nome: nomesBR.marca[e.marca - 1], guia: GUIA_DA_MARCA[e.marca - 1] }] : []),
+  const EMOJI: Record<Produto, string> = { site: '🌐', loja: '🛒', erp: '🗂️' };
+  const itens: { nome: string; guia: GuiaDoNivel; emoji: string }[] = [
+    { nome: nomesBR[e.produto][e.nivel], guia: guia.niveis[e.nivel], emoji: EMOJI[e.produto] },
+    ...(combo ? [{ nome: nomesBR.erp[e.nivelGestao], guia: GUIA_DO_PRODUTO.erp.niveis[e.nivelGestao], emoji: EMOJI.erp }] : []),
+    ...(e.marca ? [{ nome: nomesBR.marca[e.marca - 1], guia: GUIA_DA_MARCA[e.marca - 1], emoji: '🎨' }] : []),
   ];
   // Prazo pelo catálogo: o combo de mesmo nível tem prazo próprio (menor que a soma).
   const itemCombo =
@@ -222,22 +223,59 @@ export function Simulador({
   const m = (v: number) => formatMoeda(v, moeda);
   const precoDoNivel = (p: Produto, i: number) => `${p === 'erp' && i === 2 ? 'a partir de ' : ''}${m(t[p][i][0])}`;
 
-  const resumo =
-    `${s.linhas.map((l) => l.nome).join(' + ')}\n` +
-    `Total${s.aPartirDe ? ' (a partir de)' : ''}: ${m(s.total)}${s.desconto ? ` (já com ${m(s.desconto)} de desconto do combo)` : ''}\n` +
-    `Depois: ${m(s.mensal)}/mês (hospedagem, segurança, backups e suporte)` +
-    (s.mensalSeparadas
-      ? `, em vez de ${m(s.mensalSeparadas)}: economia de ${m(s.mensalSeparadas - s.mensal)}/mês por contratar os 2 juntos`
-      : '') +
-    (prazo > 0
-      ? moeda === 'BRL'
-        ? `\nPrazo total: até ${prazo} dias úteis, contados a partir do sinal pago e do envio do material (textos, fotos e acessos).`
-        : `\nTimeline: up to ${prazo} business days, starting once the deposit and all materials (texts, photos and access) are in.`
-      : '') +
-    (moeda === 'BRL'
-      ? `\nPagamento: 50% no fechamento e 50% na entrega, ou 2x de ${m(s.total / 2)} sem juros no cartão, ou ${n}x de ${m(parcela(s.total, n))}.` +
-        itens.map((i) => `\n\n${i.nome} inclui:\n${i.guia.inclui.map((x) => `• ${x}`).join('\n')}`).join('')
-      : `\nPayment: 50% to start (${m(s.total / 2)}) and 50% on delivery.`);
+  // Texto para colar no WhatsApp: seções com emoji, *negrito* e ~riscado~ do próprio WhatsApp.
+  const br = moeda === 'BRL';
+  const aPartir = s.aPartirDe ? (br ? ' (a partir de)' : ' (starting at)') : '';
+  const resumo = [
+    br ? '✨ *Seu orçamento*' : '✨ *Your quote*',
+    '',
+    br ? '📦 *O que entra no pacote*' : '📦 *Package*',
+    ...s.linhas.map((l) => `• ${l.nome}: ${m(l.valor)}`),
+    ...(s.desconto ? [`🎁 ${br ? 'Desconto do combo' : 'Bundle discount'}: −${m(s.desconto)}`] : []),
+    '',
+    `💰 *Total: ${m(s.total)}*${aPartir}`,
+    '',
+    br ? `🔁 *Mensalidade depois da entrega: ${m(s.mensal)}/mês*` : `🔁 *Then: ${m(s.mensal)}/month*`,
+    br
+      ? 'Hospedagem, segurança, backups e suporte. Domínio grátis no 1º ano.'
+      : 'Hosting, security, backups and support.',
+    ...(s.mensalSeparadas
+      ? [
+          br
+            ? `✅ Economia de *${m(s.mensalSeparadas - s.mensal)}/mês* por contratar os 2 juntos (separados seriam ~${m(s.mensalSeparadas)}/mês~)`
+            : `✅ You save *${m(s.mensalSeparadas - s.mensal)}/month* by bundling (separately: ~${m(s.mensalSeparadas)}/month~)`,
+        ]
+      : []),
+    ...(prazo > 0
+      ? [
+          '',
+          br ? `⏱️ *Prazo total: até ${prazo} dias úteis*` : `⏱️ *Timeline: up to ${prazo} business days*`,
+          br
+            ? 'Conta a partir do sinal pago e do envio do material (textos, fotos e acessos).'
+            : 'Starting once the deposit and all materials (texts, photos and access) are in.',
+          ...(e.marca ? [br ? '🎨 A identidade visual é feita ao mesmo tempo.' : '🎨 The brand identity is designed at the same time.'] : []),
+        ]
+      : []),
+    '',
+    br ? '💳 *Formas de pagamento*' : '💳 *Payment*',
+    ...(br
+      ? [
+          `• Pix ou boleto: ${m(s.total / 2)} no fechamento + ${m(s.total / 2)} na entrega`,
+          `• Cartão 2x sem juros: 2x de ${m(s.total / 2)}`,
+          `• Cartão em ${n}x: ${n}x de ${m(parcela(s.total, n))} (com a taxa da operadora)`,
+        ]
+      : [`• 50% to start: ${m(s.total / 2)}`, `• 50% on delivery: ${m(s.total / 2)} (only after your approval)`]),
+    // A lista do que cada item inclui só existe em português.
+    ...(br
+      ? [
+          '',
+          '📋 *O que cada item inclui*',
+          ...itens.flatMap((i) => ['', `${i.emoji} *${i.nome}*`, ...i.guia.inclui.map((x) => `• ${x}`)]),
+        ]
+      : []),
+    '',
+    br ? 'Qualquer dúvida, é só me chamar! 😊' : 'Any questions, just let me know! 😊',
+  ].join('\n');
 
   async function copiar() {
     try {
