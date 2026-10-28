@@ -62,6 +62,8 @@ export async function aprenderComConversas(db: DbDoAtendente, cfg: ConfigDoAtend
     .from('ia_conversations')
     .select('id, last_message_at, leads(status, niche, category)')
     .is('learned_at', null)
+    // Teste (lead de teste ou simulador) não vira lição.
+    .eq('is_test', false)
     .order('last_message_at', { ascending: true })
     .limit(20);
   const conversa = (candidatas ?? []).find(

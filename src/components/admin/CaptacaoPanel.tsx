@@ -276,6 +276,8 @@ export function CaptacaoPanel({
     if (aba !== 'lista' && aba !== 'foco') mudarAba('lista');
   };
 
+  // Leads de teste (ex.: o do Felipe para a Lia) não entram no relatório nem no placar.
+  const leadsReais = leads.filter((l) => !l.teste);
   return (
     // color-scheme escuro: sem ele o WebKit desenha select e calendário em branco.
     // tema-apple: cores de sistema, profundidade e aurora (globals.css).
@@ -561,7 +563,7 @@ export function CaptacaoPanel({
         />
       )}
       {aba === 'mapa' && <Mapa leads={filtrados} estimativa={estimativa} agora={agora} />}
-      {aba === 'relatorio' && <Relatorio leads={leads} estimativa={estimativa} cotacoes={cotacoes} agora={agoraDaMeta} />}
+      {aba === 'relatorio' && <Relatorio leads={leadsReais} estimativa={estimativa} cotacoes={cotacoes} agora={agoraDaMeta} />}
       {aba === 'buscas' && <Buscas pedidos={pedidos} />}
       {aba === 'atendimento' && (
         <Atendimento

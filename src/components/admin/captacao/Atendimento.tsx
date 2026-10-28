@@ -6,7 +6,7 @@
 // visível; o placar usa os leads do painel (relidos a cada minuto).
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { Bell, Bot, CheckCircle2, CircleAlert, FlaskConical, GraduationCap, Hand, MessageCircle, Send, Settings, Sparkles, Trophy, UserRound } from 'lucide-react';
+import { Bell, Bot, CalendarDays, CheckCircle2, CircleAlert, FlaskConical, GraduationCap, Hand, MessageCircle, Send, Settings, Sparkles, Trophy, UserRound } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { LEAD_STATUS_LABEL, type Lead } from '@/lib/captacao';
 import { TrilhaDaVenda, BarraDaEtapa } from './TrilhaDaVenda';
@@ -34,6 +34,7 @@ import {
   orientarLiaAction,
 } from '@/app/actions/atendente';
 import { inputClass, semCentavos } from './comum';
+import { ResultadosDaLiaPainel, TestarALia } from './LiaResultadosETeste';
 
 const RELER_A_CADA = 10_000;
 
@@ -114,7 +115,8 @@ export function Atendimento({
       v.leadIds.push(...k.leadIds);
       porChave.set(chave, v);
     }
-    return placar([...porChave.values()], leads, valorDoLead);
+    // Lead de teste não conta no placar.
+    return placar([...porChave.values()], leads.filter((l) => !l.teste), valorDoLead);
   }, [kits, leads, valorDoLead]);
 
   const conversas = (painel?.conversas ?? []).filter((c) =>
@@ -126,6 +128,8 @@ export function Atendimento({
   return (
     <div className="space-y-4">
       <Placar linhas={linhas} lidoEm={lidoEm} />
+
+      <ResultadosDaLiaPainel cotacaoDolar={cotacaoDolar} aoAbrir={setAberta} />
 
       {painel && <Situacao painel={painel} cotacaoDolar={cotacaoDolar} />}
 
@@ -199,6 +203,8 @@ export function Atendimento({
           </div>
         )}
       </section>
+
+      <TestarALia leads={leads} />
 
       {painel && <Aprendizados licoes={painel.licoes} aoMudar={reler} />}
 
@@ -326,6 +332,7 @@ function Situacao({ painel, cotacaoDolar }: { painel: PainelDoAtendente; cotacao
       <Cartao rotulo="Mensagens no mês (grátis até 1.000)" valor={painel.mensagensDoMes.toLocaleString('pt-BR')} ok={painel.mensagensDoMes < 900} />
       <Cartao rotulo="E-mails de 1º contato hoje" valor={`${painel.emailsHoje} de ${c.dailyEmailCap}`} ok />
       <AvisosNoWhatsapp avisos={painel.avisos} />
+      <AgendaDoGoogle estado={painel.agenda} />
       {faltam.length > 0 && (
         <div className="flex items-start gap-2 rounded-[14px] border border-error/40 bg-error/[.06] px-3.5 py-2.5 text-[12.5px] sm:col-span-4">
           <CircleAlert size={15} className="mt-0.5 shrink-0 text-error" />
@@ -335,6 +342,34 @@ function Situacao({ painel, cotacaoDolar }: { painel: PainelDoAtendente; cotacao
         </div>
       )}
     </section>
+  );
+}
+
+function AgendaDoGoogle({ estado }: { estado: PainelDoAtendente['agenda'] }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[14px] border border-border bg-card px-3.5 py-2.5 text-[12.5px] sm:col-span-4">
+      <CalendarDays size={13} className="text-accent" />
+      <b>Google Agenda</b>
+      {estado === 'conectada' ? (
+        <span className="text-fg-tertiary">
+          · conectada: a Lia vê seus horários livres e marca a reunião com link do Meet.{' '}
+          <a href="/api/google/conectar" className="font-bold text-accent">
+            Reconectar
+          </a>
+        </span>
+      ) : estado === 'desconectada' ? (
+        <>
+          <span className="text-fg-tertiary">· não conectada: a Lia só evita as reuniões que ela mesma marcou.</span>
+          <a href="/api/google/conectar" className="rounded-full bg-accent px-3 py-1 text-[12px] font-extrabold text-page">
+            Conectar minha agenda
+          </a>
+        </>
+      ) : (
+        <span className="text-fg-tertiary">
+          · falta configurar GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET na Vercel (passo a passo em docs/ATENDENTE-IA.md).
+        </span>
+      )}
+    </div>
   );
 }
 

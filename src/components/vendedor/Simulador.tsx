@@ -7,7 +7,7 @@
 // vendedor saber qual pacote indicar sem decorar a página de planos.
 
 import { useMemo, useState, type ReactNode } from 'react';
-import { Copy, Check, Lightbulb, CircleCheck, CircleSlash, Info, Clock } from 'lucide-react';
+import { Copy, Check, Lightbulb, CircleCheck, CircleSlash, Info, Clock, FileDown } from 'lucide-react';
 import { tabelaBRL, formatMoeda, type Moeda } from '@/lib/precos-captacao';
 import { simular, parcela, tabelaDaMoeda, NOMES, type Escolha, type Produto } from '@/lib/simulador';
 import {
@@ -166,10 +166,16 @@ export function Simulador({
   catalogo,
   inicial,
   moedaInicial = 'BRL',
+  token,
+  leadId,
 }: {
   catalogo: ItemDoCatalogo[];
   inicial?: Partial<Escolha>;
   moedaInicial?: Moeda;
+  /** Link do vendedor: habilita a pré-proposta em PDF. */
+  token?: string;
+  /** Lead aberto quando o simulador veio da ficha (o nome dele vai no PDF). */
+  leadId?: string;
 }) {
   const tabBRL = useMemo(() => tabelaBRL(new Map(catalogo.map((c) => [c.nome, c.preco]))), [catalogo]);
   const porNome = useMemo(() => new Map(catalogo.map((c) => [c.nome, c])), [catalogo]);
@@ -512,6 +518,21 @@ export function Simulador({
             </button>
             {moeda === 'BRL' && (
               <div className="mt-1.5 text-center text-[11.5px] text-fg-faded">O resumo copiado já leva o que cada item inclui.</div>
+            )}
+            {token && (
+              <a
+                href={`/api/vendedor/${token}/pre-proposta?e=${encodeURIComponent(JSON.stringify(e))}&moeda=${moeda}${leadId ? `&lead=${leadId}` : ''}`}
+                target="_blank"
+                rel="noopener"
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-control border border-accent/60 px-4 py-2.5 text-[13.5px] font-extrabold text-accent"
+              >
+                <FileDown size={15} /> Baixar pré-proposta (PDF)
+              </a>
+            )}
+            {token && (
+              <div className="mt-1.5 text-center text-[11.5px] text-fg-faded">
+                Para quem quer &quot;algo por escrito&quot;: mande o PDF no WhatsApp. O contrato segue com o Arthur.
+              </div>
             )}
           </div>
 

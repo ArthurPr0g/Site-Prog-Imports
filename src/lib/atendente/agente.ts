@@ -19,9 +19,21 @@ import { situacaoDoSite, LEAD_STATUS_LABEL, type LeadStatus } from '@/lib/captac
 import { limparRespostas, CHECKLIST, type RespostasDoChecklist } from '@/lib/checklist-descoberta';
 import { SITE_URL } from '@/lib/seo';
 import type { Json } from '@/lib/supabase/database.types';
+import {
+  agendaConectada,
+  criarEventoNaAgenda,
+  horarioPorExtenso,
+  horariosLivres,
+  ocupadosNaAgenda,
+  DURACAO_DA_REUNIAO_MIN,
+  type Intervalo,
+} from '@/lib/google-agenda';
 
 const RODADAS = 6;
 const HISTORICO = 40;
+
+/** Conversa do simulador do painel: não manda WhatsApp, não mexe em lead nem avisa ninguém. */
+export const SIMULADOR = 'simulador:';
 
 // Proteção contra abuso (pedido do dono em 28/10/2026). Cada resposta custa uma
 // chamada ao Claude: passou deste número de mensagens da IA numa conversa em
@@ -74,7 +86,13 @@ export async function chamarArthur(
 ): Promise<void> {
   await db.from('ia_conversations').update({ needs_human: true, needs_human_reason: motivo }).eq('id', conversaId);
   await registrar(db, conversaId, 'sistema', `Arthur chamado: ${motivo}`);
-  const { data: c } = await db.from('ia_conversations').select('lead_id, contact_name, leads(name)').eq('id', conversaId).maybeSingle();
+  const { data: c } = await db
+    .from('ia_conversations')
+    .select('lead_id, contact_id, contact_name, leads(name)')
+    .eq('id', conversaId)
+    .maybeSingle();
+  // Simulador do painel: fica só no histórico, sem aviso no WhatsApp do Arthur.
+  if (c?.contact_id.startsWith(SIMULADOR)) return;
   const quem = c?.leads?.name ?? c?.contact_name;
   await avisarArthur(db, cfg, { titulo, texto: quem ? `${quem}: ${motivo}` : motivo, conversaId, leadId: c?.lead_id ?? null });
 }
@@ -199,13 +217,35 @@ const tools: Anthropic.Beta.BetaTool[] = [
   {
     name: 'chamar_arthur',
     description:
-      'Avisa o Arthur (dono) no WhatsApp dele e no painel. Use para negócio fechado, reunião combinada, pergunta fora do guia, pedido fora do catálogo, cliente irritado ou que quer falar com uma pessoa.',
+      'Avisa o Arthur (dono) no WhatsApp dele e no painel. Use para negócio fechado, pergunta fora do guia, pedido fora do catálogo, cliente irritado ou que quer falar com uma pessoa. Reunião não: use marcar_reuniao (o Arthur é avisado sozinho).',
     input_schema: {
       type: 'object',
       properties: {
         motivo: { type: 'string', description: 'O que o Arthur precisa saber ou fazer, em uma ou duas frases.' },
       },
       required: ['motivo'],
+      additionalProperties: false,
+    },
+    strict: true,
+  },
+  {
+    name: 'horarios_livres',
+    description:
+      'Próximos horários livres do Arthur para uma reunião de 30 min por vídeo (dias úteis, 9h às 18h, já sem os compromissos da agenda dele). Use quando o cliente quiser conversar por vídeo/ligação ou precisar de uma reunião para decidir. Ofereça 2 ou 3 opções em dias diferentes.',
+    input_schema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'marcar_reuniao',
+    description:
+      'Marca a reunião no horário que o cliente escolheu (um dos devolvidos por horarios_livres): cria o evento na agenda do Arthur com link do Google Meet, manda o convite ao e-mail do cliente (se ele passar) e move o lead para Reunião. O Arthur é avisado sozinho.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        inicio: { type: 'string', description: 'Início exato, no formato devolvido por horarios_livres (ex.: 2026-10-30T13:00:00.000Z).' },
+        email: { type: 'string', description: 'E-mail do cliente para o convite, ou "" se ele não quiser passar.' },
+        assunto: { type: 'string', description: 'Assunto em poucas palavras (ex.: "site novo da academia").' },
+      },
+      required: ['inicio', 'email', 'assunto'],
       additionalProperties: false,
     },
     strict: true,
@@ -239,12 +279,55 @@ type Estado = {
   /** O que o lead tem (para escolher os cases do portfólio). */
   perfil: Parameters<typeof casesDoLead>[0];
   eua: boolean;
+  /** Simulador do painel: as ferramentas que gravam só fingem. */
+  simulado: boolean;
 };
 
 const ORDEM: LeadStatus[] = ['novo', 'contatado', 'respondeu', 'reuniao', 'proposta', 'fechado'];
 
+/** No simulador, o que grava (lead, cobrança, desconto, reunião) só devolve a resposta que a IA veria. */
+function simular(e: Estado, nome: string, entrada: Record<string, unknown>): string | null {
+  switch (nome) {
+    case 'registrar_descoberta':
+      return 'Registrado.';
+    case 'mudar_etapa': {
+      const etapa = String(entrada.etapa) as LeadStatus;
+      e.leadStatus = etapa;
+      return `Etapa: ${LEAD_STATUS_LABEL[etapa] ?? etapa}.`;
+    }
+    case 'gerar_cobranca_do_sinal':
+      return 'Simulação: no teste a cobrança não é gerada. Diga ao cliente que o link do sinal (Pix, boleto ou cartão) chega em seguida.';
+    case 'pedir_desconto_extra': {
+      e.descontoAprovado = Math.min(Math.max(Number(entrada.percentual) || 0, 1), e.cfg.extraDiscountMax);
+      return `Simulação: o superior aprovou ${e.descontoAprovado}% na hora (no real, espera alguns minutos). calcular_preco já aplica.`;
+    }
+    case 'marcar_reuniao':
+      return `Simulação: reunião marcada para ${horarioPorExtenso(new Date(String(entrada.inicio)))} (no teste não vai para a agenda). Link do Meet de exemplo: https://meet.google.com/simulacao`;
+    default:
+      return null;
+  }
+}
+
+/** Horários já ocupados: agenda do Arthur (se conectada) e reuniões que a Lia marcou. */
+async function ocupados(db: DbDoAtendente, de: Date, ate: Date): Promise<{ lista: Intervalo[]; agenda: boolean }> {
+  const [daAgenda, { data: marcadas }] = await Promise.all([
+    ocupadosNaAgenda(db, de, ate),
+    db.from('reunioes').select('inicio, fim').eq('status', 'marcada').gte('fim', de.toISOString()).lte('inicio', ate.toISOString()),
+  ]);
+  const lista = [
+    ...(daAgenda ?? []),
+    ...(marcadas ?? []).map((r) => ({ inicio: new Date(r.inicio).getTime(), fim: new Date(r.fim).getTime() })),
+  ];
+  return { lista, agenda: daAgenda !== null };
+}
+
 async function executar(e: Estado, nome: string, entrada: Record<string, unknown>): Promise<string> {
-  const { db, cfg, conversaId, leadId } = e;
+  const { db, cfg, conversaId } = e;
+  const leadId = e.simulado ? null : e.leadId;
+  if (e.simulado) {
+    const fingido = simular(e, nome, entrada);
+    if (fingido) return fingido;
+  }
   switch (nome) {
     case 'calcular_preco': {
       const p = calcularProposta(
@@ -429,6 +512,64 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
         ),
       ].join('\n');
     }
+    case 'horarios_livres': {
+      const agora = new Date();
+      const { lista, agenda } = await ocupados(db, agora, new Date(agora.getTime() + 15 * 24 * 3600_000));
+      const livres = horariosLivres(lista, agora.getTime());
+      if (!livres.length) return 'Sem horário livre nas próximas 2 semanas: use chamar_arthur para ele combinar com o cliente.';
+      return [
+        `Horários livres (reunião de ${DURACAO_DA_REUNIAO_MIN} min, horário de Brasília). Ofereça 2 ou 3, em dias diferentes; para marcar, use o valor entre parênteses:`,
+        ...livres.map((d) => `• ${horarioPorExtenso(d)} (${d.toISOString()})`),
+        ...(agenda ? [] : ['(A agenda do Arthur não está conectada: esses horários só evitam as reuniões já marcadas por aqui.)']),
+      ].join('\n');
+    }
+    case 'marcar_reuniao': {
+      const inicio = new Date(String(entrada.inicio ?? ''));
+      if (!Number.isFinite(inicio.getTime()) || inicio.getTime() < Date.now()) return 'Horário inválido: use um dos que horarios_livres devolveu.';
+      const fim = new Date(inicio.getTime() + DURACAO_DA_REUNIAO_MIN * 60_000);
+      const { lista } = await ocupados(db, new Date(inicio.getTime() - 3600_000), new Date(fim.getTime() + 3600_000));
+      if (lista.some((o) => o.inicio < fim.getTime() && o.fim > inicio.getTime()))
+        return 'Esse horário acabou de ser ocupado: chame horarios_livres de novo e ofereça outras opções.';
+      const email = String(entrada.email ?? '').trim();
+      const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
+      const { data: l } = leadId ? await db.from('leads').select('name').eq('id', leadId).maybeSingle() : { data: null };
+      const { data: conv } = await db.from('ia_conversations').select('contact_id, contact_name').eq('id', conversaId).maybeSingle();
+      const quem = l?.name ?? conv?.contact_name ?? `+${conv?.contact_id ?? ''}`;
+      const assunto = String(entrada.assunto ?? '').trim().slice(0, 80) || 'projeto';
+      const titulo = `Prog Soluções × ${quem}: ${assunto}`;
+      const ev = (await agendaConectada(db))
+        ? await criarEventoNaAgenda(db, {
+            titulo,
+            descricao: `Marcada pela ${cfg.personaName} no WhatsApp.\nConversa: ${SITE_URL}/admin/captacao?aba=atendimento&conversa=${conversaId}`,
+            inicio,
+            fim,
+            emailCliente: emailValido,
+          })
+        : null;
+      await db.from('reunioes').insert({
+        lead_id: leadId,
+        conversation_id: conversaId,
+        titulo,
+        inicio: inicio.toISOString(),
+        fim: fim.toISOString(),
+        email_cliente: emailValido,
+        google_event_id: ev?.ok ? ev.id : null,
+        meet_link: ev?.ok ? ev.meet : null,
+      });
+      if (leadId && (!e.leadStatus || ORDEM.indexOf(e.leadStatus) < ORDEM.indexOf('reuniao'))) {
+        await executar(e, 'mudar_etapa', { etapa: 'reuniao', motivo: `Reunião marcada para ${horarioPorExtenso(inicio)}`, responsavel: '' });
+      }
+      const quando = horarioPorExtenso(inicio);
+      await avisarArthur(db, cfg, {
+        titulo: 'Reunião marcada pela Lia',
+        texto: `${quem}, ${quando} (${assunto}).${ev?.ok && ev.meet ? ` Meet: ${ev.meet}` : ev && !ev.ok ? ` Não entrou na sua agenda (${ev.erro}): crie você.` : ' Agenda não conectada: crie o evento você.'}`,
+        conversaId,
+        leadId,
+      });
+      if (ev?.ok)
+        return `Reunião marcada: ${quando}.${ev.meet ? ` Link do Google Meet: ${ev.meet}` : ''}${emailValido ? ` O convite foi para ${emailValido}.` : ''} Passe o horário e o link ao cliente.`;
+      return `Reunião registrada para ${quando}. O Arthur foi avisado e manda o link da chamada antes do horário. Confirme o horário com o cliente.`;
+    }
     case 'chamar_arthur': {
       const motivo = String(entrada.motivo ?? '').slice(0, 500);
       await chamarArthur(db, cfg, conversaId, motivo, 'A conversa precisa de você');
@@ -459,7 +600,8 @@ export async function responderConversa(conversaId: string, avisoInterno?: strin
   const { data: conversa } = await db.from('ia_conversations').select('*').eq('id', conversaId).maybeSingle();
   if (!conversa) return 'conversa não encontrada';
   if (conversa.mode !== 'ia') return 'Arthur assumiu a conversa';
-  if (!conversa.last_inbound_at || Date.now() - new Date(conversa.last_inbound_at).getTime() > JANELA_MS - 5 * 60_000)
+  const simulado = conversa.contact_id.startsWith(SIMULADOR);
+  if (!simulado && (!conversa.last_inbound_at || Date.now() - new Date(conversa.last_inbound_at).getTime() > JANELA_MS - 5 * 60_000))
     return 'fora da janela de 24 h';
 
   if ((await gastoDoMes(db)) >= cfg.monthlyBudgetUsd) {
@@ -532,6 +674,7 @@ export async function responderConversa(conversaId: string, avisoInterno?: strin
       suggested_services: lead?.suggested_services ?? [],
     },
     eua: moeda === 'USD',
+    simulado,
   };
 
   // "Fora do ar" da captação pode estar velho ou ter sido falha passageira:
@@ -753,8 +896,8 @@ export async function responderConversa(conversaId: string, avisoInterno?: strin
   for (const [i, parte] of partes.entries()) {
     // Pausa de "quem está digitando" entre uma mensagem e outra (1,2 s a 4 s,
     // pelo tamanho), para não chegarem todas no mesmo segundo.
-    if (i > 0) await new Promise((r) => setTimeout(r, Math.min(4000, 1200 + parte.length * 30)));
-    const env = await enviarTexto(conversa.contact_id, parte);
+    if (i > 0 && !simulado) await new Promise((r) => setTimeout(r, Math.min(4000, 1200 + parte.length * 30)));
+    const env = simulado ? ({ ok: true, id: `simulado-${crypto.randomUUID()}` } as const) : await enviarTexto(conversa.contact_id, parte);
     await registrar(db, conversaId, 'ia', parte, env.ok ? { external_id: env.id, status: 'sent' } : { status: 'failed', error: env.erro });
     if (!env.ok) {
       await chamarArthur(db, cfg, conversaId, `Falha ao enviar pelo WhatsApp: ${env.erro}`, 'Mensagem não enviada');

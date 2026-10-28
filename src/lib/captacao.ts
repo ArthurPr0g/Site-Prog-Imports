@@ -81,6 +81,8 @@ export type Lead = {
   diagViews: number;
   diagFirstViewAt: string | null;
   diagLastViewAt: string | null;
+  /** Lead de teste (origem 'teste…'): fora do placar, do relatório e do custo por resultado. */
+  teste: boolean;
   latitude: number | null;
   longitude: number | null;
   screenshotUrl: string | null;

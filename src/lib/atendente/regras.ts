@@ -380,6 +380,8 @@ export type PainelDoAtendente = {
   mensagensDoMes: number;
   emailsHoje: number;
   integracoes: { whatsapp: boolean; email: boolean; ia: boolean; banco: boolean; relogio: boolean };
+  /** Google Agenda do Arthur: sem as chaves na Vercel, conectada ou ainda não conectada. */
+  agenda: 'sem_chaves' | 'desconectada' | 'conectada';
   /** Avisos ao Arthur no WhatsApp dele. */
   avisos: {
     whatsappDoDono: string | null;

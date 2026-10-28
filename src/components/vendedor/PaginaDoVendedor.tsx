@@ -155,6 +155,7 @@ export function PaginaDoVendedor({
     chave: number;
     escolha: Partial<Escolha>;
     moeda: 'BRL' | 'USD';
+    leadId?: string;
   } | null>(null);
   const vendedor = primeiroNome(kit.seller_name);
   const leadAberto = kit.leads.find((l) => l.id === aberto?.id) ?? null;
@@ -474,6 +475,8 @@ export function PaginaDoVendedor({
           catalogo={kit.catalog}
           inicial={presetSimulador?.escolha}
           moedaInicial={presetSimulador?.moeda ?? 'BRL'}
+          token={token}
+          leadId={presetSimulador?.leadId}
         />
       )}
 
@@ -541,7 +544,7 @@ export function PaginaDoVendedor({
           whatsArthur={whatsArthur}
           onFechar={() => setAberto(null)}
           onSimular={() => {
-            setPresetSimulador({ chave: Date.now(), escolha: escolhaDoLead(leadAberto), moeda: leadAberto.currency });
+            setPresetSimulador({ chave: Date.now(), escolha: escolhaDoLead(leadAberto), moeda: leadAberto.currency, leadId: leadAberto.id });
             setAberto(null);
             setAba('simulador');
           }}

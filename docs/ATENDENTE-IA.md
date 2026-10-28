@@ -59,8 +59,31 @@ Variáveis novas (Production): `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`,
 1. Captação > Vendedores > marcar **Link da atendente de IA** > gerar (só leads com e-mail).
 2. Captação > Atendimento > Configuração: seu e-mail (avisos), teto, desconto máximo (10%),
    tempo do "superior" (6 min), e-mails por dia (15) > marcar **Atendente ligada** > Salvar.
-3. Testar: mandar do seu WhatsApp para 62 99636-8281 o texto
-   "Oi, Lia! Vi o diagnóstico de <empresa da lista da IA> e quero conversar."
+3. Testar: use **Testar a Lia** no próprio painel (simulador: nada sai pelo WhatsApp).
+   Do seu WhatsApp (62 98213-3188) não dá mais para testar como cliente: desde 28/10/2026
+   esse número é o do dono e só abre a janela dos avisos.
+
+### 6. Avisos no seu WhatsApp (28/10/2026)
+- O número da Lia avisa o 62 98213-3188 (`ia_config.owner_whatsapp`) quando um cliente
+  pede você, a venda fecha, chega pedido de desconto, a Lia marca reunião ou o vendedor
+  marca "Reunião marcada"/"Quer proposta".
+- Texto livre só sai até 24 h depois da sua última mensagem para o número da Lia. Fora
+  disso vai pelo modelo `aviso_ao_arthur`, que o relógio cria sozinho na Meta (categoria
+  utilidade) e acompanha a aprovação; o status aparece em Atendimento. Enquanto não for
+  aprovado, mande um "oi" para o número da Lia: abre 24 h de avisos.
+
+### 7. Google Agenda (reuniões que a Lia marca)
+1. console.cloud.google.com > projeto novo (ex.: "Prog Soluções") > APIs e serviços >
+   ativar **Google Calendar API**.
+2. Tela de consentimento OAuth: tipo **Externo**, só o seu e-mail como usuário de teste e,
+   no fim, **Publicar o app** (em "Teste" o Google derruba a conexão a cada 7 dias).
+   Escopo: `.../auth/calendar.events`.
+3. Credenciais > Criar ID do cliente OAuth > **Aplicativo da Web** > URI de redirecionamento
+   `https://www.prog-imports.com/api/google/retorno`.
+4. Vercel (Production): `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` > novo deploy.
+5. Captação > Atendimento > **Conectar minha agenda** > escolher a conta da agenda.
+Sem isso, a Lia marca a reunião no sistema (evitando só as que ela mesma marcou) e te
+avisa para criar o evento.
 
 ## Como funciona
 

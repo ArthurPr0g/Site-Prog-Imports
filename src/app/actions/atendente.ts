@@ -23,7 +23,9 @@ import {
 } from '@/lib/atendente/regras';
 import type { LeadStatus } from '@/lib/captacao';
 import { respondidas, type RespostasDoChecklist } from '@/lib/checklist-descoberta';
-import { responderConversa } from '@/lib/atendente/agente';
+import { responderConversa, SIMULADOR } from '@/lib/atendente/agente';
+import { dbDoAtendente } from '@/lib/atendente/db';
+import { agendaConectada, googleConfigurado } from '@/lib/google-agenda';
 
 async function adminClient() {
   const admin = await requireAdmin();
@@ -51,6 +53,8 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
       .select(
         '*, leads(name, status, first_contact_at, replied_at, closed_at, diag_last_view_at, discovery, cobrancas(parcela, valor, link, pago_em, status, created_at)), ia_messages(body, created_at)'
       )
+      // Conversas do simulador ficam só na seção "Testar a Lia".
+      .not('contact_id', 'like', 'simulador:%')
       .order('last_message_at', { ascending: false })
       .order('created_at', { referencedTable: 'ia_messages', ascending: false })
       .limit(1, { referencedTable: 'ia_messages' })
@@ -164,6 +168,7 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
       banco: !!process.env.ATENDENTE_SUPABASE_KEY,
       relogio: !!process.env.ATENDENTE_TICK_SECRET,
     },
+    agenda: !googleConfigurado() ? 'sem_chaves' : (await agendaConectada(dbDoAtendente())) ? 'conectada' : 'desconectada',
     avisos: {
       whatsappDoDono: c?.owner_whatsapp ?? null,
       modelo: c?.aviso_template_status ?? null,
@@ -326,4 +331,145 @@ export async function orientarLiaAction(conversaId: string, instrucao: string): 
   const motivo = await responderConversa(conversaId);
   revalidatePath('/admin/captacao');
   return motivo ? errResult(`A Lia não respondeu: ${motivo}.`) : okResult('A Lia respondeu seguindo a orientação.');
+}
+
+/* ------------------------------------------------------------ simulador */
+
+/** Abre uma conversa de teste com a Lia (opcionalmente fingindo ser um lead). Nada sai pelo WhatsApp. */
+export async function novaConversaDeTesteAction(leadId: string | null): Promise<{ id: string } | { erro: string }> {
+  const supabase = await adminClient();
+  if (!supabase) return { erro: 'Sem permissão.' };
+  const { data, error } = await supabase
+    .from('ia_conversations')
+    .insert({
+      channel: 'whatsapp',
+      contact_id: `${SIMULADOR}${crypto.randomUUID()}`,
+      contact_name: 'Teste do painel',
+      lead_id: leadId,
+      is_test: true,
+      last_inbound_at: new Date().toISOString(),
+    })
+    .select('id')
+    .single();
+  if (error || !data) return { erro: friendlyDbError(error, 'Não foi possível abrir o teste.') };
+  return { id: data.id };
+}
+
+/** Manda uma mensagem "do cliente" ao simulador e espera a Lia responder. */
+export async function mensagemDeTesteAction(
+  conversaId: string,
+  texto: string
+): Promise<{ mensagens: MensagemDoPainel[]; aviso: string | null }> {
+  const supabase = await adminClient();
+  if (!supabase) return { mensagens: [], aviso: 'Sem permissão.' };
+  const { data: c } = await supabase.from('ia_conversations').select('contact_id').eq('id', conversaId).maybeSingle();
+  if (!c?.contact_id.startsWith(SIMULADOR)) return { mensagens: [], aviso: 'Isto não é uma conversa de teste.' };
+  const agora = new Date().toISOString();
+  await supabase
+    .from('ia_messages')
+    .insert({ conversation_id: conversaId, direction: 'in', author: 'lead', body: texto.trim().slice(0, 2000), created_at: agora });
+  await supabase.from('ia_conversations').update({ last_inbound_at: agora, last_message_at: agora }).eq('id', conversaId);
+  const motivo = await responderConversa(conversaId);
+  return { mensagens: await mensagensDaConversaAction(conversaId), aviso: motivo };
+}
+
+/* ------------------------------------------------------------ resultados da Lia */
+
+export type ResultadosDaLia = {
+  conversas: number;
+  gastoTotal: number;
+  propostas: number;
+  reunioes: number;
+  fechados: number;
+  /** Conversas paradas há mais de 2 dias sem fechar nem perder, pela etapa em que pararam. */
+  paradas: { etapa: string; quantas: number }[];
+  /** As paradas mais recentes, com a última fala da Lia antes do silêncio. */
+  exemplos: { conversaId: string; quem: string; etapa: string; ultimaDaLia: string | null; paradaHa: number }[];
+  /** Média de mensagens do cliente até a Lia passar o preço. */
+  mensagensDoClienteAtePreco: number | null;
+};
+
+const DOIS_DIAS = 2 * 24 * 3600_000;
+const rotuloDaParada = (s: LeadStatus) =>
+  s === 'proposta' ? 'depois do preço' : s === 'reuniao' ? 'com reunião marcada' : 'antes do preço';
+
+export async function resultadosDaLiaAction(): Promise<ResultadosDaLia | null> {
+  const supabase = await adminClient();
+  if (!supabase) return null;
+  const [{ data: conversas }, { data: gastos }] = await Promise.all([
+    supabase
+      .from('ia_conversations')
+      .select('id, contact_name, last_inbound_at, leads(name, status)')
+      .eq('is_test', false)
+      .not('contact_id', 'like', 'simulador:%'),
+    supabase.from('ia_gasto_por_conversa').select('conversation_id, custo_usd'),
+  ]);
+  const lista = conversas ?? [];
+  const ids = new Set(lista.map((c) => c.id));
+  const gastoTotal = (gastos ?? [])
+    .filter((g) => g.conversation_id && ids.has(g.conversation_id))
+    .reduce((s, g) => s + Number(g.custo_usd ?? 0), 0);
+  const status = (c: (typeof lista)[number]) => (c.leads?.status as LeadStatus | undefined) ?? 'respondeu';
+
+  const agora = Date.now();
+  const paradas = lista.filter(
+    (c) =>
+      !['fechado', 'perdido', 'nao_contatar'].includes(status(c)) &&
+      !!c.last_inbound_at &&
+      agora - new Date(c.last_inbound_at).getTime() > DOIS_DIAS
+  );
+  const porEtapa = new Map<string, number>();
+  for (const c of paradas) porEtapa.set(rotuloDaParada(status(c)), (porEtapa.get(rotuloDaParada(status(c))) ?? 0) + 1);
+
+  const recentes = [...paradas].sort((a, b) => (b.last_inbound_at ?? '').localeCompare(a.last_inbound_at ?? '')).slice(0, 6);
+  const exemplos = await Promise.all(
+    recentes.map(async (c) => {
+      const { data: m } = await supabase
+        .from('ia_messages')
+        .select('body')
+        .eq('conversation_id', c.id)
+        .eq('author', 'ia')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return {
+        conversaId: c.id,
+        quem: c.leads?.name ?? c.contact_name ?? 'sem nome',
+        etapa: rotuloDaParada(status(c)),
+        ultimaDaLia: m?.body ?? null,
+        paradaHa: Math.floor((agora - new Date(c.last_inbound_at!).getTime()) / (24 * 3600_000)),
+      };
+    })
+  );
+
+  // Mensagens do cliente até a primeira proposta da Lia (o bloco com "Total:").
+  const comPreco = lista.filter((c) => ['proposta', 'fechado'].includes(status(c)));
+  const contagens = await Promise.all(
+    comPreco.map(async (c) => {
+      const { data: ms } = await supabase
+        .from('ia_messages')
+        .select('direction, author, body')
+        .eq('conversation_id', c.id)
+        .order('created_at', { ascending: true })
+        .limit(300);
+      let n = 0;
+      for (const m of ms ?? []) {
+        if (m.direction === 'in') n++;
+        else if (m.author === 'ia' && /Total:/.test(m.body)) return n;
+      }
+      return null;
+    })
+  );
+  const validas = contagens.filter((n): n is number => n !== null);
+
+  return {
+    conversas: lista.length,
+    gastoTotal,
+    propostas: comPreco.length,
+    reunioes: lista.filter((c) => ['reuniao', 'proposta', 'fechado'].includes(status(c))).length,
+    fechados: lista.filter((c) => status(c) === 'fechado').length,
+    paradas: [...porEtapa].map(([etapa, quantas]) => ({ etapa, quantas })),
+    exemplos,
+    mensagensDoClienteAtePreco: validas.length ? validas.reduce((s, n) => s + n, 0) / validas.length : null,
+  };
 }

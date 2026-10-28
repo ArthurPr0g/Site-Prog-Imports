@@ -47,6 +47,7 @@ function toLead(r: Row): Lead {
     diagViews: r.diag_views,
     diagFirstViewAt: r.diag_first_view_at,
     diagLastViewAt: r.diag_last_view_at,
+    teste: (r.source ?? '').startsWith('teste'),
     latitude: r.latitude === null ? null : Number(r.latitude),
     longitude: r.longitude === null ? null : Number(r.longitude),
     screenshotUrl: r.screenshot_url,
