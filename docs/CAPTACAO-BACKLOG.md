@@ -11,11 +11,11 @@ Pedido do dono em 27/10/2026: "pode fazer todos" (itens 1 a 12).
 
 ## Como publicar (roteiro para a sessão que for publicar)
 
-Estado em 27/10/2026: **7 commits locais** em `main` (de `916ef43` a `15b6f12`),
+Estado em 27/10/2026: **commits locais** em `main` desde `916ef43` (`git log origin/main..HEAD` lista todos),
 sem push, e a migration `0062` **não aplicada** em produção. Os commits existem
 só nesta pasta do PC: trabalhe nela (não clone de novo, senão perde tudo).
 
-1. `cd` na pasta do repo e `git status`: a árvore deve estar limpa e `ahead 7`.
+1. `cd` na pasta do repo e `git status`: a árvore deve estar limpa e `ahead` de `origin/main`.
    Se o `git pull` trouxer algo novo, resolva antes de seguir.
 2. **Aplicar a migration** `supabase/migrations/0062_captacao_leads.sql` inteira
    com `apply_migration` (nome `captacao_leads`) no MCP **`supabase-arthurmatos003`**,
