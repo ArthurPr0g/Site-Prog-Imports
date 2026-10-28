@@ -575,6 +575,8 @@ export type Database = {
           media_name: string | null
           media_type: string | null
           status: string | null
+          storage_path: string | null
+          synced_at: string | null
         }
         Insert: {
           author: string
@@ -590,6 +592,8 @@ export type Database = {
           media_name?: string | null
           media_type?: string | null
           status?: string | null
+          storage_path?: string | null
+          synced_at?: string | null
         }
         Update: {
           author?: string
@@ -605,6 +609,8 @@ export type Database = {
           media_name?: string | null
           media_type?: string | null
           status?: string | null
+          storage_path?: string | null
+          synced_at?: string | null
         }
         Relationships: [
           {
@@ -989,6 +995,7 @@ export type Database = {
           rating: number | null
           reasons: string[]
           replied_at: string | null
+          responsible_name: string | null
           review_count: number | null
           score: number
           screenshot_url: string | null
@@ -1049,6 +1056,7 @@ export type Database = {
           rating?: number | null
           reasons?: string[]
           replied_at?: string | null
+          responsible_name?: string | null
           review_count?: number | null
           score?: number
           screenshot_url?: string | null
@@ -1109,6 +1117,7 @@ export type Database = {
           rating?: number | null
           reasons?: string[]
           replied_at?: string | null
+          responsible_name?: string | null
           review_count?: number | null
           score?: number
           screenshot_url?: string | null

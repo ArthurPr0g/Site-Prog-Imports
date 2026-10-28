@@ -7,6 +7,7 @@ import type { ConfigDoAtendente } from '@/lib/atendente/regras';
 import { variaveisDoLead, linkWhatsApp } from '@/lib/mensagens-lead';
 import { emailDeVerdade } from '@/lib/captacao';
 import { SITE_URL } from '@/lib/seo';
+import { guardarArquivosDeClientes } from '@/lib/atendente/arquivos-clientes';
 
 // Relógio do atendente: o pg_cron do Supabase chama a cada minuto (migration
 // 0067) com o segredo ATENDENTE_TICK_SECRET. Cada chamada:
@@ -24,12 +25,14 @@ export async function POST(req: NextRequest) {
     return new NextResponse('Forbidden', { status: 403 });
   }
   const db = dbDoAtendente();
+  // Arquivos de quem fechou: guarda mesmo com a atendente desligada.
+  const arquivos = await guardarArquivosDeClientes(db);
   const cfg = await lerConfig(db);
-  if (!cfg.active) return NextResponse.json({ ok: true, ativo: false });
+  if (!cfg.active) return NextResponse.json({ ok: true, ativo: false, arquivos });
 
   const descontos = await resolverDescontos(db);
   const emails = emailConfigurado() && horarioComercial() ? await mandarEmails(db, cfg) : 0;
-  return NextResponse.json({ ok: true, descontos, emails });
+  return NextResponse.json({ ok: true, descontos, emails, arquivos });
 }
 
 async function resolverDescontos(db: DbDoAtendente): Promise<number> {

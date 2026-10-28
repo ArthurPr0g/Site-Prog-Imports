@@ -138,8 +138,13 @@ const tools: Anthropic.Beta.BetaTool[] = [
       properties: {
         etapa: { type: 'string', enum: ['reuniao', 'proposta', 'fechado', 'perdido', 'nao_contatar'] },
         motivo: { type: 'string', description: 'Uma frase com o porquê (vai para as anotações do lead).' },
+        responsavel: {
+          type: 'string',
+          description:
+            'Só no fechado: nome completo do responsável que vai assinar o contrato (dá nome à pasta do cliente). Nas outras etapas, mande "".',
+        },
       },
-      required: ['etapa', 'motivo'],
+      required: ['etapa', 'motivo', 'responsavel'],
       additionalProperties: false,
     },
     strict: true,
@@ -254,6 +259,10 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
           status: etapa,
           notes: [l?.notes, `[${cfg.personaName} ${hoje}] ${LEAD_STATUS_LABEL[etapa]}: ${motivo}`].filter(Boolean).join('\n'),
           closed_at: etapa === 'fechado' ? (l?.closed_at ?? agora) : l?.closed_at ?? null,
+          // Nome do responsável: dá nome à pasta do cliente no OneDrive ("Empresa - Responsável").
+          ...(etapa === 'fechado' && String(entrada.responsavel ?? '').trim()
+            ? { responsible_name: String(entrada.responsavel).trim().slice(0, 120) }
+            : {}),
           next_contact: null,
           updated_at: agora,
         })
