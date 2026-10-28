@@ -55,6 +55,21 @@ telemetria do engine e o ambiente de teste local
 
 ---
 
+## Lead que o Arthur assume sai da lista do vendedor (28/10/2026) — no ar
+
+Pedido do dono: se ele começar a conversar com um lead que está na página do Felipe, o
+lead sai da lista do Felipe (sinalizado como "com o Arthur") e entra outro no lugar.
+
+- Gatilho (painel do Arthur): "Enviei", mudar a etapa para contatado/respondeu/reunião/
+  proposta/fechado, salvar o checklist ou criar a proposta, **só se o lead ainda estava
+  Novo**. Se o Felipe já contatou, o lead continua com ele (o Arthur só ajuda).
+- O item sai de `lead_kit_items` e fica registrado em `lead_kit_transfers` (migration
+  0066, com o lead que entrou no lugar). O substituto segue a regra do "Adicionar mais 20"
+  (mesmos filtros do link, maior nota, não fantasma, não cliente) e nunca é um lead que o
+  Arthur já assumiu. Sem lead livre, o toast avisa.
+- Página do vendedor: quadro "Com o Arthur (N)" nas abas Hoje e Leads. Ficha do Arthur:
+  faixa "Na lista do Felipe" antes de agir.
+
 ## Meta e animações (27/10/2026, noite) — no ar
 
 - Card renomeado para **"Dinheiro na mesa"**; números correm até o valor, cartões entram em sequência, sublinhado da aba desliza, troca de aba suave (respeita "reduzir movimento").

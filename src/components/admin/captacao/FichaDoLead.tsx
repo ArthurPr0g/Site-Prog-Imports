@@ -88,9 +88,12 @@ export function FichaDoLead({
   origem,
   servicos,
   tabBRL,
+  vendedor,
   onFechar,
 }: {
   lead: Lead;
+  /** Vendedor com link ativo que tem este lead na lista. */
+  vendedor?: string;
   /** Base inteira: comparação com a região. */
   leads: Lead[];
   modelos: ModeloMensagem[];
@@ -123,13 +126,21 @@ export function FichaDoLead({
 
   const acoes: AcoesDaFicha = {
     async registrar({ status, nota, etapaEnviada }) {
+      // Aviso de "saiu da lista do vendedor" (vem no fim da mensagem das actions).
+      let passou = '';
+      const guardar = (msg: string) => {
+        const i = msg.indexOf(' Este lead ');
+        if (i >= 0) passou = msg.slice(i);
+      };
       if (etapaEnviada !== undefined) {
         const r = await registrarEnvioAction(lead.id, etapaEnviada, lead.abVariant ?? 'A');
         if (!r.ok) return r;
+        guardar(r.message);
       }
       if (status) {
         const r = await updateLeadAction(lead.id, { status });
         if (!r.ok) return r;
+        guardar(r.message);
       }
       if (nota?.trim()) {
         const data = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
@@ -138,7 +149,7 @@ export function FichaDoLead({
         if (!r.ok) return r;
       }
       router.refresh();
-      return okResult(etapaEnviada !== undefined ? 'Envio registrado.' : 'Salvo.');
+      return okResult((etapaEnviada !== undefined ? 'Envio registrado.' : 'Salvo.') + passou);
     },
     async salvarChecklist(respostas) {
       const r = await salvarChecklistAction(lead.id, respostas);
@@ -157,6 +168,22 @@ export function FichaDoLead({
       onFechar={onFechar}
       acoes={acoes}
       dono
+      aviso={
+        vendedor && (
+          <div className="rounded-[10px] border border-accent/40 bg-accent/10 px-3 py-2 text-[12.5px] leading-snug">
+            {lead.status === 'novo' ? (
+              <>
+                <b>Na lista de {vendedor}</b>, ainda sem contato. Se você registrar contato, mudar a etapa, preencher o
+                checklist ou criar a proposta, ele sai da lista de {vendedor} e entra outro lead no lugar.
+              </>
+            ) : (
+              <>
+                <b>{vendedor} está atendendo este lead.</b> O que você registrar aqui aparece para ele também.
+              </>
+            )}
+          </div>
+        )
+      }
       extraOportunidade={
         <button
           disabled={criando}

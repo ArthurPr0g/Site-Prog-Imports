@@ -85,7 +85,7 @@ export async function updateLeadAction(id: string, input: LeadUpdate): Promise<A
 
   const { data: atual } = await supabase
     .from('leads')
-    .select('first_contact_at, replied_at, closed_at')
+    .select('status, first_contact_at, replied_at, closed_at')
     .eq('id', id)
     .maybeSingle();
   if (!atual) return errResult('Lead não encontrado.');
@@ -115,8 +115,11 @@ export async function updateLeadAction(id: string, input: LeadUpdate): Promise<A
   const { error } = await supabase.from('leads').update(payload).eq('id', id);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar o lead.'));
 
+  // Arthur passou o lead para uma etapa de conversa: se ele estava na lista de um vendedor, é dele agora.
+  const passou =
+    input.status && ETAPAS_DE_CONVERSA.includes(input.status) ? await assumirDoVendedor(supabase, id, atual.status) : '';
   revalidatePath('/admin/captacao');
-  return okResult('Lead atualizado.');
+  return okResult(`Lead atualizado.${passou}`);
 }
 
 /** Cadastra o lead como cliente do ERP (para o orçamento de serviço) e liga os dois. */
@@ -234,8 +237,11 @@ export async function registrarEnvioAction(id: string, etapa: number, variante: 
 
   const { error } = await supabase.from('leads').update(payload).eq('id', id);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível registrar o envio.'));
+  const passou = await assumirDoVendedor(supabase, id, atual.status);
   revalidatePath('/admin/captacao');
-  return okResult(etapa >= 3 ? 'Sequência encerrada para este lead.' : 'Envio registrado. O próximo retorno já está agendado.');
+  return okResult(
+    (etapa >= 3 ? 'Sequência encerrada para este lead.' : 'Envio registrado. O próximo retorno já está agendado.') + passou
+  );
 }
 
 // Mensalidade de cada produto no catálogo (nomes de 0045–0049).
@@ -251,7 +257,7 @@ export async function criarPropostaAction(id: string): Promise<ActionResult & { 
 
   const { data: lead } = await supabase
     .from('leads')
-    .select('name, country, suggested_services, customer_id, quote_id, notes')
+    .select('name, country, suggested_services, customer_id, quote_id, notes, status')
     .eq('id', id)
     .maybeSingle();
   if (!lead) return errResult('Lead não encontrado.');
@@ -316,8 +322,9 @@ export async function criarPropostaAction(id: string): Promise<ActionResult & { 
       .update({ quote_id: quote.id, status: 'proposta', updated_at: new Date().toISOString() })
       .eq('id', id);
   }
+  const passou = await assumirDoVendedor(supabase, id, lead.status);
   revalidatePath('/admin/captacao');
-  return { ...okResult('Proposta criada em Orçamentos Serviços. Revise e envie o PDF.'), quoteId: quote?.id };
+  return { ...okResult(`Proposta criada em Orçamentos Serviços. Revise e envie o PDF.${passou}`), quoteId: quote?.id };
 }
 
 /** Pedido de busca para o programa do PC (um por nicho; "todos" cria um por nicho da lista). */
@@ -457,20 +464,45 @@ export async function adicionarAoKitAction(kitId: string): Promise<ActionResult>
   const { data: kit } = await supabase.from('lead_seller_kits').select('id, filters, active').eq('id', kitId).maybeSingle();
   if (!kit) return errResult('Link não encontrado.');
   if (!kit.active) return errResult('Reative o link antes de adicionar leads.');
-  const f = (kit.filters ?? {}) as FiltrosDoKit;
 
-  // Leads já em algum link ativo (inclusive este) não entram de novo.
-  const { data: emUso } = await supabase
-    .from('lead_kit_items')
-    .select('lead_id, kit_id, lead_seller_kits!inner(active)')
-    .eq('lead_seller_kits.active', true);
-  const ocupados = new Set((emUso ?? []).map((i) => i.lead_id));
-  const { data: posicoes } = await supabase
+  const ids = await leadsLivresParaOKit(supabase, (kit.filters ?? {}) as FiltrosDoKit, LIMITE_DO_KIT);
+  if (ids.length === 0)
+    return errResult('Não há mais leads livres com os filtros deste link. Gere um link novo com outros filtros.');
+
+  const itens = await montarItensDoKit(supabase, kitId, ids, (await ultimaPosicao(supabase, kitId)) + 1);
+  const { error } = await supabase.from('lead_kit_items').insert(itens);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível adicionar os leads.'));
+  await supabase.from('lead_seller_kits').update({ more_requested_at: null }).eq('id', kitId);
+  revalidatePath('/admin/captacao');
+  return okResult(`${itens.length} lead(s) adicionados ao link.`);
+}
+
+type Db = NonNullable<Awaited<ReturnType<typeof adminClient>>>;
+
+async function ultimaPosicao(supabase: Db, kitId: string): Promise<number> {
+  const { data } = await supabase
     .from('lead_kit_items')
     .select('position')
     .eq('kit_id', kitId)
     .order('position', { ascending: false })
     .limit(1);
+  return data?.[0]?.position ?? 0;
+}
+
+/** Etapas em que o lead está sendo atendido (passar para uma delas = conversar com ele). */
+const ETAPAS_DE_CONVERSA: LeadStatus[] = ['contatado', 'respondeu', 'reuniao', 'proposta', 'fechado'];
+
+/**
+ * Os próximos leads de maior nota com os filtros do link: ainda Novos, fora de
+ * outro link ativo, que não passaram para o Arthur e que não são clientes.
+ */
+async function leadsLivresParaOKit(supabase: Db, f: FiltrosDoKit, quantidade: number): Promise<string[]> {
+  // Leads já em algum link ativo (inclusive este) não entram de novo; nem os que o Arthur assumiu.
+  const [{ data: emUso }, { data: assumidos }] = await Promise.all([
+    supabase.from('lead_kit_items').select('lead_id, kit_id, lead_seller_kits!inner(active)').eq('lead_seller_kits.active', true),
+    supabase.from('lead_kit_transfers').select('lead_id'),
+  ]);
+  const ocupados = new Set([...(emUso ?? []), ...(assumidos ?? [])].map((i) => i.lead_id));
 
   let q = supabase
     .from('leads')
@@ -497,19 +529,49 @@ export async function adicionarAoKitAction(kitId: string): Promise<ActionResult>
   const clientes = new Set(
     await leadsQueJaSaoClientes(livres.map((l) => ({ id: l.id, phone: l.phone, email: l.email, customerId: l.customer_id })))
   );
-  const ids = livres
+  return livres
     .filter((l) => !clientes.has(l.id))
-    .slice(0, LIMITE_DO_KIT)
+    .slice(0, quantidade)
     .map((l) => l.id);
-  if (ids.length === 0)
-    return errResult('Não há mais leads livres com os filtros deste link. Gere um link novo com outros filtros.');
+}
 
-  const itens = await montarItensDoKit(supabase, kitId, ids, (posicoes?.[0]?.position ?? 0) + 1);
-  const { error } = await supabase.from('lead_kit_items').insert(itens);
-  if (error) return errResult(friendlyDbError(error, 'Não foi possível adicionar os leads.'));
-  await supabase.from('lead_seller_kits').update({ more_requested_at: null }).eq('id', kitId);
-  revalidatePath('/admin/captacao');
-  return okResult(`${itens.length} lead(s) adicionados ao link.`);
+/**
+ * O Arthur começou a atender um lead que estava, ainda sem contato, na lista de
+ * um vendedor: o lead sai da lista (registrado em lead_kit_transfers, aparece
+ * como "com o Arthur" na página do vendedor) e entra outro lead livre no lugar.
+ * Lead que o vendedor já contatou continua com ele. Devolve o aviso para o toast.
+ */
+async function assumirDoVendedor(supabase: Db, leadId: string, statusAntes: string): Promise<string> {
+  if (statusAntes !== 'novo') return '';
+  const { data: itens } = await supabase
+    .from('lead_kit_items')
+    .select('kit_id, lead_seller_kits!inner(active, seller_name, filters)')
+    .eq('lead_id', leadId)
+    .eq('lead_seller_kits.active', true);
+  if (!itens?.length) return '';
+
+  const avisos: string[] = [];
+  for (const item of itens) {
+    const kit = item.lead_seller_kits;
+    const { error } = await supabase
+      .from('lead_kit_transfers')
+      .upsert({ kit_id: item.kit_id, lead_id: leadId, taken_at: new Date().toISOString() });
+    if (error) continue; // sem o registro, o lead fica onde está
+    await supabase.from('lead_kit_items').delete().match({ kit_id: item.kit_id, lead_id: leadId });
+
+    const [novo] = await leadsLivresParaOKit(supabase, (kit.filters ?? {}) as FiltrosDoKit, 1);
+    if (novo) {
+      const reposto = await montarItensDoKit(supabase, item.kit_id, [novo], (await ultimaPosicao(supabase, item.kit_id)) + 1);
+      const { error: erroNovo } = await supabase.from('lead_kit_items').insert(reposto);
+      if (!erroNovo) {
+        await supabase.from('lead_kit_transfers').update({ replacement_lead_id: novo }).match({ kit_id: item.kit_id, lead_id: leadId });
+        avisos.push(`saiu da lista de ${kit.seller_name} e entrou outro no lugar`);
+        continue;
+      }
+    }
+    avisos.push(`saiu da lista de ${kit.seller_name} (não havia outro lead livre com os filtros do link para repor)`);
+  }
+  return avisos.length ? ` Este lead ${avisos.join('; ')}.` : '';
 }
 
 /** Desativa (ou reativa) o link: desativado, a página do vendedor some. */
@@ -526,6 +588,8 @@ export async function alternarKitAction(id: string, ativo: boolean): Promise<Act
 export async function salvarChecklistAction(id: string, respostas: RespostasDoChecklist): Promise<ActionResult> {
   const supabase = await adminClient();
   if (!supabase) return errResult('Você não tem permissão para fazer isso.');
+  const { data: atual } = await supabase.from('leads').select('status').eq('id', id).maybeSingle();
+  if (!atual) return errResult('Lead não encontrado.');
   const { error } = await supabase
     .from('leads')
     .update({
@@ -536,6 +600,8 @@ export async function salvarChecklistAction(id: string, respostas: RespostasDoCh
     })
     .eq('id', id);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar o checklist.'));
+  // Preencher o checklist é conversar com o cliente.
+  const passou = await assumirDoVendedor(supabase, id, atual.status);
   revalidatePath('/admin/captacao');
-  return okResult('Checklist salvo.');
+  return okResult(`Checklist salvo.${passou}`);
 }

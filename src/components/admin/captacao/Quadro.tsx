@@ -51,7 +51,7 @@ export function Quadro({
       aoAbrir={aoAbrir}
       aoMover={async (l, status) => {
         const r = await updateLeadAction(l.id, { status });
-        if (!r.ok) toast(r);
+        if (!r.ok || r.message.includes(' Este lead ')) toast(r);
         return r.ok;
       }}
       cartao={(l) => {

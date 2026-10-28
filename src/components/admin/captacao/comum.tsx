@@ -218,7 +218,8 @@ export function useContatoDoLead(l: Lead, modelos: ModeloMensagem[], origem: str
   function executar(fn: () => Promise<{ ok: boolean; message: string }>, sempreAvisar = false, depois?: () => void) {
     startTransition(async () => {
       const r = await fn();
-      if (!r.ok || sempreAvisar) toast(r);
+      // Também avisa quando o lead saiu da lista de um vendedor (mensagem termina com "Este lead ...").
+      if (!r.ok || sempreAvisar || r.message.includes(' Este lead ')) toast(r);
       if (r.ok) depois?.();
     });
   }

@@ -18,6 +18,7 @@ import {
   CalendarClock,
   Send,
   PlusCircle,
+  UserCheck,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { Kanban } from '@/components/kanban/Kanban';
@@ -58,6 +59,35 @@ function escolhaDoLead(l: LeadDoKit): Partial<Escolha> {
   const temGestao = s.includes('Sistema');
   const produto = s.includes('Loja') ? 'loja' : s.includes('Site') ? 'site' : temGestao ? 'erp' : 'site';
   return { produto, nivel, comGestao: temGestao && produto !== 'erp', nivelGestao: 0, marca: 0 };
+}
+
+/** Leads que o Arthur começou a atender: saíram da lista e outro entrou no lugar. */
+function ComOArthur({ leads }: { leads: NonNullable<Kit['com_o_dono']> }) {
+  if (!leads.length) return null;
+  return (
+    <section className="rounded-[18px] border border-border bg-card p-4 text-[13px]">
+      <div className="flex items-center gap-1.5 font-extrabold">
+        <UserCheck size={15} className="text-accent" /> Com o Arthur ({leads.length})
+      </div>
+      <p className="mt-1 text-[12.5px] leading-snug text-fg-tertiary">
+        O Arthur já está conversando com {leads.length === 1 ? 'esta empresa' : 'estas empresas'}: não precisa contatar. Para
+        cada uma, entrou outro lead na sua lista.
+      </p>
+      <ul className="mt-2 space-y-1">
+        {leads.map((l) => (
+          <li key={l.name + l.taken_at} className="flex flex-wrap justify-between gap-x-3 text-[12.5px]">
+            <span className="font-bold">
+              {l.name}
+              {l.city && <span className="font-normal text-fg-tertiary"> · {l.city}</span>}
+            </span>
+            <span className="text-fg-faded">
+              desde {new Date(l.taken_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 function CartaoDoLead({ l, agora }: { l: LeadDoKit; agora: number }) {
@@ -270,6 +300,7 @@ export function PaginaDoVendedor({
       {aba === 'hoje' && (
         <div className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
           <div className="space-y-3">
+            <ComOArthur leads={kit.com_o_dono ?? []} />
             {tarefasDeHoje === 0 && (
               <section className="rounded-[18px] border border-border bg-card p-5 text-[14px] text-fg-tertiary">
                 Nada pendente para hoje. Veja o quadro na aba Leads ou peça mais leads ao Arthur.
@@ -365,6 +396,11 @@ export function PaginaDoVendedor({
 
       {aba === 'leads' && (
         <>
+          {!!kit.com_o_dono?.length && (
+            <div className="mb-3">
+              <ComOArthur leads={kit.com_o_dono} />
+            </div>
+          )}
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-[12.5px] text-fg-tertiary">
               {vista === 'quadro'

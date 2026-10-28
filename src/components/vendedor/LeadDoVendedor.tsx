@@ -120,6 +120,7 @@ export function LeadDoVendedor({
   acoes,
   dono = false,
   extraOportunidade,
+  aviso,
 }: {
   lead: LeadDoKit;
   kit: Kit;
@@ -136,6 +137,8 @@ export function LeadDoVendedor({
   dono?: boolean;
   /** Botões extras na aba Oportunidade (ex.: criar a proposta no painel). */
   extraOportunidade?: ReactNode;
+  /** Faixa no topo da ficha (ex.: no painel, "este lead está na lista do Felipe"). */
+  aviso?: ReactNode;
 }) {
   const toast = useToast();
   const [aba, setAba] = useState<Aba>(abaInicial);
@@ -211,6 +214,7 @@ export function LeadDoVendedor({
                   </span>
                 )}
               </div>
+              {aviso && <div className="mt-2">{aviso}</div>}
             </div>
             <button
               onClick={onFechar}

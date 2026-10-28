@@ -542,6 +542,49 @@ export type Database = {
           },
         ]
       }
+      lead_kit_transfers: {
+        Row: {
+          kit_id: string
+          lead_id: string
+          replacement_lead_id: string | null
+          taken_at: string
+        }
+        Insert: {
+          kit_id: string
+          lead_id: string
+          replacement_lead_id?: string | null
+          taken_at?: string
+        }
+        Update: {
+          kit_id?: string
+          lead_id?: string
+          replacement_lead_id?: string | null
+          taken_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_kit_transfers_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "lead_seller_kits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_kit_transfers_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_kit_transfers_replacement_lead_id_fkey"
+            columns: ["replacement_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_templates: {
         Row: {
           body: string

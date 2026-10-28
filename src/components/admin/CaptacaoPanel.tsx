@@ -587,6 +587,7 @@ export function CaptacaoPanel({
           origem={origem}
           servicos={servicos}
           tabBRL={tabBRL}
+          vendedor={vendedorPorLead.get(fichaDe)}
           onFechar={() => setFichaDe(null)}
         />
       )}

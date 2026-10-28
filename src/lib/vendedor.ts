@@ -73,6 +73,8 @@ export type Kit = {
   catalog: ItemDoCatalogo[];
   templates: ModeloMensagem[];
   leads: LeadDoKit[];
+  /** Leads que saíram da lista porque o Arthur começou a atender (migration 0066). */
+  com_o_dono?: { name: string; city: string | null; taken_at: string }[];
 };
 
 /** Etapas que o vendedor usa no quadro dele (as do painel, com nomes de vendedor). */
