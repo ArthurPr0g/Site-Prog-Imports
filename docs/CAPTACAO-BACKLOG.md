@@ -191,6 +191,42 @@ WhatsApp dele, informado na hora de gerar o link em produção). Detalhes em
 | V11 | **Linha do tempo do lead** (mensagens enviadas, mudanças de etapa, checklist) | O Arthur e o vendedor veem a história inteira sem ler anotações soltas |
 | V12 | **Ranking entre vendedores** (contatos, respostas, propostas) quando houver mais de um | Competição saudável e visão de quem converte melhor |
 
+## Pós-venda: rodadas de ajustes, avisos e reuniões (pedido do dono em 28/10/2026) — a fazer
+
+Pedido: quando o Felipe ou o Arthur marcar que **a venda foi feita**, o sistema monta
+sozinho o acompanhamento do cliente. Depois da compra o cliente tem **rodadas de
+ajustes**, e cada uma precisa ficar registrada (o que foi pedido, quando, se foi entregue)
+junto com as **reuniões marcadas** para falar delas. Objetivo: ter controle de tudo o que
+foi prometido e feito, sem depender de memória ou de conversa solta no WhatsApp.
+
+Regras que já existem e devem ser a fonte (não duplicar números):
+- Rodadas por serviço: `REGRAS_DO_CONTRATO.rodadasDeRevisao` (2; os Premium têm 3,
+  ver `src/lib/guia-dos-pacotes.ts`). Alteração além disso é orçada antes.
+- Suporte após a entrega: 30, 60 ou 90 dias conforme o nível (`guia-dos-pacotes.ts`).
+- Prazo de aceite (`aceiteDiasUteis`: 5), garantia (`garantiaDias`: 90) e
+  arquivos disponíveis (`arquivosDisponiveisDias`: 30), em `src/lib/contract.ts`.
+- Prazo total do projeto: o mesmo cálculo do simulador (marca ao mesmo tempo; combo de
+  mesmo nível pelo catálogo).
+
+| # | Ideia | Por quê |
+|---|---|---|
+| P1 | **Marcar "venda feita"** pelo painel do Arthur **e pela página do vendedor**, escolhendo os serviços vendidos (os do simulador) | Ponto de partida de todo o acompanhamento. Hoje só o Arthur marca "Fechado" (`ETAPAS_QUE_O_VENDEDOR_MARCA`): decidir se o Felipe passa a marcar ou se ele pede e o Arthur confirma |
+| P2 | **Projeto criado sozinho** a partir da venda: serviços, prazo total, data de entrega prevista e **contador de rodadas por serviço** (ex.: "Loja Profissional: 0 de 2 usadas") | Saber na hora quantas rodadas o cliente ainda tem e quando o prazo vence |
+| P3 | **Registro de cada rodada**: data do pedido, o que o cliente pediu (texto, print ou áudio), quem atendeu, data da entrega e o aceite do cliente | Histórico do que foi pedido e entregue; evita "eu pedi isso e não fizeram" |
+| P4 | **Aviso quando passar das rodadas**: o pedido seguinte vira orçamento de alteração antes de ser feito | Cumpre o contrato sem constrangimento e não dá trabalho de graça sem querer |
+| P5 | **Reuniões das rodadas**: marcar data e hora, link da chamada e quem participa; depois, a ata (o que ficou decidido), ligada à rodada | Controle das reuniões marcadas e do que saiu de cada uma |
+| P6 | **Avisos automáticos** (para o Arthur, o Felipe e, quando fizer sentido, o cliente): reunião amanhã, rodada aberta há X dias sem entrega, prazo de entrega chegando, aceite pendente (5 dias úteis), fim do suporte | Nada vence sem alguém perceber |
+| P7 | **Feedback do cliente** depois de cada entrega e no fim do projeto (nota rápida + comentário), com pedido de depoimento quando a nota for alta | Medir satisfação e gerar prova social para o portfólio |
+| P8 | **Linha do tempo do cliente** com venda, pagamentos, rodadas, reuniões e feedbacks (liga com o V11) | O Arthur e o Felipe veem a história inteira num lugar só |
+| P9 | **Painel de pós-venda**: projetos em andamento, rodadas abertas, reuniões da semana e entregas atrasadas | Visão do dia a dia da produção, como o quadro da captação |
+
+Perguntas para o dono antes de começar:
+- O Felipe marca a venda sozinho ou só pede e o Arthur confirma (P1)?
+- Os avisos vão por WhatsApp, e-mail ou só no painel? O cliente também recebe?
+- As reuniões ficam no Google Agenda do Arthur (liga com V3 / Cal.com) ou só no sistema?
+- O pós-venda fica no ERP da Prog Imports (onde já estão clientes, contratos e
+  mensalidades) ou num módulo à parte da Prog Soluções?
+
 ## Pendências e ideias levantadas antes
 
 | Item | Observação |
