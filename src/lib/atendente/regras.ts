@@ -38,9 +38,37 @@ export type ConfigDoAtendente = {
 /* ------------------------------------------------------------ preço */
 
 /** Simulação do simulador do vendedor + desconto extra aprovado (só no valor do trabalho, nunca na mensalidade). */
-export type Proposta = Simulacao & { descontoExtraPct: number; totalComExtra: number; texto: string };
+export type Proposta = Simulacao & { descontoExtraPct: number; totalComExtra: number; prazoDias: number; texto: string };
 
-export function calcularProposta(e: Escolha, t: TabelaPrecos, descontoExtraPct: number): Proposta {
+/**
+ * Prazo em dias úteis pelo catálogo (mesma regra do simulador do vendedor):
+ * combo de mesmo nível tem prazo próprio; níveis diferentes somam; a marca é
+ * feita ao mesmo tempo, então vale o maior dos dois. 0 = sem prazo no catálogo.
+ */
+export function prazoDoPacote(e: Escolha, prazos: Map<string, number>): number {
+  const nomes = NOMES.BRL;
+  const dias = (nome: string) => prazos.get(nome) ?? 0;
+  const projeto = nomes[e.produto][e.nivel];
+  const combo = e.comGestao && e.produto !== 'erp';
+  const gestao = nomes.erp[e.nivelGestao];
+  let dProjeto = dias(projeto);
+  if (combo) {
+    const doCombo = e.nivel === e.nivelGestao
+      ? [...prazos].find(([n]) => n.includes(`(${projeto} + ${gestao.replace('Sistema de ', '')})`))?.[1]
+      : undefined;
+    dProjeto = doCombo ?? dProjeto + dias(gestao);
+  }
+  const dMarca = e.marca ? dias(nomes.marca[e.marca - 1]) : 0;
+  return Math.max(dProjeto, dMarca);
+}
+
+/** Preço do pacote e o texto da proposta já no formato do WhatsApp (blocos com emoji). */
+export function calcularProposta(
+  e: Escolha,
+  t: TabelaPrecos,
+  descontoExtraPct: number,
+  prazos: Map<string, number> = new Map()
+): Proposta {
   const s = simular(e, t);
   const m = (v: number) => formatMoeda(v, t.moeda);
   // Arredonda para o final 7 (reais) ou 0 (dólar) mais próximo: o final 97 da
@@ -49,24 +77,51 @@ export function calcularProposta(e: Escolha, t: TabelaPrecos, descontoExtraPct: 
   const comExtra =
     descontoExtraPct > 0 ? Math.round((s.total * (1 - descontoExtraPct / 100) - fim) / 10) * 10 + fim : s.total;
   const br = t.moeda === 'BRL';
+  const prazoDias = prazoDoPacote(e, prazos);
+  const aPartir = s.aPartirDe ? (br ? ' (a partir de)' : ' (starting at)') : '';
   const linhas = [
-    ...s.linhas.map((l) => `${l.nome}: ${m(l.valor)}`),
-    ...(s.desconto > 0 ? [`Desconto do combo: -${m(s.desconto)}`] : []),
-    `Total do trabalho${s.aPartirDe ? ' (a partir de)' : ''}: ${m(s.total)}`,
+    br ? '📦 *O que entra no pacote*' : '📦 *Package*',
+    ...s.linhas.map((l) => `• ${l.nome}: ${m(l.valor)}`),
+    ...(s.desconto > 0 ? [`🎁 ${br ? 'Desconto do combo' : 'Bundle discount'}: −${m(s.desconto)}`] : []),
+    '',
+    `💰 *Total: ${m(s.total)}*${aPartir}`,
     ...(descontoExtraPct > 0
-      ? [`Com a condição especial aprovada: ${m(comExtra)} (economia de ${m(s.total - comExtra)} no trabalho)`]
+      ? [
+          br
+            ? `✨ *Com a condição especial: ${m(comExtra)}* (economia de ${m(s.total - comExtra)})`
+            : `✨ *Special price: ${m(comExtra)}* (you save ${m(s.total - comExtra)})`,
+        ]
       : []),
-    `Mensalidade (hospedagem, segurança, backups e suporte): ${m(s.mensal)}/mês`,
-    ...(s.mensalSeparadas ? [`Separados seriam ${m(s.mensalSeparadas)}/mês`] : []),
+    '',
+    br
+      ? `🔁 *Mensalidade: ${m(s.mensal)}/mês* (hospedagem, segurança, backups e suporte)`
+      : `🔁 *Monthly: ${m(s.mensal)}/month* (hosting, security, backups and support)`,
+    ...(s.mensalSeparadas
+      ? [
+          br
+            ? `✅ Economia de ${m(s.mensalSeparadas - s.mensal)}/mês por contratar junto (separados: ~${m(s.mensalSeparadas)}/mês~)`
+            : `✅ You save ${m(s.mensalSeparadas - s.mensal)}/month by bundling (separately: ~${m(s.mensalSeparadas)}/month~)`,
+        ]
+      : []),
+    ...(prazoDias > 0
+      ? [
+          '',
+          br
+            ? `⏱️ *Prazo: até ${prazoDias} dias úteis*, contados a partir do sinal pago e do envio do material (textos, fotos e acessos)`
+            : `⏱️ *Timeline: up to ${prazoDias} business days*, starting once the deposit and all materials are in`,
+        ]
+      : []),
+    '',
+    br ? '💳 *Pagamento*' : '💳 *Payment*',
     ...(br
       ? [
-          `Pix ou boleto: ${m(comExtra / 2)} no fechamento + ${m(comExtra / 2)} na entrega`,
-          `Cartão 2x sem juros: 2x de ${m(comExtra / 2)}`,
-          `Cartão 6x: 6x de ${m(parcela(comExtra, 6))}; 12x: 12x de ${m(parcela(comExtra, 12))} (com a taxa da operadora)`,
+          `• Pix ou boleto: ${m(comExtra / 2)} no fechamento + ${m(comExtra / 2)} na entrega`,
+          `• Cartão 2x sem juros: 2x de ${m(comExtra / 2)}`,
+          `• Cartão em 12x: 12x de ${m(parcela(comExtra, 12))} (com a taxa da operadora)`,
         ]
-      : [`50% to start: ${m(comExtra / 2)}; 50% on delivery: ${m(comExtra / 2)}`]),
+      : [`• 50% to start: ${m(comExtra / 2)}`, `• 50% on delivery: ${m(comExtra / 2)}`]),
   ];
-  return { ...s, descontoExtraPct, totalComExtra: comExtra, texto: linhas.join('\n') };
+  return { ...s, descontoExtraPct, totalComExtra: comExtra, prazoDias, texto: linhas.join('\n') };
 }
 
 export { NOMES as NOMES_DOS_PACOTES };

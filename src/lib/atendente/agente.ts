@@ -9,6 +9,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { dbDoAtendente, type DbDoAtendente } from '@/lib/atendente/db';
 import { enviarTexto, JANELA_MS } from '@/lib/atendente/whatsapp-api';
 import { enviarEmail } from '@/lib/atendente/email';
+import { siteAbreAgora } from '@/lib/atendente/site-agora';
 import { instrucoesFixas, contextoDaConversa } from '@/lib/atendente/prompt';
 import { calcularProposta, custoDaChamada, type ConfigDoAtendente, type ModeloDaIA } from '@/lib/atendente/regras';
 import { tabelaBRL, TABELA_USD } from '@/lib/precos-captacao';
@@ -89,7 +90,7 @@ const tools: Anthropic.Beta.BetaTool[] = [
   {
     name: 'calcular_preco',
     description:
-      'Calcula o preço oficial (mesmo simulador do vendedor) de um pacote: trabalho, desconto de combo, mensalidade e formas de pagamento. Use SEMPRE antes de falar qualquer valor. Já aplica o desconto extra se ele foi aprovado nesta conversa.',
+      'Calcula o preço oficial (mesmo simulador do vendedor) de um pacote: trabalho, desconto de combo, mensalidade, prazo em dias úteis e formas de pagamento. Devolve o bloco da proposta já formatado para o WhatsApp. Use SEMPRE antes de falar qualquer valor ou prazo. Já aplica o desconto extra se ele foi aprovado nesta conversa.',
     input_schema: {
       type: 'object',
       properties: {
@@ -192,6 +193,8 @@ type Estado = {
   leadId: string | null;
   leadStatus: LeadStatus | null;
   tabela: ReturnType<typeof tabelaBRL>;
+  /** Prazo em dias úteis de cada serviço do catálogo (nome em português). */
+  prazos: Map<string, number>;
   descontoAprovado: number;
   descontoPendente: boolean;
   descontoNegado: boolean;
@@ -212,7 +215,8 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
           marca: Number(entrada.marca) as 0 | 1 | 2 | 3,
         },
         e.tabela,
-        e.descontoAprovado
+        e.descontoAprovado,
+        e.prazos
       );
       if (p.total <= 0) return 'Pacote sem preço no catálogo. Não passe valor: use chamar_arthur.';
       return p.texto;
@@ -339,12 +343,13 @@ export async function responderConversa(conversaId: string, avisoInterno?: strin
 
   const moeda = (item?.currency as 'BRL' | 'USD' | undefined) ?? (lead?.country === 'US' ? 'USD' : 'BRL');
   // Preço do retrato do catálogo guardado no link (o mesmo que o placar usa); sem link, o catálogo de agora.
-  let catalogo = new Map<string, number>(
-    ((kit?.catalog ?? []) as { nome: string; preco: number }[]).map((s) => [s.nome, Number(s.preco)])
-  );
-  if (catalogo.size === 0) {
-    const { data: servicos } = await db.from('internal_services').select('name, price').eq('active', true);
-    catalogo = new Map((servicos ?? []).map((s) => [s.name, Number(s.price)]));
+  const itensDoLink = (kit?.catalog ?? []) as { nome: string; preco: number; prazoDias?: number }[];
+  let catalogo = new Map<string, number>(itensDoLink.map((s) => [s.nome, Number(s.preco)]));
+  let prazos = new Map<string, number>(itensDoLink.map((s) => [s.nome, Number(s.prazoDias ?? 0)]));
+  if (catalogo.size === 0 || itensDoLink.every((s) => !s.prazoDias)) {
+    const { data: servicos } = await db.from('internal_services').select('name, price, lead_time_days').eq('active', true);
+    if (catalogo.size === 0) catalogo = new Map((servicos ?? []).map((s) => [s.name, Number(s.price)]));
+    prazos = new Map((servicos ?? []).map((s) => [s.name, Number(s.lead_time_days ?? 0)]));
   }
 
   const estado: Estado = {
@@ -354,10 +359,25 @@ export async function responderConversa(conversaId: string, avisoInterno?: strin
     leadId: conversa.lead_id,
     leadStatus: (lead?.status as LeadStatus | undefined) ?? null,
     tabela: moeda === 'USD' ? TABELA_USD : tabelaBRL(catalogo),
+    prazos,
     descontoAprovado: Number((pedidos ?? []).find((p) => p.status === 'aprovado')?.percent ?? 0),
     descontoPendente: (pedidos ?? []).some((p) => p.status === 'aguardando'),
     descontoNegado: (pedidos ?? []).some((p) => p.status === 'negado'),
   };
+
+  // "Fora do ar" da captação pode estar velho ou ter sido falha passageira:
+  // confere na hora antes de a IA usar isso como argumento. Se abriu, corrige o banco.
+  let situacao: string = lead ? situacaoDoSite(lead.website, lead.site_check) : 'sem_site';
+  let motivos: string[] = lead?.reasons ?? [];
+  if (lead?.website && situacao === 'fora') {
+    if (await siteAbreAgora(lead.website)) {
+      situacao = 'no ar (conferido agora; NÃO diga que está fora do ar)';
+      motivos = motivos.filter((m) => !/fora do ar/i.test(m));
+      await db.from('leads').update({ site_check: null, reasons: motivos }).eq('id', lead.id);
+    } else {
+      situacao = 'fora do ar (conferido agora, não abriu)';
+    }
+  }
 
   const contexto = contextoDaConversa({
     persona: cfg.personaName,
@@ -374,10 +394,10 @@ export async function responderConversa(conversaId: string, avisoInterno?: strin
           cidade: lead.city,
           ramo: lead.niche ?? lead.category,
           site: lead.website,
-          situacaoDoSite: situacaoDoSite(lead.website, lead.site_check),
+          situacaoDoSite: situacao,
           nota: lead.rating,
           avaliacoes: lead.review_count,
-          motivos: lead.reasons ?? [],
+          motivos,
           sugeridos: lead.suggested_services ?? [],
           etapa: LEAD_STATUS_LABEL[lead.status as LeadStatus] ?? lead.status,
           descoberta: (lead.discovery ?? {}) as Record<string, string | string[]>,

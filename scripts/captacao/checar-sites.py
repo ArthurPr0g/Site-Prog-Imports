@@ -19,6 +19,7 @@ import csv
 import re
 import ssl
 import sys
+import time
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -53,21 +54,28 @@ def checar(url: str) -> str:
     if not re.match(r"https?://", url, re.I):
         url = "http://" + url
     req = urllib.request.Request(url, headers={"User-Agent": UA})
-    try:
-        # Certificado inválido também é problema real, mas aqui só queremos saber se abre.
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        with urllib.request.urlopen(req, timeout=TIMEOUT, context=ctx) as r:
-            final = r.geturl()
-            html = r.read(400_000)
-    except urllib.error.HTTPError:
-        # Respondeu com erro (403 de proteção anti-robô, 503 do Cloudflare...):
-        # o site existe, só não deu para olhar. Não é argumento de venda.
-        return "ok"
-    except Exception:
-        # DNS que não resolve, conexão recusada, tempo esgotado: fora do ar.
-        return "fora"
+    # Certificado inválido também é problema real, mas aqui só queremos saber se abre.
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    # Três tentativas antes de dizer "fora": uma falha passageira (rede, tempo
+    # esgotado com muitas checagens em paralelo) já fez a IA dizer a um lead que
+    # o site estava fora do ar quando estava no ar (28/10/2026).
+    for tentativa in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=TIMEOUT, context=ctx) as r:
+                final = r.geturl()
+                html = r.read(400_000)
+            break
+        except urllib.error.HTTPError:
+            # Respondeu com erro (403 de proteção anti-robô, 503 do Cloudflare...):
+            # o site existe, só não deu para olhar. Não é argumento de venda.
+            return "ok"
+        except Exception:
+            # DNS que não resolve, conexão recusada, tempo esgotado: tenta de novo.
+            if tentativa == 2:
+                return "fora"
+            time.sleep(3)
     if PARADO.search(html) or re.search(r"forsale\.|sedoparking|parkingcrew|/lander", final, re.I):
         return "parado"
     problemas = []
