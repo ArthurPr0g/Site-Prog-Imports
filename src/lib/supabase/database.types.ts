@@ -452,6 +452,69 @@ export type Database = {
         }
         Relationships: []
       }
+      cobrancas: {
+        Row: {
+          ambiente: string
+          asaas_payment_id: string | null
+          conversation_id: string | null
+          created_at: string
+          id: string
+          lead_id: string
+          link: string | null
+          pago_em: string | null
+          parcela: string
+          status: string
+          updated_at: string
+          valor: number
+          vencimento: string
+        }
+        Insert: {
+          ambiente?: string
+          asaas_payment_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          lead_id: string
+          link?: string | null
+          pago_em?: string | null
+          parcela: string
+          status?: string
+          updated_at?: string
+          valor: number
+          vencimento: string
+        }
+        Update: {
+          ambiente?: string
+          asaas_payment_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          lead_id?: string
+          link?: string | null
+          pago_em?: string | null
+          parcela?: string
+          status?: string
+          updated_at?: string
+          valor?: number
+          vencimento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cobrancas_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cobrancas_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ia_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ia_config: {
         Row: {
           active: boolean
@@ -996,6 +1059,7 @@ export type Database = {
           reasons: string[]
           replied_at: string | null
           responsible_name: string | null
+          asaas_customer_id: string | null
           closed_value: number | null
           closed_monthly: number | null
           closed_currency: string | null
@@ -1060,6 +1124,7 @@ export type Database = {
           reasons?: string[]
           replied_at?: string | null
           responsible_name?: string | null
+          asaas_customer_id?: string | null
           closed_value?: number | null
           closed_monthly?: number | null
           closed_currency?: string | null
@@ -1124,6 +1189,7 @@ export type Database = {
           reasons?: string[]
           replied_at?: string | null
           responsible_name?: string | null
+          asaas_customer_id?: string | null
           closed_value?: number | null
           closed_monthly?: number | null
           closed_currency?: string | null

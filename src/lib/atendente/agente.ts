@@ -10,6 +10,7 @@ import { dbDoAtendente, type DbDoAtendente } from '@/lib/atendente/db';
 import { enviarTexto, baixarMidia, JANELA_MS } from '@/lib/atendente/whatsapp-api';
 import { enviarEmail } from '@/lib/atendente/email';
 import { siteAbreAgora } from '@/lib/atendente/site-agora';
+import { asaasConfigurado, ambienteAsaas, criarCliente, criarCobranca, daquiA, documentoValido } from '@/lib/pagamentos/asaas';
 import { instrucoesFixas, contextoDaConversa } from '@/lib/atendente/prompt';
 import { calcularProposta, custoDaChamada, modeloDoMomento, type ConfigDoAtendente, type ModeloDaIA } from '@/lib/atendente/regras';
 import { tabelaBRL, TABELA_USD } from '@/lib/precos-captacao';
@@ -150,6 +151,22 @@ const tools: Anthropic.Beta.BetaTool[] = [
     strict: true,
   },
   {
+    name: 'gerar_cobranca_do_sinal',
+    description:
+      'Gera no Asaas a cobrança do sinal (50% do valor fechado) e devolve o link. Use logo depois de mudar_etapa "fechado", com o CPF ou CNPJ e o nome completo que o cliente informou. O cliente escolhe Pix, boleto ou cartão no próprio link.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        documento: { type: 'string', description: 'CPF ou CNPJ do cliente (com ou sem pontuação).' },
+        nome: { type: 'string', description: 'Nome completo (pessoa) ou razão social (empresa) que vai no contrato e na cobrança.' },
+        email: { type: 'string', description: 'E-mail do cliente para o recibo, ou "" se ele não informou.' },
+      },
+      required: ['documento', 'nome', 'email'],
+      additionalProperties: false,
+    },
+    strict: true,
+  },
+  {
     name: 'pedir_desconto_extra',
     description:
       'Pede ao superior um desconto extra além do combo. Só quando o cliente pediu desconto ou travou no preço e você julga necessário para fechar. Depois diga ao cliente que vai ver com seu superior e volta em alguns minutos.',
@@ -278,6 +295,70 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
       e.leadStatus = etapa;
       if (etapa === 'fechado') await chamarArthur(db, cfg, conversaId, `Negócio fechado: ${motivo}`, 'Venda fechada! Mandar contrato e sinal');
       return `Etapa: ${LEAD_STATUS_LABEL[etapa]}.`;
+    }
+    case 'gerar_cobranca_do_sinal': {
+      if (!leadId) return 'Sem lead identificado: não dá para cobrar. Use chamar_arthur.';
+      if (!asaasConfigurado()) {
+        await chamarArthur(db, cfg, conversaId, 'Venda fechada, mas o Asaas não está configurado: gere a cobrança do sinal você.', 'Gerar cobrança do sinal');
+        return 'A cobrança automática não está disponível agora: diga que o Arthur envia o link do sinal em seguida.';
+      }
+      const documento = documentoValido(String(entrada.documento ?? ''));
+      if (!documento) return 'CPF ou CNPJ inválido (CPF tem 11 dígitos e CNPJ 14). Peça de novo ao cliente com gentileza.';
+      const { data: l } = await db
+        .from('leads')
+        .select('name, status, email, closed_value, closed_currency, asaas_customer_id')
+        .eq('id', leadId)
+        .maybeSingle();
+      if (!l || l.status !== 'fechado') return 'Use mudar_etapa "fechado" antes de gerar a cobrança.';
+      if (!l.closed_value) return 'Não há valor de proposta gravado: use calcular_preco com o pacote fechado antes de gerar a cobrança.';
+      if (l.closed_currency === 'USD') {
+        await chamarArthur(db, cfg, conversaId, 'Venda em dólar fechada: o Asaas só cobra em reais. Combine o pagamento com o cliente.', 'Cobrança em dólar');
+        return 'Pagamento em dólar é combinado pelo Arthur: diga que ele envia as instruções em seguida.';
+      }
+      const ambiente = ambienteAsaas();
+      const { data: existente } = await db
+        .from('cobrancas')
+        .select('link, valor, vencimento')
+        .match({ lead_id: leadId, parcela: 'sinal', ambiente })
+        .maybeSingle();
+      if (existente?.link) return `A cobrança do sinal já existe (R$ ${Number(existente.valor).toFixed(2)}): ${existente.link}. Reenvie esse link.`;
+
+      let cliente = l.asaas_customer_id;
+      if (!cliente) {
+        const { data: conv } = await db.from('ia_conversations').select('contact_id').eq('id', conversaId).maybeSingle();
+        const celular = conv?.contact_id?.startsWith('55') ? conv.contact_id.slice(2) : null;
+        const email = String(entrada.email ?? '').trim() || l.email || null;
+        const r = await criarCliente({ nome: String(entrada.nome ?? l.name).trim() || l.name, documento, email, celular, referencia: leadId });
+        if (!r.ok) return `O Asaas recusou o cadastro (${r.erro}). Confira o CPF/CNPJ com o cliente; se continuar, use chamar_arthur.`;
+        cliente = r.dados.id;
+        await db.from('leads').update({ asaas_customer_id: cliente }).eq('id', leadId);
+      }
+      const valor = Math.round((Number(l.closed_value) / 2) * 100) / 100;
+      const vencimento = daquiA(3);
+      const c = await criarCobranca({
+        cliente,
+        valor,
+        vencimento,
+        descricao: `Sinal (50%) do projeto de ${l.name} - Prog Soluções`,
+        referencia: `lead:${leadId}:sinal`,
+      });
+      if (!c.ok) {
+        await chamarArthur(db, cfg, conversaId, `O Asaas não gerou a cobrança do sinal: ${c.erro}`, 'Falha na cobrança');
+        return 'Não consegui gerar o link agora: diga que o Arthur envia o link do sinal em seguida.';
+      }
+      await db.from('cobrancas').insert({
+        lead_id: leadId,
+        conversation_id: conversaId,
+        parcela: 'sinal',
+        valor,
+        vencimento,
+        asaas_payment_id: c.dados.id,
+        link: c.dados.invoiceUrl,
+        status: c.dados.status ?? 'PENDING',
+        ambiente,
+      });
+      const venc = vencimento.split('-').reverse().slice(0, 2).join('/');
+      return `Cobrança do sinal criada: R$ ${valor.toFixed(2).replace('.', ',')}, vence ${venc}. Link: ${c.dados.invoiceUrl}\nMande o link ao cliente: ele escolhe Pix, boleto ou cartão. Diga que, assim que o pagamento cair, você avisa por aqui e o projeto começa.`;
     }
     case 'pedir_desconto_extra': {
       if (e.descontoAprovado) return `Já há ${e.descontoAprovado}% aprovado; calcular_preco já aplica.`;

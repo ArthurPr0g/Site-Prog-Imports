@@ -322,6 +322,8 @@ export type ConversaDoPainel = {
     diagnosticoVisto: string | null;
     /** Perguntas do checklist de descoberta já respondidas. */
     descoberta: number;
+    /** Cobrança do sinal no Asaas (null = ainda não gerada). */
+    sinal: { valor: number; link: string | null; pagoEm: string | null; status: string } | null;
   };
 };
 

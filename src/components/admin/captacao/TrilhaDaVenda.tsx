@@ -117,6 +117,25 @@ export function TrilhaDaVenda({ conversa }: { conversa: ConversaDoPainel }) {
         <span>
           Diagnóstico: <b className="text-fg-secondary">{m.diagnosticoVisto ? `visto ${dia(m.diagnosticoVisto)}` : 'não aberto'}</b>
         </span>
+        {m.sinal && (
+          <span>
+            Sinal ({`R$ ${m.sinal.valor.toFixed(2).replace('.', ',')}`}):{' '}
+            {m.sinal.pagoEm ? (
+              <b className="text-success">pago {dia(m.sinal.pagoEm)}</b>
+            ) : (
+              <>
+                <b className={m.sinal.status === 'OVERDUE' ? 'text-error' : 'text-[#ff9f43]'}>
+                  {m.sinal.status === 'OVERDUE' ? 'vencido' : 'aguardando pagamento'}
+                </b>
+                {m.sinal.link && (
+                  <a href={m.sinal.link} target="_blank" rel="noreferrer" className="ml-1 font-bold text-accent underline">
+                    link
+                  </a>
+                )}
+              </>
+            )}
+          </span>
+        )}
       </div>
     </div>
   );

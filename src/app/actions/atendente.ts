@@ -46,7 +46,9 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
     supabase.from('ia_config').select('*').eq('id', true).maybeSingle(),
     supabase
       .from('ia_conversations')
-      .select('*, leads(name, status, first_contact_at, replied_at, closed_at, diag_last_view_at, discovery), ia_messages(body, created_at)')
+      .select(
+        '*, leads(name, status, first_contact_at, replied_at, closed_at, diag_last_view_at, discovery, cobrancas(parcela, valor, link, pago_em, status, created_at)), ia_messages(body, created_at)'
+      )
       .order('last_message_at', { ascending: false })
       .order('created_at', { referencedTable: 'ia_messages', ascending: false })
       .limit(1, { referencedTable: 'ia_messages' })
@@ -105,6 +107,12 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
           fechado: v.leads?.closed_at ?? null,
           diagnosticoVisto: v.leads?.diag_last_view_at ?? null,
           descoberta: respondidas((v.leads?.discovery ?? {}) as RespostasDoChecklist),
+          sinal: (() => {
+            const s = (v.leads?.cobrancas ?? [])
+              .filter((c) => c.parcela === 'sinal')
+              .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+            return s ? { valor: Number(s.valor), link: s.link, pagoEm: s.pago_em, status: s.status } : null;
+          })(),
         },
       })
     ),
