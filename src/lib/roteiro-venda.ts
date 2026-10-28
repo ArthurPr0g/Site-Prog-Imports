@@ -29,7 +29,7 @@ export type Roteiro = {
 const ACHADO_NA_LIGACAO: Record<SituacaoDoSite, string> = {
   sem_site: 'notei que vocês ainda não têm um site próprio aparecendo no Google',
   rede_social: 'notei que o link de vocês no Google leva para o Instagram, e não para um site',
-  parado: 'notei que o endereço do site de vocês está à venda, ou seja, o site saiu do ar',
+  parado: 'notei que o endereço do site de vocês abre só uma página padrão da hospedagem, sem o site',
   fora: 'tentei abrir o site de vocês e ele não está abrindo',
   sem_celular: 'abri o site de vocês no celular e ele não se adapta à tela',
   sem_https: 'o site de vocês aparece como "não seguro" no navegador',
@@ -52,7 +52,7 @@ const OPORTUNIDADE: Record<SituacaoDoSite, string> = {
   sem_site: 'Não tem site próprio: quem procura no Google não acha uma página da empresa e pode ir para um concorrente.',
   rede_social:
     'O link do Google leva para uma rede social: funciona para quem já segue, mas não para quem pesquisa e ainda não conhece.',
-  parado: 'O endereço do site está à venda: o site saiu do ar e qualquer pessoa pode comprar o domínio.',
+  parado: 'O endereço do site abre só uma página de estacionamento da hospedagem: o site não está no ar. O domínio costuma continuar no nome deles (confira o dono antes de falar disso).',
   fora: 'O site não abre: quem clica no Google vê erro e desiste.',
   sem_celular: 'O site não se adapta ao celular: no telefone, a página fica pequena e difícil de usar.',
   sem_https: 'O navegador mostra o site como "não seguro", o que tira a confiança de quem visita.',
@@ -66,7 +66,7 @@ const ARGUMENTO_DO_SITE: Record<SituacaoDoSite, string> = {
   rede_social:
     'O Instagram é ótimo para relacionamento; o site é a vitrine para quem pesquisa no Google e ainda não conhece. Os dois se completam.',
   parado:
-    'Domínio à venda é urgente: além de perder clientes, o endereço pode ser comprado por outra pessoa (até por um concorrente).',
+    'Quem clica no site pelo Google cai numa página vazia da hospedagem e pode achar que a empresa fechou. Se o domínio já é deles, colocar o site no ar é rápido.',
   fora: 'Site fora do ar passa a impressão de empresa fechada. Colocar um site novo no ar resolve isso rápido.',
   sem_celular:
     'A maioria das pessoas pesquisa pelo celular; um site que não se adapta à tela faz o cliente desistir antes de chamar.',

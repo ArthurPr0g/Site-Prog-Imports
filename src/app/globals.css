@@ -378,6 +378,12 @@ textarea::placeholder {
   100% { transform: translate3d(-3%, 1%, 0) scale(1.02); }
 }
 
+/* Versão discreta (página do cliente): só um brilho azul bem fraco. */
+.tema-apple .aurora-suave {
+  opacity: 0.22;
+  background: radial-gradient(45% 50% at 50% 20%, rgba(10, 132, 255, 0.35), transparent 70%);
+}
+
 /* Texto com degradê (números de destaque) */
 .tema-apple .texto-degrade {
   background: linear-gradient(92deg, #64d2ff 0%, #0a84ff 35%, #bf5af2 70%, #ff375f 100%);
@@ -425,12 +431,12 @@ textarea::placeholder {
   background: linear-gradient(90deg, #64d2ff, #0a84ff 45%, #bf5af2);
 }
 .tema-apple .cta-verde {
-  background: linear-gradient(180deg, #34d65c, #28b84c);
+  background: #28b84c;
   color: #fff;
-  box-shadow: 0 8px 24px rgba(48, 209, 88, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .tema-apple .cta-verde:hover {
-  box-shadow: 0 12px 32px rgba(48, 209, 88, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  background: #2cc653;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -84,8 +84,8 @@ const PROBLEMA: Record<SituacaoDoSite, Record<Idioma, string>> = {
     en: 'noticed your Google link goes to a social profile instead of your own website',
   },
   parado: {
-    pt: 'vi que o endereço do site de vocês está à venda, ou seja, o site saiu do ar',
-    en: 'noticed your website address is up for sale, so the site is no longer online',
+    pt: 'vi que o endereço do site de vocês abre só uma página padrão da hospedagem, sem o site',
+    en: 'noticed your website address only shows a default hosting page, not your site',
   },
   fora: {
     pt: 'tentei abrir o site de vocês, mas ele está fora do ar',

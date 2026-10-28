@@ -57,7 +57,7 @@ const T = {
       redeSocial: 'O link do Google leva para uma rede social, não para um site próprio',
       noAr: 'Site no ar',
       fora: 'O site não abriu: o endereço parece fora do ar',
-      parado: 'O endereço do site está à venda: o site de vocês saiu do ar',
+      parado: 'O endereço do site abre só uma página padrão da hospedagem: o site de vocês não está no ar',
       seguro: 'Conexão segura (HTTPS)',
       inseguro: 'O navegador mostra o site como "não seguro"',
       celular: 'Funciona bem no celular',
@@ -90,7 +90,7 @@ const T = {
       redeSocial: 'Your Google link goes to a social profile, not your own website',
       noAr: 'Website online',
       fora: "The website didn't load: the address seems to be down",
-      parado: 'Your website address is up for sale: the site is no longer online',
+      parado: 'Your website address only shows a default hosting page: your site is not online',
       seguro: 'Secure connection (HTTPS)',
       inseguro: 'Browsers show the website as "not secure"',
       celular: 'Works well on phones',
@@ -184,12 +184,12 @@ export default async function DiagnosticoPage({
 
   return (
     <div className="tema-apple min-h-screen overflow-x-clip bg-page [color-scheme:dark]">
-    <div className="aurora" aria-hidden />
+    <div className="aurora aurora-suave" aria-hidden />
     <main className="mx-auto max-w-[720px] px-4 py-10 sm:px-6 sm:py-14">
       <div className="entrar mb-8" style={entrada()}>
         <div className="text-[12px] font-extrabold uppercase tracking-[.14em] text-[#64d2ff]">Prog Soluções</div>
         <h1 className="mt-2 font-display text-[30px] font-bold leading-tight tracking-[-.02em] sm:text-[40px]">
-          <span className="texto-degrade">{t.titulo}</span>
+          {t.titulo}
         </h1>
         <div className="mt-2 text-[17px] font-bold">{d.name}</div>
         {/* A categoria do Google vem em inglês (o scraper busca com lang=en): só na versão em inglês. */}
@@ -199,13 +199,13 @@ export default async function DiagnosticoPage({
       </div>
 
       <section className="entrar mb-4 rounded-[22px] border border-border bg-card p-5 sm:p-6" style={entrada()}>
-        <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#ffd60a]">{t.google}</div>
+        <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{t.google}</div>
         {d.rating !== null ? (
           <div className="flex items-baseline gap-2.5">
             <span className="font-display text-[34px] font-bold tabular-nums">
               {lang === 'pt' ? d.rating.toFixed(1).replace('.', ',') : d.rating.toFixed(1)}
             </span>
-            <Star size={20} className="fill-[#ffd60a] text-[#ffd60a] drop-shadow-[0_0_8px_rgba(255,214,10,.6)]" />
+            <Star size={20} className="fill-[#ffd60a] text-[#ffd60a]" />
             <span className="text-[14px] text-fg-tertiary">{t.avaliacoes(d.review_count ?? 0)}</span>
           </div>
         ) : null}
@@ -215,11 +215,13 @@ export default async function DiagnosticoPage({
       </section>
 
       <section className="entrar mb-4 rounded-[22px] border border-border bg-card p-5 sm:p-6" style={entrada()}>
-        <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#64d2ff]">{t.checklist}</div>
+        <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{t.checklist}</div>
         <ul className="divide-y divide-divider">
           {sit === 'sem_site' && <Item ok={false} texto={t.itens.semSite} />}
           {sit === 'rede_social' && <Item ok={false} texto={t.itens.redeSocial} />}
-          {temSiteProprio && <Item ok={true} texto={t.itens.siteProprio} />}
+          {temSiteProprio && (
+            <Item ok={true} texto={`${t.itens.siteProprio}: ${d.website!.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '')}`} />
+          )}
           {temSiteProprio && checado && (
             <Item
               ok={sit !== 'fora' && sit !== 'parado'}
@@ -245,10 +247,10 @@ export default async function DiagnosticoPage({
 
       {c && c.total >= 4 && d.city && (
         <section className="entrar mb-4 rounded-[22px] border border-border bg-card p-5 sm:p-6" style={entrada()}>
-          <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#bf5af2]">{t.concorrentes}</div>
+          <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{t.concorrentes}</div>
           <p className="text-[14.5px] leading-relaxed">{t.concorrentesTexto(c.com_site, c.total, d.city)}</p>
           <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-fg-faded/15">
-            <div className="barra-cor crescer h-full rounded-full shadow-[0_0_12px_rgba(10,132,255,.6)]" style={{ width: `${Math.round((c.com_site / c.total) * 100)}%` }} />
+            <div className="crescer h-full rounded-full bg-[#0a84ff]" style={{ width: `${Math.round((c.com_site / c.total) * 100)}%` }} />
           </div>
           {c.nota_media !== null && (
             <p className="mt-3 text-[13px] text-fg-tertiary">
@@ -260,7 +262,7 @@ export default async function DiagnosticoPage({
 
       {d.screenshot_url && (
         <section className="entrar mb-4 rounded-[22px] border border-border bg-card p-5 sm:p-6" style={entrada()}>
-          <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#ff9f0a]">{t.itens.print}</div>
+          <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{t.itens.print}</div>
           {/* Print feito no PC (iPhone simulado), guardado no Storage público */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -273,8 +275,8 @@ export default async function DiagnosticoPage({
       )}
 
       {recomendados.length > 0 && (
-        <section className="borda-degrade entrar mb-6 rounded-[22px] border bg-card p-5 sm:p-6" style={entrada()}>
-          <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#30d158]">{t.recomendo}</div>
+        <section className="entrar mb-6 rounded-[22px] border border-[#0a84ff]/35 bg-card p-5 sm:p-6" style={entrada()}>
+          <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#64d2ff]">{t.recomendo}</div>
           <ul className="space-y-2.5">
             {recomendados.map((s) => (
               <li key={s} className="text-[14.5px] leading-relaxed">

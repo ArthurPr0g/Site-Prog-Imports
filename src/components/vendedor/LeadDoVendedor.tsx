@@ -65,7 +65,7 @@ type Aba = AbaDoLead;
 const SITUACAO: Record<string, string> = {
   sem_site: 'Sem site próprio',
   rede_social: 'Usa rede social no lugar de site',
-  parado: 'Domínio do site à venda (site perdido)',
+  parado: 'Endereço sem site no ar (página de estacionamento)',
   fora: 'Site fora do ar',
   sem_celular: 'Site não se adapta ao celular',
   sem_https: 'Site aparece como "não seguro"',
@@ -243,7 +243,7 @@ export function LeadDoVendedor({
                   <span className="rounded-full bg-accent/12 px-2.5 py-0.5 text-[11.5px] font-extrabold text-accent">
                     {SITUACAO[sit]}
                   </span>
-                  {l.reasons.map((r) => (
+                  {l.reasons.filter((r) => r !== SITUACAO[sit] && !r.startsWith('Sem site') && !r.startsWith('Endereço do site sem site')).map((r) => (
                     <span key={r} className="rounded-full bg-fg-faded/15 px-2.5 py-0.5 text-[11.5px] font-bold text-fg-secondary">
                       {r}
                     </span>

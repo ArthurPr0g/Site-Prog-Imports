@@ -675,9 +675,11 @@ export function avaliarLead(l: LinhaImportada, niche: string | null, unidades = 
     motivos.push('O "site" é só rede social ou link');
     servicos.push(varejo ? 'Loja Essencial' : 'Site Profissional');
   } else if (l.siteCheck?.includes('parado')) {
-    // Domínio à venda: o site morreu e o endereço pode ir para outro dono.
+    // Endereço abre página de estacionamento da hospedagem (ou de domínio à venda)
+    // em vez do site. Não prova que o domínio esteja livre: costuma continuar
+    // registrado no nome da empresa (conferir no Registro.br antes de afirmar).
     nota += 40;
-    motivos.push('Domínio do site à venda (site perdido)');
+    motivos.push('Endereço do site sem site no ar (página de estacionamento)');
     servicos.push(varejo ? 'Loja Essencial' : 'Site Essencial');
   } else if (l.siteCheck?.includes('fora')) {
     nota += 35;

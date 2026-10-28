@@ -6,7 +6,7 @@
 // o guia do ramo. Dados públicos do Google Maps + src/lib/conhecer-o-ramo.ts.
 
 import { motion, useReducedMotion } from 'framer-motion';
-import { Activity, Clock, MapPin, MessageSquareQuote, Users, BookOpen, Star, CalendarCheck } from 'lucide-react';
+import { Activity, Clock, MapPin, MessageSquareQuote, Users, BookOpen, Star, CalendarCheck, Globe, ExternalLink, Search } from 'lucide-react';
 import type { LeadDoKit } from '@/lib/vendedor';
 import { guiaDoRamo } from '@/lib/conhecer-o-ramo';
 import { mapsDoLead } from '@/lib/captacao';
@@ -58,6 +58,75 @@ function Secao({ titulo, Icone, children, i = 0 }: { titulo: string; Icone: type
 function Sinal({ tom, children }: { tom: 'ok' | 'alerta' | 'neutro'; children: React.ReactNode }) {
   const cor = { ok: 'bg-success/12 text-success', alerta: 'bg-error/12 text-error', neutro: 'bg-fg-faded/15 text-fg-secondary' }[tom];
   return <span className={`rounded-full px-2.5 py-1 text-[12px] font-bold ${cor}`}>{children}</span>;
+}
+
+// O que cada resultado da conferência quer dizer e como foi visto
+// (scripts/captacao/checar-sites.py, na importação).
+const ACHADO_DO_SITE: Record<string, { texto: string; como: string; ruim: boolean }> = {
+  fora: { texto: 'Não abriu', como: 'o endereço não respondeu (domínio sem DNS, conexão recusada ou tempo esgotado)', ruim: true },
+  parado: {
+    texto: 'Abre uma página de estacionamento, sem o site',
+    como: 'a página mostra o aviso padrão da hospedagem ou de domínio à venda no lugar do site. Isso não prova que o domínio esteja livre: veja o dono abaixo',
+    ruim: true,
+  },
+  sem_https: { texto: 'Sem cadeado (https)', como: 'o navegador mostra "não seguro"', ruim: true },
+  sem_celular: { texto: 'Não se adapta ao celular', como: 'a página não tem o ajuste de tela para celular (meta viewport)', ruim: true },
+  vende_online: { texto: 'Já vende online', como: 'a página tem carrinho ou loja', ruim: false },
+  ok: { texto: 'Abriu normalmente', como: 'sem problema técnico visível', ruim: false },
+};
+
+/** Domínio sem protocolo, www e caminho (ex.: casasinergia.com.br). */
+function dominioDe(url: string): string {
+  return url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').split(/[/?#]/)[0].toLowerCase();
+}
+
+/** O site do lead: endereço, o que a conferência achou e como checar o dono do domínio. */
+function SiteDoLead({ l }: { l: LeadDoKit }) {
+  const dominio = dominioDe(l.website!);
+  const redeSocial = /instagram|facebook|fb\.|wa\.me|whatsapp|linktr\.ee|linkin\.bio/i.test(dominio);
+  const achados = (l.site_check ?? '').split('+').filter((a) => ACHADO_DO_SITE[a]);
+  const whois = dominio.endsWith('.br')
+    ? `https://registro.br/tecnologia/ferramentas/whois?search=${encodeURIComponent(dominio)}`
+    : `https://lookup.icann.org/en/lookup?name=${encodeURIComponent(dominio)}`;
+  return (
+    <Secao titulo="O site deles (confira antes de citar)" Icone={Globe} i={1}>
+      <a
+        href={/^https?:/i.test(l.website!) ? l.website! : `https://${l.website}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 break-all text-[14px] font-bold text-[#64d2ff] underline decoration-[#64d2ff]/40 underline-offset-4"
+      >
+        {dominio} <ExternalLink size={13} className="flex-shrink-0" />
+      </a>
+      {redeSocial ? (
+        <p className="mt-2 text-[13px] text-fg-secondary">O endereço cadastrado no Google é uma rede social ou link, não um site próprio.</p>
+      ) : achados.length ? (
+        <ul className="mt-2 space-y-1.5 text-[13px]">
+          {achados.map((a) => (
+            <li key={a} className="leading-snug">
+              <b className={ACHADO_DO_SITE[a].ruim ? 'text-[#ff9f0a]' : 'text-[#30d158]'}>{ACHADO_DO_SITE[a].texto}</b>
+              <span className="text-fg-tertiary">: {ACHADO_DO_SITE[a].como}.</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-[13px] text-fg-tertiary">Ainda não conferido automaticamente: abra o link e veja como está.</p>
+      )}
+      <p className="mt-2 text-[12px] text-fg-tertiary">
+        Conferido quando o lead foi importado; o site pode ter mudado. Abra o link antes de falar disso com o cliente.
+      </p>
+      {!redeSocial && (
+        <a
+          href={whois}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border-strong px-3 py-1.5 text-[12.5px] font-bold text-fg-secondary hover:border-[#0a84ff] hover:text-[#64d2ff]"
+        >
+          <Search size={13} /> Ver o dono e a validade do domínio
+        </a>
+      )}
+    </Secao>
+  );
 }
 
 export function NegocioDoLead({ l, agora }: { l: LeadDoKit; agora: number }) {
@@ -127,6 +196,8 @@ export function NegocioDoLead({ l, agora }: { l: LeadDoKit; agora: number }) {
           </div>
         )}
       </Secao>
+
+      {l.website && <SiteDoLead l={l} />}
 
       <Secao titulo="Como é o negócio" Icone={MapPin} i={1}>
         <dl className="space-y-1.5 text-[13.5px]">
