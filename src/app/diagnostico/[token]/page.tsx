@@ -74,6 +74,7 @@ const T = {
     cta: 'Conversar no WhatsApp',
     portfolio: 'Ver trabalhos',
     rodape: 'Análise feita com informações públicas do Google Maps e do site da empresa.',
+    rodapeSemMaps: 'Análise feita com informações públicas do Instagram e do site.',
     msg: (empresa: string, quem: string) => `Oi, ${quem}! Vi o diagnóstico de ${empresa} e quero conversar.`,
     portfolioUrl: 'https://portfolio-arthur-prog.vercel.app/pt',
   },
@@ -107,6 +108,7 @@ const T = {
     cta: 'Chat on WhatsApp',
     portfolio: 'See my work',
     rodape: "Review based on public information from Google Maps and the company's website.",
+    rodapeSemMaps: 'Review based on public information from Instagram and the website.',
     msg: (empresa: string, quem: string) => `Hi ${quem}! I saw the review for ${empresa} and I'd like to talk.`,
     portfolioUrl: 'https://portfolio-arthur-prog.vercel.app/en',
   },
@@ -175,6 +177,8 @@ export default async function DiagnosticoPage({
   const temSiteProprio = sit !== 'sem_site' && sit !== 'rede_social';
   const checado = !!d.site_check;
   const local = [d.city, d.state].filter(Boolean).join(' / ');
+  // Veio do Google Maps (tem nota ou número de avaliações)? Lead achado só pelo Instagram não tem.
+  const doMaps = d.rating !== null || d.review_count !== null;
   const c = d.concorrentes;
   const recomendados = d.suggested_services.filter((s) => SERVICOS[s]);
 
@@ -198,6 +202,8 @@ export default async function DiagnosticoPage({
         </div>
       </div>
 
+      {/* Lead que não veio do Google Maps (ex.: achado pelo Instagram): sem bloco do Google. */}
+      {doMaps && (
       <section className="entrar mb-4 rounded-[22px] border border-border bg-card p-5 sm:p-6" style={entrada()}>
         <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{t.google}</div>
         {d.rating !== null ? (
@@ -213,6 +219,7 @@ export default async function DiagnosticoPage({
           {(d.review_count ?? 0) >= 30 && (d.rating ?? 0) >= 4.3 ? t.elogio : t.semAvaliacao}
         </p>
       </section>
+      )}
 
       <section className="entrar mb-4 rounded-[22px] border border-border bg-card p-5 sm:p-6" style={entrada()}>
         <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{t.checklist}</div>
@@ -309,7 +316,7 @@ export default async function DiagnosticoPage({
         </a>
       </div>
 
-      <p className="mt-8 text-center text-[12px] text-fg-faded">{t.rodape}</p>
+      <p className="mt-8 text-center text-[12px] text-fg-faded">{doMaps ? t.rodape : t.rodapeSemMaps}</p>
     </main>
     </div>
   );
