@@ -9,15 +9,48 @@ Pedido do dono em 27/10/2026: "pode fazer todos" (itens 1 a 12).
 
 ---
 
-## Para publicar o que já existe
+## Como publicar (roteiro para a sessão que for publicar)
+
+Estado em 27/10/2026: **7 commits locais** em `main` (de `916ef43` a `15b6f12`),
+sem push, e a migration `0062` **não aplicada** em produção. Os commits existem
+só nesta pasta do PC: trabalhe nela (não clone de novo, senão perde tudo).
+
+1. `cd` na pasta do repo e `git status`: a árvore deve estar limpa e `ahead 7`.
+   Se o `git pull` trouxer algo novo, resolva antes de seguir.
+2. **Aplicar a migration** `supabase/migrations/0062_captacao_leads.sql` inteira
+   com `apply_migration` (nome `captacao_leads`) no MCP **`supabase-arthurmatos003`**,
+   project ref **`oduimaztcoxbvtlsjjcy`**. Depois, `get_advisors` (security):
+   as 6 tabelas novas têm RLS de admin; as funções `lead_*` são security
+   definer de propósito (página pública do diagnóstico e do vendedor).
+3. `npm run build` (deve passar; lint do projeto inteiro está zerado).
+4. `git push` → a Vercel publica sozinha. Acompanhar o deploy até `READY`.
+   Não precisa de variável nova. `NEXT_PUBLIC_SITE_URL` deve ser o domínio
+   de produção (os links do diagnóstico e do vendedor saem dele).
+5. Testar pelo acesso do dono (login Google): `/admin/captacao` (abas Lista,
+   Foco, Quadro, Mapa, Relatório, Vendedores, Buscas), um `/diagnostico/...` e,
+   depois de gerar o link do Felipe, `/vendedor/...` no celular e no
+   computador. Android e iPhone pelos simuladores (`TESTES-CELULAR.md`).
+6. **Importar os leads**: `npx -y tsx scripts/captacao/worker.ts --importar <CSVs>`
+   (usa a `SUPABASE_SECRET_KEY` do `.env.local`; importa com a mesma lógica do
+   painel e tira os prints). Os CSVs estão em
+   `3 - Ferramentas\google-maps-scraper-kit\resultados` (todos já com
+   `busca_*`; os 8 antigos foram marcados em 27/10).
+7. **Link do Felipe**: na aba Vendedores, com os filtros que o dono quiser,
+   informar nome e **WhatsApp do Felipe** (o dono passa) e gerar.
 
 | # | Item | Status | Observação |
 |---|---|---|---|
-| P1 | Aplicar a migration `0062` em produção e rodar `get_advisors` | a fazer | Só numa sessão do Claude Code aberta na pasta **Prog Soluções** (MCP `supabase-arthurmatos003`). |
+| P1 | Aplicar a migration `0062` em produção e rodar `get_advisors` | a fazer | Passo 2 acima. Só numa sessão aberta na pasta **Prog Soluções** (MCP `supabase-arthurmatos003`). |
 | P2 | Push dos commits locais e acompanhar o deploy | a fazer | Depois do P1, nunca antes (a tela sem a tabela quebra). |
 | P3 | Testar no Chrome, iPhone e Android pelo acesso do dono | a fazer | O Android ainda não foi testado em nenhuma versão (emulador não abria o Chrome após boot a frio). |
 | P4 | Conferir se `NEXT_PUBLIC_WHATSAPP_NUMBER` na Vercel é `5562982133188` | a fazer | É o número de serviços (padrão do código). |
-| P5 | Importar em produção os CSVs de `google-maps-scraper-kit\resultados` | a fazer | Lote de Goiânia (36 nichos) e Orlando (18) rodando em 27/10. Mais simples: `npx -y tsx scripts/captacao/worker.ts --importar <arquivos>` (importa e tira os prints). CSVs antigos sem `busca_*` precisam antes de `checar-sites.py <csv> --ramo --cidade --pais`. |
+| P5 | Importar em produção os CSVs de `google-maps-scraper-kit\resultados` | a fazer | Passo 6 acima. Lote de Goiânia (36 nichos) e Orlando (18) rodando em 27/10. |
+| P6 | Gerar o link do Felipe e mandar para ele | a fazer | Passo 7. Falta o WhatsApp dele. |
+
+Fora do repositório (só no PC, não vão no push): a alteração do kit do scraper
+(`scrape.py` lendo `GMAPS_LANG`), o `docker-compose.override.yml` que desliga a
+telemetria do engine e o ambiente de teste local
+(`3 - Ferramentas\prog-imports-local`).
 
 ---
 
