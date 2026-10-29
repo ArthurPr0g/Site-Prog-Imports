@@ -514,25 +514,26 @@ textarea::placeholder {
 }
 .tema-apple .bg-card:hover { border-color: rgba(130, 148, 255, 0.24); box-shadow: var(--sombra-2), var(--brilho-borda); }
 
-/* Cartão em destaque: azul elétrico com brilho (o "Design System" da referência) */
+/* Cartão em destaque: marinho com um brilho azul só no canto (o "Design System" da
+   referência). Suavizado em 29/10 a pedido do dono ("achei esse azul muito forte"). */
 .tema-apple .borda-degrade,
 .tema-apple .borda-dinheiro {
-  border-color: rgba(120, 140, 255, 0.35) !important;
+  border-color: rgba(120, 140, 255, 0.22) !important;
   background:
-    radial-gradient(120% 90% at 0% 0%, rgba(91, 116, 255, 0.45), transparent 60%),
-    linear-gradient(135deg, rgba(40, 58, 200, 0.55) 0%, rgba(22, 30, 80, 0.88) 55%, rgba(16, 21, 50, 0.92) 100%);
-  box-shadow: 0 20px 60px -18px rgba(51, 73, 240, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    radial-gradient(70% 60% at 0% 0%, rgba(91, 116, 255, 0.2), transparent 70%),
+    linear-gradient(160deg, rgba(28, 38, 92, 0.85) 0%, rgba(19, 25, 52, 0.9) 45%, rgba(16, 21, 46, 0.92) 100%);
+  box-shadow: 0 18px 50px -22px rgba(51, 73, 240, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 .tema-apple .borda-dinheiro {
   background:
-    radial-gradient(120% 90% at 100% 0%, rgba(91, 116, 255, 0.4), transparent 60%),
-    linear-gradient(135deg, rgba(22, 30, 80, 0.92) 0%, rgba(40, 58, 200, 0.5) 100%);
+    radial-gradient(70% 60% at 100% 0%, rgba(91, 116, 255, 0.18), transparent 70%),
+    linear-gradient(200deg, rgba(28, 38, 92, 0.85) 0%, rgba(19, 25, 52, 0.9) 45%, rgba(16, 21, 46, 0.92) 100%);
 }
 
 /* Texto em degradê azul (o "Make Things" da referência) */
 .tema-apple .texto-degrade,
 .tema-apple .texto-dinheiro {
-  background: linear-gradient(92deg, #a9b8ff 0%, #6f86ff 45%, #3f5bff 100%);
+  background: linear-gradient(92deg, #dfe4ff 0%, #b3c0ff 50%, #8a9dff 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
