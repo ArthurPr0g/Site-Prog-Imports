@@ -104,6 +104,11 @@ function escolher(leads: LeadDaFila[], agora: number): { l: LeadDaFila; motivo: 
   return lista;
 }
 
+const saudacao = () => {
+  const h = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', hour: 'numeric', hour12: false }).format(new Date()));
+  return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+};
+
 export async function textoDaFila(db: DbDoAtendente, kit: Kit): Promise<{ texto: string; quantos: number }> {
   const agora = Date.now();
   const [leads, { data: modelos }] = await Promise.all([
@@ -114,7 +119,7 @@ export async function textoDaFila(db: DbDoAtendente, kit: Kit): Promise<{ texto:
   const nome = kit.seller_name.split(' ')[0];
   const pagina = `${SITE_URL}/vendedor/${kit.token}`;
   if (!fila.length) {
-    return { texto: `Bom dia, ${nome}! Nada pendente hoje na sua lista. Se acabaram os leads, peça mais na sua página:\n${pagina}`, quantos: 0 };
+    return { texto: `${saudacao()}, ${nome}! Nada pendente hoje na sua lista. Se acabaram os leads, peça mais na sua página:\n${pagina}`, quantos: 0 };
   }
   const tpl = (modelos ?? []) as ModeloMensagem[];
   const linhas = fila.map(({ l, motivo, etapa }, i) => {
@@ -143,10 +148,11 @@ export async function textoDaFila(db: DbDoAtendente, kit: Kit): Promise<{ texto:
         : l.phone
           ? `Ligar: ${l.phone}`
           : 'Sem telefone: veja na sua página';
-    return `*${i + 1}. ${l.name}*${l.city ? ` (${l.city})` : ''}\n${motivo} · ${LEAD_STATUS_LABEL[l.status as LeadStatus] ?? l.status}\n${contato}`;
+    const etapaAtual = l.status === 'novo' ? '' : ` · ${LEAD_STATUS_LABEL[l.status as LeadStatus] ?? l.status}`;
+    return `*${i + 1}. ${l.name}*${l.city ? ` (${l.city})` : ''}\n${motivo}${etapaAtual}\n${contato}`;
   });
   return {
-    texto: [`Bom dia, ${nome}! Sua fila de hoje (${fila.length}):`, '', linhas.join('\n\n'), '', `Depois de mandar, registre na sua página: ${pagina}`].join('\n'),
+    texto: [`${saudacao()}, ${nome}! Sua fila de hoje (${fila.length}):`, '', linhas.join('\n\n'), '', `Depois de mandar, registre na sua página: ${pagina}`].join('\n'),
     quantos: fila.length,
   };
 }
