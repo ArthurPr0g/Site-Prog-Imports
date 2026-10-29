@@ -38,7 +38,6 @@ import type { ServicoDoCatalogo } from '@/lib/itens-do-kit';
 import { GraficoDaMeta } from '@/components/captacao/GraficoDaMeta';
 import { NumeroAnimado, SUAVE } from '@/components/captacao/NumeroAnimado';
 import { resumoDaMeta } from '@/lib/meta-captacao';
-import { LuzDoVidro } from '@/components/captacao/LuzDoVidro';
 
 const POR_PAGINA = 50;
 const ABAS = [
@@ -284,7 +283,6 @@ export function CaptacaoPanel({
     // tema-apple: cores de sistema, profundidade e aurora (globals.css).
     <div className="tema-apple [color-scheme:dark]">
       <div className="aurora" aria-hidden />
-      <LuzDoVidro />
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="col-span-2 grid gap-3 lg:col-span-4 xl:grid-cols-2">
         <ValorNaMesa

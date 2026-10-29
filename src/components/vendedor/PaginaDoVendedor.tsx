@@ -3,7 +3,6 @@
 // Página do vendedor: leads (quadro ou lista), simulador de preços, perguntas
 // difíceis e o passo a passo da venda. Funciona igual no celular e no computador.
 
-import { LuzDoVidro } from '@/components/captacao/LuzDoVidro';
 import { useMemo, useState, useTransition } from 'react';
 import {
   LayoutGrid,
@@ -226,7 +225,6 @@ export function PaginaDoVendedor({
   return (
     <main className="tema-apple mx-auto min-h-screen max-w-[1280px] overflow-x-clip px-4 py-6 [color-scheme:dark] sm:px-6 sm:py-8">
       <div className="aurora" aria-hidden />
-      <LuzDoVidro />
       <header className="mb-5">
         <div className="text-[12px] font-extrabold uppercase tracking-[.14em] text-accent">Prog Soluções · área do vendedor</div>
         <h1 className="mt-1 font-display text-[26px] font-bold leading-tight sm:text-[32px]">Olá, {vendedor}!</h1>

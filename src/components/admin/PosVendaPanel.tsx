@@ -6,7 +6,6 @@
 // ERP e a linha do tempo. Regras do contrato: aceite em 5 dias úteis, rodada além do
 // incluído vira orçamento.
 
-import { LuzDoVidro } from '@/components/captacao/LuzDoVidro';
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { CalendarDays, CheckCircle2, ClipboardList, FileText, History, Plus, Repeat } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
@@ -90,10 +89,9 @@ export function PosVendaPanel() {
   const projeto = painel?.projetos.find((p) => p.id === aberto) ?? null;
 
   return (
-    // tema-apple + vidro líquido (globals.css), como a Captação.
+    // tema-apple + design "Noite azul" (globals.css), como a Captação.
     <div className="tema-apple space-y-4 [color-scheme:dark]">
       <div className="aurora" aria-hidden />
-      <LuzDoVidro />
       <section className="grid gap-3 sm:grid-cols-5">
         <Indicador rotulo="Em andamento" valor={ind.andamento} />
         <Indicador rotulo="Rodadas abertas" valor={ind.rodadasAbertas} />

@@ -1,4 +1,3 @@
-import { LuzDoVidro } from '@/components/captacao/LuzDoVidro';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
@@ -213,7 +212,6 @@ export default async function DiagnosticoPage({
   return (
     <div className="tema-apple min-h-screen overflow-x-clip bg-page [color-scheme:dark]">
     <div className="aurora aurora-suave" aria-hidden />
-    <LuzDoVidro />
     <main className="mx-auto max-w-[720px] px-4 py-10 sm:px-6 sm:py-14">
       <div className="entrar mb-8" style={entrada()}>
         <div className="text-[12px] font-extrabold uppercase tracking-[.14em] text-[#64d2ff]">Prog Soluções</div>
