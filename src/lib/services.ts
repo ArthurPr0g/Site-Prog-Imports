@@ -140,6 +140,21 @@ export type ServiceOrder = {
   startDate: string;
   dueDate: string | null;
   items: ServiceOrderItem[];
+  /** Venda que veio da Captação (sinal pago no Asaas abre a prestação; 0087). */
+  origem?: OrigemDaPrestacao | null;
+};
+
+export type OrigemDaPrestacao = {
+  leadId: string;
+  empresa: string;
+  responsavel: string | null;
+  /** Token público do diagnóstico. */
+  diagnostico: string;
+  conversaId: string | null;
+  projetoId: string | null;
+  sinal: { valor: number; pagoEm: string | null; link: string | null } | null;
+  /** Perguntas da descoberta já respondidas pelo cliente. */
+  descoberta: number;
 };
 
 export type TotaisDosItens = {

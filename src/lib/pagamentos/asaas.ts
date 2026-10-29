@@ -59,6 +59,13 @@ export async function criarCliente(c: {
   });
 }
 
+/** Cadastro do cliente no Asaas (o CPF/CNPJ vai para o cadastro do ERP, que o contrato usa). */
+export async function buscarCliente(id: string) {
+  return chamar<{ id: string; name: string; cpfCnpj: string | null; email: string | null; mobilePhone: string | null }>(
+    `/customers/${encodeURIComponent(id)}`
+  );
+}
+
 export async function criarCobranca(c: {
   cliente: string;
   valor: number;

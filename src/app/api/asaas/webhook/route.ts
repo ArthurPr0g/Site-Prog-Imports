@@ -4,6 +4,7 @@ import { dbDoAtendente } from '@/lib/atendente/db';
 import { lerConfig, responderConversa } from '@/lib/atendente/agente';
 import { enviarEmail } from '@/lib/atendente/email';
 import { SITE_URL } from '@/lib/seo';
+import { abrirPrestacaoDoSinal } from '@/lib/atendente/prestacao-do-sinal';
 
 // Webhook do Asaas (registrado por scripts/asaas/registrar-webhook.mjs).
 // O Asaas manda o authToken no cabeçalho `asaas-access-token` (docs.asaas.com,
@@ -50,11 +51,22 @@ export async function POST(req: NextRequest) {
     const valor = `R$ ${Number(cob.valor).toFixed(2).replace('.', ',')}`;
     const painel = `${SITE_URL}/admin/captacao?aba=atendimento${cob.conversation_id ? `&conversa=${cob.conversation_id}` : ''}`;
     if (pagouAgora) {
+      // Sinal pago: a venda vira Prestação de serviço para o Arthur começar.
+      const prestacao = cob.parcela === 'sinal' ? await abrirPrestacaoDoSinal(db, cob.id) : null;
+      if (prestacao && !prestacao.ok) console.error('[asaas] prestação não aberta', cob.id, prestacao.motivo);
       if (cfg.ownerEmail) {
         await enviarEmail({
           para: cfg.ownerEmail,
           assunto: `💰 ${cob.parcela === 'sinal' ? 'Sinal' : 'Pagamento'} pago: ${empresa} (${valor})`,
-          texto: `${empresa} pagou ${cob.parcela === 'sinal' ? 'o sinal' : 'a parcela da entrega'} (${valor}).\n\nConversa: ${painel}`,
+          texto: [
+            `${empresa} pagou ${cob.parcela === 'sinal' ? 'o sinal' : 'a parcela da entrega'} (${valor}).`,
+            prestacao?.ok
+              ? `\nA prestação de serviço já está aberta para você começar: ${SITE_URL}/admin/prestacao-servico`
+              : prestacao
+                ? `\nNão consegui abrir a prestação sozinho (${prestacao.motivo}). Abra à mão no ERP.`
+                : '',
+            `\nConversa: ${painel}`,
+          ].join('\n'),
           nomeDoRemetente: `${cfg.personaName} (atendente)`,
         });
       }

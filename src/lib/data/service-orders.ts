@@ -1,4 +1,6 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
+import type { Database } from '@/lib/supabase/database.types';
 import {
   lancamentosDaPrestacao,
   type BillingType,
@@ -12,6 +14,7 @@ import type { Desconto } from '@/lib/discount';
 import { listInstallments, listInstallmentsBySource } from '@/lib/data/installments';
 import { OFFSET_PARCELA_PIX, dataDeCaixa, type Installment } from '@/lib/installments';
 import { rotuloDaParcela } from '@/lib/pagamento-servico';
+import { respondidas, type RespostasDoChecklist } from '@/lib/checklist-descoberta';
 
 type ItemRow = {
   id: string;
@@ -50,7 +53,34 @@ type OrderRow = {
   due_date: string | null;
   customers: { name: string } | null;
   service_order_items: ItemRow[] | null;
+  lead_id: string | null;
+  leads: {
+    name: string;
+    public_token: string;
+    responsible_name: string | null;
+    discovery: Record<string, unknown> | null;
+    ia_conversations: { id: string }[] | null;
+    cobrancas: { parcela: string; valor: number; pago_em: string | null; link: string | null }[] | null;
+    projetos: { id: string }[] | null;
+  } | null;
 };
+
+/** Origem na Captação (empresa, conversa, diagnóstico, projeto, sinal). */
+function origemDe(r: OrderRow): ServiceOrder['origem'] {
+  const l = r.leads;
+  if (!r.lead_id || !l) return null;
+  const sinal = (l.cobrancas ?? []).find((c) => c.parcela === 'sinal');
+  return {
+    leadId: r.lead_id,
+    empresa: l.name,
+    responsavel: l.responsible_name,
+    diagnostico: l.public_token,
+    conversaId: l.ia_conversations?.[0]?.id ?? null,
+    projetoId: l.projetos?.[0]?.id ?? null,
+    sinal: sinal ? { valor: Number(sinal.valor), pagoEm: sinal.pago_em, link: sinal.link } : null,
+    descoberta: respondidas((l.discovery ?? {}) as RespostasDoChecklist),
+  };
+}
 
 function toItem(r: ItemRow): ServiceOrderItem {
   return {
@@ -94,6 +124,7 @@ function toOrder(r: OrderRow, parcelas: Installment[] = []): ServiceOrder {
     startDate: r.start_date,
     dueDate: r.due_date,
     items: (r.service_order_items ?? []).sort((a, b) => a.position - b.position).map(toItem),
+    origem: origemDe(r),
   };
 }
 
@@ -123,7 +154,10 @@ export async function listServiceOrders(): Promise<ServiceOrder[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from('service_orders')
-    .select('*, customers(name), service_order_items(*)')
+    .select(
+      // !fkey: prestação e lead também se ligam pelo projeto do pós-venda; aqui é a ligação direta.
+      '*, customers(name), service_order_items(*), leads!service_orders_lead_id_fkey(name, public_token, responsible_name, discovery, ia_conversations(id), cobrancas(parcela, valor, pago_em, link), projetos!projetos_lead_id_fkey(id))'
+    )
     .order('start_date', { ascending: false })
     .order('created_at', { ascending: false });
 
@@ -151,8 +185,12 @@ export async function listServiceOrders(): Promise<ServiceOrder[]> {
  *
  *  Não é transacional: se o Financeiro falhar, a prestação continua salva e um
  *  novo salvamento conserta. */
-export async function sincronizarFinanceiroDaPrestacao(orderId: string): Promise<void> {
-  const supabase = await createClient();
+export async function sincronizarFinanceiroDaPrestacao(
+  orderId: string,
+  /** Opcional: o servidor sem sessão (webhook do Asaas) passa a chave do atendente. */
+  db?: SupabaseClient<Database>
+): Promise<void> {
+  const supabase = db ?? (await createClient());
 
   const { data } = await supabase
     .from('service_orders')
@@ -184,7 +222,7 @@ export async function sincronizarFinanceiroDaPrestacao(orderId: string): Promise
   // Com PIX parcelado, o TRABALHO vira um carnê: as parcelas substituem a
   // receita única. As mensalidades do plano continuam intactas — são coisas
   // diferentes e podem coexistir na mesma prestação.
-  const parcelasPix = await listInstallments('servico', orderId);
+  const parcelasPix = await listInstallments('servico', orderId, db);
   const alvosFinais =
     parcelasPix.length > 0
       ? [

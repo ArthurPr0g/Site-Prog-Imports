@@ -19,6 +19,7 @@ import {
   SERVICE_PAYMENT_STATUSES,
   type InternalService,
   type ServiceOrder,
+  type OrigemDaPrestacao,
   type ServiceOrderItem,
   type ServiceOrderStatus,
   type ServicePaymentStatus,
@@ -118,6 +119,50 @@ function RecebimentoDaPrestacao({ r, cancelada }: { r?: ResumoRecebimentos; canc
           </div>
         )
       )}
+    </div>
+  );
+}
+
+/**
+ * Venda que veio da Captação (sinal pago no Asaas abre a prestação): de onde veio,
+ * a conversa com a Lia, o diagnóstico, o projeto do pós-venda, o sinal e a pasta
+ * do cliente no OneDrive. Tudo o que o Arthur precisa para começar.
+ */
+function OrigemDaCaptacao({ origem }: { origem: OrigemDaPrestacao }) {
+  const primeiro = (origem.responsavel ?? '').trim().split(/\s+/)[0];
+  const pasta = (primeiro ? `${origem.empresa} - ${primeiro}` : origem.empresa).replace(/[<>:"/\\|?*]/g, ' ').trim();
+  const chip = 'inline-flex items-center gap-1 rounded-full border border-border-strong px-2 py-0.5 text-[10.5px] font-bold text-fg-secondary hover:border-accent hover:text-accent';
+  const s = origem.sinal;
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+      <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10.5px] font-extrabold text-accent">
+        Captação{origem.responsavel ? ` · ${origem.responsavel}` : ''}
+      </span>
+      {s && (
+        <span
+          className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold"
+          style={s.pagoEm ? { background: `${VERDE}1f`, color: VERDE } : { background: `${AMBAR}1f`, color: AMBAR }}
+        >
+          {s.pagoEm ? `Sinal pago ${formatDateBR(s.pagoEm)}` : 'Sinal aguardando'} · {formatBRL(s.valor)}
+        </span>
+      )}
+      {origem.conversaId && (
+        <a href={`/admin/captacao?aba=atendimento&conversa=${origem.conversaId}`} className={chip}>
+          Conversa
+        </a>
+      )}
+      <a href={`/diagnostico/${origem.diagnostico}`} target="_blank" rel="noreferrer" className={chip}>
+        Diagnóstico
+      </a>
+      {origem.projetoId && (
+        <a href="/admin/pos-venda" className={chip}>
+          Pós-venda
+        </a>
+      )}
+      <span className="text-[10.5px] text-fg-faded">Descoberta {origem.descoberta}</span>
+      <span className="truncate text-[10.5px] text-fg-faded" title={`OneDrive › 05 - Negócios › 1 - Prog Soluções › 2 - Clientes › ${pasta}`}>
+        Pasta: {pasta}
+      </span>
     </div>
   );
 }
@@ -383,6 +428,7 @@ export function ServiceOrdersTable({
                 {o.quoteId ? ' · veio de orçamento' : ''}
               </div>
               <PilulaAtividades lista={atividades[o.id] ?? []} hoje={hoje} onAbrir={() => setAtividadesDe(o.id)} />
+              {o.origem && <OrigemDaCaptacao origem={o.origem} />}
             </div>
             <div className="truncate text-fg-secondary">{o.customerName || '—'}</div>
             {/* Valor único e mensalidade aparecem separados, como o contrato é

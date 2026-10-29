@@ -1,7 +1,13 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
+import type { Database } from '@/lib/supabase/database.types';
 import type { Installment, InstallmentStatus } from '@/lib/installments';
 
 export type SourceType = 'venda' | 'servico';
+
+/** Cliente do banco opcional: sem ele, a sessão do admin. O servidor sem sessão
+ *  (webhook do Asaas) passa a chave secreta do atendente. */
+type Db = SupabaseClient<Database>;
 
 type Row = {
   id: string;
@@ -25,8 +31,8 @@ function toInstallment(r: Row): Installment {
   };
 }
 
-export async function listInstallments(tipo: SourceType, sourceId: string): Promise<Installment[]> {
-  const supabase = await createClient();
+export async function listInstallments(tipo: SourceType, sourceId: string, db?: Db): Promise<Installment[]> {
+  const supabase = db ?? (await createClient());
   const { data } = await supabase
     .from('payment_installments')
     .select('*')
@@ -108,9 +114,10 @@ export async function salvarParcelas(
   tipo: SourceType,
   sourceId: string,
   parcelas: Installment[],
-  opcoes?: { redefinirDatas?: boolean }
+  opcoes?: { redefinirDatas?: boolean },
+  db?: Db
 ): Promise<void> {
-  const supabase = await createClient();
+  const supabase = db ?? (await createClient());
 
   const { data: existentes } = await supabase
     .from('payment_installments')

@@ -659,6 +659,7 @@ export type Database = {
           pacote: Json | null
           prazo_dias: number
           responsavel: string | null
+          service_order_id: string | null
           service_quote_id: string | null
           status: string
           valor: number | null
@@ -678,6 +679,7 @@ export type Database = {
           pacote?: Json | null
           prazo_dias?: number
           responsavel?: string | null
+          service_order_id?: string | null
           service_quote_id?: string | null
           status?: string
           valor?: number | null
@@ -697,6 +699,7 @@ export type Database = {
           pacote?: Json | null
           prazo_dias?: number
           responsavel?: string | null
+          service_order_id?: string | null
           service_quote_id?: string | null
           status?: string
           valor?: number | null
@@ -1455,6 +1458,7 @@ export type Database = {
           closed_value: number | null
           closed_monthly: number | null
           closed_currency: string | null
+          closed_package: Json | null
           review_count: number | null
           score: number
           screenshot_url: string | null
@@ -1522,6 +1526,7 @@ export type Database = {
           closed_value?: number | null
           closed_monthly?: number | null
           closed_currency?: string | null
+          closed_package?: Json | null
           review_count?: number | null
           score?: number
           screenshot_url?: string | null
@@ -1589,6 +1594,7 @@ export type Database = {
           closed_value?: number | null
           closed_monthly?: number | null
           closed_currency?: string | null
+          closed_package?: Json | null
           review_count?: number | null
           score?: number
           screenshot_url?: string | null
@@ -2442,6 +2448,7 @@ export type Database = {
           plan_months: number | null
           plan_start_date: string | null
           quote_id: string | null
+          lead_id: string | null
           start_date: string
           status: string
           title: string
@@ -2469,6 +2476,7 @@ export type Database = {
           plan_months?: number | null
           plan_start_date?: string | null
           quote_id?: string | null
+          lead_id?: string | null
           start_date?: string
           status?: string
           title: string
@@ -2496,6 +2504,7 @@ export type Database = {
           plan_months?: number | null
           plan_start_date?: string | null
           quote_id?: string | null
+          lead_id?: string | null
           start_date?: string
           status?: string
           title?: string
