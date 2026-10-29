@@ -1186,6 +1186,7 @@ export type Database = {
           customer_id: string | null
           dedupe_key: string
           diag_first_view_at: string | null
+          diag_aviso_em: string | null
           diag_last_view_at: string | null
           diag_views: number
           discovery: Json
@@ -1251,6 +1252,7 @@ export type Database = {
           customer_id?: string | null
           dedupe_key: string
           diag_first_view_at?: string | null
+          diag_aviso_em?: string | null
           diag_last_view_at?: string | null
           diag_views?: number
           discovery?: Json
@@ -1316,6 +1318,7 @@ export type Database = {
           customer_id?: string | null
           dedupe_key?: string
           diag_first_view_at?: string | null
+          diag_aviso_em?: string | null
           diag_last_view_at?: string | null
           diag_views?: number
           discovery?: Json
