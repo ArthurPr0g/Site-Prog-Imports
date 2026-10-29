@@ -661,6 +661,7 @@ export type Database = {
           discount_wait_minutes: number
           email_formato: string
           extra_discount_max: number
+          fila_template_status: string | null
           id: boolean
           model: string
           aviso_template_status: string | null
@@ -679,6 +680,7 @@ export type Database = {
           discount_wait_minutes?: number
           email_formato?: string
           extra_discount_max?: number
+          fila_template_status?: string | null
           id?: boolean
           model?: string
           monthly_budget_usd?: number
@@ -697,6 +699,7 @@ export type Database = {
           discount_wait_minutes?: number
           email_formato?: string
           extra_discount_max?: number
+          fila_template_status?: string | null
           id?: boolean
           model?: string
           monthly_budget_usd?: number
@@ -1008,6 +1011,8 @@ export type Database = {
       lead_seller_kits: {
         Row: {
           active: boolean
+          fila_enviada_em: string | null
+          ultima_msg_em: string | null
           catalog: Json
           created_at: string
           filters: Json
@@ -1022,6 +1027,8 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          fila_enviada_em?: string | null
+          ultima_msg_em?: string | null
           catalog?: Json
           created_at?: string
           filters?: Json
@@ -1036,6 +1043,8 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          fila_enviada_em?: string | null
+          ultima_msg_em?: string | null
           catalog?: Json
           created_at?: string
           filters?: Json

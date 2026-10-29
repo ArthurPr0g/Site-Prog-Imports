@@ -11,6 +11,7 @@ import { SELECT_DO_ITEM, emailDoLead, regiaoDoLead, type ItemComLead } from '@/l
 import { garantirModeloDoAviso } from '@/lib/atendente/avisos';
 import { lembrarConversasParadas } from '@/lib/atendente/lembretes';
 import { avisarLeadsQuentes } from '@/lib/atendente/lead-quente';
+import { garantirModeloDaFila, mandarFilasDoDia } from '@/lib/atendente/fila-do-vendedor';
 
 // Relógio do atendente: o pg_cron do Supabase chama a cada minuto (migration
 // 0067) com o segredo ATENDENTE_TICK_SECRET. Cada chamada:
@@ -20,7 +21,8 @@ import { avisarLeadsQuentes } from '@/lib/atendente/lead-quente';
 // 3. relê 1 conversa encerrada para a Lia aprender (lições vão para aprovação);
 // 4. cria o modelo de aviso ao Arthur na Meta e acompanha a aprovação;
 // 5. manda 1 lembrete a quem parou de responder (3 h depois, dentro das 24 h);
-// 6. avisa o Arthur de quem abriu o diagnóstico e não chamou (lead quente).
+// 6. avisa o Arthur de quem abriu o diagnóstico e não chamou (lead quente);
+// 7. manda a fila do dia ao vendedor às 8h dos dias úteis (e cria o modelo dela na Meta).
 
 export const maxDuration = 60;
 
@@ -44,7 +46,9 @@ export async function POST(req: NextRequest) {
   const licoes = await aprenderComConversas(db, cfg);
   const lembretes = await lembrarConversasParadas(db);
   const leadsQuentes = await avisarLeadsQuentes(db, cfg);
-  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes });
+  const modeloDaFila = await garantirModeloDaFila(db);
+  const filas = await mandarFilasDoDia(db);
+  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas });
 }
 
 async function resolverDescontos(db: DbDoAtendente): Promise<number> {

@@ -8,6 +8,7 @@ import { mesmoTelefone, reenviarAvisoPeloModelo } from '@/lib/atendente/avisos';
 import { PEDIDO_DE_RELATORIO, relatorioDaCaptacao } from '@/lib/atendente/relatorio';
 import { lerConfig } from '@/lib/atendente/agente';
 import { enviarTexto } from '@/lib/atendente/whatsapp-api';
+import { kitDoVendedor, textoDaFila, relatorioDoVendedor, PEDIDO_DE_FILA, PEDIDO_DE_RELATORIO_DO_VENDEDOR } from '@/lib/atendente/fila-do-vendedor';
 
 // Webhook do WhatsApp Cloud API (configurado no app da Meta).
 // GET: verificação do endereço. POST: mensagens e status de entrega.
@@ -75,6 +76,23 @@ export async function POST(req: NextRequest) {
         });
       }
       continue;
+    }
+    // Vendedor (Felipe) escrevendo para a Lia: abre a janela de 24 h para a fila do dia.
+    // "fila" e "relatório" são pedidos dele; o resto segue para a Lia como cliente (testes).
+    const kit = await kitDoVendedor(db, m.de);
+    if (kit) {
+      await db.from('lead_seller_kits').update({ ultima_msg_em: m.quando }).eq('id', kit.id);
+      const fila = PEDIDO_DE_FILA.test(m.texto);
+      if (fila || PEDIDO_DE_RELATORIO_DO_VENDEDOR.test(m.texto)) {
+        const para = m.de;
+        after(async () => {
+          await marcarLidaEDigitando(m.id);
+          const texto = fila ? (await textoDaFila(db, kit)).texto : await relatorioDoVendedor(db, kit);
+          await enviarTexto(para, texto);
+          if (fila) await db.from('lead_seller_kits').update({ fila_enviada_em: new Date().toISOString() }).eq('id', kit.id);
+        });
+        continue;
+      }
     }
     const conversaId = await gravarRecebida(db, m);
     // Reação (emoji numa mensagem) fica no histórico, mas não pede resposta.
