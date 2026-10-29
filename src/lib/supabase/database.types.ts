@@ -661,6 +661,7 @@ export type Database = {
           discount_wait_minutes: number
           email_formato: string
           extra_discount_max: number
+          fila_automatica: boolean
           fila_template_status: string | null
           id: boolean
           model: string
@@ -680,6 +681,7 @@ export type Database = {
           discount_wait_minutes?: number
           email_formato?: string
           extra_discount_max?: number
+          fila_automatica?: boolean
           fila_template_status?: string | null
           id?: boolean
           model?: string
@@ -699,6 +701,7 @@ export type Database = {
           discount_wait_minutes?: number
           email_formato?: string
           extra_discount_max?: number
+          fila_automatica?: boolean
           fila_template_status?: string | null
           id?: boolean
           model?: string

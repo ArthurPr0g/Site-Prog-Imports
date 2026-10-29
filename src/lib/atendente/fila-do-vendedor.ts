@@ -220,7 +220,9 @@ export async function mandarFilasDoDia(db: DbDoAtendente): Promise<number> {
     .select('id, token, seller_name, seller_whatsapp, ultima_msg_em, fila_enviada_em')
     .eq('kind', 'pessoa')
     .eq('active', true);
-  const { data: cfg } = await db.from('ia_config').select('fila_template_status').eq('id', true).maybeSingle();
+  const { data: cfg } = await db.from('ia_config').select('fila_template_status, fila_automatica').eq('id', true).maybeSingle();
+  // Desligada por pedido do dono (28/10/2026): só responde quando o vendedor pede.
+  if (!cfg?.fila_automatica) return 0;
   let enviadas = 0;
   for (const k of (kits ?? []) as Kit[]) {
     if (!k.seller_whatsapp || (k.fila_enviada_em && k.fila_enviada_em >= inicioDoDiaEmBrasilia())) continue;
