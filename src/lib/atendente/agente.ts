@@ -432,6 +432,7 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
       const p = pre.dados;
       return [
         `PDF "${arquivo}" enviado ao cliente. NÃO cole o bloco da proposta.`,
+        `Nome do pacote para falar com o cliente (use exatamente estes, no idioma dele): ${p.itens.map((i) => i.nome).join(' + ')}.`,
         'Agora escreva, em mensagens curtas:',
         `1) Uma frase dizendo que mandou a proposta em PDF e por que esse pacote resolve o caso dele, e os números principais numa linha: *Total ${p.total}*${p.aPartirDe ? ' (a partir de)' : ''} + ${p.mensal}/mês${p.prazoDias ? `, pronto em até ${p.prazoDias} dias úteis` : ''}.${p.pagamento[2] ? ` Se ajudar, cite o 12x: ${p.pagamento[2]}.` : ''}${p.idioma === 'en' ? ' O PDF saiu em inglês, com valores em dólar: escreva tudo no idioma do cliente e use os valores exatamente assim.' : ''}`,
         '2) Use mostrar_exemplos e mande 1 ou 2 links parecidos com o caso dele.',

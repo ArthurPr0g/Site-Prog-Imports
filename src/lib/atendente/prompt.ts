@@ -204,7 +204,7 @@ Ramo: ${l.ramo ?? 'não informado'}
 Site: ${l.site ?? 'não tem'} (situação: ${l.situacaoDoSite}. Só diga que o site está fora do ar se a situação disser "conferido agora, não abriu".)
 Google: ${l.nota ?? '-'} de nota, ${l.avaliacoes ?? 0} avaliações
 O que o diagnóstico apontou: ${l.motivos.join('; ') || '-'}
-Serviços sugeridos pela análise: ${l.sugeridos.join(', ') || '-'}
+Serviços sugeridos pela análise: ${l.sugeridos.join(', ') || '-'}${c.moeda === 'USD' ? ' (nomes internos, em português: com este cliente use só os nomes em inglês que as ferramentas devolvem, ex.: Business Website)' : ''}
 Etapa no funil: ${l.etapa}
 Link do diagnóstico que o cliente recebeu: ${l.diagnostico}
 Descoberta já registrada: ${Object.keys(l.descoberta).length ? JSON.stringify(l.descoberta) : 'nada ainda'}
