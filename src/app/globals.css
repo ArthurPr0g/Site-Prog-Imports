@@ -445,3 +445,151 @@ textarea::placeholder {
   .tema-apple .crescer { animation: none; }
   .tema-apple .bg-card { transition: none; }
 }
+
+/* ===== Vidro líquido na Captação, Pós-venda, vendedor e diagnóstico (29/10/2026) =====
+   Pedido do dono: visual mais Apple, moderno, com vidro de alta qualidade e
+   micro animações. Por cima do tema acima, só dentro de .tema-apple:
+   - fundo de cor fixo e vivo (a aurora cobre a tela toda), para o vidro ter o
+     que desfocar em qualquer altura da página;
+   - cartões translúcidos com desfoque, reflexo na borda de cima, sombra em
+     camadas e uma luz que segue o cursor (--luz-x/--luz-y, LuzDoVidro.tsx);
+   - toque com leve afundamento, hover com elevação, entrada em sequência.
+   Tudo cai para a versão sólida sem backdrop-filter e respeita "reduzir movimento". */
+.tema-apple {
+  --color-card: rgba(30, 30, 34, 0.56);
+  --color-card-hover: rgba(40, 40, 46, 0.62);
+  --color-input: rgba(255, 255, 255, 0.06);
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-strong: rgba(255, 255, 255, 0.18);
+  --vidro-desfoque: blur(26px) saturate(185%);
+  --vidro-reflexo: linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.025) 38%, rgba(255, 255, 255, 0) 60%);
+  --mola: cubic-bezier(0.22, 1, 0.36, 1);
+}
+.tema-apple .aurora {
+  position: fixed;
+  inset: -12vh -12vw;
+  height: auto;
+  filter: blur(80px) saturate(140%);
+  opacity: 0.8;
+  background:
+    radial-gradient(30% 34% at 14% 18%, rgba(10, 132, 255, 0.42), transparent 70%),
+    radial-gradient(28% 32% at 72% 12%, rgba(191, 90, 242, 0.36), transparent 70%),
+    radial-gradient(26% 30% at 90% 58%, rgba(48, 209, 88, 0.24), transparent 70%),
+    radial-gradient(30% 34% at 30% 78%, rgba(255, 55, 95, 0.22), transparent 70%),
+    radial-gradient(24% 28% at 58% 48%, rgba(100, 210, 255, 0.2), transparent 70%);
+  animation: aurora-mover 26s ease-in-out infinite alternate;
+}
+.tema-apple .aurora-suave { opacity: 0.45; }
+
+/* Cartões de vidro */
+.tema-apple .bg-card {
+  background-image:
+    radial-gradient(420px circle at var(--luz-x, 50%) var(--luz-y, -40%), rgba(255, 255, 255, calc(0.085 * var(--luz, 0))), transparent 45%),
+    var(--vidro-reflexo);
+  -webkit-backdrop-filter: var(--vidro-desfoque);
+  backdrop-filter: var(--vidro-desfoque);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 18px 50px -12px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+  transition:
+    box-shadow 0.45s var(--mola),
+    transform 0.45s var(--mola),
+    border-color 0.45s var(--mola),
+    background-color 0.45s var(--mola);
+}
+.tema-apple .bg-card:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.35),
+    0 28px 70px -14px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+/* Cartões pequenos (indicadores, linhas, chips grandes) sobem um pouco no hover. */
+.tema-apple :is(.rounded-\[14px\], .rounded-\[18px\]).bg-card:hover { transform: translateY(-2px); }
+/* Cartões com borda em degradê continuam com vidro por dentro. */
+.tema-apple .borda-degrade,
+.tema-apple .borda-dinheiro {
+  -webkit-backdrop-filter: var(--vidro-desfoque);
+  backdrop-filter: var(--vidro-desfoque);
+}
+.tema-apple .borda-degrade {
+  background:
+    linear-gradient(rgba(30, 30, 34, 0.6), rgba(30, 30, 34, 0.6)) padding-box,
+    linear-gradient(135deg, rgba(10, 132, 255, 0.8), rgba(191, 90, 242, 0.65), rgba(48, 209, 88, 0.6)) border-box;
+}
+.tema-apple .borda-dinheiro {
+  background:
+    linear-gradient(rgba(30, 30, 34, 0.6), rgba(30, 30, 34, 0.6)) padding-box,
+    linear-gradient(135deg, rgba(48, 209, 88, 0.85), rgba(102, 212, 207, 0.6), rgba(255, 214, 10, 0.5)) border-box;
+}
+
+/* Barras e menus de vidro */
+.tema-apple .vidro {
+  background: rgba(18, 18, 20, 0.55);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  backdrop-filter: blur(30px) saturate(190%);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Campos: vidro fosco e foco com halo azul */
+.tema-apple :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
+  transition: border-color 0.25s var(--mola), box-shadow 0.25s var(--mola), background-color 0.25s var(--mola);
+}
+.tema-apple :is(input, select, textarea):focus-visible {
+  outline: none;
+  border-color: rgba(10, 132, 255, 0.75);
+  box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.22);
+}
+
+/* Micro animações de toque e hover */
+.tema-apple :is(button, a[href], [role="button"]):not(:disabled) {
+  transition: transform 0.25s var(--mola), filter 0.25s var(--mola), background-color 0.25s var(--mola), color 0.25s var(--mola), box-shadow 0.25s var(--mola), border-color 0.25s var(--mola);
+}
+.tema-apple :is(button, [role="button"]):not(:disabled):active { transform: scale(0.965); }
+.tema-apple .bg-accent:not(:disabled):hover,
+.tema-apple .cta-verde:not(:disabled):hover { filter: brightness(1.08); box-shadow: 0 10px 28px -8px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+.tema-apple .bg-accent { box-shadow: 0 6px 18px -6px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.22); }
+
+/* Entrada em sequência dos cartões (só na primeira montagem de cada um) */
+.tema-apple .bg-card { animation: vidro-entrar 0.6s var(--mola) backwards; }
+.tema-apple .bg-card:nth-child(2) { animation-delay: 0.04s; }
+.tema-apple .bg-card:nth-child(3) { animation-delay: 0.08s; }
+.tema-apple .bg-card:nth-child(4) { animation-delay: 0.12s; }
+.tema-apple .bg-card:nth-child(5) { animation-delay: 0.16s; }
+.tema-apple .bg-card:nth-child(n + 6) { animation-delay: 0.2s; }
+@keyframes vidro-entrar {
+  from { opacity: 0; transform: translateY(10px) scale(0.99); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Números de destaque com brilho que passa devagar */
+.tema-apple .texto-degrade,
+.tema-apple .texto-dinheiro {
+  background-size: 220% 100%;
+  animation: vidro-brilho 9s ease-in-out infinite;
+}
+@keyframes vidro-brilho {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Rolagem discreta */
+.tema-apple ::-webkit-scrollbar { width: 10px; height: 10px; }
+.tema-apple ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+.tema-apple ::-webkit-scrollbar-track { background: transparent; }
+
+/* Sem backdrop-filter (navegador antigo): cartões sólidos, como antes. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .tema-apple { --color-card: #161618; --color-card-hover: #1c1c1f; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tema-apple .bg-card,
+  .tema-apple .texto-degrade,
+  .tema-apple .texto-dinheiro { animation: none; }
+  .tema-apple :is(button, [role="button"]):active,
+  .tema-apple .bg-card:hover { transform: none; }
+}
