@@ -393,6 +393,8 @@ export type ResultadosDaLia = {
   exemplos: { conversaId: string; quem: string; etapa: string; ultimaDaLia: string | null; paradaHa: number }[];
   /** Média de mensagens do cliente até a Lia passar o preço. */
   mensagensDoClienteAtePreco: number | null;
+  /** Teste A/B da abertura: A = atual, B = proposta já na 1ª resposta. */
+  ab: { versao: 'A' | 'B'; conversas: number; responderam: number; chegaramAoPreco: number; fechados: number }[];
 };
 
 const DOIS_DIAS = 2 * 24 * 3600_000;
@@ -405,7 +407,7 @@ export async function resultadosDaLiaAction(): Promise<ResultadosDaLia | null> {
   const [{ data: conversas }, { data: gastos }] = await Promise.all([
     supabase
       .from('ia_conversations')
-      .select('id, contact_name, last_inbound_at, leads(name, status)')
+      .select('id, contact_name, last_inbound_at, abertura, leads(name, status)')
       .eq('is_test', false)
       .not('contact_id', 'like', 'simulador:%'),
     supabase.from('ia_gasto_por_conversa').select('conversation_id, custo_usd'),
@@ -468,7 +470,33 @@ export async function resultadosDaLiaAction(): Promise<ResultadosDaLia | null> {
   );
   const validas = contagens.filter((n): n is number => n !== null);
 
+  // A/B: "responderam" = o cliente mandou mais alguma coisa depois da 1ª resposta da Lia.
+  const ab = await Promise.all(
+    (['A', 'B'] as const).map(async (versao) => {
+      const daVersao = lista.filter((c) => c.abertura === versao);
+      let responderam = 0;
+      for (const c of daVersao) {
+        const { data: ms } = await supabase
+          .from('ia_messages')
+          .select('direction, author')
+          .eq('conversation_id', c.id)
+          .order('created_at', { ascending: true })
+          .limit(60);
+        const i = (ms ?? []).findIndex((m) => m.author === 'ia');
+        if (i >= 0 && (ms ?? []).slice(i + 1).some((m) => m.direction === 'in')) responderam++;
+      }
+      return {
+        versao,
+        conversas: daVersao.length,
+        responderam,
+        chegaramAoPreco: daVersao.filter((c) => ['proposta', 'fechado'].includes(status(c))).length,
+        fechados: daVersao.filter((c) => status(c) === 'fechado').length,
+      };
+    })
+  );
+
   return {
+    ab,
     conversas: lista.length,
     gastoTotal,
     propostas: comPreco.length,

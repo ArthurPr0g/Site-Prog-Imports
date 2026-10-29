@@ -715,6 +715,7 @@ export type Database = {
       }
       ia_conversations: {
         Row: {
+          abertura: string | null
           channel: string
           contact_id: string
           contact_name: string | null
@@ -735,6 +736,7 @@ export type Database = {
           unread: number
         }
         Insert: {
+          abertura?: string | null
           channel?: string
           contact_id: string
           contact_name?: string | null
@@ -755,6 +757,7 @@ export type Database = {
           unread?: number
         }
         Update: {
+          abertura?: string | null
           channel?: string
           contact_id?: string
           contact_name?: string | null

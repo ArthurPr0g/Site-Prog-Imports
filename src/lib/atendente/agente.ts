@@ -877,11 +877,25 @@ async function responder(conversaId: string, avisoInterno?: string): Promise<str
     .limit(40);
   const aprendido = aprendizadosDaLia((licoes ?? []) as Aprendizado[]);
 
+  // Teste A/B da abertura (pedido do dono em 28/10/2026): sorteado na 1ª resposta,
+  // metade para cada, fixo até o fim. B (proposta já na 1ª resposta) só com lead
+  // identificado: sem diagnóstico não há pacote para indicar.
+  const primeiraDaIa = !(historico ?? []).some((m) => m.author === 'ia');
+  let abertura = conversa.abertura as 'A' | 'B' | null;
+  if (!abertura && primeiraDaIa && !avisoInterno) {
+    abertura = lead && parseInt(conversaId.replace(/-/g, '').slice(-2), 16) % 2 === 1 ? 'B' : 'A';
+    await db.from('ia_conversations').update({ abertura }).eq('id', conversaId);
+  }
+  const instrucaoDaAbertura =
+    abertura === 'B' && primeiraDaIa
+      ? '\n\nABERTURA DESTA CONVERSA (teste A/B, versão B; vale só para esta primeira resposta e substitui o passo 1 do roteiro): apresente-se em uma frase, cite UM achado concreto do diagnóstico e já use enviar_proposta_pdf com o pacote que o diagnóstico indica (serviços sugeridos; marca = 0 se não houver sinal de que falta logo), sem perguntar nada antes. Siga o que a ferramenta indicar e termine com as opções, no idioma do cliente: [[opções: Quero fechar | Ajustar o pacote | Tenho uma dúvida]]. Se o cliente já fez uma pergunta, responda em uma frase antes.'
+      : '';
+
   const system: Anthropic.Beta.BetaTextBlockParam[] = [
     // Cache de 1 h: o cliente de WhatsApp costuma demorar mais que os 5 min do padrão para responder.
     { type: 'text', text: instrucoesFixas(), cache_control: { type: 'ephemeral', ttl: '1h' } },
     ...(aprendido ? [{ type: 'text' as const, text: aprendido, cache_control: { type: 'ephemeral' as const, ttl: '1h' as const } }] : []),
-    { type: 'text', text: contexto },
+    { type: 'text', text: contexto + instrucaoDaAbertura },
   ];
 
   // Modelo pelo momento (o mesmo em todas as rodadas desta resposta, para aproveitar o cache).

@@ -78,6 +78,47 @@ export function ResultadosDaLiaPainel({ cotacaoDolar, aoAbrir }: { cotacaoDolar:
           )}
         </div>
       </div>
+      <div className="mt-3 rounded-[12px] bg-page/40 p-3 text-[12.5px]">
+        <div className="mb-1.5 font-extrabold">Teste A/B da abertura</div>
+        <div className="mb-2 text-[12px] text-fg-tertiary">
+          A: achado + &quot;Ver preço agora | Tirar uma dúvida&quot; · B: proposta em PDF já na 1ª resposta. Metade das conversas novas
+          para cada; dá para comparar a partir de umas 20 conversas em cada.
+        </div>
+        <table className="w-full text-left tabular-nums">
+          <thead className="text-[11px] text-fg-tertiary">
+            <tr>
+              <th className="py-1 font-bold">Versão</th>
+              <th className="py-1 font-bold">Conversas</th>
+              <th className="py-1 font-bold">Responderam</th>
+              <th className="py-1 font-bold">Chegaram ao preço</th>
+              <th className="py-1 font-bold">Fecharam</th>
+            </tr>
+          </thead>
+          <tbody>
+            {r.ab.map((v) => {
+              const p = (n: number) => (v.conversas ? ` (${Math.round((n / v.conversas) * 100)}%)` : '');
+              return (
+                <tr key={v.versao} className="border-t border-border">
+                  <td className="py-1.5 font-extrabold">{v.versao}</td>
+                  <td className="py-1.5">{v.conversas}</td>
+                  <td className="py-1.5">
+                    {v.responderam}
+                    {p(v.responderam)}
+                  </td>
+                  <td className="py-1.5">
+                    {v.chegaramAoPreco}
+                    {p(v.chegaramAoPreco)}
+                  </td>
+                  <td className="py-1.5">
+                    {v.fechados}
+                    {p(v.fechados)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
       {r.exemplos.length > 0 && (
         <div className="mt-3">
           <div className="mb-1 text-[12px] font-extrabold text-fg-tertiary">Última fala da Lia antes do silêncio</div>
