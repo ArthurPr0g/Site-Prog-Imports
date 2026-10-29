@@ -12,6 +12,7 @@ import { garantirModeloDoAviso } from '@/lib/atendente/avisos';
 import { lembrarConversasParadas } from '@/lib/atendente/lembretes';
 import { avisarLeadsQuentes } from '@/lib/atendente/lead-quente';
 import { garantirModeloDaFila, mandarFilasDoDia } from '@/lib/atendente/fila-do-vendedor';
+import { resumoDoPosVenda } from '@/lib/pos-venda-resumo';
 
 // Relógio do atendente: o pg_cron do Supabase chama a cada minuto (migration
 // 0067) com o segredo ATENDENTE_TICK_SECRET. Cada chamada:
@@ -22,7 +23,8 @@ import { garantirModeloDaFila, mandarFilasDoDia } from '@/lib/atendente/fila-do-
 // 4. cria o modelo de aviso ao Arthur na Meta e acompanha a aprovação;
 // 5. manda 1 lembrete a quem parou de responder (3 h depois, dentro das 24 h);
 // 6. avisa o Arthur de quem abriu o diagnóstico e não chamou (lead quente);
-// 7. manda a fila do dia ao vendedor às 8h dos dias úteis (e cria o modelo dela na Meta).
+// 7. manda a fila do dia ao vendedor às 8h dos dias úteis (e cria o modelo dela na Meta);
+// 8. resumo das pendências do pós-venda no WhatsApp do Arthur (9h dos dias úteis).
 
 export const maxDuration = 60;
 
@@ -48,7 +50,8 @@ export async function POST(req: NextRequest) {
   const leadsQuentes = await avisarLeadsQuentes(db, cfg);
   const modeloDaFila = await garantirModeloDaFila(db);
   const filas = await mandarFilasDoDia(db);
-  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas });
+  const posVenda = await resumoDoPosVenda(db, cfg);
+  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas, posVenda });
 }
 
 async function resolverDescontos(db: DbDoAtendente): Promise<number> {

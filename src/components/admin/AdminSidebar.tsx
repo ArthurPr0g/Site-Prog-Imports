@@ -26,6 +26,7 @@ import {
   Images,
   Settings,
   Magnet,
+  ClipboardCheck,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 
@@ -73,6 +74,7 @@ const NAV: NavGroup[] = [
     group: 'Operacional',
     items: [
       { href: '/admin/captacao', label: 'Captação', Icon: Magnet },
+      { href: '/admin/pos-venda', label: 'Pós-venda', Icon: ClipboardCheck },
       { href: '/admin/orcamentos-loja', label: 'Orçamentos Loja', Icon: FileText },
       { href: '/admin/orcamentos-servicos', label: 'Orçamentos Serviços', Icon: FileSpreadsheet },
       { href: '/admin/vendas', label: 'Vendas', Icon: ClipboardList },

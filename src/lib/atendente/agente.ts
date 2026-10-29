@@ -11,6 +11,7 @@ import { enviarTexto, enviarComOpcoes, enviarDocumento, baixarMidia, JANELA_MS }
 import { renderToBuffer } from '@react-pdf/renderer';
 import { PrePropostaDocument } from '@/lib/pdf/pre-proposta';
 import { montarPreProposta } from '@/lib/pdf/montar-pre-proposta';
+import { criarProjetoDaVenda, escolhaDoJson } from '@/lib/pos-venda';
 import { fusoDoCliente, horarioNoFuso } from '@/lib/idioma-do-lead';
 import { avisarArthur } from '@/lib/atendente/avisos';
 import { casesDoLead, linkDoCase } from '@/lib/cases-portfolio';
@@ -389,6 +390,14 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
             closed_value: p.totalComExtra,
             closed_monthly: p.mensal,
             closed_currency: e.tabela.moeda,
+            // Pacote passado: vira os serviços do projeto quando o lead fechar (pós-venda).
+            pacote: {
+              produto: String(entrada.produto),
+              nivel: Number(entrada.nivel),
+              comGestao: !!entrada.com_gestao,
+              nivelGestao: Number(entrada.nivel_gestao),
+              marca: Number(entrada.marca),
+            },
             ...(subirParaProposta
               ? {
                   status: 'proposta',
@@ -464,7 +473,11 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
         ORDEM.indexOf(etapa) < ORDEM.indexOf(e.leadStatus)
       )
         return `O lead já está em ${LEAD_STATUS_LABEL[e.leadStatus]}; nada mudou.`;
-      const { data: l } = await db.from('leads').select('notes, closed_at').eq('id', leadId).maybeSingle();
+      const { data: l } = await db
+        .from('leads')
+        .select('name, notes, closed_at, pacote, closed_value, closed_monthly, closed_currency, responsible_name')
+        .eq('id', leadId)
+        .maybeSingle();
       const hoje = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
       const agora = new Date().toISOString();
       await db
@@ -482,7 +495,20 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
         })
         .eq('id', leadId);
       e.leadStatus = etapa;
-      if (etapa === 'fechado') await chamarArthur(db, cfg, conversaId, `Negócio fechado: ${motivo}`, 'Venda fechada! Mandar contrato e sinal');
+      if (etapa === 'fechado') {
+        // Pós-venda: a venda vira projeto com os serviços do último pacote passado.
+        await criarProjetoDaVenda(db, {
+          leadId,
+          cliente: l?.name ?? 'Cliente',
+          responsavel: String(entrada.responsavel ?? '').trim() || l?.responsible_name || null,
+          vendidoPor: cfg.personaName,
+          escolha: escolhaDoJson(l?.pacote),
+          moeda: (l?.closed_currency as 'BRL' | 'USD' | null) ?? 'BRL',
+          valor: l?.closed_value ?? null,
+          mensal: l?.closed_monthly ?? null,
+        });
+        await chamarArthur(db, cfg, conversaId, `Negócio fechado: ${motivo}`, 'Venda fechada! Mandar contrato e sinal');
+      }
       return `Etapa: ${LEAD_STATUS_LABEL[etapa]}.`;
     }
     case 'gerar_cobranca_do_sinal': {

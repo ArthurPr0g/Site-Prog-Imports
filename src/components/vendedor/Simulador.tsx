@@ -6,8 +6,10 @@
 // Cada escolha mostra para quem é e o que inclui (lib/guia-dos-pacotes), para o
 // vendedor saber qual pacote indicar sem decorar a página de planos.
 
-import { useMemo, useState, type ReactNode } from 'react';
-import { Copy, Check, Lightbulb, CircleCheck, CircleSlash, Info, Clock, FileDown } from 'lucide-react';
+import { useMemo, useState, useTransition, type ReactNode } from 'react';
+import { useToast } from '@/components/ui/Toast';
+import { vendaFeitaPeloVendedorAction } from '@/app/actions/vendedor';
+import { Copy, Check, Lightbulb, CircleCheck, CircleSlash, Info, Clock, FileDown, BadgeCheck } from 'lucide-react';
 import { tabelaBRL, formatMoeda, type Moeda } from '@/lib/precos-captacao';
 import { simular, parcela, tabelaDaMoeda, NOMES, type Escolha, type Produto } from '@/lib/simulador';
 import {
@@ -183,6 +185,10 @@ export function Simulador({
   const [e, setE] = useState<Escolha>({ produto: 'site', nivel: 0, comGestao: false, nivelGestao: 0, marca: 0, ...inicial });
   const [n, setN] = useState(12);
   const [copiado, setCopiado] = useState(false);
+  // Venda feita (pós-venda): pede um segundo toque para confirmar.
+  const [confirmando, setConfirmando] = useState(false);
+  const [vendendo, startVenda] = useTransition();
+  const toast = useToast();
 
   const t = tabelaDaMoeda(moeda, tabBRL);
   const s = simular(e, t);
@@ -533,6 +539,25 @@ export function Simulador({
               <div className="mt-1.5 text-center text-[11.5px] text-fg-faded">
                 Para quem quer &quot;algo por escrito&quot;: mande o PDF no WhatsApp. O contrato segue com o Arthur.
               </div>
+            )}
+            {token && leadId && (
+              <button
+                disabled={vendendo}
+                onClick={() => {
+                  if (!confirmando) return setConfirmando(true);
+                  startVenda(async () => {
+                    const r = await vendaFeitaPeloVendedorAction(token, leadId, e, moeda).catch(() => ({ ok: false, message: 'Falha de conexão. Tente de novo.' }));
+                    toast(r);
+                    setConfirmando(false);
+                  });
+                }}
+                className={`mt-3 flex w-full items-center justify-center gap-2 rounded-control px-4 py-2.5 text-[13.5px] font-extrabold ${
+                  confirmando ? 'bg-success text-page' : 'border border-success/60 text-success'
+                } disabled:opacity-50`}
+              >
+                <BadgeCheck size={15} />
+                {vendendo ? 'Registrando…' : confirmando ? `Confirmar: o cliente fechou ${m(s.total)}?` : 'Venda feita com este pacote'}
+              </button>
             )}
           </div>
 

@@ -15,6 +15,10 @@ import type { ResumoDaMeta } from '@/lib/meta-captacao';
 import { dbDoAtendente } from '@/lib/atendente/db';
 import { lerConfig } from '@/lib/atendente/agente';
 import { avisarArthur } from '@/lib/atendente/avisos';
+import { calcularProposta } from '@/lib/atendente/regras';
+import { tabelaBRL, TABELA_USD } from '@/lib/precos-captacao';
+import { criarProjetoDaVenda, escolhaDoJson } from '@/lib/pos-venda';
+import type { Escolha } from '@/lib/simulador';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -98,4 +102,53 @@ async function avisarDoVendedor(token: string, leadId: string, status: 'reuniao'
   } catch (e) {
     console.error('[vendedor] aviso ao Arthur falhou', e);
   }
+}
+
+/**
+ * "Venda feita" pelo vendedor (decisão do dono em 28/10/2026: o Felipe também fecha).
+ * Valida o link e o lead, marca o lead como fechado com o valor do pacote (tabela do
+ * catálogo guardado no link) e cria o projeto do pós-venda. O Arthur é avisado.
+ */
+export async function vendaFeitaPeloVendedorAction(
+  token: string,
+  leadId: string,
+  escolha: Escolha,
+  moeda: 'BRL' | 'USD'
+): Promise<ActionResult> {
+  if (!UUID.test(token) || !UUID.test(leadId)) return errResult('Link inválido.');
+  const e = escolhaDoJson(escolha);
+  if (!e) return errResult('Pacote inválido.');
+  const db = dbDoAtendente();
+  const { data: kit } = await db.from('lead_seller_kits').select('id, seller_name, catalog, active').eq('token', token).maybeSingle();
+  if (!kit?.active) return errResult('Link desativado.');
+  const { data: item } = await db.from('lead_kit_items').select('leads(id, name, closed_at)').match({ kit_id: kit.id, lead_id: leadId }).maybeSingle();
+  const lead = item?.leads;
+  if (!lead) return errResult('Lead fora deste link.');
+  const catalogo = (kit.catalog ?? []) as { nome: string; preco: number; prazoDias?: number }[];
+  const tabela = moeda === 'USD' ? TABELA_USD : tabelaBRL(new Map(catalogo.map((c) => [c.nome, Number(c.preco)])));
+  const prop = calcularProposta(e, tabela, 0, new Map(catalogo.map((c) => [c.nome, Number(c.prazoDias ?? 0)])));
+  const agora = new Date().toISOString();
+  await db
+    .from('leads')
+    .update({
+      status: 'fechado',
+      closed_at: lead.closed_at ?? agora,
+      closed_value: prop.total,
+      closed_monthly: prop.mensal,
+      closed_currency: moeda,
+      pacote: e as never,
+      next_contact: null,
+      updated_at: agora,
+    })
+    .eq('id', leadId);
+  const r = await criarProjetoDaVenda(db, { leadId, cliente: lead.name, vendidoPor: kit.seller_name, escolha: e, moeda, valor: prop.total, mensal: prop.mensal });
+  if ('erro' in r) return errResult('A venda foi marcada, mas o projeto não foi criado. Avise o Arthur.');
+  await avisarArthur(db, await lerConfig(db), {
+    titulo: 'Venda feita pelo vendedor',
+    texto: `${kit.seller_name} fechou ${lead.name}: ${prop.linhas.map((l) => l.nome).join(' + ')} (${moeda === 'USD' ? '$' : 'R$ '}${Math.round(prop.total).toLocaleString(moeda === 'USD' ? 'en-US' : 'pt-BR')}). Mande o contrato e o sinal; o projeto já está no Pós-venda.`,
+    leadId,
+  });
+  revalidar(token);
+  revalidatePath('/admin/pos-venda');
+  return okResult('Venda registrada! O Arthur foi avisado e manda o contrato e o sinal.');
 }

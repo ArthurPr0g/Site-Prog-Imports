@@ -565,6 +565,9 @@ export type Database = {
           inicio: string
           lead_id: string | null
           meet_link: string | null
+          ata: string | null
+          projeto_id: string | null
+          rodada_id: string | null
           status: string
           titulo: string
         }
@@ -578,6 +581,9 @@ export type Database = {
           inicio: string
           lead_id?: string | null
           meet_link?: string | null
+          ata?: string | null
+          projeto_id?: string | null
+          rodada_id?: string | null
           status?: string
           titulo: string
         }
@@ -591,10 +597,35 @@ export type Database = {
           inicio?: string
           lead_id?: string | null
           meet_link?: string | null
+          ata?: string | null
+          projeto_id?: string | null
+          rodada_id?: string | null
           status?: string
           titulo?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "reunioes_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reunioes_rodada_id_fkey"
+            columns: ["rodada_id"]
+            isOneToOne: false
+            referencedRelation: "rodadas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reunioes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       integracoes: {
         Row: {
@@ -613,6 +644,182 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      projetos: {
+        Row: {
+          cliente: string
+          created_at: string
+          entrega_prevista: string | null
+          entregue_em: string | null
+          id: string
+          lead_id: string | null
+          mensal: number | null
+          moeda: string
+          observacoes: string | null
+          pacote: Json | null
+          prazo_dias: number
+          responsavel: string | null
+          service_quote_id: string | null
+          status: string
+          valor: number | null
+          vendido_em: string
+          vendido_por: string
+        }
+        Insert: {
+          cliente: string
+          created_at?: string
+          entrega_prevista?: string | null
+          entregue_em?: string | null
+          id?: string
+          lead_id?: string | null
+          mensal?: number | null
+          moeda?: string
+          observacoes?: string | null
+          pacote?: Json | null
+          prazo_dias?: number
+          responsavel?: string | null
+          service_quote_id?: string | null
+          status?: string
+          valor?: number | null
+          vendido_em?: string
+          vendido_por: string
+        }
+        Update: {
+          cliente?: string
+          created_at?: string
+          entrega_prevista?: string | null
+          entregue_em?: string | null
+          id?: string
+          lead_id?: string | null
+          mensal?: number | null
+          moeda?: string
+          observacoes?: string | null
+          pacote?: Json | null
+          prazo_dias?: number
+          responsavel?: string | null
+          service_quote_id?: string | null
+          status?: string
+          valor?: number | null
+          vendido_em?: string
+          vendido_por?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projetos_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projetos_service_quote_id_fkey"
+            columns: ["service_quote_id"]
+            isOneToOne: false
+            referencedRelation: "service_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projeto_servicos: {
+        Row: {
+          id: string
+          nome: string
+          posicao: number
+          prazo_dias: number
+          projeto_id: string
+          rodadas_incluidas: number
+          suporte_dias: number
+          tipo: string
+        }
+        Insert: {
+          id?: string
+          nome: string
+          posicao?: number
+          prazo_dias?: number
+          projeto_id: string
+          rodadas_incluidas?: number
+          suporte_dias?: number
+          tipo: string
+        }
+        Update: {
+          id?: string
+          nome?: string
+          posicao?: number
+          prazo_dias?: number
+          projeto_id?: string
+          rodadas_incluidas?: number
+          suporte_dias?: number
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projeto_servicos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rodadas: {
+        Row: {
+          aceite_em: string | null
+          atendido_por: string | null
+          created_at: string
+          entregue_em: string | null
+          extra: boolean
+          id: string
+          numero: number
+          pedido: string
+          pedido_em: string
+          projeto_id: string
+          servico_id: string
+          status: string
+        }
+        Insert: {
+          aceite_em?: string | null
+          atendido_por?: string | null
+          created_at?: string
+          entregue_em?: string | null
+          extra?: boolean
+          id?: string
+          numero: number
+          pedido: string
+          pedido_em?: string
+          projeto_id: string
+          servico_id: string
+          status?: string
+        }
+        Update: {
+          aceite_em?: string | null
+          atendido_por?: string | null
+          created_at?: string
+          entregue_em?: string | null
+          extra?: boolean
+          id?: string
+          numero?: number
+          pedido?: string
+          pedido_em?: string
+          projeto_id?: string
+          servico_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rodadas_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rodadas_servico_id_fkey"
+            columns: ["servico_id"]
+            isOneToOne: false
+            referencedRelation: "projeto_servicos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ia_aprendizados: {
         Row: {
@@ -661,6 +868,7 @@ export type Database = {
           discount_wait_minutes: number
           email_formato: string
           extra_discount_max: number
+          posvenda_resumo_em: string | null
           fila_automatica: boolean
           fila_template_status: string | null
           id: boolean
@@ -681,6 +889,7 @@ export type Database = {
           discount_wait_minutes?: number
           email_formato?: string
           extra_discount_max?: number
+          posvenda_resumo_em?: string | null
           fila_automatica?: boolean
           fila_template_status?: string | null
           id?: boolean
@@ -701,6 +910,7 @@ export type Database = {
           discount_wait_minutes?: number
           email_formato?: string
           extra_discount_max?: number
+          posvenda_resumo_em?: string | null
           fila_automatica?: boolean
           fila_template_status?: string | null
           id?: boolean
@@ -1202,6 +1412,7 @@ export type Database = {
           dedupe_key: string
           diag_first_view_at: string | null
           diag_aviso_em: string | null
+          pacote: Json | null
           diag_last_view_at: string | null
           diag_views: number
           discovery: Json
@@ -1268,6 +1479,7 @@ export type Database = {
           dedupe_key: string
           diag_first_view_at?: string | null
           diag_aviso_em?: string | null
+          pacote?: Json | null
           diag_last_view_at?: string | null
           diag_views?: number
           discovery?: Json
@@ -1334,6 +1546,7 @@ export type Database = {
           dedupe_key?: string
           diag_first_view_at?: string | null
           diag_aviso_em?: string | null
+          pacote?: Json | null
           diag_last_view_at?: string | null
           diag_views?: number
           discovery?: Json
