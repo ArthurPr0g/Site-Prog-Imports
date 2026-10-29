@@ -436,7 +436,9 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
         'Agora escreva, em mensagens curtas:',
         `1) Uma frase dizendo que mandou a proposta em PDF e por que esse pacote resolve o caso dele, e os números principais numa linha: *Total ${p.total}*${p.aPartirDe ? ' (a partir de)' : ''} + ${p.mensal}/mês${p.prazoDias ? `, pronto em até ${p.prazoDias} dias úteis` : ''}.${p.pagamento[2] ? ` Se ajudar, cite o 12x: ${p.pagamento[2]}.` : ''}${p.idioma === 'en' ? ' O PDF saiu em inglês, com valores em dólar: escreva tudo no idioma do cliente e use os valores exatamente assim.' : ''}`,
         '2) Use mostrar_exemplos e mande 1 ou 2 links parecidos com o caso dele.',
-        '3) Termine com opções: [[opções: Quero fechar | Tenho uma dúvida | Falar com o Arthur]]',
+        p.idioma === 'en'
+          ? '3) Termine com opções, em inglês: [[opções: Ready to start | I have a question | Talk to Arthur]]'
+          : '3) Termine com opções: [[opções: Quero fechar | Tenho uma dúvida | Falar com o Arthur]]',
       ].join('\n');
     }
     case 'registrar_descoberta': {
