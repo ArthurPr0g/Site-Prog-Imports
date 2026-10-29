@@ -7,15 +7,38 @@ import { WHATSAPP_NUMBER } from '@/lib/constants';
 import { situacaoDoSite } from '@/lib/captacao';
 import { linkWhatsApp } from '@/lib/mensagens-lead';
 import { getCurrentUser } from '@/lib/auth';
+import { metadadosProgSolucoes } from '@/lib/prog-solucoes-seo';
 
 // Diagnóstico de presença digital que vai no link da primeira mensagem da
 // Captação. Público por token, lido pela função lead_diagnostico (só campos
 // que já são públicos no Google). Fora do índice dos buscadores.
 
-export const metadata: Metadata = {
-  title: { absolute: 'Diagnóstico de presença digital · Prog Soluções' },
-  robots: { index: false, follow: false },
-};
+// Prévia do link (WhatsApp/e-mail) com o nome da empresa, no visual da Prog
+// Soluções. Só lê o nome e o país: a visita não é contada aqui (só na página).
+export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
+  const { token } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase.rpc('lead_diagnostico', { p_token: token, p_kit: undefined });
+  const d = data as { name?: string; country?: string } | null;
+  const ingles = d?.country === 'US';
+  const empresa = d?.name ?? '';
+  return metadadosProgSolucoes(
+    ingles
+      ? {
+          titulo: empresa ? `Online presence review · ${empresa}` : 'Online presence review · Prog Soluções',
+          descricao: 'A free review by Prog Soluções: your website, Google profile, mobile experience and how competitors nearby show up.',
+          tituloDaImagem: empresa ? `Online presence review: ${empresa}` : 'Online presence review',
+          subtituloDaImagem: 'Free review by Prog Soluções',
+          ingles: true,
+        }
+      : {
+          titulo: empresa ? `Diagnóstico da presença online · ${empresa}` : 'Diagnóstico da presença online · Prog Soluções',
+          descricao: 'Análise gratuita feita pela Prog Soluções: site, Google, celular e como os concorrentes da região aparecem.',
+          tituloDaImagem: empresa ? `Diagnóstico da presença online: ${empresa}` : 'Diagnóstico da presença online',
+          subtituloDaImagem: 'Análise gratuita da Prog Soluções',
+        }
+  );
+}
 
 type Diagnostico = {
   name: string;

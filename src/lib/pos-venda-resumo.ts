@@ -6,6 +6,7 @@ import type { DbDoAtendente } from '@/lib/atendente/db';
 import type { ConfigDoAtendente } from '@/lib/atendente/regras';
 import { avisarArthur } from '@/lib/atendente/avisos';
 import { REGRAS_DO_CONTRATO } from '@/lib/contract';
+import { SITE_URL } from '@/lib/seo';
 
 function diasUteisDesde(iso: string, agora: number): number {
   const d = new Date(iso);
@@ -77,6 +78,6 @@ export async function resumoDoPosVenda(db: DbDoAtendente, cfg: ConfigDoAtendente
     linhas.push(`• ${cliente}: reunião ${quando}`);
   }
   if (!linhas.length) return 0;
-  await avisarArthur(db, cfg, { titulo: 'Pós-venda: pendências de hoje', texto: `\n${linhas.slice(0, 15).join('\n')}` });
+  await avisarArthur(db, cfg, { titulo: 'Pós-venda: pendências de hoje', texto: `\n${linhas.slice(0, 15).join('\n')}`, link: `${SITE_URL}/admin/pos-venda` });
   return linhas.length;
 }

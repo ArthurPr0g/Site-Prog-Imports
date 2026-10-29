@@ -18,6 +18,7 @@ import {
   marcarRodadaAction,
   marcarReuniaoDoProjetoAction,
   salvarAtaAction,
+  excluirProjetoAction,
   type ProjetoDoPainel,
 } from '@/app/actions/pos-venda';
 import { NOMES, type Escolha } from '@/lib/simulador';
@@ -331,6 +332,7 @@ function DetalheDoProjeto({
   const [link, setLink] = useState('');
   const [assunto, setAssunto] = useState('');
   const [rodadaDaReuniao, setRodadaDaReuniao] = useState('');
+  const [excluindo, setExcluindo] = useState(false);
 
   const linha = useMemo(() => {
     const ev: { quando: string; texto: string }[] = [{ quando: p.vendidoEm, texto: `Venda fechada por ${p.vendidoPor} (${dinheiro(p.valor, p.moeda)})` }];
@@ -575,6 +577,24 @@ function DetalheDoProjeto({
           className={`mt-1 w-full resize-none ${inputClass}`}
         />
       </label>
+
+      <div className="flex justify-end">
+        <button
+          disabled={pending}
+          onClick={() => {
+            if (!excluindo) return setExcluindo(true);
+            acao(async () => {
+              const r = await excluirProjetoAction(p.id);
+              if (r.ok) aoVoltar();
+              return r;
+            });
+          }}
+          onBlur={() => setExcluindo(false)}
+          className={`rounded-full px-3 py-1 text-[12px] font-bold ${excluindo ? 'bg-error text-page' : 'border border-error/50 text-error'}`}
+        >
+          {excluindo ? 'Confirmar: excluir este projeto?' : 'Excluir projeto'}
+        </button>
+      </div>
 
       {/* Linha do tempo (P8) */}
       <div>

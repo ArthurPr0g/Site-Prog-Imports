@@ -19,6 +19,7 @@ import { calcularProposta } from '@/lib/atendente/regras';
 import { tabelaBRL, TABELA_USD } from '@/lib/precos-captacao';
 import { criarProjetoDaVenda, escolhaDoJson } from '@/lib/pos-venda';
 import type { Escolha } from '@/lib/simulador';
+import { SITE_URL as SITE_URL_POS } from '@/lib/seo';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -147,6 +148,7 @@ export async function vendaFeitaPeloVendedorAction(
     titulo: 'Venda feita pelo vendedor',
     texto: `${kit.seller_name} fechou ${lead.name}: ${prop.linhas.map((l) => l.nome).join(' + ')} (${moeda === 'USD' ? '$' : 'R$ '}${Math.round(prop.total).toLocaleString(moeda === 'USD' ? 'en-US' : 'pt-BR')}). Mande o contrato e o sinal; o projeto já está no Pós-venda.`,
     leadId,
+    link: `${SITE_URL_POS}/admin/pos-venda`,
   });
   revalidar(token);
   revalidatePath('/admin/pos-venda');

@@ -48,11 +48,11 @@ const linkDaConversa = (conversaId: string | null) =>
 export async function avisarArthur(
   db: DbDoAtendente,
   cfg: ConfigDoAtendente,
-  a: { titulo: string; texto: string; conversaId?: string | null; leadId?: string | null }
+  a: { titulo: string; texto: string; conversaId?: string | null; leadId?: string | null; link?: string }
 ): Promise<void> {
   try {
     const dono = await lerDono(db);
-    const link = linkDaConversa(a.conversaId ?? null);
+    const link = a.link ?? linkDaConversa(a.conversaId ?? null);
     const base = { titulo: a.titulo, texto: a.texto, conversation_id: a.conversaId ?? null, lead_id: a.leadId ?? null };
 
     if (dono.whatsapp && whatsappConfigurado()) {

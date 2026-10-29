@@ -6,16 +6,18 @@ import { WHATSAPP_NUMBER } from '@/lib/constants';
 import type { Kit } from '@/lib/vendedor';
 import { PaginaDoVendedor } from '@/components/vendedor/PaginaDoVendedor';
 import { metaDoVendedor } from '@/lib/data/meta-do-vendedor';
+import { metadadosProgSolucoes } from '@/lib/prog-solucoes-seo';
 
 // Página do vendedor (link gerado na aba Vendedores da Captação). Sem login:
 // quem tem o link lê os leads dele pela função lead_kit; link desativado = 404.
 // Fora do índice dos buscadores.
 
-export const metadata: Metadata = {
-  // absolute: sem o "| Prog Imports" do layout (página da Prog Soluções).
-  title: { absolute: 'Área do vendedor · Prog Soluções' },
-  robots: { index: false, follow: false },
-};
+export const metadata: Metadata = metadadosProgSolucoes({
+  titulo: 'Área do vendedor · Prog Soluções',
+  descricao: 'Seus leads do dia, mensagens prontas, simulador de preços e meta da Captação.',
+  tituloDaImagem: 'Área do vendedor',
+  subtituloDaImagem: 'Leads, mensagens prontas e simulador da Prog Soluções',
+});
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

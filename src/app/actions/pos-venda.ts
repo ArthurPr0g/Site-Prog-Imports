@@ -17,6 +17,7 @@ import { tabelaBRL, TABELA_USD } from '@/lib/precos-captacao';
 import { criarProjetoDaVenda, abrirRodada, escolhaDoJson, prazosDoCatalogo } from '@/lib/pos-venda';
 import { agendaConectada, criarEventoNaAgenda } from '@/lib/google-agenda';
 import type { Escolha } from '@/lib/simulador';
+import { SITE_URL } from '@/lib/seo';
 
 async function admin() {
   return (await requireAdmin()) ? createClient() : null;
@@ -228,6 +229,7 @@ export async function novaRodadaAction(projetoId: string, servicoId: string, ped
       titulo: 'Rodada além do contrato',
       texto: `${p?.cliente ?? 'Cliente'} pediu a ${r.numero}ª rodada (o contrato inclui ${r.incluidas}). Orce antes de fazer: "${pedido.trim().slice(0, 160)}"`,
       leadId: p?.lead_id ?? null,
+      link: `${SITE_URL}/admin/pos-venda`,
     });
   }
   revalidar();
@@ -297,4 +299,14 @@ export async function salvarAtaAction(reuniaoId: string, ata: string): Promise<A
   if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar.'));
   revalidar();
   return okResult('Ata salva.');
+}
+
+/** Exclui o projeto (venda cancelada ou teste), com os serviços, as rodadas e o vínculo das reuniões. */
+export async function excluirProjetoAction(id: string): Promise<ActionResult> {
+  const supabase = await admin();
+  if (!supabase) return errResult('Sem permissão.');
+  const { error } = await supabase.from('projetos').delete().eq('id', id);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível excluir.'));
+  revalidar();
+  return okResult('Projeto excluído.');
 }
