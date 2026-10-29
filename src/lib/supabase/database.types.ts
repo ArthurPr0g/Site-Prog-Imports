@@ -515,6 +515,12 @@ export type Database = {
           },
         ]
       }
+      ideias_acesso: {
+        Row: { codigo_hub: string; id: boolean; token_claude: string }
+        Insert: { codigo_hub: string; id?: boolean; token_claude: string }
+        Update: { codigo_hub?: string; id?: boolean; token_claude?: string }
+        Relationships: []
+      }
       ideias: {
         Row: {
           atualizado_em: string
@@ -523,11 +529,13 @@ export type Database = {
           external_id: string | null
           id: string
           origem: string
+          original: string | null
           resultado: string | null
           status: string
           tags: string[]
           texto: string
           tipo: string
+          titulo: string | null
         }
         Insert: {
           atualizado_em?: string
@@ -536,11 +544,13 @@ export type Database = {
           external_id?: string | null
           id?: string
           origem?: string
+          original?: string | null
           resultado?: string | null
           status?: string
           tags?: string[]
           texto: string
           tipo?: string
+          titulo?: string | null
         }
         Update: {
           atualizado_em?: string
@@ -549,11 +559,13 @@ export type Database = {
           external_id?: string | null
           id?: string
           origem?: string
+          original?: string | null
           resultado?: string | null
           status?: string
           tags?: string[]
           texto?: string
           tipo?: string
+          titulo?: string | null
         }
         Relationships: []
       }
