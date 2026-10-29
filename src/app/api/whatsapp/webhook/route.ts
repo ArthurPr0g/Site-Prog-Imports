@@ -8,6 +8,7 @@ import { mesmoTelefone, reenviarAvisoPeloModelo } from '@/lib/atendente/avisos';
 import { PEDIDO_DE_RELATORIO, relatorioDaCaptacao } from '@/lib/atendente/relatorio';
 import { lerConfig } from '@/lib/atendente/agente';
 import { enviarTexto } from '@/lib/atendente/whatsapp-api';
+import { anotarDoDono } from '@/lib/atendente/ideias';
 import { kitDoVendedor, textoDaFila, relatorioDoVendedor, PEDIDO_DE_FILA, PEDIDO_DE_RELATORIO_DO_VENDEDOR } from '@/lib/atendente/fila-do-vendedor';
 
 // Webhook do WhatsApp Cloud API (configurado no app da Meta).
@@ -73,6 +74,12 @@ export async function POST(req: NextRequest) {
             via: 'texto',
             ...(r.ok ? { external_id: r.id, status: 'sent' } : { status: 'failed', error: r.erro }),
           });
+        });
+      } else if (!m.reacao) {
+        // Qualquer outra coisa (texto ou áudio) é ideia ou prompt para o Claude Code (0088).
+        after(async () => {
+          await marcarLidaEDigitando(m.id);
+          await anotarDoDono(db, m);
         });
       }
       continue;

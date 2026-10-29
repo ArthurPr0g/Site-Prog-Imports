@@ -515,6 +515,48 @@ export type Database = {
           },
         ]
       }
+      ideias: {
+        Row: {
+          atualizado_em: string
+          criado_em: string
+          entregue_em: string | null
+          external_id: string | null
+          id: string
+          origem: string
+          resultado: string | null
+          status: string
+          tags: string[]
+          texto: string
+          tipo: string
+        }
+        Insert: {
+          atualizado_em?: string
+          criado_em?: string
+          entregue_em?: string | null
+          external_id?: string | null
+          id?: string
+          origem?: string
+          resultado?: string | null
+          status?: string
+          tags?: string[]
+          texto: string
+          tipo?: string
+        }
+        Update: {
+          atualizado_em?: string
+          criado_em?: string
+          entregue_em?: string | null
+          external_id?: string | null
+          id?: string
+          origem?: string
+          resultado?: string | null
+          status?: string
+          tags?: string[]
+          texto?: string
+          tipo?: string
+        }
+        Relationships: []
+      }
       ia_avisos: {
         Row: {
           conversation_id: string | null
