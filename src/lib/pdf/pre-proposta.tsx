@@ -7,6 +7,8 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
 export type DadosDaPreProposta = {
+  /** Idioma do cliente (EUA = inglês). */
+  idioma?: 'pt' | 'en';
   cliente: string | null;
   vendedor: string;
   emitidaEm: Date;
@@ -46,28 +48,73 @@ const s = StyleSheet.create({
   rodape: { position: 'absolute', bottom: 24, left: 44, right: 44, fontSize: 8, color: CLARO, textAlign: 'center' },
 });
 
-const data = (d: Date) => d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+const TEXTO = {
+  pt: {
+    sub: 'Sites, lojas virtuais e sistemas para pequenas empresas · Goiânia',
+    emitida: 'Emitida em',
+    titulo: 'Pré-proposta',
+    para: 'para',
+    resumo: (v: string, ate: string) =>
+      `Resumo do pacote conversado com ${v}. Válida até ${ate}. A proposta oficial, com contrato, é enviada pelo Arthur no fechamento.`,
+    pacote: 'O que entra no pacote',
+    descontoCombo: 'Desconto do combo',
+    condicao: 'Condição especial',
+    total: 'Total',
+    aPartir: ' (a partir de)',
+    mensal: 'Mensalidade (hospedagem, segurança, backups e suporte)',
+    porMes: '/mês',
+    prazo: 'Prazo',
+    prazoTexto: (n: number) => `Até ${n} dias úteis, contados a partir do sinal pago e do envio do material (textos, fotos e acessos).`,
+    pagamento: 'Pagamento',
+    rodape: 'Valores sujeitos à proposta oficial',
+    local: 'pt-BR',
+  },
+  en: {
+    sub: 'Websites, online stores and management systems for small businesses',
+    emitida: 'Issued on',
+    titulo: 'Proposal',
+    para: 'for',
+    resumo: (v: string, ate: string) =>
+      `Summary of the package discussed with ${v}. Valid until ${ate}. The official proposal and contract are sent by Arthur when you decide to move forward.`,
+    pacote: "What's included",
+    descontoCombo: 'Bundle discount',
+    condicao: 'Special price',
+    total: 'Total',
+    aPartir: ' (starting at)',
+    mensal: 'Monthly plan (hosting, security, backups and support)',
+    porMes: '/month',
+    prazo: 'Timeline',
+    prazoTexto: (n: number) => `Up to ${n} business days, starting once the deposit is paid and all materials (copy, photos and access) are in.`,
+    pagamento: 'Payment',
+    rodape: 'Prices subject to the official proposal',
+    local: 'en-US',
+  },
+};
 
 export function PrePropostaDocument(d: DadosDaPreProposta) {
+  const t = TEXTO[d.idioma ?? 'pt'];
+  const data = (x: Date) => x.toLocaleDateString(t.local, { timeZone: d.idioma === 'en' ? 'America/New_York' : 'America/Sao_Paulo' });
   const validade = new Date(d.emitidaEm.getTime() + d.validadeDias * 24 * 3600_000);
   return (
-    <Document title={`Pré-proposta Prog Soluções${d.cliente ? ` - ${d.cliente}` : ''}`} author="Prog Soluções">
+    <Document title={`${t.titulo} Prog Soluções${d.cliente ? ` - ${d.cliente}` : ''}`} author="Prog Soluções">
       <Page size="A4" style={s.pagina}>
         <View style={s.topo}>
           <View>
             <Text style={s.marca}>Prog Soluções</Text>
-            <Text style={s.sub}>Sites, lojas virtuais e sistemas para pequenas empresas · Goiânia</Text>
+            <Text style={s.sub}>{t.sub}</Text>
           </View>
-          <Text style={s.sub}>Emitida em {data(d.emitidaEm)}</Text>
+          <Text style={s.sub}>
+            {t.emitida} {data(d.emitidaEm)}
+          </Text>
         </View>
 
-        <Text style={s.titulo}>Pré-proposta{d.cliente ? ` para ${d.cliente}` : ''}</Text>
-        <Text style={s.texto}>
-          Resumo do pacote conversado com {d.vendedor}. Válida até {data(validade)}. A proposta oficial, com contrato, é enviada
-          pelo Arthur no fechamento.
+        <Text style={s.titulo}>
+          {t.titulo}
+          {d.cliente ? ` ${t.para} ${d.cliente}` : ''}
         </Text>
+        <Text style={s.texto}>{t.resumo(d.vendedor, data(validade))}</Text>
 
-        <Text style={s.secao}>O que entra no pacote</Text>
+        <Text style={s.secao}>{t.pacote}</Text>
         {d.itens.map((i) => (
           <View key={i.nome} style={s.item} wrap={false}>
             <View style={s.linhaItem}>
@@ -85,37 +132,41 @@ export function PrePropostaDocument(d: DadosDaPreProposta) {
         <View style={s.total} wrap={false}>
           {d.desconto && (
             <View style={s.totalLinha}>
-              <Text>Desconto do combo</Text>
+              <Text>{t.descontoCombo}</Text>
               <Text>- {d.desconto}</Text>
             </View>
           )}
           {d.condicaoEspecial && (
             <View style={s.totalLinha}>
-              <Text>Condição especial</Text>
+              <Text>{t.condicao}</Text>
               <Text>- {d.condicaoEspecial}</Text>
             </View>
           )}
           <View style={s.totalLinha}>
-            <Text style={s.grande}>Total{d.aPartirDe ? ' (a partir de)' : ''}</Text>
+            <Text style={s.grande}>
+              {t.total}
+              {d.aPartirDe ? t.aPartir : ''}
+            </Text>
             <Text style={s.grande}>{d.total}</Text>
           </View>
           <View style={s.totalLinha}>
-            <Text>Mensalidade (hospedagem, segurança, backups e suporte)</Text>
-            <Text>{d.mensal}/mês</Text>
+            <Text>{t.mensal}</Text>
+            <Text>
+              {d.mensal}
+              {t.porMes}
+            </Text>
           </View>
           {d.economiaMensal && <Text style={s.inclui}>{d.economiaMensal}</Text>}
         </View>
 
         {d.prazoDias > 0 && (
           <>
-            <Text style={s.secao}>Prazo</Text>
-            <Text style={s.texto}>
-              Até {d.prazoDias} dias úteis, contados a partir do sinal pago e do envio do material (textos, fotos e acessos).
-            </Text>
+            <Text style={s.secao}>{t.prazo}</Text>
+            <Text style={s.texto}>{t.prazoTexto(d.prazoDias)}</Text>
           </>
         )}
 
-        <Text style={s.secao}>Pagamento</Text>
+        <Text style={s.secao}>{t.pagamento}</Text>
         {d.pagamento.map((p) => (
           <Text key={p} style={s.texto}>
             • {p}
@@ -123,8 +174,7 @@ export function PrePropostaDocument(d: DadosDaPreProposta) {
         ))}
 
         <Text style={s.rodape} fixed>
-          Prog Soluções · Alameda Botafogo, Quadra 36B, Lote 16-21, Setor Pedro Ludovico, Goiânia - GO · Valores sujeitos à
-          proposta oficial
+          Prog Soluções · Alameda Botafogo, Quadra 36B, Lote 16-21, Setor Pedro Ludovico, Goiânia - GO · {t.rodape}
         </Text>
       </Page>
     </Document>

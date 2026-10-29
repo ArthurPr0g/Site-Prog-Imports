@@ -2,8 +2,9 @@
 // O que fala com WhatsApp, e-mail, banco e Claude fica nos outros arquivos
 // desta pasta e só roda no servidor.
 
+import { dinheiroDoPais } from '@/lib/idioma-do-lead';
 import { simular, parcela, NOMES, type Escolha, type Simulacao } from '@/lib/simulador';
-import { formatMoeda, type TabelaPrecos } from '@/lib/precos-captacao';
+import type { TabelaPrecos } from '@/lib/precos-captacao';
 import { EM_NEGOCIACAO, type Lead, type LeadStatus } from '@/lib/captacao';
 
 /* ------------------------------------------------------------ configuração */
@@ -97,7 +98,7 @@ export function calcularProposta(
   prazos: Map<string, number> = new Map()
 ): Proposta {
   const s = simular(e, t);
-  const m = (v: number) => formatMoeda(v, t.moeda);
+  const m = (v: number) => dinheiroDoPais(v, t.moeda);
   // Arredonda para o final 7 (reais) ou 0 (dólar) mais próximo: o final 97 da
   // tabela desce até 100 e, num pedido de 8%, virava 10%.
   const fim = t.moeda === 'BRL' ? 7 : 0;

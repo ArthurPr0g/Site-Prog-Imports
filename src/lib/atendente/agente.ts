@@ -11,6 +11,7 @@ import { enviarTexto, enviarComOpcoes, enviarDocumento, baixarMidia, JANELA_MS }
 import { renderToBuffer } from '@react-pdf/renderer';
 import { PrePropostaDocument } from '@/lib/pdf/pre-proposta';
 import { montarPreProposta } from '@/lib/pdf/montar-pre-proposta';
+import { fusoDoCliente, horarioNoFuso } from '@/lib/idioma-do-lead';
 import { avisarArthur } from '@/lib/atendente/avisos';
 import { casesDoLead, linkDoCase } from '@/lib/cases-portfolio';
 import { siteAbreAgora } from '@/lib/atendente/site-agora';
@@ -309,6 +310,8 @@ type Estado = {
   /** WhatsApp do cliente e nome que vai no PDF da proposta. */
   contato: string;
   nomeDoCliente: string | null;
+  /** Fuso do cliente de fora do Brasil (null = horário de Brasília). */
+  fuso: string | null;
 };
 
 const ORDEM: LeadStatus[] = ['novo', 'contatado', 'respondeu', 'reuniao', 'proposta', 'fechado'];
@@ -430,7 +433,7 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
       return [
         `PDF "${arquivo}" enviado ao cliente. NÃO cole o bloco da proposta.`,
         'Agora escreva, em mensagens curtas:',
-        `1) Uma frase dizendo que mandou a proposta em PDF e por que esse pacote resolve o caso dele, e os números principais numa linha: *Total ${p.total}*${p.aPartirDe ? ' (a partir de)' : ''} + ${p.mensal}/mês${p.prazoDias ? `, pronto em até ${p.prazoDias} dias úteis` : ''}. Se ajudar, cite o 12x: ${p.pagamento[2] ?? ''}.`,
+        `1) Uma frase dizendo que mandou a proposta em PDF e por que esse pacote resolve o caso dele, e os números principais numa linha: *Total ${p.total}*${p.aPartirDe ? ' (a partir de)' : ''} + ${p.mensal}/mês${p.prazoDias ? `, pronto em até ${p.prazoDias} dias úteis` : ''}.${p.pagamento[2] ? ` Se ajudar, cite o 12x: ${p.pagamento[2]}.` : ''}${p.idioma === 'en' ? ' O PDF saiu em inglês, com valores em dólar: escreva tudo no idioma do cliente e use os valores exatamente assim.' : ''}`,
         '2) Use mostrar_exemplos e mande 1 ou 2 links parecidos com o caso dele.',
         '3) Termine com opções: [[opções: Quero fechar | Tenho uma dúvida | Falar com o Arthur]]',
       ].join('\n');
@@ -582,7 +585,8 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
       if (!livres.length) return 'Sem horário livre nas próximas 2 semanas: use chamar_arthur para ele combinar com o cliente.';
       return [
         `Horários livres (reunião de ${DURACAO_DA_REUNIAO_MIN} min, horário de Brasília). Ofereça 2 ou 3, em dias diferentes; para marcar, use o valor entre parênteses:`,
-        ...livres.map((d) => `• ${horarioPorExtenso(d)} (${d.toISOString()})`),
+        ...livres.map((d) => `• ${horarioPorExtenso(d)} em Brasília${e.fuso ? ` = ${horarioNoFuso(d, e.fuso)} no horário do cliente` : ''} (${d.toISOString()})`),
+        ...(e.fuso ? ['Cliente de fora do Brasil: ofereça SÓ no horário dele (o segundo), no idioma dele.'] : []),
         ...(agenda ? [] : ['(A agenda do Arthur não está conectada: esses horários só evitam as reuniões já marcadas por aqui.)']),
       ].join('\n');
     }
@@ -622,7 +626,7 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
       if (leadId && (!e.leadStatus || ORDEM.indexOf(e.leadStatus) < ORDEM.indexOf('reuniao'))) {
         await executar(e, 'mudar_etapa', { etapa: 'reuniao', motivo: `Reunião marcada para ${horarioPorExtenso(inicio)}`, responsavel: '' });
       }
-      const quando = horarioPorExtenso(inicio);
+      const quando = horarioPorExtenso(inicio) + (e.fuso ? ` em Brasília (${horarioNoFuso(inicio, e.fuso)} para o cliente)` : '');
       await avisarArthur(db, cfg, {
         titulo: 'Reunião marcada pela Lia',
         texto: `${quem}, ${quando} (${assunto}).${ev?.ok && ev.meet ? ` Meet: ${ev.meet}` : ev && !ev.ok ? ` Não entrou na sua agenda (${ev.erro}): crie você.` : ' Agenda não conectada: crie o evento você.'}`,
@@ -770,6 +774,7 @@ async function responder(conversaId: string, avisoInterno?: string): Promise<str
     simulado,
     contato: conversa.contact_id,
     nomeDoCliente: lead?.name ?? null,
+    fuso: fusoDoCliente(lead?.country, lead?.state),
   };
 
   // "Fora do ar" da captação pode estar velho ou ter sido falha passageira:
