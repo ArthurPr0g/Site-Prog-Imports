@@ -722,6 +722,7 @@ export type Database = {
           last_inbound_at: string | null
           last_message_at: string
           learned_at: string | null
+          lembrete_em: string | null
           lead_id: string | null
           mode: string
           respondendo_ate: string | null
@@ -741,6 +742,7 @@ export type Database = {
           last_inbound_at?: string | null
           last_message_at?: string
           learned_at?: string | null
+          lembrete_em?: string | null
           lead_id?: string | null
           mode?: string
           respondendo_ate?: string | null
@@ -760,6 +762,7 @@ export type Database = {
           last_inbound_at?: string | null
           last_message_at?: string
           learned_at?: string | null
+          lembrete_em?: string | null
           lead_id?: string | null
           mode?: string
           respondendo_ate?: string | null

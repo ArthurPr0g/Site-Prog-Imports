@@ -9,6 +9,7 @@ import { guardarArquivosDeClientes } from '@/lib/atendente/arquivos-clientes';
 import { aprenderComConversas } from '@/lib/atendente/aprender';
 import { SELECT_DO_ITEM, emailDoLead, regiaoDoLead, type ItemComLead } from '@/lib/atendente/email-do-lead';
 import { garantirModeloDoAviso } from '@/lib/atendente/avisos';
+import { lembrarConversasParadas } from '@/lib/atendente/lembretes';
 
 // Relógio do atendente: o pg_cron do Supabase chama a cada minuto (migration
 // 0067) com o segredo ATENDENTE_TICK_SECRET. Cada chamada:
@@ -16,7 +17,8 @@ import { garantirModeloDoAviso } from '@/lib/atendente/avisos';
 // 2. manda no máximo 1 e-mail de primeiro contato (horário comercial, até o
 //    limite do dia) e 1 retorno para quem não respondeu;
 // 3. relê 1 conversa encerrada para a Lia aprender (lições vão para aprovação);
-// 4. cria o modelo de aviso ao Arthur na Meta e acompanha a aprovação.
+// 4. cria o modelo de aviso ao Arthur na Meta e acompanha a aprovação;
+// 5. manda 1 lembrete a quem parou de responder (3 h depois, dentro das 24 h).
 
 export const maxDuration = 60;
 
@@ -38,7 +40,8 @@ export async function POST(req: NextRequest) {
   const descontos = await resolverDescontos(db);
   const emails = emailConfigurado() && horarioComercial() ? await mandarEmails(db, cfg) : 0;
   const licoes = await aprenderComConversas(db, cfg);
-  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes, modeloDoAviso });
+  const lembretes = await lembrarConversasParadas(db);
+  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes });
 }
 
 async function resolverDescontos(db: DbDoAtendente): Promise<number> {
