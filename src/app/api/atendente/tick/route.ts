@@ -12,7 +12,9 @@ import { garantirModeloDoAviso } from '@/lib/atendente/avisos';
 import { lembrarConversasParadas } from '@/lib/atendente/lembretes';
 import { avisarLeadsQuentes } from '@/lib/atendente/lead-quente';
 import { garantirModeloDaFila, mandarFilasDoDia } from '@/lib/atendente/fila-do-vendedor';
-import { resumoDoPosVenda } from '@/lib/pos-venda-resumo';
+import { bomDia } from '@/lib/atendente/bom-dia';
+import { baterRelogio, verificarSaude } from '@/lib/atendente/saude';
+import { cuidarDoPosEntrega } from '@/lib/atendente/pos-entrega';
 import { avisarPromptsTerminados } from '@/lib/atendente/ideias';
 import { enviarEncomendasPendentes, retomarEncomendas } from '@/lib/atendente/encomenda';
 import { garantirModelos } from '@/lib/atendente/modelos';
@@ -31,6 +33,8 @@ import { lembrarReunioes } from '@/lib/atendente/lembrete-reuniao';
 // 8. resumo das pendências do pós-venda no WhatsApp do Arthur (9h dos dias úteis);
 // 9. "Lia, faça todo o projeto" (0093): chama quem esperava a aprovação do modelo e retoma 1x quem não respondeu em 48 h;
 // 10. modelos de mensagem da Meta (0094): cria e acompanha a aprovação; lembrete de reunião ao cliente ~2 h antes.
+// 11. (0105) batida do relógio + alarme de saúde a cada 10 min; "Bom dia" às 8h (substitui o resumo do pós-venda
+//     das 9h); pós-entrega: acompanhamento de 7/30/90 dias, avaliação, portfólio e oferta de manutenção.
 
 export const maxDuration = 60;
 
@@ -42,6 +46,7 @@ export async function POST(req: NextRequest) {
     return new NextResponse('Forbidden', { status: 403 });
   }
   const db = dbDoAtendente();
+  await baterRelogio(db, 'tick');
   // Arquivos de quem fechou: guarda mesmo com a atendente desligada.
   const arquivos = await guardarArquivosDeClientes(db);
   // Modelo do aviso ao Arthur na Meta: cria uma vez e acompanha a aprovação.
@@ -50,7 +55,10 @@ export async function POST(req: NextRequest) {
   const cfg = await lerConfig(db);
   // Pedidos do Arthur pelo WhatsApp que terminaram (PC ou nuvem): avisa mesmo com a atendente desligada.
   const promptsAvisados = await avisarPromptsTerminados(db, cfg);
-  if (!cfg.active) return NextResponse.json({ ok: true, ativo: false, arquivos, modeloDoAviso, promptsAvisados, modelos });
+  // Bom dia e alarme valem mesmo com a atendente desligada (são para o Arthur, não para clientes).
+  const saude = await verificarSaude(db, cfg, 'tick');
+  const bomDiaEnviado = await bomDia(db, cfg);
+  if (!cfg.active) return NextResponse.json({ ok: true, ativo: false, arquivos, modeloDoAviso, promptsAvisados, modelos, saude, bomDiaEnviado });
 
   const descontos = await resolverDescontos(db);
   const emails = emailConfigurado() && horarioComercial() ? await mandarEmails(db, cfg) : 0;
@@ -59,11 +67,11 @@ export async function POST(req: NextRequest) {
   const leadsQuentes = await avisarLeadsQuentes(db, cfg);
   const modeloDaFila = await garantirModeloDaFila(db);
   const filas = await mandarFilasDoDia(db);
-  const posVenda = await resumoDoPosVenda(db, cfg);
+  const posEntrega = await cuidarDoPosEntrega(db, cfg);
   const encomendas = await enviarEncomendasPendentes(db);
   const retomadas = await retomarEncomendas(db);
   const lembretesDeReuniao = await lembrarReunioes(db);
-  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas, posVenda, promptsAvisados, modelos, encomendas, retomadas, lembretesDeReuniao });
+  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas, posEntrega, promptsAvisados, saude, bomDiaEnviado, modelos, encomendas, retomadas, lembretesDeReuniao });
 }
 
 async function resolverDescontos(db: DbDoAtendente): Promise<number> {

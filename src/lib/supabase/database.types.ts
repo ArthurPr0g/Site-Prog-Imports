@@ -739,6 +739,7 @@ export type Database = {
         Row: {
           site_url: string | null
           pasta: string | null
+          pos_entrega: Json
           cliente: string
           created_at: string
           entrega_prevista: string | null
@@ -761,6 +762,7 @@ export type Database = {
         Insert: {
           site_url?: string | null
           pasta?: string | null
+          pos_entrega?: Json
           cliente: string
           created_at?: string
           entrega_prevista?: string | null
@@ -783,6 +785,7 @@ export type Database = {
         Update: {
           site_url?: string | null
           pasta?: string | null
+          pos_entrega?: Json
           cliente?: string
           created_at?: string
           entrega_prevista?: string | null
@@ -959,6 +962,51 @@ export type Database = {
         }
         Relationships: []
       }
+      ensaios_lia: {
+        Row: {
+          id: string
+          rodada: string
+          perfil: string
+          conversation_id: string | null
+          status: string
+          turnos: number
+          nota: number | null
+          aprovado: boolean | null
+          problemas: Json
+          resumo: string | null
+          criado_em: string
+          atualizado_em: string
+        }
+        Insert: {
+          id?: string
+          rodada: string
+          perfil: string
+          conversation_id?: string | null
+          status?: string
+          turnos?: number
+          nota?: number | null
+          aprovado?: boolean | null
+          problemas?: Json
+          resumo?: string | null
+          criado_em?: string
+          atualizado_em?: string
+        }
+        Update: {
+          id?: string
+          rodada?: string
+          perfil?: string
+          conversation_id?: string | null
+          status?: string
+          turnos?: number
+          nota?: number | null
+          aprovado?: boolean | null
+          problemas?: Json
+          resumo?: string | null
+          criado_em?: string
+          atualizado_em?: string
+        }
+        Relationships: []
+      }
       encomendas: {
         Row: {
           duvidas: Json | null
@@ -1024,6 +1072,12 @@ export type Database = {
           custos: Json
           modelos: Json
           modelos_categoria: Json
+          bom_dia_em: string | null
+          tick_em: string | null
+          pesquisa_em: string | null
+          saude: Json
+          link_avaliacao_google: string | null
+          ensaio_em: string | null
           encomenda_template_status: string | null
           agenda: Json
           active: boolean
@@ -1050,6 +1104,12 @@ export type Database = {
           custos?: Json
           modelos?: Json
           modelos_categoria?: Json
+          bom_dia_em?: string | null
+          tick_em?: string | null
+          pesquisa_em?: string | null
+          saude?: Json
+          link_avaliacao_google?: string | null
+          ensaio_em?: string | null
           encomenda_template_status?: string | null
           agenda?: Json
           active?: boolean
@@ -1076,6 +1136,12 @@ export type Database = {
           custos?: Json
           modelos?: Json
           modelos_categoria?: Json
+          bom_dia_em?: string | null
+          tick_em?: string | null
+          pesquisa_em?: string | null
+          saude?: Json
+          link_avaliacao_google?: string | null
+          ensaio_em?: string | null
           encomenda_template_status?: string | null
           agenda?: Json
           active?: boolean

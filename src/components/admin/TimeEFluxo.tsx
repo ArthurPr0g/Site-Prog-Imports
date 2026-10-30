@@ -165,7 +165,7 @@ const ETAPAS: Etapa[] = [
   },
   {
     titulo: 'Vistoria completa', fase: 'qualidade', quem: ['vera', 'nico', 'iris', 'tito'], paralelo: true,
-    voce: '"Claude, vistoria completa do X"',
+    auto: 'Entra sozinha quando o Rafa ou o Leo terminam',
     volta: 'Reprovou? Volta para o Rafa',
     texto: 'Os quatro conferem ao mesmo tempo: o que se vê (Vera), o código (Nico), a segurança (Íris) e os testes e a velocidade (Tito).',
   },
@@ -181,9 +181,9 @@ const ETAPAS: Etapa[] = [
   },
   {
     titulo: 'Pós-venda e ajustes', fase: 'construcao', quem: ['lia', 'leo'],
-    auto: 'Ajuste dentro do pacote → Leo',
+    auto: 'Ajuste → Leo; 7, 30 e 90 dias: acompanhamento',
     volta: 'Passa pela vistoria de novo',
-    texto: 'O cliente pede ajuste à Lia. Se está nas rodadas do pacote, o Leo faz só na pasta dele e a Lia avisa o cliente. Fora do pacote, vai para você.',
+    texto: 'O cliente pede ajuste à Lia: dentro do pacote, o Leo faz só na pasta dele e a Lia avisa. Depois da entrega, a Lia volta em 1 semana (avaliação e portfólio), 1 mês (manutenção mensal) e 3 meses (novo serviço).',
   },
 ];
 
@@ -211,6 +211,11 @@ const FUNCOES: Funcao[] = [
   { grupo: 'whatsapp', Icon: RotateCcw, titulo: 'Desfazer mensagem errada', texto: 'Arquiva a última anotação dos últimos 30 minutos.', comando: 'desconsidera, mandei errado' },
   { grupo: 'whatsapp', Icon: Eye, titulo: 'Código da página Ideias', texto: 'A Lia te manda o código, pedido uma vez por aparelho.', comando: 'qual o código das ideias?' },
   { grupo: 'whatsapp', Icon: Check, titulo: 'Decidir com botões', texto: 'Desconto, financeiro, dúvidas de um pedido e projeto: é só tocar. Se a janela de 24 h fechou, vem como modelo com "Sim" e "Não".' },
+  { grupo: 'automatico', Icon: Bell, titulo: 'Bom dia às 8h', texto: 'Todo dia no seu WhatsApp: o que depende de você, agenda, o que os agentes terminaram, pós-venda, números de ontem e saúde do sistema.' },
+  { grupo: 'automatico', Icon: ShieldCheck, titulo: 'Alarme do sistema', texto: 'Te avisa se um relógio parar, a Meta recusar ou demorar com um modelo, a fila do Claude travar, a IA gastar demais ou mensagens falharem.' },
+  { grupo: 'automatico', Icon: Eye, titulo: 'Vistoria automática', texto: 'Quando o Rafa constrói ou o Leo ajusta, Vera, Nico, Íris e Tito entram na fila sozinhos.' },
+  { grupo: 'automatico', Icon: Sparkles, titulo: 'Pós-entrega', texto: '1 semana: avaliação no Google e portfólio. 1 mês: oferta de manutenção mensal. 3 meses: novo serviço. Você recebe o que o cliente topar.' },
+  { grupo: 'automatico', Icon: FlaskConical, titulo: 'Ensaio semanal da Lia', texto: 'Toda segunda de manhã, 5 clientes difíceis simulados conversam com a Lia e um avaliador dá nota. Resultado no seu WhatsApp.' },
   { grupo: 'automatico', Icon: Search, titulo: 'Pesquisa do lead', texto: 'Google, Maps e o Instagram que o cliente passar. As descobertas vão se somando com o tempo.' },
   { grupo: 'automatico', Icon: Bell, titulo: 'Retomada da conversa', texto: 'Cliente parou de responder: 3 h depois a Lia manda uma retomada curta, só em horário comercial.' },
   { grupo: 'automatico', Icon: Zap, titulo: 'Aviso de lead quente', texto: 'Abriu o diagnóstico e não chamou em 15 min: você recebe quem é e o telefone.' },
@@ -218,7 +223,7 @@ const FUNCOES: Funcao[] = [
   { grupo: 'automatico', Icon: Smartphone, titulo: 'Confere o site do lead', texto: 'Antes de dizer que o site está fora do ar, a Lia testa de novo na hora.' },
   { grupo: 'automatico', Icon: Brain, titulo: 'A Lia aprende', texto: 'Relê conversas encerradas e sugere lições. Só entra o que você aprova no painel.' },
   { grupo: 'automatico', Icon: Mic, titulo: 'Áudios viram texto', texto: 'Áudios do cliente e seus são transcritos antes de a IA ler.' },
-  { grupo: 'automatico', Icon: Rocket, titulo: 'Sinal pago abre o projeto', texto: 'Prestação de serviço criada, material pedido ao cliente e a Bia na fila.' },
+  { grupo: 'automatico', Icon: Rocket, titulo: 'Projeto abre sozinho', texto: 'Sinal pago no Asaas, ou indicação marcada como grátis ou paga por Pix/cartão: projeto no Pós-venda e a Bia na fila.' },
   { grupo: 'automatico', Icon: FolderOpen, titulo: 'Arquivos do cliente guardados', texto: 'Cliente fechado: o que ele mandou no WhatsApp é copiado antes de a Meta apagar (30 dias).' },
   { grupo: 'automatico', Icon: Wrench, titulo: 'Ajuste do cliente vai para o Leo', texto: 'Dentro das rodadas do pacote, feito só na pasta dele. Fora, vai para você.' },
   { grupo: 'automatico', Icon: MessageCircle, titulo: 'Modelos da Meta', texto: '10 mensagens prontas com botões, criadas e acompanhadas sozinhas, para falar fora da janela de 24 h.' },

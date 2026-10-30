@@ -26,6 +26,10 @@ const agoraEmBrasilia = () => {
 const hojeEmBrasilia = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
 const dataBR = (iso: string) => new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
+/**
+ * Desde 30/10/2026 estas pendências saem dentro do "Bom dia" das 8h (bom-dia.ts), não mais numa mensagem
+ * separada às 9h. resumoDoPosVenda continua aqui caso o Bom dia seja desligado.
+ */
 export async function resumoDoPosVenda(db: DbDoAtendente, cfg: ConfigDoAtendente): Promise<number> {
   const { dia, hora } = agoraEmBrasilia();
   if (dia === 'Sat' || dia === 'Sun' || hora < 9 || hora >= 12) return 0;
@@ -34,7 +38,15 @@ export async function resumoDoPosVenda(db: DbDoAtendente, cfg: ConfigDoAtendente
   if (c?.posvenda_resumo_em === hoje) return 0;
   // Marca antes: o próximo tick não manda de novo.
   await db.from('ia_config').update({ posvenda_resumo_em: hoje }).eq('id', true);
+  const linhas = await pendenciasDoPosVenda(db);
+  if (!linhas.length) return 0;
+  await avisarArthur(db, cfg, { titulo: 'Pós-venda: pendências de hoje', texto: `\n${linhas.slice(0, 15).join('\n')}`, link: `${SITE_URL}/admin/pos-venda` });
+  return linhas.length;
+}
 
+/** Pendências dos projetos (rodadas paradas, entregas próximas ou atrasadas, fim de suporte, reuniões em 2 dias). */
+export async function pendenciasDoPosVenda(db: DbDoAtendente): Promise<string[]> {
+  const hoje = hojeEmBrasilia();
   const agora = Date.now();
   const em = (dias: number) => new Date(agora + dias * 864e5).toISOString().slice(0, 10);
   const [{ data: projetos }, { data: reunioes }] = await Promise.all([
@@ -77,7 +89,5 @@ export async function resumoDoPosVenda(db: DbDoAtendente, cfg: ConfigDoAtendente
     const quando = new Date(r.inicio).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'short', hour: '2-digit', minute: '2-digit' });
     linhas.push(`• ${cliente}: reunião ${quando}`);
   }
-  if (!linhas.length) return 0;
-  await avisarArthur(db, cfg, { titulo: 'Pós-venda: pendências de hoje', texto: `\n${linhas.slice(0, 15).join('\n')}`, link: `${SITE_URL}/admin/pos-venda` });
-  return linhas.length;
+  return linhas;
 }

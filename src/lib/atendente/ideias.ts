@@ -16,7 +16,7 @@ import { baixarMidia, enviarComOpcoes, enviarTexto, JANELA_MS, type MensagemRece
 import { enviarModeloAoCliente } from './modelos';
 import { transcrever, transcricaoConfigurada } from './transcricao';
 import { tratarEncomenda } from './encomenda';
-import { rotuloDoAgente } from '@/lib/agentes/time';
+import { rotuloDoAgente, pedirAoAgente, pedidoDeVistoria, pedidoParaOAgente, type ChaveDoAgente } from '@/lib/agentes/time';
 
 /** "Claude, ..." / "prompt: ..." / "para o Claude: ..." no começo da mensagem. No áudio, o Whisper
  *  costuma ouvir "Claude" como "Cláudio", "Claudio", "Cloud" ou "Clóde": todos valem. */
@@ -26,6 +26,25 @@ export function separarPrompt(texto: string): { tipo: 'ideia' | 'prompt'; texto:
   const m = texto.match(PREFIXO_DE_PROMPT);
   if (m && texto.slice(m[0].length).trim()) return { tipo: 'prompt', texto: texto.slice(m[0].length).trim() };
   return { tipo: 'ideia', texto: texto.trim() };
+}
+
+/** "Claude, Rafa, ..." / "Claude, vistoria completa do X" (30/10/2026): o pedido vai direto para o agente,
+ *  sem perguntar o projeto (o projeto é o do cliente citado no texto, não um dos projetos do Arthur). */
+const NOME_DO_AGENTE: [RegExp, ChaveDoAgente][] = [
+  [/^vistoria\s+completa\b/i, 'vistoria'],
+  [/^t[eé]o\b/i, 'teo'],
+  [/^bia\b/i, 'bia'],
+  [/^rafa\b/i, 'rafa'],
+  [/^vera\b/i, 'vera'],
+  [/^nico\b/i, 'nico'],
+  [/^[ií]ris\b/i, 'iris'],
+  [/^tito\b/i, 'tito'],
+  [/^l[eé]o\b/i, 'leo'],
+  [/^gabi\b/i, 'gabi'],
+];
+export function agenteDoPedido(texto: string): ChaveDoAgente | null {
+  const t = texto.trim().replace(/^(?:o|a)\s+/i, '');
+  return NOME_DO_AGENTE.find(([re]) => re.test(t))?.[1] ?? null;
 }
 
 /** Projetos em que um pedido "Claude, ..." pode mexer (0100). A pasta vai no texto do pedido para o executor. */
@@ -172,10 +191,17 @@ export async function anotarDoDono(db: DbDoAtendente, m: MensagemRecebida): Prom
   const org = await organizar(db, separado.texto, tipo);
   // Pedido para o Claude Code: projeto claro vai escrito no começo do texto (o executor sabe a pasta);
   // em dúvida, o pedido espera o Arthur escolher o projeto por botão (0100).
-  const proj = tipo === 'prompt' ? PROJETOS[org?.projeto ?? ''] : undefined;
-  const perguntar = tipo === 'prompt' && (!org || org.projeto === 'incerto');
+  const agente = tipo === 'prompt' ? agenteDoPedido(separado.texto) : null;
+  const proj = tipo === 'prompt' && !agente ? PROJETOS[org?.projeto ?? ''] : undefined;
+  const perguntar = tipo === 'prompt' && !agente && (!org || org.projeto === 'incerto');
   const corpo = org?.texto ?? separado.texto;
-  const texto = proj ? `[Projeto: ${proj.nome} — pasta ${proj.pasta}]\n${corpo}` : corpo;
+  const texto = agente
+    ? agente === 'vistoria'
+      ? pedidoDeVistoria(separado.texto.replace(/^vistoria\s+completa\s*(d[oae]s?\s+)?/i, '').trim() || 'citado no pedido', separado.texto, 'arthur')
+      : pedidoParaOAgente(agente, separado.texto)
+    : proj
+      ? `[Projeto: ${proj.nome} — pasta ${proj.pasta}]\n${corpo}`
+      : corpo;
   const { data: gravada, error } = await db
     .from('ideias')
     .upsert(
@@ -187,6 +213,7 @@ export async function anotarDoDono(db: DbDoAtendente, m: MensagemRecebida): Prom
         origem,
         status: tipo === 'prompt' ? (perguntar ? 'aguardando_projeto' : 'pendente') : 'nova',
         projeto: proj?.nome ?? null,
+        agente,
         external_id: m.id,
       },
       { onConflict: 'external_id', ignoreDuplicates: true },
@@ -215,7 +242,7 @@ export async function anotarDoDono(db: DbDoAtendente, m: MensagemRecebida): Prom
   await enviarTexto(
     m.de,
     tipo === 'prompt'
-      ? `🤖 *Pedido para o Claude Code na fila* ✅${proj ? ` (${proj.nome})` : ''}\n\n${cab}${eco}\n\n⏱️ Com o PC ligado, começa em até 10 min. Com ele desligado, fica na fila e começa assim que o PC ligar.\n📲 Te aviso aqui quando começar e quando terminar.`
+      ? `🤖 *Pedido para o Claude Code na fila* ✅${proj ? ` (${proj.nome})` : ''}${agente ? `\n👤 Vai para: *${rotuloDoAgente(agente)}*` : ''}\n\n${cab}${eco}\n\n⏱️ Com o PC ligado, começa em até 10 min. Com ele desligado, fica na fila e começa assim que o PC ligar.\n📲 Te aviso aqui quando começar e quando terminar.`
       : `💡 *Anotado nas suas Ideias* ✅${origem === 'whatsapp_audio' ? ' 🎙️ (áudio transcrito)' : ''}\n\n${cab}${eco}`,
   );
 }
@@ -295,7 +322,7 @@ export async function escolherProjeto(db: DbDoAtendente, id: string, chave: stri
 export async function avisarPromptsTerminados(db: DbDoAtendente, cfg: ConfigDoAtendente): Promise<number> {
   const { data } = await db
     .from('ideias')
-    .select('id, titulo, texto, status, resultado, falta, avisado_status, criado_em, executor, origem, conversation_id, rodada_id, agente')
+    .select('id, titulo, texto, status, resultado, falta, avisado_status, criado_em, executor, origem, conversation_id, rodada_id, agente, projeto, pasta_exclusiva')
     .eq('tipo', 'prompt')
     .in('status', ['feito', 'parcial', 'em_execucao'])
     .order('atualizado_em', { ascending: true })
@@ -326,13 +353,25 @@ export async function avisarPromptsTerminados(db: DbDoAtendente, cfg: ConfigDoAt
       });
       continue;
     }
+    // Rafa construiu ou Leo ajustou (o ajuste do cliente vem com agente 'leo'): a vistoria completa entra sozinha.
+    let vistoria = '';
+    if (i.status === 'feito' && (i.agente === 'rafa' || i.agente === 'leo') && !/Aguardando você:/.test(i.resultado ?? '')) {
+      const projeto = i.projeto || i.titulo || 'do cliente';
+      const { error } = await pedirAoAgente(db, 'vistoria', {
+        titulo: `vistoria de ${projeto}`.slice(0, 100),
+        projeto: i.projeto,
+        pastaExclusiva: i.pasta_exclusiva,
+        pedido: pedidoDeVistoria(projeto, (i.resultado ?? '').replace(/\[(PC|Nuvem)\]\s*/g, ''), i.agente),
+      });
+      if (!error) vistoria = '\n\n🔎 A *vistoria completa* (Vera, Nico, Íris e Tito) já entrou na fila.';
+    }
     const feito = (i.resultado ?? '').trim().slice(-900) || 'Sem detalhes.';
     // O resultado do executor vem com "[PC]"/"[Nuvem]" e "Aguardando você: ...": vira linhas com emoji.
     const limpo = feito.replace(/\[(PC|Nuvem)\]\s*/g, '').replace(/\n?Aguardando você:\s*/g, '\n⏸️ Aguardando você: ');
     const naNuvem = /\[Nuvem\]/.test(i.resultado ?? '') && !/\[PC\]/.test(i.resultado ?? '');
     const texto =
       i.status === 'feito'
-        ? `${quem}📝 *Pedido:* ${pedido}\n\n🛠️ *O que fiz:* ${limpo}\n\n${naNuvem ? '☁️ Feito na nuvem' : '💻 Feito no PC'}`
+        ? `${quem}📝 *Pedido:* ${pedido}\n\n🛠️ *O que fiz:* ${limpo}\n\n${naNuvem ? '☁️ Feito na nuvem' : '💻 Feito no PC'}${vistoria}`
         : `${quem}📝 *Pedido:* ${pedido}\n\n☁️ *Já feito na nuvem:* ${limpo}\n\n💻 *Fica para o PC terminar:* ${(i.falta ?? '').trim().slice(0, 600)}`;
     await avisarArthur(db, cfg, {
       titulo: i.status === 'feito' ? 'Pedido concluído ✅' : 'Pedido feito em parte ⏳',

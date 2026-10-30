@@ -12,6 +12,7 @@ import { renderToBuffer } from '@react-pdf/renderer';
 import { PrePropostaDocument } from '@/lib/pdf/pre-proposta';
 import { montarPreProposta } from '@/lib/pdf/montar-pre-proposta';
 import { criarProjetoDaVenda, escolhaDoJson } from '@/lib/pos-venda';
+import { orientacaoDoPosEntrega, type PosEntrega } from './pos-entrega';
 import { fusoDoCliente, horarioNoFuso } from '@/lib/idioma-do-lead';
 import { avisarArthur } from '@/lib/atendente/avisos';
 import { casesDoLead, linkDoCase } from '@/lib/cases-portfolio';
@@ -346,6 +347,8 @@ function simular(e: Estado, nome: string, entrada: Record<string, unknown>): str
       return 'Registrado.';
     case 'pedir_ajuste':
       return 'Ajuste registrado (simulador: nada é executado). Diga ao cliente o que vai mudar e que avisa quando estiver no ar.';
+    case 'registrar_pos_entrega':
+      return 'Registrado (simulador). Agradeça e siga a conversa.';
     case 'mudar_etapa': {
       const etapa = String(entrada.etapa) as LeadStatus;
       e.leadStatus = etapa;
@@ -541,6 +544,31 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
         leadId,
       });
       return 'Ajuste registrado e já na fila de execução. Diga ao cliente, em uma frase, o que vai mudar e que avisa por aqui assim que estiver no ar (normalmente no mesmo dia).';
+    }
+    case 'registrar_pos_entrega': {
+      const pj = await projetoDoCliente(db, leadId);
+      if (!pj) return 'Este contato não tem projeto: nada a registrar.';
+      const novo: PosEntrega = { ...pj.posEntrega };
+      if (entrada.portfolio === 'sim' || entrada.portfolio === 'nao') novo.portfolio = entrada.portfolio;
+      if (typeof entrada.avaliou === 'boolean') novo.avaliou = entrada.avaliou;
+      if (typeof entrada.quer_manutencao === 'boolean') novo.quer_manutencao = entrada.quer_manutencao;
+      const depoimento = String(entrada.depoimento ?? '').trim().slice(0, 1500);
+      if (depoimento) novo.depoimento = depoimento;
+      await db.from('projetos').update({ pos_entrega: novo as unknown as Json }).eq('id', pj.id);
+      const boas = [
+        entrada.portfolio === 'sim' ? 'autorizou mostrar no portfólio' : null,
+        entrada.avaliou === true ? 'deixou avaliação no Google' : null,
+        depoimento ? `depoimento: "${depoimento.slice(0, 300)}"` : null,
+        entrada.quer_manutencao === true ? 'QUER a manutenção mensal (mande a proposta)' : null,
+      ].filter(Boolean);
+      if (boas.length)
+        await avisarArthur(db, cfg, {
+          titulo: entrada.quer_manutencao === true ? '💰 Cliente quer manutenção mensal' : '🌟 Prova social do cliente',
+          texto: `${pj.cliente}: ${boas.join('; ')}.`,
+          conversaId,
+          leadId,
+        });
+      return 'Registrado. Agradeça com carinho, em uma frase, e não peça mais nada nesta mensagem.';
     }
     case 'registrar_briefing': {
       if (!leadId) return 'Sem lead identificado: guardei só no resumo. Continue a conversa.';
@@ -832,7 +860,7 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
 // Lead que o Arthur indicou ("Lia, faça todo o projeto", source indicacao_dono): a Lia não vende pacote,
 // faz a descoberta completa do projeto sob medida e segue o financeiro que o Arthur informou.
 // Instagram da Prog para o cliente marcar (o do portfólio: portfolio-arthur-prog.vercel.app).
-const INSTAGRAM_DA_PROG = '@prog.arthur';
+export const INSTAGRAM_DA_PROG = '@prog.arthur';
 const SO_PARA_VENDA_DE_PACOTE = new Set(['calcular_preco', 'enviar_proposta_pdf', 'pedir_desconto_extra']);
 
 const CAMPOS_DO_BRIEFING = new Map<string, string>([
@@ -946,14 +974,42 @@ const FERRAMENTA_AJUSTE: Anthropic.Beta.BetaTool = {
   },
 };
 
-type ProjetoDoCliente = { id: string; cliente: string; pasta: string | null; site_url: string | null; servicoId: string | null; incluidas: number; usadas: number; total: number };
+const FERRAMENTA_POS_ENTREGA: Anthropic.Beta.BetaTool = {
+  name: 'registrar_pos_entrega',
+  description:
+    'Grava o que o cliente respondeu no acompanhamento depois da entrega (PÓS-ENTREGA). Mande só os campos que ele respondeu agora.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      portfolio: { type: 'string', enum: ['sim', 'nao'], description: 'Autorizou mostrar o projeto no portfólio?' },
+      avaliou: { type: 'boolean', description: 'Disse que deixou a avaliação no Google.' },
+      depoimento: { type: 'string', description: 'O depoimento que ele escreveu, exatamente como escreveu.' },
+      quer_manutencao: { type: 'boolean', description: 'true = quer a proposta de manutenção mensal; false = não quer agora.' },
+    },
+    additionalProperties: false,
+  },
+};
+
+type ProjetoDoCliente = {
+  id: string;
+  cliente: string;
+  pasta: string | null;
+  site_url: string | null;
+  servicoId: string | null;
+  incluidas: number;
+  usadas: number;
+  total: number;
+  entregue: boolean;
+  temMensal: boolean;
+  posEntrega: PosEntrega;
+};
 
 /** Projeto ativo do lead da conversa (nunca o que o cliente digita: cada cliente só mexe no próprio projeto). */
 async function projetoDoCliente(db: DbDoAtendente, leadId: string | null): Promise<ProjetoDoCliente | null> {
   if (!leadId) return null;
   const { data } = await db
     .from('projetos')
-    .select('id, cliente, pasta, site_url, status, projeto_servicos(id, rodadas_incluidas, posicao), rodadas(id, extra)')
+    .select('id, cliente, pasta, site_url, status, entregue_em, mensal, pos_entrega, projeto_servicos(id, rodadas_incluidas, posicao), rodadas(id, extra)')
     .eq('lead_id', leadId)
     .neq('status', 'encerrado')
     .order('vendido_em', { ascending: false })
@@ -963,7 +1019,19 @@ async function projetoDoCliente(db: DbDoAtendente, leadId: string | null): Promi
   const incluidas = (data.projeto_servicos ?? []).reduce((s, x) => s + Number(x.rodadas_incluidas ?? 0), 0);
   const usadas = (data.rodadas ?? []).filter((r) => !r.extra).length;
   const servicoId = [...(data.projeto_servicos ?? [])].sort((a, b) => a.posicao - b.posicao)[0]?.id ?? null;
-  return { id: data.id, cliente: data.cliente, pasta: data.pasta, site_url: data.site_url, servicoId, incluidas, usadas, total: (data.rodadas ?? []).length };
+  return {
+    id: data.id,
+    cliente: data.cliente,
+    pasta: data.pasta,
+    site_url: data.site_url,
+    servicoId,
+    incluidas,
+    usadas,
+    total: (data.rodadas ?? []).length,
+    entregue: !!data.entregue_em,
+    temMensal: Number(data.mensal ?? 0) > 0,
+    posEntrega: (data.pos_entrega ?? {}) as PosEntrega,
+  };
 }
 
 /* ------------------------------------------------------------ resposta */
@@ -1122,11 +1190,16 @@ async function responder(conversaId: string, avisoInterno?: string): Promise<str
     : pesquisa?.itens?.length
       ? [...tools, FERRAMENTA_PESQUISA]
       : tools;
-  const ferramentas = projetoCliente ? [...base, FERRAMENTA_AJUSTE] : base;
+  const ferramentas = projetoCliente ? [...base, FERRAMENTA_AJUSTE, ...(projetoCliente.entregue ? [FERRAMENTA_POS_ENTREGA] : [])] : base;
+  // Pós-entrega (0105): orientação da etapa de acompanhamento em andamento.
+  const { data: cfgPos } = projetoCliente?.entregue ? await db.from('ia_config').select('link_avaliacao_google').eq('id', true).maybeSingle() : { data: null };
+  const posEntrega = projetoCliente?.entregue
+    ? orientacaoDoPosEntrega(projetoCliente.posEntrega, { gratis: fin?.pagamento === 'gratis', temMensal: projetoCliente.temMensal, linkAvaliacao: cfgPos?.link_avaliacao_google ?? null })
+    : null;
   const blocoCliente = projetoCliente
     ? `
 
-CLIENTE COM PROJETO (${projetoCliente.cliente}): ele já é cliente. Se pedir mudança no projeto (texto, foto, cor, link, horário...), entenda exatamente o que mudar (veja o print, se mandar) e use pedir_ajuste. Rodadas de ajuste: ${projetoCliente.usadas} de ${projetoCliente.incluidas} usadas. Se tiver dúvida, pergunte antes. Nunca fale de outro cliente nem de outro projeto.`
+CLIENTE COM PROJETO (${projetoCliente.cliente}): ele já é cliente. Se pedir mudança no projeto (texto, foto, cor, link, horário...), entenda exatamente o que mudar (veja o print, se mandar) e use pedir_ajuste. Rodadas de ajuste: ${projetoCliente.usadas} de ${projetoCliente.incluidas} usadas. Se tiver dúvida, pergunte antes. Nunca fale de outro cliente nem de outro projeto.${posEntrega ? `\n\n${posEntrega}` : ''}`
     : '';
 
   const contexto = contextoDaConversa({

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse, after } from 'next/server';
 import { dbDoAtendente } from '@/lib/atendente/db';
 import { lerConfig } from '@/lib/atendente/agente';
 import { pesquisarProximo } from '@/lib/atendente/pesquisa';
+import { baterRelogio, verificarSaude } from '@/lib/atendente/saude';
+import { passoDoEnsaio } from '@/lib/atendente/ensaio-semanal';
 
 // Relógio da pesquisa do lead (migration 0095): o pg_cron chama a cada 2 min com o segredo do relógio.
 // Responde na hora (o pg_net espera só 5 s) e pesquisa depois, em segundo plano: a busca web leva de 30 s
@@ -16,7 +18,12 @@ export async function POST(req: NextRequest) {
   }
   after(async () => {
     const db = dbDoAtendente();
-    await pesquisarProximo(db, await lerConfig(db));
+    const cfg = await lerConfig(db);
+    // Este relógio também vigia o do minuto (saude.ts) e roda o ensaio semanal da Lia, um passo por vez.
+    await baterRelogio(db, 'pesquisa');
+    await verificarSaude(db, cfg, 'pesquisa');
+    await pesquisarProximo(db, cfg);
+    await passoDoEnsaio(db, cfg);
   });
   return NextResponse.json({ ok: true });
 }

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dbDoAtendente } from '@/lib/atendente/db';
-import { responderConversa, SIMULADOR } from '@/lib/atendente/agente';
+import { responderConversa, SIMULADOR, lerConfig } from '@/lib/atendente/agente';
+import { bomDia } from '@/lib/atendente/bom-dia';
+import { problemasAtuais } from '@/lib/atendente/saude';
+import { comecarEnsaio, passoDoEnsaio } from '@/lib/atendente/ensaio-semanal';
 import { interpretarPedido } from '@/lib/atendente/encomenda';
 import { asaasConfigurado, ambienteAsaas } from '@/lib/pagamentos/asaas';
 import { whatsappConfigurado } from '@/lib/atendente/whatsapp-api';
@@ -12,6 +15,9 @@ import { emailConfigurado } from '@/lib/atendente/email';
 //   { acao: 'saude' }                          o que está configurado (sem mostrar valores)
 //   { acao: 'interpretar', nome, texto }       como a Lia lê um pedido "Lia, faça todo o projeto"
 //   { acao: 'responder', conversaId }          a Lia responde, SÓ em conversa do simulador
+//   { acao: 'bom_dia' }                         manda o Bom dia agora (ao Arthur)
+//   { acao: 'problemas' }                       o que o alarme de saúde vê agora (sem avisar)
+//   { acao: 'ensaio_semanal' }                  começa a rodada do ensaio agora e dá o primeiro passo
 
 export const maxDuration = 120;
 
@@ -42,6 +48,16 @@ export async function POST(req: NextRequest) {
     if (!c?.contact_id.startsWith(SIMULADOR)) return NextResponse.json({ erro: 'só conversa do simulador' }, { status: 400 });
     const motivo = await responderConversa(corpo.conversaId);
     return NextResponse.json({ motivo });
+  }
+  if (corpo.acao === 'bom_dia') {
+    return NextResponse.json({ blocos: await bomDia(db, await lerConfig(db), true) });
+  }
+  if (corpo.acao === 'problemas') {
+    return NextResponse.json((await problemasAtuais(db, await lerConfig(db), 'bom_dia')).problemas);
+  }
+  if (corpo.acao === 'ensaio_semanal') {
+    await comecarEnsaio(db, true);
+    return NextResponse.json({ passo: await passoDoEnsaio(db, await lerConfig(db)) });
   }
   return NextResponse.json({ erro: 'ação desconhecida' }, { status: 400 });
 }
