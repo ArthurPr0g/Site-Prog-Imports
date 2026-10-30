@@ -84,7 +84,14 @@ export async function problemasAtuais(db: DbDoAtendente, cfg: ConfigDoAtendente,
   // 5. Envios falhando.
   const [{ count: avisosFalhos }, { count: msgsFalhas }] = await Promise.all([
     db.from('ia_avisos').select('id', { count: 'exact', head: true }).eq('status', 'failed').gte('created_at', desde(1)),
-    db.from('ia_messages').select('id', { count: 'exact', head: true }).eq('direction', 'out').eq('status', 'failed').gte('created_at', desde(1)),
+    // Conversas de teste (número falso, simulador) falham de propósito: não contam para o alarme (30/10/2026).
+    db
+      .from('ia_messages')
+      .select('id, ia_conversations!inner(is_test)', { count: 'exact', head: true })
+      .eq('direction', 'out')
+      .eq('status', 'failed')
+      .eq('ia_conversations.is_test', false)
+      .gte('created_at', desde(1)),
   ]);
   // A IA não conseguiu responder (créditos da Anthropic acabaram, chave inválida, limite): a Lia está parada.
   const { data: falhasDaIa } = await db
