@@ -932,8 +932,51 @@ export type Database = {
         }
         Relationships: []
       }
+      encomendas: {
+        Row: {
+          assunto: string | null
+          contatado_em: string | null
+          conversation_id: string | null
+          criado_em: string
+          erro: string | null
+          id: string
+          instrucoes: string | null
+          lead_id: string | null
+          nome: string | null
+          status: string
+          telefone: string | null
+        }
+        Insert: {
+          assunto?: string | null
+          contatado_em?: string | null
+          conversation_id?: string | null
+          criado_em?: string
+          erro?: string | null
+          id?: string
+          instrucoes?: string | null
+          lead_id?: string | null
+          nome?: string | null
+          status?: string
+          telefone?: string | null
+        }
+        Update: {
+          assunto?: string | null
+          contatado_em?: string | null
+          conversation_id?: string | null
+          criado_em?: string
+          erro?: string | null
+          id?: string
+          instrucoes?: string | null
+          lead_id?: string | null
+          nome?: string | null
+          status?: string
+          telefone?: string | null
+        }
+        Relationships: []
+      }
       ia_config: {
         Row: {
+          encomenda_template_status: string | null
           agenda: Json
           active: boolean
           auto_model: boolean
@@ -956,6 +999,7 @@ export type Database = {
           waba_id: string | null
         }
         Insert: {
+          encomenda_template_status?: string | null
           agenda?: Json
           active?: boolean
           auto_model?: boolean
@@ -978,6 +1022,7 @@ export type Database = {
           waba_id?: string | null
         }
         Update: {
+          encomenda_template_status?: string | null
           agenda?: Json
           active?: boolean
           auto_model?: boolean

@@ -9,6 +9,7 @@ import { PEDIDO_DE_RELATORIO, relatorioDaCaptacao } from '@/lib/atendente/relato
 import { lerConfig } from '@/lib/atendente/agente';
 import { enviarTexto } from '@/lib/atendente/whatsapp-api';
 import { anotarDoDono, mandarCodigoDasIdeias, pedeCodigo } from '@/lib/atendente/ideias';
+import { conversaDaEncomenda } from '@/lib/atendente/encomenda';
 import { kitDoVendedor, textoDaFila, relatorioDoVendedor, PEDIDO_DE_FILA, PEDIDO_DE_RELATORIO_DO_VENDEDOR } from '@/lib/atendente/fila-do-vendedor';
 
 // Webhook do WhatsApp Cloud API (configurado no app da Meta).
@@ -153,6 +154,15 @@ async function gravarRecebida(db: DbDoAtendente, m: MensagemRecebida): Promise<s
 
   let conversaId = existente?.id;
   let leadId = existente?.lead_id ?? null;
+  // Cliente indicado pelo Arthur (0093) respondendo de um número escrito diferente (sem o 9).
+  if (!conversaId) {
+    const daEncomenda = await conversaDaEncomenda(db, m.de);
+    if (daEncomenda) {
+      const { data: c } = await db.from('ia_conversations').select('id, lead_id').eq('id', daEncomenda).maybeSingle();
+      conversaId = c?.id;
+      leadId = c?.lead_id ?? null;
+    }
+  }
   if (!conversaId) {
     const achado = await acharLead(db, m);
     leadId = achado?.leadId ?? null;

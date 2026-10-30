@@ -14,6 +14,7 @@ import { avisarLeadsQuentes } from '@/lib/atendente/lead-quente';
 import { garantirModeloDaFila, mandarFilasDoDia } from '@/lib/atendente/fila-do-vendedor';
 import { resumoDoPosVenda } from '@/lib/pos-venda-resumo';
 import { avisarPromptsTerminados } from '@/lib/atendente/ideias';
+import { enviarEncomendasPendentes, garantirModeloDaEncomenda } from '@/lib/atendente/encomenda';
 
 // Relógio do atendente: o pg_cron do Supabase chama a cada minuto (migration
 // 0067) com o segredo ATENDENTE_TICK_SECRET. Cada chamada:
@@ -25,7 +26,8 @@ import { avisarPromptsTerminados } from '@/lib/atendente/ideias';
 // 5. manda 1 lembrete a quem parou de responder (3 h depois, dentro das 24 h);
 // 6. avisa o Arthur de quem abriu o diagnóstico e não chamou (lead quente);
 // 7. manda a fila do dia ao vendedor às 8h dos dias úteis (e cria o modelo dela na Meta);
-// 8. resumo das pendências do pós-venda no WhatsApp do Arthur (9h dos dias úteis).
+// 8. resumo das pendências do pós-venda no WhatsApp do Arthur (9h dos dias úteis);
+// 9. "Lia, faça todo o projeto" (0093): cria o modelo da 1ª mensagem e chama quem esperava a aprovação.
 
 export const maxDuration = 60;
 
@@ -41,6 +43,7 @@ export async function POST(req: NextRequest) {
   const arquivos = await guardarArquivosDeClientes(db);
   // Modelo do aviso ao Arthur na Meta: cria uma vez e acompanha a aprovação.
   const modeloDoAviso = await garantirModeloDoAviso(db);
+  const modeloDaEncomenda = await garantirModeloDaEncomenda(db);
   const cfg = await lerConfig(db);
   // Pedidos do Arthur pelo WhatsApp que terminaram (PC ou nuvem): avisa mesmo com a atendente desligada.
   const promptsAvisados = await avisarPromptsTerminados(db, cfg);
@@ -54,7 +57,8 @@ export async function POST(req: NextRequest) {
   const modeloDaFila = await garantirModeloDaFila(db);
   const filas = await mandarFilasDoDia(db);
   const posVenda = await resumoDoPosVenda(db, cfg);
-  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas, posVenda, promptsAvisados });
+  const encomendas = await enviarEncomendasPendentes(db);
+  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas, posVenda, promptsAvisados, modeloDaEncomenda, encomendas });
 }
 
 async function resolverDescontos(db: DbDoAtendente): Promise<number> {

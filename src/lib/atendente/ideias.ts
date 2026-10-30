@@ -14,6 +14,7 @@ import { custoDaChamada, type ConfigDoAtendente } from './regras';
 import { avisarArthur } from './avisos';
 import { baixarMidia, enviarTexto, type MensagemRecebida } from './whatsapp-api';
 import { transcrever, transcricaoConfigurada } from './transcricao';
+import { tratarEncomenda } from './encomenda';
 
 /** "Claude, ..." / "prompt: ..." / "para o Claude: ..." no começo da mensagem. No áudio, o Whisper
  *  costuma ouvir "Claude" como "Cláudio", "Claudio", "Cloud" ou "Clóde": todos valem. */
@@ -123,6 +124,8 @@ export async function anotarDoDono(db: DbDoAtendente, m: MensagemRecebida): Prom
     }
     bruto = texto;
   }
+  // Contato de cliente ou "Lia, faça todo o projeto..." (0093): a Lia chama a pessoa, não vira ideia.
+  if (bruto && !m.reacao && (await tratarEncomenda(db, m.de, bruto))) return;
   // Foto/arquivo sem legenda, figurinha, reação: não há o que anotar.
   if (!bruto || /^\[o cliente mandou/.test(bruto) || m.reacao) return;
 
