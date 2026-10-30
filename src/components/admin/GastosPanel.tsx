@@ -593,7 +593,7 @@ export function GastosPanel() {
             <b className="text-[13px]">Recargas de crédito da API (Anthropic)</b>
             <button
               onClick={() =>
-                alterar({ recargas: [...(cfg.recargas ?? []), { id: crypto.randomUUID(), data: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }), usd: 0, dolar: null, brl_pago: null }] })
+                alterar({ recargas: [...(cfg.recargas ?? []), { id: crypto.randomUUID(), data: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }), usd: 0, dolar: null, brl_pago: null, desde: new Date().toISOString() }] })
               }
               className="flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-[12px] font-bold text-accent"
             >

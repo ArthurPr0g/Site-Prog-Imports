@@ -18,7 +18,7 @@ export type CustoFixo = { id: string; nome: string; valor_brl: number; periodo: 
  * dolar = cotação do dia da recarga (congela o valor em reais); brl_pago = o que veio na fatura (IOF e câmbio do
  * banco), quando o Arthur informar.
  */
-export type RecargaDeCredito = { id: string; data: string; usd: number; dolar: number | null; brl_pago: number | null };
+export type RecargaDeCredito = { id: string; data: string; usd: number; dolar: number | null; brl_pago: number | null; /** Hora da recarga (ISO); sem ela, conta desde 0h do dia. */ desde?: string | null };
 export type ConfigDeCustos = {
   dolar: number | null;
   meta_utilidade_usd: number;
@@ -254,12 +254,13 @@ async function creditosDaApi(db: NonNullable<Awaited<ReturnType<typeof admin>>>,
   const lista = [...recargas]
     .sort((a, b) => b.data.localeCompare(a.data))
     .map((r) => ({ ...r, brl: r.brl_pago ?? r.usd * (r.dolar ?? dolarHoje) }));
-  const desde = lista.length ? lista[lista.length - 1].data : null;
+  const inicios = lista.map((r) => r.desde || `${r.data}T03:00:00Z`).sort();
+  const desde = inicios[0] ?? null;
   let gastoUsd = 0;
   if (desde) {
-    // Desde 00h (Brasília) do dia da 1ª recarga, em páginas de 1000 linhas.
+    // Desde a hora da 1ª recarga (ou 00h de Brasília do dia), em páginas de 1000 linhas.
     for (let de = 0; de < 200_000; de += 1000) {
-      const { data } = await db.from('ia_usage').select('cost_usd').gte('created_at', `${desde}T03:00:00Z`).order('created_at').range(de, de + 999);
+      const { data } = await db.from('ia_usage').select('cost_usd').gte('created_at', desde).order('created_at').range(de, de + 999);
       gastoUsd += (data ?? []).reduce((s, u) => s + Number(u.cost_usd), 0);
       if (!data || data.length < 1000) break;
     }
@@ -341,6 +342,7 @@ export async function salvarCustosAction(c: ConfigDeCustos, tetoUsd: number): Pr
       usd: num(r.usd, 0, 100_000, 0),
       dolar: Number(r.dolar) > 0 ? num(r.dolar, 1, 20, 5.5) : cot?.ok ? cot.cotacao.valor : null,
       brl_pago: Number(r.brl_pago) > 0 ? num(r.brl_pago, 0, 1_000_000, 0) : null,
+      desde: r.desde && !Number.isNaN(Date.parse(r.desde)) && r.desde.slice(0, 10) <= r.data ? r.desde : null,
     }));
   const teto = num(tetoUsd, 1, 10000, 30);
   const { error } = await db.from('ia_config').update({ custos: limpo as unknown as Json, monthly_budget_usd: teto }).eq('id', true);
