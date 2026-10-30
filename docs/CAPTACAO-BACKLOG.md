@@ -9,6 +9,26 @@ Pedido do dono em 27/10/2026: "pode fazer todos" (itens 1 a 12).
 
 ---
 
+## Separar visualmente a Prog Imports (loja) da Prog Soluções (serviços) (30/10/2026) — a fazer, HOJE
+
+Pedido do dono: "Hoje os dois estão integrados visualmente, e eu quero separar os dois visualmente para
+não ficar bagunçado as coisas da minha loja de importados com a prestação de serviço."
+Hoje o mesmo admin (`/admin`) mistura no menu a loja (produtos, estoque, vendas, orçamentos da loja,
+cupons, banners...) e a Prog Soluções (Captação, Pós-venda, Gastos, prestação de serviço, orçamentos de
+serviços, serviços internos). Levantar o que é de cada um, propor a separação (área própria da Prog
+Soluções com menu, cabeçalho, marca e cores dela, e o seletor de área já existente "Loja / Gerenciamento /
+Estúdio"), e aplicar sem quebrar rotas nem permissões. Ordem do dia: depois do piloto do Felipe estar
+pronto (prévias do WhatsApp e verificação noturna).
+
+## Piloto "Lia, faça todo o projeto" — Felipe (30/10/2026) — pronto para começar
+
+Modo projeto, dúvidas e financeiro por botão, pesquisa do lead, briefing, 10 modelos da Meta (em análise),
+página Gastos (0093-0099). Começa quando o Arthur mandar o contato do Felipe + "Lia, ...".
+Pendências dele (não travam o piloto): conectar o Google Agenda; Asaas da Vercel em sandbox; worker do PC
+para a busca no Maps.
+
+---
+
 ## Como publicar (roteiro para a sessão que for publicar)
 
 Estado em 27/10/2026: **commits locais** em `main` desde `916ef43` (`git log origin/main..HEAD` lista todos),
