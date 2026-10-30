@@ -34,10 +34,11 @@ export async function repassarAoManual(m: MensagemRecebida): Promise<void> {
       return;
     }
     corpo = { de: m.de, msg_id: m.id, tipo: 'audio', audio_base64: arquivo.dados.toString('base64'), mime: arquivo.mime || m.midia.mime || 'audio/ogg' };
-  } else if (m.texto.trim()) {
+  } else if (!m.midia && m.texto.trim()) {
     corpo = { de: m.de, msg_id: m.id, tipo: 'texto', texto: m.texto };
   } else {
-    return; // figurinha, reação, foto: o Manual só trata texto e áudio
+    // Foto, documento, figurinha, vídeo: a porta responde que só entende texto e áudio.
+    corpo = { de: m.de, msg_id: m.id, tipo: 'outro' };
   }
   try {
     const r = await fetch(url, {
