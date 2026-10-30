@@ -92,15 +92,20 @@ export function Atendimento({
 }) {
   const [painel, setPainel] = useState<PainelDoAtendente | null>(null);
   const [lidoEm, setLidoEm] = useState<number | null>(null);
-  // Link do e-mail de aviso: ?conversa=<id> abre a conversa (a aba só monta no navegador).
-  const [aberta, setAberta] = useState<string | null>(() =>
-    typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('conversa')
-  );
+  const [aberta, setAberta] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<'todas' | 'precisa' | 'comigo' | 'esperando' | 'novos'>('todas');
   const [busca, setBusca] = useState('');
   const [verTestes, setVerTestes] = useState(false);
-  // A conversa aberta fica no endereço (?conversa=): atualizar a página volta para ela.
+  // Link dos avisos: ?conversa=<id> abre a conversa. A página Atendimento é montada no servidor (sem
+  // endereço), então lê ao montar no navegador e só depois passa a manter o endereço em dia.
+  const leuEndereco = useRef(false);
   useEffect(() => {
+    if (!leuEndereco.current) {
+      leuEndereco.current = true;
+      const pedida = new URLSearchParams(window.location.search).get('conversa');
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- o endereço só existe no navegador
+      if (pedida) return setAberta(pedida);
+    }
     const u = new URL(window.location.href);
     if (aberta) u.searchParams.set('conversa', aberta);
     else u.searchParams.delete('conversa');
@@ -983,7 +988,7 @@ function Conversa({
             const dia = diaDaMensagem(m.createdAt, agora);
             const novoDia = !antes || diaDaMensagem(antes.createdAt, agora) !== dia;
             const separador = novoDia && (
-              <div className="sticky top-0 z-[1] my-3 flex justify-center">
+              <div className="my-3 flex justify-center">
                 <span className="rounded-[7.5px] bg-[#182229] px-3 py-[5px] text-[12.5px] uppercase text-[#8696a0] shadow-[0_1px_0.5px_rgba(11,20,26,.13)]">{dia}</span>
               </div>
             );
@@ -992,9 +997,7 @@ function Conversa({
                 <div key={m.id}>
                   {separador}
                   <div className="my-2 flex justify-center">
-                    <span className="max-w-[90%] rounded-[7.5px] bg-[#182229] px-3 py-[5px] text-center text-[12.5px] text-[#8696a0]">
-                      {m.body} · {hora(m.createdAt)}
-                    </span>
+                    <AvisoDoSistema texto={`${m.body} · ${horaCurta(m.createdAt)}`} />
                   </div>
                 </div>
               );
@@ -1027,16 +1030,31 @@ function Conversa({
                       </span>
                     )}
                     <span className="whitespace-pre-wrap break-words">
-                      <TextoDoWhatsapp texto={m.body} />
+                      <TextoDoWhatsapp texto={semOpcoes(m.body).texto} />
                     </span>
                     {/* Espaço para a hora e os tiques não ficarem por cima do texto. */}
                     <span className={`inline-block ${saiu ? 'w-[72px]' : 'w-[50px]'}`} />
                     <span className="absolute bottom-[4px] right-[7px] flex items-center gap-[3px] text-[11px] leading-none text-[#ffffff99]">
-                      {hora(m.createdAt)}
+                      {horaCurta(m.createdAt)}
                       {saiu && <Tique status={m.status} />}
                     </span>
                   </div>
                 </div>
+                {/* Botões de resposta que a Lia mandou (como os botões do WhatsApp, embaixo do balão). */}
+                {semOpcoes(m.body).opcoes.length > 0 && (
+                  <div className={`mt-[2px] flex ${saiu ? 'justify-end' : 'justify-start'}`}>
+                    <div className="grid w-full max-w-[88%] gap-[2px] sm:max-w-[65%]">
+                      {semOpcoes(m.body).opcoes.map((o) => (
+                        <span
+                          key={o}
+                          className={`rounded-[7.5px] px-3 py-[9px] text-center text-[14px] text-[#53bdeb] shadow-[0_1px_0.5px_rgba(11,20,26,.13)] ${saiu ? 'bg-[#005c4b]' : 'bg-[#202c33]'}`}
+                        >
+                          ↩ {o}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {m.status === 'failed' && (
                   <div className="mt-0.5 text-right text-[11px] text-[#f15c6d]">Não saiu: {m.error ?? 'erro do WhatsApp'}</div>
                 )}
@@ -1098,6 +1116,30 @@ function Conversa({
         </div>
       </div>
     </div>
+  );
+}
+
+/** Hora da mensagem como no WhatsApp ("14:36"); o dia fica no separador. */
+const horaCurta = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+
+/** A Lia grava os botões como "[opções: A | B | C]" no fim do texto: separa para desenhar como botões. */
+function semOpcoes(body: string): { texto: string; opcoes: string[] } {
+  const m = body.match(/\n?\[opções:\s*([^\]]+)\]\s*$/i);
+  if (!m) return { texto: body, opcoes: [] };
+  return { texto: body.slice(0, m.index).trimEnd(), opcoes: m[1].split('|').map((o) => o.trim()).filter(Boolean) };
+}
+
+/** Aviso interno do sistema (o cliente não vê): pílula central recolhida em 2 linhas; clique abre tudo. */
+function AvisoDoSistema({ texto }: { texto: string }) {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <button
+      onClick={() => setAberto((v) => !v)}
+      title={aberto ? 'Recolher' : 'Ver tudo'}
+      className={`max-w-[90%] rounded-[7.5px] bg-[#182229] px-3 py-[5px] text-center text-[12.5px] text-[#8696a0] ${aberto ? '' : 'line-clamp-2'}`}
+    >
+      🔒 {texto}
+    </button>
   );
 }
 
