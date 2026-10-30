@@ -12,6 +12,13 @@ import { MODELOS } from '@/lib/atendente/modelos';
 import { TIME, type ChaveDoAgente } from '@/lib/agentes/time';
 
 export type CustoFixo = { id: string; nome: string; valor_brl: number; periodo: 'mensal' | 'anual'; categoria: string };
+/**
+ * Recarga de créditos da API da Anthropic (pedido do Arthur, 30/10/2026). A Anthropic não tem API de saldo e a
+ * de custos exige chave de administrador (só para organizações), então as recargas são lançadas aqui.
+ * dolar = cotação do dia da recarga (congela o valor em reais); brl_pago = o que veio na fatura (IOF e câmbio do
+ * banco), quando o Arthur informar.
+ */
+export type RecargaDeCredito = { id: string; data: string; usd: number; dolar: number | null; brl_pago: number | null };
 export type ConfigDeCustos = {
   dolar: number | null;
   meta_utilidade_usd: number;
@@ -24,6 +31,7 @@ export type ConfigDeCustos = {
   pesquisas_por_projeto: number;
   modelos_por_projeto: number;
   fixos: CustoFixo[];
+  recargas: RecargaDeCredito[];
 };
 export type Periodo = 'mes' | '7d' | '30d' | 'tudo';
 type Fatia = { nome: string; usd: number };
@@ -51,6 +59,8 @@ export type Gastos = {
    * informa em cada execução (não é cobrado à parte). Execuções da nuvem e anteriores a 30/10 não têm medição.
    */
   agentes: { chave: string; nome: string; papel: string; cobranca: 'api' | 'assinatura'; usd: number; execucoes: number; semMedicao: number; tokens: number }[];
+  /** Créditos da API: total recarregado, gasto medido da Lia desde a 1ª recarga e o saldo estimado. */
+  creditos: { recargas: (RecargaDeCredito & { brl: number })[]; totalUsd: number; totalBrl: number; gastoUsd: number; saldoUsd: number; desde: string | null };
 };
 
 const PADRAO: ConfigDeCustos = {
@@ -65,6 +75,7 @@ const PADRAO: ConfigDeCustos = {
   pesquisas_por_projeto: 2,
   modelos_por_projeto: 5,
   fixos: [],
+  recargas: [],
 };
 
 const FINALIDADE: Record<string, string> = {
@@ -233,8 +244,28 @@ export async function gastosAction(periodo: Periodo = 'mes'): Promise<Gastos | n
     vendas: { fechadas: fechadas ?? 0, custoPorVendaBrl: fechadas ? totalBrl / fechadas : null, iaDasFechadasUsd: iaDasFechadas },
     estimativa: { usd: estPartes.reduce((s, p) => s + p.usd, 0), partes: estPartes, base: { porResposta, porPesquisa, medidoPorResposta: medidoResp, medidoPorPesquisa: medidoPesq } },
     leads: listaLeads.slice(0, 10),
+    creditos: await creditosDaApi(db, config.recargas ?? [], dolar),
     agentes: gastoPorAgente(iaUsd, noPeriodo.length, noPeriodo.reduce((s, u) => s + u.input_tokens + u.output_tokens + u.cache_read_tokens + u.cache_write_tokens, 0), execucoes ?? []),
   };
+}
+
+/** Saldo estimado dos créditos: recargas lançadas menos o gasto da Lia medido (ia_usage) desde a 1ª recarga. */
+async function creditosDaApi(db: NonNullable<Awaited<ReturnType<typeof admin>>>, recargas: RecargaDeCredito[], dolarHoje: number): Promise<Gastos['creditos']> {
+  const lista = [...recargas]
+    .sort((a, b) => b.data.localeCompare(a.data))
+    .map((r) => ({ ...r, brl: r.brl_pago ?? r.usd * (r.dolar ?? dolarHoje) }));
+  const desde = lista.length ? lista[lista.length - 1].data : null;
+  let gastoUsd = 0;
+  if (desde) {
+    // Desde 00h (Brasília) do dia da 1ª recarga, em páginas de 1000 linhas.
+    for (let de = 0; de < 200_000; de += 1000) {
+      const { data } = await db.from('ia_usage').select('cost_usd').gte('created_at', `${desde}T03:00:00Z`).order('created_at').range(de, de + 999);
+      gastoUsd += (data ?? []).reduce((s, u) => s + Number(u.cost_usd), 0);
+      if (!data || data.length < 1000) break;
+    }
+  }
+  const totalUsd = lista.reduce((s, r) => s + r.usd, 0);
+  return { recargas: lista, totalUsd, totalBrl: lista.reduce((s, r) => s + r.brl, 0), gastoUsd, saldoUsd: totalUsd - gastoUsd, desde };
 }
 
 /** Lia (API real) primeiro; depois os agentes do Claude Code pelo custo equivalente, do maior para o menor. */
@@ -297,7 +328,20 @@ export async function salvarCustosAction(c: ConfigDeCustos, tetoUsd: number): Pr
         periodo: f.periodo === 'anual' ? 'anual' : 'mensal',
         categoria: (f.categoria ?? '').trim().slice(0, 40) || 'Outros',
       })),
+    recargas: [],
   };
+  // Recarga sem cotação ganha o dólar de hoje ao salvar: o valor em reais fica congelado no dia lançado.
+  const cot = (c.recargas ?? []).some((r) => !(Number(r.dolar) > 0)) ? await buscarCotacaoMercado() : null;
+  limpo.recargas = (c.recargas ?? [])
+    .filter((r) => Number(r.usd) > 0 && /^\d{4}-\d{2}-\d{2}$/.test(r.data ?? ''))
+    .slice(0, 200)
+    .map((r) => ({
+      id: r.id || crypto.randomUUID(),
+      data: r.data,
+      usd: num(r.usd, 0, 100_000, 0),
+      dolar: Number(r.dolar) > 0 ? num(r.dolar, 1, 20, 5.5) : cot?.ok ? cot.cotacao.valor : null,
+      brl_pago: Number(r.brl_pago) > 0 ? num(r.brl_pago, 0, 1_000_000, 0) : null,
+    }));
   const teto = num(tetoUsd, 1, 10000, 30);
   const { error } = await db.from('ia_config').update({ custos: limpo as unknown as Json, monthly_budget_usd: teto }).eq('id', true);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar.'));

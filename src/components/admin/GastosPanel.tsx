@@ -5,9 +5,9 @@
 // magnitude. Cada gráfico tem dica ao passar o mouse e a tabela dos números logo abaixo.
 
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
-import { Bot, CalendarDays, Users, Coins, Gauge, MessageCircle, Mic, Plus, Receipt, Save, Settings2, Target, Trash2, TrendingUp, TriangleAlert, CircleCheck } from 'lucide-react';
+import { Bot, CalendarDays, CreditCard, Users, Coins, Gauge, MessageCircle, Mic, Plus, Receipt, Save, Settings2, Target, Trash2, TrendingUp, TriangleAlert, CircleCheck } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
-import { gastosAction, salvarCustosAction, type ConfigDeCustos, type CustoFixo, type Gastos, type Periodo } from '@/app/actions/gastos';
+import { gastosAction, salvarCustosAction, type ConfigDeCustos, type CustoFixo, type Gastos, type Periodo, type RecargaDeCredito } from '@/app/actions/gastos';
 
 const PERIODOS: [Periodo, string][] = [
   ['mes', 'Este mês'],
@@ -225,6 +225,8 @@ export function GastosPanel() {
     setMudou(true);
   };
   const fixo = (i: number, parcial: Partial<CustoFixo>) => alterar({ fixos: cfg!.fixos.map((f, k) => (k === i ? { ...f, ...parcial } : f)) });
+  const recarga = (i: number, parcial: Partial<RecargaDeCredito>) =>
+    alterar({ recargas: (cfg!.recargas ?? []).map((r, k) => (k === i ? { ...r, ...parcial } : r)) });
   const salvar = () =>
     startSalvar(async () => {
       if (!cfg) return;
@@ -333,6 +335,55 @@ export function GastosPanel() {
           </span>
           <span>Ao atingir, a Lia para de responder e te avisa</span>
         </div>
+      </Cartao>
+
+      {/* Créditos da API da Anthropic (recargas lançadas) */}
+      <Cartao atraso={270}>
+        <Titulo Icon={CreditCard} dica="A Anthropic não informa o saldo por API: as recargas são lançadas aqui, em Parâmetros">
+          Créditos da API (Anthropic)
+        </Titulo>
+        {d.creditos.recargas.length === 0 ? (
+          <p className="text-[13px] text-fg-tertiary">Nenhuma recarga lançada. Lance em Parâmetros, lá embaixo, em “Recargas de crédito da API”.</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 [&>*]:min-w-0">
+              <div>
+                <span className="block text-[11px] font-bold uppercase tracking-[.06em] text-fg-faded">Recarregado</span>
+                <span className="block text-[22px] font-extrabold tabular-nums text-fg">{usd(d.creditos.totalUsd)}</span>
+                <span className="block text-[12px] text-fg-tertiary">{brl(d.creditos.totalBrl)}</span>
+              </div>
+              <div>
+                <span className="block text-[11px] font-bold uppercase tracking-[.06em] text-fg-faded">Gasto da Lia desde então</span>
+                <span className="block text-[22px] font-extrabold tabular-nums text-fg">{usd(d.creditos.gastoUsd)}</span>
+                <span className="block text-[12px] text-fg-tertiary">{brl(d.creditos.gastoUsd * d.dolar)}</span>
+              </div>
+              <div>
+                <span className="block text-[11px] font-bold uppercase tracking-[.06em] text-fg-faded">Saldo estimado</span>
+                <span className={`block text-[22px] font-extrabold tabular-nums ${d.creditos.saldoUsd < 3 ? 'text-error' : 'text-success'}`}>{usd(Math.max(0, d.creditos.saldoUsd))}</span>
+                <span className="block text-[12px] text-fg-tertiary">{brl(Math.max(0, d.creditos.saldoUsd) * d.dolar)}</span>
+              </div>
+            </div>
+            <table className="mt-3 w-full text-[12.5px]">
+              <tbody>
+                {d.creditos.recargas.map((r) => (
+                  <tr key={r.id} className="border-t border-white/5">
+                    <td className="py-1.5">{r.data.split('-').reverse().join('/')}</td>
+                    <td className="py-1.5 text-right tabular-nums">{usd(r.usd)}</td>
+                    <td className="py-1.5 text-right font-bold tabular-nums text-fg">{brl(r.brl)}</td>
+                    <td className="py-1.5 text-right text-fg-tertiary">{r.brl_pago ? 'valor da fatura' : r.dolar ? `dólar a ${brl(r.dolar)}` : 'dólar de hoje'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-2 text-[12px] text-fg-tertiary">
+              Saldo estimado = recargas menos o gasto da Lia medido pelo sistema. O saldo exato fica em{' '}
+              <a href="https://platform.claude.com/settings/billing" target="_blank" rel="noreferrer" className="text-accent underline">
+                Billing da Anthropic
+              </a>
+              {' '}(outros usos da mesma chave não entram aqui).
+            </p>
+          </>
+        )}
       </Cartao>
 
       {/* Gasto por agente (0110) */}
@@ -530,6 +581,69 @@ export function GastosPanel() {
                   <option value="anual">por ano</option>
                 </select>
                 <button onClick={() => alterar({ fixos: cfg.fixos.filter((_, k) => k !== i) })} className="p-2 text-fg-faded hover:text-error" title="Tirar">
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-5">
+          <div className="mb-2 flex items-center justify-between">
+            <b className="text-[13px]">Recargas de crédito da API (Anthropic)</b>
+            <button
+              onClick={() =>
+                alterar({ recargas: [...(cfg.recargas ?? []), { id: crypto.randomUUID(), data: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }), usd: 0, dolar: null, brl_pago: null }] })
+              }
+              className="flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-[12px] font-bold text-accent"
+            >
+              <Plus size={13} /> lançar recarga
+            </button>
+          </div>
+          <p className="mb-2 text-[12px] text-fg-faded">Valor em dólar que você colocou. A cotação vazia usa o dólar do dia ao salvar; “pago em R$” é o valor da fatura do cartão, se quiser o exato.</p>
+          <div className="grid gap-2">
+            {(cfg.recargas ?? []).map((r, i) => (
+              <div key={r.id} className="g-entrar flex flex-wrap items-center gap-2">
+                <input
+                  type="date"
+                  value={r.data}
+                  onChange={(e) => recarga(i, { data: e.target.value })}
+                  className="rounded-[12px] border border-border-strong bg-input px-3 py-2 text-[13px] outline-none focus:border-accent"
+                  aria-label="Data da recarga"
+                />
+                <label className="flex items-center gap-1 text-[12px] text-fg-tertiary">
+                  US$
+                  <input
+                    type="number"
+                    step={0.01}
+                    value={r.usd || ''}
+                    onChange={(e) => recarga(i, { usd: Number(e.target.value) })}
+                    className="w-[100px] rounded-[12px] border border-border-strong bg-input px-3 py-2 text-[13px] tabular-nums text-fg outline-none focus:border-accent"
+                  />
+                </label>
+                <label className="flex items-center gap-1 text-[12px] text-fg-tertiary">
+                  dólar R$
+                  <input
+                    type="number"
+                    step={0.0001}
+                    value={r.dolar ?? ''}
+                    placeholder="do dia"
+                    onChange={(e) => recarga(i, { dolar: e.target.value ? Number(e.target.value) : null })}
+                    className="w-[100px] rounded-[12px] border border-border-strong bg-input px-3 py-2 text-[13px] tabular-nums text-fg outline-none focus:border-accent"
+                  />
+                </label>
+                <label className="flex items-center gap-1 text-[12px] text-fg-tertiary">
+                  pago em R$
+                  <input
+                    type="number"
+                    step={0.01}
+                    value={r.brl_pago ?? ''}
+                    placeholder="opcional"
+                    onChange={(e) => recarga(i, { brl_pago: e.target.value ? Number(e.target.value) : null })}
+                    className="w-[110px] rounded-[12px] border border-border-strong bg-input px-3 py-2 text-[13px] tabular-nums text-fg outline-none focus:border-accent"
+                  />
+                </label>
+                <button onClick={() => alterar({ recargas: (cfg.recargas ?? []).filter((_, k) => k !== i) })} className="p-2 text-fg-faded hover:text-error" title="Tirar">
                   <Trash2 size={15} />
                 </button>
               </div>
