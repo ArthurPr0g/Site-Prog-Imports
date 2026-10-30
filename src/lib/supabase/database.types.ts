@@ -1084,6 +1084,7 @@ export type Database = {
           saude: Json
           link_avaliacao_google: string | null
           ensaio_em: string | null
+          ia_sem_credito_desde: string | null
           encomenda_template_status: string | null
           agenda: Json
           active: boolean
@@ -1116,6 +1117,7 @@ export type Database = {
           saude?: Json
           link_avaliacao_google?: string | null
           ensaio_em?: string | null
+          ia_sem_credito_desde?: string | null
           encomenda_template_status?: string | null
           agenda?: Json
           active?: boolean
@@ -1148,6 +1150,7 @@ export type Database = {
           saude?: Json
           link_avaliacao_google?: string | null
           ensaio_em?: string | null
+          ia_sem_credito_desde?: string | null
           encomenda_template_status?: string | null
           agenda?: Json
           active?: boolean
@@ -1181,6 +1184,7 @@ export type Database = {
           created_at: string
           id: string
           is_test: boolean
+          ia_pendente_desde: string | null
           kit_id: string | null
           last_inbound_at: string | null
           last_message_at: string
@@ -1202,6 +1206,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_test?: boolean
+          ia_pendente_desde?: string | null
           kit_id?: string | null
           last_inbound_at?: string | null
           last_message_at?: string
@@ -1223,6 +1228,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_test?: boolean
+          ia_pendente_desde?: string | null
           kit_id?: string | null
           last_inbound_at?: string | null
           last_message_at?: string

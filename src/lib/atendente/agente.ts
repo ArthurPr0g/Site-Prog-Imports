@@ -13,6 +13,7 @@ import { PrePropostaDocument } from '@/lib/pdf/pre-proposta';
 import { montarPreProposta } from '@/lib/pdf/montar-pre-proposta';
 import { criarProjetoDaVenda, escolhaDoJson } from '@/lib/pos-venda';
 import { orientacaoDoPosEntrega, type PosEntrega } from './pos-entrega';
+import { marcarSemCredito } from './credito';
 import { fusoDoCliente, horarioNoFuso } from '@/lib/idioma-do-lead';
 import { avisarArthur } from '@/lib/atendente/avisos';
 import { casesDoLead, linkDoCase } from '@/lib/cases-portfolio';
@@ -1181,6 +1182,8 @@ export async function responderConversa(conversaId: string, avisoInterno?: strin
   } finally {
     await db.from('ia_conversations').update({ respondendo_ate: null }).eq('id', conversaId);
   }
+  // Respondeu: sai da fila de quem esperava crédito (0108).
+  if (!motivo) await db.from('ia_conversations').update({ ia_pendente_desde: null }).eq('id', conversaId).not('ia_pendente_desde', 'is', null);
   // Chegou mensagem do cliente ou orientação enquanto ela escrevia: responde de novo (já vê as duas).
   const { data: nova } = await db
     .from('ia_messages')
@@ -1478,7 +1481,12 @@ CLIENTE COM PROJETO (${projetoCliente.cliente}): ele já é cliente. Se pedir mu
             : erro instanceof Anthropic.APIError
               ? `erro ${erro.status} da API da Anthropic`
               : 'falha ao falar com a IA';
-      await chamarArthur(db, cfg, conversaId, `A IA não conseguiu responder (${msg}). Responda você.`, semCredito ? '⚠️ Créditos da IA acabaram: a Lia parou' : 'A IA falhou');
+      // Sem crédito (0108): a conversa espera e a Lia retoma sozinha quando voltar (um aviso só ao Arthur).
+      if (semCredito) {
+        await marcarSemCredito(db, cfg, conversaId);
+        return msg;
+      }
+      await chamarArthur(db, cfg, conversaId, `A IA não conseguiu responder (${msg}). Responda você.`, 'A IA falhou');
       return msg;
     }
 

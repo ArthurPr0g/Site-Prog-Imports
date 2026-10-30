@@ -13,6 +13,7 @@ import { lembrarConversasParadas } from '@/lib/atendente/lembretes';
 import { avisarLeadsQuentes } from '@/lib/atendente/lead-quente';
 import { garantirModeloDaFila, mandarFilasDoDia } from '@/lib/atendente/fila-do-vendedor';
 import { bomDia } from '@/lib/atendente/bom-dia';
+import { retomarDepoisDoCredito } from '@/lib/atendente/credito';
 import { baterRelogio, verificarSaude } from '@/lib/atendente/saude';
 import { cuidarDoPosEntrega } from '@/lib/atendente/pos-entrega';
 import { cuidarDosPedidosDeDesign } from '@/lib/atendente/design-do-projeto';
@@ -61,6 +62,8 @@ export async function POST(req: NextRequest) {
   const bomDiaEnviado = await bomDia(db, cfg);
   if (!cfg.active) return NextResponse.json({ ok: true, ativo: false, arquivos, modeloDoAviso, promptsAvisados, modelos, saude, bomDiaEnviado });
 
+  // (0108) crédito da Anthropic voltou? retoma as conversas que ficaram esperando.
+  const retomadasPorCredito = await retomarDepoisDoCredito(db, cfg);
   const descontos = await resolverDescontos(db);
   const emails = emailConfigurado() && horarioComercial() ? await mandarEmails(db, cfg) : 0;
   const licoes = await aprenderComConversas(db, cfg);
@@ -74,7 +77,7 @@ export async function POST(req: NextRequest) {
   const encomendas = await enviarEncomendasPendentes(db);
   const retomadas = await retomarEncomendas(db);
   const lembretesDeReuniao = await lembrarReunioes(db);
-  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas, posEntrega, design, promptsAvisados, saude, bomDiaEnviado, modelos, encomendas, retomadas, lembretesDeReuniao });
+  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas, posEntrega, design, retomadasPorCredito, promptsAvisados, saude, bomDiaEnviado, modelos, encomendas, retomadas, lembretesDeReuniao });
 }
 
 async function resolverDescontos(db: DbDoAtendente): Promise<number> {

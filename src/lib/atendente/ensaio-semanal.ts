@@ -12,6 +12,7 @@ import { custoDaChamada } from './regras';
 import { responderConversa, SIMULADOR } from './agente';
 import { avisarArthur } from './avisos';
 import { SITE_URL } from '@/lib/seo';
+import { ehFaltaDeCredito, marcarSemCredito } from './credito';
 
 const MODELO_CLIENTE = 'claude-haiku-5-5';
 const MODELO_AVALIADOR = 'claude-sonnet-5-5';
@@ -111,6 +112,8 @@ export async function comecarEnsaio(db: DbDoAtendente, forcar = false): Promise<
 /** Um passo: abre uma conversa, faz o cliente falar mais uma vez, ou avalia uma conversa pronta. */
 export async function passoDoEnsaio(db: DbDoAtendente, cfg: ConfigDoAtendente): Promise<string | null> {
   if (!cfg.active || !process.env.ANTHROPIC_API_KEY) return null;
+  const { data: credito } = await db.from('ia_config').select('ia_sem_credito_desde').eq('id', true).maybeSingle();
+  if (credito?.ia_sem_credito_desde) return null; // sem crédito (0108): continua quando voltar
   if (await comecarEnsaio(db)) return 'rodada criada';
   const { data: c } = await db.from('ia_config').select('ensaio_em, saude').eq('id', true).maybeSingle();
   if (!c?.ensaio_em) return null;
@@ -215,6 +218,11 @@ ${await transcricao(db, conversaId)}`,
       .eq('id', proxima.id);
     return 'avaliou';
   } catch (e) {
+    // Sem crédito (0108): o perfil espera (não vira erro) e o ensaio segue quando o crédito voltar.
+    if (ehFaltaDeCredito(e)) {
+      await marcarSemCredito(db, cfg);
+      return 'sem crédito';
+    }
     await db
       .from('ensaios_lia')
       .update({ status: 'erro', resumo: motivoCurto(e), atualizado_em: new Date().toISOString() })

@@ -13,6 +13,7 @@ import type { DbDoAtendente } from './db';
 import type { Json } from '@/lib/supabase/database.types';
 import { custoDaChamada, type ConfigDoAtendente } from './regras';
 import { avisarArthur } from './avisos';
+import { ehFaltaDeCredito, marcarSemCredito } from './credito';
 
 const MODELO = 'claude-sonnet-5-5';
 /** Até ~420 caracteres, terminando numa frase inteira (o aviso no WhatsApp não corta no meio da palavra). */
@@ -65,6 +66,9 @@ type Resultado = { resumo: string; itens: { campo: string; valor: string; fonte:
 
 /** Pesquisa um lead pendente (um por chamada). Devolve o id pesquisado ou null se não havia. */
 export async function pesquisarProximo(db: DbDoAtendente, cfg: ConfigDoAtendente): Promise<string | null> {
+  // Sem crédito (0108): espera o relógio confirmar que voltou, em vez de tentar a cada 2 min.
+  const { data: credito } = await db.from('ia_config').select('ia_sem_credito_desde').eq('id', true).maybeSingle();
+  if (credito?.ia_sem_credito_desde) return null;
   // Pega um pendente (ou um "rodando" travado há mais de 15 min).
   const { data: l } = await db
     .from('leads')
@@ -149,6 +153,12 @@ export async function pesquisarProximo(db: DbDoAtendente, cfg: ConfigDoAtendente
     }
   } catch (e) {
     console.error('[pesquisa] falhou', e);
+    // Sem crédito (0108): o lead continua na fila e a pesquisa roda quando o crédito voltar.
+    if (ehFaltaDeCredito(e)) {
+      await db.from('leads').update({ pesquisa_status: 'pendente' }).eq('id', l.id);
+      await marcarSemCredito(db, cfg);
+      return null;
+    }
   }
 
   if (!resultado) {

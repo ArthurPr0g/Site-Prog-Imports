@@ -93,13 +93,15 @@ export async function problemasAtuais(db: DbDoAtendente, cfg: ConfigDoAtendente,
     .like('body', '%A IA não conseguiu responder%')
     .gte('created_at', desde(1))
     .limit(20);
-  if (falhasDaIa?.length) {
-    const credito = falhasDaIa.some((m) => /créditos da Anthropic/i.test(m.body));
+  if (falhasDaIa?.length)
+    problemas.push({ chave: 'ia_falhando', texto: `🚨 A IA falhou ${falhasDaIa.length} vez(es) na última hora e não respondeu os clientes. Veja em Captação → Atendimento.` });
+  // Sem crédito (0108): conta quantas conversas esperam a Lia.
+  const { data: semCredito } = await db.from('ia_config').select('ia_sem_credito_desde').eq('id', true).maybeSingle();
+  if (semCredito?.ia_sem_credito_desde) {
+    const { count: esperando } = await db.from('ia_conversations').select('id', { count: 'exact', head: true }).not('ia_pendente_desde', 'is', null);
     problemas.push({
-      chave: credito ? 'ia_sem_credito' : 'ia_falhando',
-      texto: credito
-        ? '🚨 Acabaram os créditos da Anthropic: a Lia, a pesquisa e o ensaio pararam. Recarregue em https://console.anthropic.com/settings/billing'
-        : `🚨 A IA falhou ${falhasDaIa.length} vez(es) na última hora e não respondeu os clientes. Veja em Captação → Atendimento.`,
+      chave: 'ia_sem_credito',
+      texto: `🚨 Sem créditos da Anthropic desde ${hora(semCredito.ia_sem_credito_desde)}${esperando ? `: ${esperando} conversa(s) esperando a Lia` : ''}. Nada se perde; ela retoma sozinha quando você recarregar: https://console.anthropic.com/settings/billing`,
     });
   }
   if ((avisosFalhos ?? 0) >= 3) problemas.push({ chave: 'avisos_falhando', texto: `📵 ${avisosFalhos} avisos para você falharam na última hora.` });
