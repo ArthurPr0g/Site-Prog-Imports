@@ -84,7 +84,9 @@ async function main() {
     const conversa = m.ia_conversations;
     const lead = conversa.leads;
     const responsavel = primeiroNome(lead.responsible_name) || primeiroNome(conversa.contact_name);
-    const pasta = join(clientes, limpar(responsavel ? `${lead.name} - ${responsavel}` : lead.name));
+    // "Pessoa - Empresa" (padrão do Arthur desde 30/10/2026), igual a nomeDaPasta em prestacao-do-sinal.ts.
+    const jaTem = responsavel && lead.name.toLowerCase().startsWith(`${responsavel.toLowerCase()} - `);
+    const pasta = join(clientes, limpar(responsavel && !jaTem ? `${responsavel} - ${lead.name}` : lead.name));
     if (!existsSync(pasta)) {
       log(`Pasta nova: ${pasta}`);
       if (!simular) {

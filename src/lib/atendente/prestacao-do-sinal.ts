@@ -57,8 +57,10 @@ export type PastaDoCliente = { empresa: string; responsavel: string | null };
 
 /** Nome da pasta no OneDrive (o mesmo que a tarefa do PC usa). */
 export function nomeDaPasta(p: PastaDoCliente): string {
+  // "Pessoa - Empresa" (padrão do Arthur desde 30/10/2026; antes era "Empresa - Pessoa").
   const primeiro = (p.responsavel ?? '').trim().split(/\s+/)[0];
-  return (primeiro ? `${p.empresa} - ${primeiro}` : p.empresa).replace(/[<>:"/\\|?*]/g, ' ').trim();
+  const jaTemPessoa = primeiro && p.empresa.toLowerCase().startsWith(`${primeiro.toLowerCase()} - `);
+  return (primeiro && !jaTemPessoa ? `${primeiro} - ${p.empresa}` : p.empresa).replace(/[<>:"/\\|?*]/g, ' ').trim();
 }
 
 /**

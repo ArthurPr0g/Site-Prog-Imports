@@ -610,6 +610,20 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
         }
       }
       await db.from('leads').update({ briefing: atual as Json, ...extra }).eq('id', leadId);
+      // Nome do projeto no padrão do Arthur (30/10/2026): "Pessoa - Empresa ou ocupação" no lead, na conversa e no projeto.
+      const negocio = String(entrada.empresa_ou_ocupacao ?? '').trim().replace(/\s+/g, ' ').slice(0, 60);
+      if (negocio) {
+        const { data: ld } = await db.from('leads').select('name, responsible_name, source').eq('id', leadId).maybeSingle();
+        if (ld?.source === 'indicacao_dono') {
+          const pessoa = (ld.responsible_name || ld.name.split(' - ')[0]).trim().split(/\s+/)[0];
+          const nome = `${pessoa} - ${negocio}`.replace(/[<>:"/\\|?*]/g, ' ').replace(/\s+/g, ' ').trim();
+          if (nome !== ld.name) {
+            await db.from('leads').update({ name: nome, responsible_name: ld.responsible_name || pessoa }).eq('id', leadId);
+            await db.from('ia_conversations').update({ contact_name: nome }).eq('lead_id', leadId);
+            await db.from('projetos').update({ cliente: nome }).eq('lead_id', leadId);
+          }
+        }
+      }
       return 'Registrado no briefing.';
     }
     case 'confirmar_pesquisa': {
@@ -880,6 +894,7 @@ export const INSTAGRAM_DA_PROG = '@prog.arthur';
 const SO_PARA_VENDA_DE_PACOTE = new Set(['calcular_preco', 'enviar_proposta_pdf', 'pedir_desconto_extra']);
 
 const CAMPOS_DO_BRIEFING = new Map<string, string>([
+  ['empresa_ou_ocupacao', 'Nome da empresa; se não tiver empresa, a ocupação em 1 a 3 palavras (ex.: "Clínica Sorriso", "Personal Trainer"). Vira o nome do projeto: "Pessoa - Empresa"'],
   ['instagram', 'Instagram que mais ajuda a criar o site (o da empresa ou o profissional da pessoa): @ ou link'],
   ['negocio', 'O negócio: o que faz, há quanto tempo, como funciona hoje'],
   ['dor', 'A dor principal: o que incomoda ou dá trabalho hoje, nas palavras do cliente'],

@@ -43,7 +43,7 @@ export async function bomDia(db: DbDoAtendente, cfg: ConfigDoAtendente, forcar =
     db.from('ideias').select('titulo').eq('status', 'aguardando_projeto').limit(10),
     db.from('ia_discount_requests').select('id', { count: 'exact', head: true }).eq('status', 'aguardando'),
     db.from('ia_conversations').select('contact_name').eq('needs_human', true).eq('is_test', false).not('contact_id', 'like', 'simulador:%').limit(10),
-    db.from('ideias').select('titulo, agente').eq('tipo', 'prompt').in('status', ['feito', 'parcial']).ilike('resultado', '%Aguardando você:%').gte('atualizado_em', new Date(Date.now() - 72 * HORA).toISOString()).limit(8),
+    db.from('ideias').select('titulo, agente').eq('tipo', 'prompt').in('status', ['feito', 'parcial']).ilike('resultado', '%Aguardando você:%').not('resultado', 'ilike', '%[resolvido%').gte('atualizado_em', new Date(Date.now() - 72 * HORA).toISOString()).limit(8),
     db.from('reunioes').select('titulo, inicio').eq('status', 'marcada').gte('inicio', meiaNoite(hoje)).lt('inicio', amanha).order('inicio'),
     db.from('ideias').select('titulo, agente, status').eq('tipo', 'prompt').in('status', ['feito', 'parcial']).gte('atualizado_em', desde18h).order('atualizado_em', { ascending: false }).limit(8),
     db.from('leads').select('id', { count: 'exact', head: true }).gte('created_at', ontem).lt('created_at', meiaNoite(hoje)).not('source', 'like', 'teste%'),

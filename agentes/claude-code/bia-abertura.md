@@ -18,7 +18,7 @@ Sua função é uma só: **abrir o projeto** de um cliente que acabou de fechar,
 
 ## Passo a passo
 1. Ache o projeto (pelo id do pedido ou pelo nome) e junte: cliente, responsável, contato, pacote e serviços, prazo em dias úteis, descoberta, diagnóstico, site e Instagram atuais, resumo da conversa.
-2. Crie a pasta do código em `C:\Apps\1 - Dev\Prog Soluções\1 - Clientes\<Empresa - PrimeiroNome do responsável>` (sem `<>:"/\|?*`; mesmo nome que `nomeDaPasta` em `src/lib/atendente/prestacao-do-sinal.ts`). Se já existir, reaproveite e não apague nada. Dentro dela: `handoff/` (vazia, para o pacote da Nina) e `insumos/` (material do cliente).
+2. Crie a pasta do código em `C:\Apps\1 - Dev\Prog Soluções\1 - Clientes\<PrimeiroNome - Empresa ou ocupação>` (padrão do Arthur: "Felipe - Personal Trainer"; é o `projetos.cliente`; sem `<>:"/\|?*`; mesmo padrão de `nomeDaPasta` em `src/lib/atendente/prestacao-do-sinal.ts`). Se ainda não se sabe a empresa ou ocupação, use só o primeiro nome: a pasta é renomeada nos pedidos finais. Se já existir, reaproveite e não apague nada. Dentro dela: `handoff/` (vazia, para o pacote da Nina) e `insumos/` (material do cliente).
 3. Escreva na pasta:
    - `BRIEFING.md`: quem é o cliente, o que foi vendido (cada serviço com o que inclui, pelo `src/lib/guia-dos-pacotes.ts`), objetivo do site/loja, público, tom, páginas e seções esperadas, conteúdo já disponível, referências (site e Instagram atuais), o que o diagnóstico apontou, prazo e rodadas incluídas, e a lista do **material que falta** (fotos, textos, lista de produtos/preços, logo, acessos).
    - `PEDIDO-DUDA.md` e `PEDIDO-NINA.md` como **RASCUNHO** (primeira linha: `> RASCUNHO: não colar ainda. A versão final sai quando o cliente confirmar a descoberta.`): os modelos de `site-prog-imports/agentes/claude-design/` com o que já se sabe. O Arthur só usa a versão final (pedido do Arthur em 30/10/2026).
@@ -28,6 +28,7 @@ Sua função é uma só: **abrir o projeto** de um cliente que acabou de fechar,
 
 ## Pedidos finais do Claude Design
 Quando o pedido da fila for "pedidos do Claude Design de <cliente>" (o sistema só pede depois de: projeto aberto, financeiro resolvido e descoberta confirmada pelo cliente):
+0. Se `projetos.cliente` mudou (ex.: "Felipe" virou "Felipe - Personal Trainer") e a pasta tem o nome antigo: renomeie a pasta para o nome novo, atualize `projetos.pasta` e o `$Mapa` do backup-clientes.ps1. Nunca apague nada.
 1. Releia tudo: `leads.briefing` (o que a Lia levantou e o cliente confirmou), `leads.pesquisa`, `leads.discovery`, o resumo da conversa e as observações do projeto.
 2. Atualize o `BRIEFING.md` e reescreva `PEDIDO-DUDA.md` e `PEDIDO-NINA.md` na versão final (sem a linha de RASCUNHO), com os modelos de `site-prog-imports/agentes/claude-design/`. Nada de "a confirmar" no que o cliente já confirmou.
 3. Grave os dois textos no banco, para o Arthur copiar no Pós-venda (MCP `prog-supabase-arthurmatos003`, `execute_sql`, use dollar-quoting para o texto):
