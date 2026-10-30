@@ -32,7 +32,7 @@ const ORGANIZAR: Anthropic.Tool = {
   input_schema: {
     type: 'object',
     properties: {
-      titulo: { type: 'string', description: 'Título curto (até 8 palavras), sem ponto final.' },
+      titulo: { type: 'string', description: 'Título curto (até 8 palavras), sem ponto final e sem começar com "Ideia:" ou "Prompt:".' },
       texto: { type: 'string', description: 'A ideia organizada.' },
     },
     required: ['titulo', 'texto'],
@@ -75,7 +75,9 @@ export async function organizar(db: DbDoAtendente, bruto: string, tipo: 'ideia' 
     if (!texto) return null;
     // Trava de tamanho: se a IA inchou o texto (mais que o dobro), fica o original.
     if (texto.length > Math.max(bruto.length * 2, bruto.length + 200)) return null;
-    return { titulo: (saida.titulo ?? '').trim().slice(0, 120), texto: texto.slice(0, 8000) };
+    // A página já mostra se é ideia ou prompt: "Ideia: ..." no título é redundante.
+    const titulo = (saida.titulo ?? '').trim().replace(/^(ideia|prompt)\s*[:\-–—]\s*/i, '');
+    return { titulo: (titulo.charAt(0).toUpperCase() + titulo.slice(1)).slice(0, 120), texto: texto.slice(0, 8000) };
   } catch (e) {
     console.error('[ideias] organizar falhou', e);
     return null;
