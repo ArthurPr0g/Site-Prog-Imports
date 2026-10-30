@@ -217,10 +217,18 @@ ${await transcricao(db, conversaId)}`,
   } catch (e) {
     await db
       .from('ensaios_lia')
-      .update({ status: 'erro', resumo: (e instanceof Error ? e.message : 'falhou').slice(0, 500), atualizado_em: new Date().toISOString() })
+      .update({ status: 'erro', resumo: motivoCurto(e), atualizado_em: new Date().toISOString() })
       .eq('id', proxima.id);
     return 'erro';
   }
+}
+
+/** Motivo legível do erro (o texto da API vinha em inglês e com JSON no aviso ao Arthur). */
+function motivoCurto(e: unknown): string {
+  const m = e instanceof Error ? e.message : String(e);
+  if (/credit balance is too low|créditos da Anthropic/i.test(m)) return 'acabaram os créditos da Anthropic';
+  if (/rate limit|429/i.test(m)) return 'limite de uso da API da Anthropic';
+  return m.replace(/\{[\s\S]*\}/g, '').trim().slice(0, 160) || 'falhou';
 }
 
 type Linha = { perfil: string; status: string; nota: number | null; aprovado: boolean | null; problemas: Json; resumo: string | null; conversation_id: string | null };
@@ -237,6 +245,16 @@ async function relatar(db: DbDoAtendente, cfg: ConfigDoAtendente, rodada: string
     const graves = ((l.problemas ?? []) as { gravidade?: string; o_que?: string }[]).filter((x) => x.gravidade === 'grave');
     return `${l.aprovado ? '✅' : '❌'} ${p?.nome ?? l.perfil} · nota ${l.nota}${graves.length ? `\n   ⚠️ ${graves.map((g) => g.o_que).join('; ').slice(0, 300)}` : l.aprovado ? '' : `\n   ${(l.resumo ?? '').slice(0, 200)}`}`;
   });
+  // Nada rodou (ex.: créditos da Anthropic acabaram): diz o motivo uma vez, sem nota zero enganosa.
+  if (!avaliadas.length) {
+    const motivos = [...new Set(linhas.map((l) => l.resumo ?? 'falhou'))].join('; ');
+    await avisarArthur(db, cfg, {
+      titulo: '🧪 O ensaio da Lia não rodou',
+      texto: `Motivo: ${motivos}.${/créditos/.test(motivos) ? ' Recarregue em https://console.anthropic.com/settings/billing e o ensaio roda de novo na próxima segunda (ou peça ao Claude para rodar agora).' : ''}`,
+      link: `${SITE_URL}/admin/captacao?aba=atendimento`,
+    });
+    return 'relatado';
+  }
   await avisarArthur(db, cfg, {
     titulo: aprovadas === linhas.length ? '🧪 Ensaio da Lia: tudo certo' : '🧪 Ensaio da Lia: tem o que melhorar',
     texto: `\n${aprovadas} de ${linhas.length} perfis aprovados · nota média ${media.toFixed(1)}\n\n${linhasTexto.join('\n')}`,
