@@ -9,7 +9,7 @@ Pedido do dono em 27/10/2026: "pode fazer todos" (itens 1 a 12).
 
 ---
 
-## Separar visualmente a Prog Imports (loja) da Prog Soluções (serviços) (30/10/2026) — a fazer, HOJE
+## Separar visualmente a Prog Imports (loja) da Prog Soluções (serviços) (30/10/2026) — no ar (b280bb6)
 
 Pedido do dono: "Hoje os dois estão integrados visualmente, e eu quero separar os dois visualmente para
 não ficar bagunçado as coisas da minha loja de importados com a prestação de serviço."
@@ -19,6 +19,12 @@ serviços, serviços internos). Levantar o que é de cada um, propor a separaç�
 Soluções com menu, cabeçalho, marca e cores dela, e o seletor de área já existente "Loja / Gerenciamento /
 Estúdio"), e aplicar sem quebrar rotas nem permissões. Ordem do dia: depois do piloto do Felipe estar
 pronto (prévias do WhatsApp e verificação noturna).
+
+Feito: área "Prog Soluções" no seletor do topo, menu próprio (Captação, Pós-venda, Prestação, Orçamentos de serviços,
+Gastos, Catálogo de serviços), marca P azul e tema Noite azul na área inteira (`src/lib/areas.ts`, `AdminSidebar.tsx`,
+`WorkspaceSwitcher.tsx`); menu da loja sem os itens de serviço. Cartão no Hub. **Falta decidir:** Clientes e Financeiro
+seguem compartilhados (ficam no Gerenciamento); o painel da loja ainda soma as receitas de serviço em "De onde veio
+o dinheiro" — separar as finanças é um passo à parte, se o dono quiser.
 
 ## Piloto "Lia, faça todo o projeto" — Felipe (30/10/2026) — pronto para começar
 
