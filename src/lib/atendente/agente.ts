@@ -16,6 +16,7 @@ import { fusoDoCliente, horarioNoFuso } from '@/lib/idioma-do-lead';
 import { avisarArthur } from '@/lib/atendente/avisos';
 import { casesDoLead, linkDoCase } from '@/lib/cases-portfolio';
 import { siteAbreAgora } from '@/lib/atendente/site-agora';
+import { pedidoParaOAgente } from '@/lib/agentes/time';
 import { asaasConfigurado, ambienteAsaas, criarCliente, criarCobranca, daquiA, documentoValido } from '@/lib/pagamentos/asaas';
 import { instrucoesFixas, contextoDaConversa, aprendizadosDaLia, type Aprendizado } from '@/lib/atendente/prompt';
 import { calcularProposta, custoDaChamada, modeloDoMomento, type ConfigDoAtendente, type ModeloDaIA } from '@/lib/atendente/regras';
@@ -523,9 +524,11 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
       await db.from('ideias').insert({
         tipo: 'prompt',
         origem: 'cliente',
+        agente: 'leo',
         status: 'pendente',
         titulo: `Ajuste: ${pj.cliente}`.slice(0, 120),
-        texto: texto.slice(0, 8000),
+        // Quem faz é o Leo (ajustes do cliente; docs/AGENTES.md).
+        texto: pedidoParaOAgente('leo', texto).slice(0, 8000),
         projeto: pj.cliente.slice(0, 200),
         pasta_exclusiva: pj.pasta,
         conversation_id: conversaId,

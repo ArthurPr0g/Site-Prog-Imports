@@ -16,6 +16,7 @@ import { baixarMidia, enviarComOpcoes, enviarTexto, JANELA_MS, type MensagemRece
 import { enviarModeloAoCliente } from './modelos';
 import { transcrever, transcricaoConfigurada } from './transcricao';
 import { tratarEncomenda } from './encomenda';
+import { rotuloDoAgente } from '@/lib/agentes/time';
 
 /** "Claude, ..." / "prompt: ..." / "para o Claude: ..." no começo da mensagem. No áudio, o Whisper
  *  costuma ouvir "Claude" como "Cláudio", "Claudio", "Cloud" ou "Clóde": todos valem. */
@@ -294,7 +295,7 @@ export async function escolherProjeto(db: DbDoAtendente, id: string, chave: stri
 export async function avisarPromptsTerminados(db: DbDoAtendente, cfg: ConfigDoAtendente): Promise<number> {
   const { data } = await db
     .from('ideias')
-    .select('id, titulo, texto, status, resultado, falta, avisado_status, criado_em, executor, origem, conversation_id, rodada_id')
+    .select('id, titulo, texto, status, resultado, falta, avisado_status, criado_em, executor, origem, conversation_id, rodada_id, agente')
     .eq('tipo', 'prompt')
     .in('status', ['feito', 'parcial', 'em_execucao'])
     .order('atualizado_em', { ascending: true })
@@ -309,6 +310,9 @@ export async function avisarPromptsTerminados(db: DbDoAtendente, cfg: ConfigDoAt
     // Marca antes: o próximo tick não repete o aviso enquanto este sai.
     await db.from('ideias').update({ avisado_status: i.status }).eq('id', i.id);
     const pedido = i.titulo || (i.texto.length > 80 ? i.texto.slice(0, 77) + '…' : i.texto);
+    // Pedido feito por um agente do time (0103): o aviso diz quem foi.
+    const agente = rotuloDoAgente(i.agente);
+    const quem = agente ? `🤖 *Agente:* ${agente}\n` : '';
     // Ajuste pedido pelo cliente (0101): pronto = Lia avisa o cliente e a rodada é entregue.
     if (i.origem === 'cliente' && i.status === 'feito' && i.conversation_id && !/Aguardando você:/.test(i.resultado ?? '')) {
       await avisarClienteDoAjuste(db, cfg, i.conversation_id, (i.resultado ?? '').replace(/\[(PC|Nuvem)\]\s*/g, '').trim());
@@ -317,7 +321,7 @@ export async function avisarPromptsTerminados(db: DbDoAtendente, cfg: ConfigDoAt
     if (i.status === 'em_execucao') {
       await avisarArthur(db, cfg, {
         titulo: 'Comecei seu pedido ▶️',
-        texto: `📝 *Pedido:* ${pedido}\n\n${i.executor === 'nuvem' ? '☁️ Rodando na nuvem' : '💻 Rodando no PC'}. Te aviso quando terminar.`,
+        texto: `${quem}📝 *Pedido:* ${pedido}\n\n${i.executor === 'nuvem' ? '☁️ Rodando na nuvem' : '💻 Rodando no PC'}. Te aviso quando terminar.`,
         link: 'https://hub-prog.vercel.app/ideias',
       });
       continue;
@@ -328,8 +332,8 @@ export async function avisarPromptsTerminados(db: DbDoAtendente, cfg: ConfigDoAt
     const naNuvem = /\[Nuvem\]/.test(i.resultado ?? '') && !/\[PC\]/.test(i.resultado ?? '');
     const texto =
       i.status === 'feito'
-        ? `📝 *Pedido:* ${pedido}\n\n🛠️ *O que fiz:* ${limpo}\n\n${naNuvem ? '☁️ Feito na nuvem' : '💻 Feito no PC'}`
-        : `📝 *Pedido:* ${pedido}\n\n☁️ *Já feito na nuvem:* ${limpo}\n\n💻 *Fica para o PC terminar:* ${(i.falta ?? '').trim().slice(0, 600)}`;
+        ? `${quem}📝 *Pedido:* ${pedido}\n\n🛠️ *O que fiz:* ${limpo}\n\n${naNuvem ? '☁️ Feito na nuvem' : '💻 Feito no PC'}`
+        : `${quem}📝 *Pedido:* ${pedido}\n\n☁️ *Já feito na nuvem:* ${limpo}\n\n💻 *Fica para o PC terminar:* ${(i.falta ?? '').trim().slice(0, 600)}`;
     await avisarArthur(db, cfg, {
       titulo: i.status === 'feito' ? 'Pedido concluído ✅' : 'Pedido feito em parte ⏳',
       texto,

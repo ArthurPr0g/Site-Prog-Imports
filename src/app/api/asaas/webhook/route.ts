@@ -5,6 +5,7 @@ import { lerConfig, responderConversa } from '@/lib/atendente/agente';
 import { enviarEmail } from '@/lib/atendente/email';
 import { SITE_URL } from '@/lib/seo';
 import { abrirPrestacaoDoSinal } from '@/lib/atendente/prestacao-do-sinal';
+import { pedirAoAgente } from '@/lib/agentes/time';
 
 // Webhook do Asaas (registrado por scripts/asaas/registrar-webhook.mjs).
 // O Asaas manda o authToken no cabeçalho `asaas-access-token` (docs.asaas.com,
@@ -54,6 +55,19 @@ export async function POST(req: NextRequest) {
       // Sinal pago: a venda vira Prestação de serviço para o Arthur começar.
       const prestacao = cob.parcela === 'sinal' ? await abrirPrestacaoDoSinal(db, cob.id) : null;
       if (prestacao && !prestacao.ok) console.error('[asaas] prestação não aberta', cob.id, prestacao.motivo);
+      // Sinal pago = a Bia abre o projeto no PC (pasta, briefing e pedidos para a Duda e a Nina; docs/AGENTES.md).
+      if (prestacao?.ok) {
+        const { data: pj } = await db.from('projetos').select('id, cliente').eq('lead_id', cob.lead_id).maybeSingle();
+        await pedirAoAgente(db, 'bia', {
+          titulo: `abrir o projeto de ${pj?.cliente ?? empresa}`,
+          projeto: pj?.cliente ?? empresa,
+          pedido: [
+            `O cliente ${empresa} pagou o sinal (${valor}). Abra o projeto: pasta do cliente, briefing e os pedidos para a Duda e a Nina no Claude Design.`,
+            pj ? `Projeto no Pós-venda: ${pj.id}` : `Projeto no Pós-venda: não achei pelo lead ${cob.lead_id}; procure pelo nome.`,
+            `Prestação de serviço: ${prestacao.orderId}`,
+          ].join('\n'),
+        });
+      }
       if (cfg.ownerEmail) {
         await enviarEmail({
           para: cfg.ownerEmail,

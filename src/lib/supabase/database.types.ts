@@ -526,6 +526,7 @@ export type Database = {
       }
       ideias: {
         Row: {
+          agente: string | null
           pasta_exclusiva: string | null
           rodada_id: string | null
           conversation_id: string | null
@@ -549,6 +550,7 @@ export type Database = {
           titulo: string | null
         }
         Insert: {
+          agente?: string | null
           pasta_exclusiva?: string | null
           rodada_id?: string | null
           conversation_id?: string | null
@@ -572,6 +574,7 @@ export type Database = {
           titulo?: string | null
         }
         Update: {
+          agente?: string | null
           pasta_exclusiva?: string | null
           rodada_id?: string | null
           conversation_id?: string | null

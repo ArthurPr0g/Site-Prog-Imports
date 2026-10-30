@@ -18,6 +18,7 @@ vive inteiro online; a pasta local é só uma cópia de trabalho.
 
 - `README.md` — stack, rotas, variáveis de ambiente, regras de negócio da loja
 - `docs/ERP.md` — estado dos módulos do ERP (`/admin`), decisões já tomadas e o que falta
+- `docs/AGENTES.md` — time de agentes do pós-venda (Téo, Bia, Duda, Nina, Rafa, Vera, Leo, Gabi): quem faz o quê e onde
 
 ## Como o deploy funciona
 
