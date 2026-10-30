@@ -7,12 +7,13 @@
 // tipo "Aplicativo da Web", redirecionamento <site>/api/google/retorno).
 
 import type { DbDoAtendente } from '@/lib/atendente/db';
-import { SITE_URL } from '@/lib/seo';
+import { URL_PUBLICA } from '@/lib/seo';
 
 // Só eventos: ler a agenda para achar os horários livres e criar a reunião.
 const ESCOPO = 'https://www.googleapis.com/auth/calendar.events';
 const CHAVE = 'google_agenda';
-export const REDIRECT = `${SITE_URL}/api/google/retorno`;
+// Com www (30/10/2026): é o endereço cadastrado no cliente OAuth do Google e onde fica a sessão do painel.
+export const REDIRECT = `${URL_PUBLICA}/api/google/retorno`;
 
 export const googleConfigurado = () => !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 
