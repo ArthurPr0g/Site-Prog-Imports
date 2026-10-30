@@ -49,9 +49,11 @@ export function descricaoCurta(texto: string, limite = 155): string {
   return `${cortado.slice(0, ultimoEspaco > 60 ? ultimoEspaco : limite).trim()}…`;
 }
 
-/** Imagem padrão de compartilhamento: arte 1200 × 630 gerada com o logo centralizado (/og/prog-imports, 30/10/2026). */
+/** Imagem padrão de compartilhamento: arte 1200 × 630 com o logo centralizado. É a saída de
+ *  /og/prog-imports salva em JPEG (75 KB): o PNG gerado passava de 280 KB, e o WhatsApp descarta
+ *  ou rebaixa a prévia perto de 300 KB. Mudou o desenho da rota? Gere o JPEG de novo (30/10/2026). */
 export const OG_IMAGE_PADRAO = {
-  url: `${URL_PUBLICA}/og/prog-imports`,
+  url: `${URL_PUBLICA}/marca/previa-prog-imports.jpg`,
   width: 1200,
   height: 630,
   alt: SITE_NAME,

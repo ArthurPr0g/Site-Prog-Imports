@@ -5,11 +5,14 @@ import type { NextRequest } from 'next/server';
 // declarado como 1200×630): no WhatsApp saía borrado e cortado (30/10/2026). Agora o logo fica
 // centralizado num fundo claro e quente, inteiro dentro do quadrado do centro (a miniatura compacta
 // do WhatsApp é um quadrado recortado do meio).
+// Ainda saía em baixa qualidade (30/10/2026): o logo.png de 500×174 tem um retângulo branco atrás
+// e é pequeno demais. Agora usa o logo oficial em alta (marca/logo.png, 1500×1500, fundo
+// transparente), recortado em marca/logo-previa.png (797×900) e desenhado na metade do tamanho.
 
 export const runtime = 'edge';
 
 export async function GET(req: NextRequest) {
-  const logo = new URL('/images/logo.png', req.nextUrl.origin).toString();
+  const logo = new URL('/marca/logo-previa.png', req.nextUrl.origin).toString();
   return new ImageResponse(
     (
       <div
@@ -26,8 +29,8 @@ export async function GET(req: NextRequest) {
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={logo} width={500} height={174} alt="Prog Imports" />
-        <div style={{ display: 'flex', marginTop: 34, fontSize: 30, color: '#4a4540', letterSpacing: '0.02em' }}>
+        <img src={logo} width={372} height={420} alt="Prog Imports" />
+        <div style={{ display: 'flex', marginTop: 26, fontSize: 30, color: '#4a4540', letterSpacing: '0.02em' }}>
           Tecnologia importada premium
         </div>
         <div style={{ display: 'flex', marginTop: 10, fontSize: 22, color: '#8a8278' }}>MacBooks · iPhones · Notebooks gamer</div>
