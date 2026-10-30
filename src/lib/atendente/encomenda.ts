@@ -22,6 +22,8 @@ import { chaveDoLead } from '@/lib/captacao';
 import { SITE_URL } from '@/lib/seo';
 import type { Json } from '@/lib/supabase/database.types';
 import { asaasConfigurado, procurarPagamentos } from '@/lib/pagamentos/asaas';
+import { criarProjetoDaVenda, escolhaDoJson } from '@/lib/pos-venda';
+import { pedirAoAgente } from '@/lib/agentes/time';
 
 /** "Lia, ..." no começo (o Whisper às vezes escreve "Lía" ou põe "oi" antes). */
 const CHAMA_A_LIA = /^\s*(?:(?:oi|ol[aá]|ei)[\s,!]*)?l[ií]a\b[\s,:;.!\-–—]*/i;
@@ -550,7 +552,8 @@ export async function decidirFinanceiro(db: DbDoAtendente, acao: string, valorDa
       );
     } else if (pagamento === 'gratis') {
       if (e.lead_id) await db.from('leads').update({ closed_value: null }).eq('id', e.lead_id);
-      await enviarTexto(de, `🎁 Anotado: o projeto de ${quem} é *de graça*. Não vou falar de preço nem gerar cobrança.`);
+      const aberto = await abrirProjetoDaEncomenda(db, e, 'projeto de graça');
+      await enviarTexto(de, `🎁 Anotado: o projeto de ${quem} é *de graça*. Não vou falar de preço nem gerar cobrança.${aberto}`);
     } else if (pagamento === 'depois') {
       await enviarTexto(de, `👍 Sem problema. Quando souber, me manda *Lia, valor 3500* e me diga se já houve pagamento.`);
     } else {
@@ -591,7 +594,8 @@ export async function decidirFinanceiro(db: DbDoAtendente, acao: string, valorDa
     await db.from('encomendas').update({ asaas_resumo: resumo.slice(0, 2000) }).eq('id', id);
   }
   await anotarNoLead(db, e.lead_id, `Pagamento feito por: ${onde === 'asaas' ? 'Asaas' : onde === 'pix' ? 'Pix direto' : 'cartão/outro'}.`);
-  await enviarTexto(de, `${resumo ? resumo + '\n\n' : ''}👍 Anotado: pago por ${onde === 'asaas' ? 'Asaas' : onde === 'pix' ? 'Pix direto' : 'cartão/outro'}. Não vou cobrar o que já foi pago.${pedirValor}`);
+  const aberto = e.pagamento === 'sinal' || e.pagamento === 'total' ? await abrirProjetoDaEncomenda(db, e, e.pagamento === 'sinal' ? 'sinal pago' : 'pago 100%') : '';
+  await enviarTexto(de, `${resumo ? resumo + '\n\n' : ''}👍 Anotado: pago por ${onde === 'asaas' ? 'Asaas' : onde === 'pix' ? 'Pix direto' : 'cartão/outro'}. Não vou cobrar o que já foi pago.${aberto}${pedirValor}`);
 }
 
 async function registrarValor(
@@ -611,6 +615,45 @@ async function registrarValor(
         ? `O sinal já foi pago; o restante (${brl(valor / 2)}) fica para a entrega.`
         : `Quando ${quem} aprovar, eu gero o sinal de ${brl(valor / 2)} (50%) no Asaas, mando o link e te aviso quando cair.`;
   await enviarTexto(de, `💵 Valor do projeto de *${quem}*: ${brl(valor)}.\n\n${proximo}`);
+}
+
+/**
+ * Projeto por indicação que já pode começar (de graça, ou pago fora da cobrança do sinal da Lia): cria o projeto
+ * no Pós-venda e põe a Bia na fila, como o webhook do Asaas faz quando o sinal cai (30/10/2026: antes, só o sinal
+ * pago pelo Asaas abria o projeto, e o piloto do Felipe, de graça, ficaria sem projeto nem ajustes).
+ * Devolve o trecho para a mensagem ao Arthur ('' se não abriu).
+ */
+async function abrirProjetoDaEncomenda(
+  db: DbDoAtendente,
+  e: { nome: string | null; lead_id: string | null; valor_total: number | null },
+  motivo: string,
+): Promise<string> {
+  if (!e.lead_id) return '\n\n⚠️ Sem lead ligado a este pedido: abra o projeto no Pós-venda à mão.';
+  const { data: l } = await db.from('leads').select('name, responsible_name, pacote, closed_currency, closed_monthly').eq('id', e.lead_id).maybeSingle();
+  const cliente = l?.name ?? e.nome ?? 'Cliente';
+  const r = await criarProjetoDaVenda(db, {
+    leadId: e.lead_id,
+    cliente,
+    responsavel: l?.responsible_name ?? null,
+    vendidoPor: 'Arthur (indicação)',
+    escolha: escolhaDoJson(l?.pacote),
+    moeda: (l?.closed_currency as 'BRL' | 'USD' | null) ?? 'BRL',
+    valor: motivo === 'projeto de graça' ? 0 : e.valor_total,
+    mensal: l?.closed_monthly ?? null,
+  });
+  if ('erro' in r) return `\n\n⚠️ Não consegui abrir o projeto no Pós-venda (${r.erro}). Abra à mão.`;
+  if (!r.novo) return '\n\n📂 O projeto já estava aberto no Pós-venda.';
+  await pedirAoAgente(db, 'bia', {
+    titulo: `abrir o projeto de ${cliente}`,
+    projeto: cliente,
+    pedido: [
+      `Projeto por indicação do Arthur (${motivo}). Abra o projeto: pasta do cliente, briefing e os pedidos para a Duda e a Nina no Claude Design.`,
+      `Projeto no Pós-venda: ${r.id}`,
+      'Não há prestação de serviço no ERP (não passou pela cobrança do sinal).',
+    ].join('\n'),
+  });
+  await anotarNoLead(db, e.lead_id, `Projeto aberto no Pós-venda (${motivo}); Bia na fila.`);
+  return `\n\n📂 Abri o projeto no Pós-venda e a *Bia* já está na fila para montar a pasta e o briefing.\n${SITE_URL}/admin/pos-venda`;
 }
 
 async function anotarNoLead(db: DbDoAtendente, leadId: string | null, linha: string) {
