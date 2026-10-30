@@ -940,6 +940,7 @@ export type Database = {
       }
       encomendas: {
         Row: {
+          duvidas: Json | null
           asaas_resumo: string | null
           valor_total: number | null
           pago_onde: string | null
@@ -958,6 +959,7 @@ export type Database = {
           telefone: string | null
         }
         Insert: {
+          duvidas?: Json | null
           asaas_resumo?: string | null
           valor_total?: number | null
           pago_onde?: string | null
@@ -976,6 +978,7 @@ export type Database = {
           telefone?: string | null
         }
         Update: {
+          duvidas?: Json | null
           asaas_resumo?: string | null
           valor_total?: number | null
           pago_onde?: string | null

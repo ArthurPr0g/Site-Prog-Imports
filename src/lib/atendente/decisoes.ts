@@ -1,6 +1,7 @@
 // Decisões do Arthur por botão no WhatsApp da Lia (pedido de 30/10/2026). Só no servidor.
 // O id de cada botão diz a ação: "<tipo>:<valor>:<id>".
 //   enc:ok|nao:<encomenda>            chamar (ou não) o cliente indicado
+//   duv:a|b|c|d:<encomenda>           resposta a uma dúvida da Lia sobre o pedido
 //   pag:nada|sinal|total|gratis|depois:<enc> em que pé está o financeiro
 //   pagou:asaas|pix|cartao:<enc>      onde foi pago
 //   desc:ok|nao:<pedido de desconto>  desconto extra pedido pela Lia
@@ -8,10 +9,10 @@
 
 import type { DbDoAtendente } from './db';
 import { enviarTexto, type MensagemRecebida } from './whatsapp-api';
-import { decidirEncomenda, decidirFinanceiro } from './encomenda';
+import { decidirEncomenda, decidirFinanceiro, responderDuvida } from './encomenda';
 import { SITE_URL } from '@/lib/seo';
 
-const ACAO = /^(enc|pag|pagou|desc|conv):([a-z]+):([0-9a-f-]{36})$/;
+const ACAO = /^(enc|duv|pag|pagou|desc|conv):([a-z]+):([0-9a-f-]{36})$/;
 
 export const ehDecisao = (m: MensagemRecebida) => !!m.botaoId && ACAO.test(m.botaoId);
 
@@ -21,6 +22,8 @@ export async function tratarDecisao(db: DbDoAtendente, m: MensagemRecebida): Pro
   switch (tipo) {
     case 'enc':
       return decidirEncomenda(db, id, valor === 'ok', de);
+    case 'duv':
+      return responderDuvida(db, id, { letra: valor }, de);
     case 'pag':
     case 'pagou':
       return decidirFinanceiro(db, tipo, valor, id, de);

@@ -9,7 +9,7 @@ import { PEDIDO_DE_RELATORIO, relatorioDaCaptacao } from '@/lib/atendente/relato
 import { lerConfig } from '@/lib/atendente/agente';
 import { enviarTexto } from '@/lib/atendente/whatsapp-api';
 import { anotarDoDono, mandarCodigoDasIdeias, pedeCodigo } from '@/lib/atendente/ideias';
-import { conversaDaEncomenda } from '@/lib/atendente/encomenda';
+import { conversaDaEncomenda, temProjetoAtivo } from '@/lib/atendente/encomenda';
 import { ehDecisao, tratarDecisao } from '@/lib/atendente/decisoes';
 import { kitDoVendedor, textoDaFila, relatorioDoVendedor, PEDIDO_DE_FILA, PEDIDO_DE_RELATORIO_DO_VENDEDOR } from '@/lib/atendente/fila-do-vendedor';
 
@@ -104,8 +104,12 @@ export async function POST(req: NextRequest) {
     const kit = await kitDoVendedor(db, m.de);
     if (kit) {
       await db.from('lead_seller_kits').update({ ultima_msg_em: m.quando }).eq('id', kit.id);
-      const fila = PEDIDO_DE_FILA.test(m.texto);
-      if (fila || PEDIDO_DE_RELATORIO_DO_VENDEDOR.test(m.texto)) {
+      // Vendedor que também é cliente de um projeto (o Felipe no piloto): "Hoje eu uso planilha..." não pode
+      // virar a fila do dia. Com projeto ativo, o comando só vale se a mensagem for só a palavra.
+      const exato = /^\s*(fila|hoje|leads do dia|relat[oó]rio|meus n[uú]meros|placar)\s*[?!.]*\s*$/i.test(m.texto);
+      const vale = exato || !(await temProjetoAtivo(db, m.de));
+      const fila = vale && PEDIDO_DE_FILA.test(m.texto);
+      if (fila || (vale && PEDIDO_DE_RELATORIO_DO_VENDEDOR.test(m.texto))) {
         const para = m.de;
         after(async () => {
           await marcarLidaEDigitando(m.id);
