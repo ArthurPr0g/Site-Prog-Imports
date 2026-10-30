@@ -7,14 +7,16 @@
 //   desc:ok|nao:<pedido de desconto>  desconto extra pedido pela Lia
 //   conv:assumir|lia:<conversa>       cliente chamou o Arthur
 //   proj:<chave>|outro:<ideia>        projeto de um pedido "Claude, ..." (0100)
+//   ind:sim|gratis|nao:<lead>         contato novo disse que foi indicado pelo Arthur (0107)
 
 import type { DbDoAtendente } from './db';
 import { enviarTexto, type MensagemRecebida } from './whatsapp-api';
-import { decidirEncomenda, decidirFinanceiro, responderDuvida } from './encomenda';
+import { abrirProjetoDeCortesia, decidirEncomenda, decidirFinanceiro, responderDuvida } from './encomenda';
 import { SITE_URL } from '@/lib/seo';
+import { responderConversa } from './agente';
 import { escolherProjeto } from './ideias';
 
-const ACAO = /^(enc|duv|pag|pagou|desc|conv|proj):([a-z]+):([0-9a-f-]{36})$/;
+const ACAO = /^(enc|duv|pag|pagou|desc|conv|proj|ind):([a-z]+):([0-9a-f-]{36})$/;
 
 export const ehDecisao = (m: MensagemRecebida) => !!m.botaoId && ACAO.test(m.botaoId);
 
@@ -31,6 +33,8 @@ export async function tratarDecisao(db: DbDoAtendente, m: MensagemRecebida): Pro
     case 'pag':
     case 'pagou':
       return decidirFinanceiro(db, tipo, valor, id, de);
+    case 'ind':
+      return confirmarIndicacao(db, id, valor as 'sim' | 'gratis' | 'nao', de);
     case 'desc': {
       const { data: p } = await db.from('ia_discount_requests').select('status, percent').eq('id', id).maybeSingle();
       if (!p) return void (await enviarTexto(de, 'Não achei esse pedido de desconto.'));
@@ -50,4 +54,45 @@ export async function tratarDecisao(db: DbDoAtendente, m: MensagemRecebida): Pro
       return void (await enviarTexto(de, `🤖 Combinado: a Lia segue com a conversa.\n${link}`));
     }
   }
+}
+
+/**
+ * Contato novo disse "O Arthur me indicou" (0107): o Arthur confirma (cobrança normal), confirma de graça
+ * (vira projeto de indicação em cortesia, como "Lia, ..." + contato) ou não reconhece.
+ */
+async function confirmarIndicacao(db: DbDoAtendente, leadId: string, valor: 'sim' | 'gratis' | 'nao', de: string): Promise<void> {
+  const { data: l } = await db.from('leads').select('id, name, phone, notes, source').eq('id', leadId).maybeSingle();
+  if (!l) return void (await enviarTexto(de, 'Não achei esse contato.'));
+  const { data: conv } = await db.from('ia_conversations').select('id').eq('lead_id', leadId).not('contact_id', 'like', 'simulador:%').order('last_message_at', { ascending: false }).limit(1).maybeSingle();
+  const hoje = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  const anotar = (linha: string) => db.from('leads').update({ notes: `${l.notes ? l.notes + '\n' : ''}${linha}`.slice(0, 8000) }).eq('id', leadId);
+  if (valor === 'nao') {
+    await anotar(`[${hoje}] O Arthur NÃO reconhece a indicação.`);
+    if (conv) await responderConversa(conv.id, 'O Arthur não reconhece essa indicação. Siga o atendimento normal (descoberta e proposta), sem citar indicação nem o Arthur. Escreva SÓ a mensagem para o cliente, se fizer sentido responder agora; se não, não escreva nada.');
+    return void (await enviarTexto(de, `👍 Anotado: você não conhece ${l.name}. A Lia segue como atendimento normal.`));
+  }
+  if (valor === 'sim') {
+    await anotar(`[${hoje}] Indicação confirmada pelo Arthur (cobrança normal).`);
+    return void (await enviarTexto(de, `✅ Indicação de ${l.name} confirmada. A Lia faz o processo completo e fala de valores normalmente.`));
+  }
+  // De graça: vira indicação em cortesia (modo projeto da Lia, sem preço) e abre o projeto no Pós-venda.
+  await anotar(`[${hoje}] Indicação confirmada pelo Arthur: projeto DE GRAÇA (cortesia).`);
+  await db.from('leads').update({ source: 'indicacao_dono' }).eq('id', leadId);
+  const { data: enc } = await db
+    .from('encomendas')
+    .insert({
+      nome: l.name,
+      telefone: l.phone,
+      lead_id: leadId,
+      conversation_id: conv?.id ?? null,
+      status: 'contatado',
+      pagamento: 'gratis',
+      instrucoes: 'O cliente chamou a Lia dizendo que foi indicado pelo Arthur; o Arthur confirmou e disse que é de graça.',
+      assunto: 'o seu projeto',
+    })
+    .select('id')
+    .single();
+  const aberto = enc ? await abrirProjetoDeCortesia(db, enc.id) : '';
+  if (conv) await responderConversa(conv.id, 'O Arthur confirmou a indicação: este projeto é cortesia dele. Siga o MODO PROJETO (descoberta completa) sem falar de preço. Escreva SÓ a mensagem para o cliente, se fizer sentido responder agora.');
+  await enviarTexto(de, `🎁 Indicação de ${l.name} confirmada como *de graça*. A Lia não fala de preço.${aberto}`);
 }

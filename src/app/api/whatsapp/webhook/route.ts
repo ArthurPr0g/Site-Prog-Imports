@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
         continue;
       }
     }
-    const conversaId = await gravarRecebida(db, m);
+    const conversaId = await gravarRecebida(db, m, !!kit);
     // Reação (emoji numa mensagem) fica no histórico, mas não pede resposta.
     if (conversaId && !m.reacao) paraResponder.set(conversaId, m.id);
     if (conversaId && m.midia?.tipo === 'audio') audios.push(m);
@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
 }
 
 /** Grava a mensagem (uma vez só) e liga a conversa ao lead. Devolve a conversa, ou null se já existia. */
-async function gravarRecebida(db: DbDoAtendente, m: MensagemRecebida): Promise<string | null> {
+async function gravarRecebida(db: DbDoAtendente, m: MensagemRecebida, ehVendedor = false): Promise<string | null> {
   const { data: existente } = await db
     .from('ia_conversations')
     .select('id, lead_id, unread')
@@ -184,6 +184,9 @@ async function gravarRecebida(db: DbDoAtendente, m: MensagemRecebida): Promise<s
   if (!conversaId) {
     const achado = await acharLead(db, m);
     leadId = achado?.leadId ?? null;
+    // Contato novo de verdade (não é lead da captação, indicação registrada nem vendedor): vira lead na hora,
+    // para a Lia perguntar como a pessoa chegou e seguir o processo completo com pesquisa (0107, 30/10/2026).
+    if (!leadId && !ehVendedor) leadId = await leadDoContatoNovo(db, m);
     const { data: nova, error } = await db
       .from('ia_conversations')
       .insert({
@@ -267,6 +270,33 @@ async function transcreverAudio(db: DbDoAtendente, m: MensagemRecebida): Promise
 }
 
 const digitos = (s: string | null) => (s ?? '').replace(/\D/g, '');
+
+/** Lead de quem chamou a Lia primeiro sem ninguém ter mandado o contato antes (0107). */
+async function leadDoContatoNovo(db: DbDoAtendente, m: MensagemRecebida): Promise<string | null> {
+  const tel = digitos(m.de);
+  // Mesmo telefone já é lead (com ou sem o 9)? Usa esse.
+  const fim8 = tel.slice(-8);
+  const { data: candidatos } = await db.from('leads').select('id, phone').ilike('phone', `%${fim8.slice(0, 4)}%${fim8.slice(4)}%`).limit(20);
+  const mesmo = (candidatos ?? []).find((l) => digitos(l.phone).slice(-8) === fim8 && digitos(l.phone).slice(0, 4) === tel.slice(0, 4));
+  if (mesmo) return mesmo.id;
+  const nome = (m.nome ?? '').trim() || `Contato do WhatsApp (+${tel})`;
+  const { data: l } = await db
+    .from('leads')
+    .insert({
+      name: nome.slice(0, 120),
+      responsible_name: (m.nome ?? '').trim().split(/\s+/)[0] || null,
+      dedupe_key: `whatsapp:${tel}`,
+      phone: tel,
+      source: 'whatsapp_direto',
+      status: 'respondeu',
+      first_contact_at: m.quando,
+      replied_at: m.quando,
+      notes: `Chamou a Lia primeiro pelo WhatsApp em ${new Date(m.quando).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}.`,
+    })
+    .select('id')
+    .single();
+  return l?.id ?? null;
+}
 
 /**
  * Lead do contato novo: pelo texto do botão ("Vi o diagnóstico de <empresa>"),

@@ -1655,6 +1655,7 @@ export type Database = {
         Row: {
           briefing: Json
           briefing_confirmado_em: string | null
+          origem_contato: string | null
           pesquisa_dica: string | null
           pesquisa_status: string | null
           pesquisa: Json | null
@@ -1728,6 +1729,7 @@ export type Database = {
         Insert: {
           briefing?: Json
           briefing_confirmado_em?: string | null
+          origem_contato?: string | null
           pesquisa_dica?: string | null
           pesquisa_status?: string | null
           pesquisa?: Json | null
@@ -1801,6 +1803,7 @@ export type Database = {
         Update: {
           briefing?: Json
           briefing_confirmado_em?: string | null
+          origem_contato?: string | null
           pesquisa_dica?: string | null
           pesquisa_status?: string | null
           pesquisa?: Json | null

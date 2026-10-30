@@ -736,6 +736,12 @@ async function abrirProjetoDaEncomenda(
   return `\n\n📂 Abri o projeto no Pós-venda e a *Bia* já está na fila para montar a pasta e o briefing.\n${SITE_URL}/admin/pos-venda`;
 }
 
+/** Indicação confirmada como cortesia a partir de um contato que chamou primeiro (0107): abre o projeto. */
+export async function abrirProjetoDeCortesia(db: DbDoAtendente, encomendaId: string): Promise<string> {
+  const { data: e } = await db.from('encomendas').select('nome, lead_id, valor_total').eq('id', encomendaId).maybeSingle();
+  return e ? abrirProjetoDaEncomenda(db, e, 'projeto de graça') : '';
+}
+
 async function anotarNoLead(db: DbDoAtendente, leadId: string | null, linha: string) {
   if (!leadId) return;
   const { data: l } = await db.from('leads').select('notes').eq('id', leadId).maybeSingle();

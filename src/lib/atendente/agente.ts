@@ -351,6 +351,8 @@ function simular(e: Estado, nome: string, entrada: Record<string, unknown>): str
       return 'Registrado (simulador). Agradeça e siga a conversa.';
     case 'confirmar_briefing':
       return 'Descoberta registrada como confirmada (simulador). Agradeça e diga o próximo passo: a equipe começa o design.';
+    case 'registrar_origem':
+      return 'Origem registrada (simulador). Siga o caminho combinado para essa origem.';
     case 'mudar_etapa': {
       const etapa = String(entrada.etapa) as LeadStatus;
       e.leadStatus = etapa;
@@ -546,6 +548,38 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
         leadId,
       });
       return 'Ajuste registrado e já na fila de execução. Diga ao cliente, em uma frase, o que vai mudar e que avisa por aqui assim que estiver no ar (normalmente no mesmo dia).';
+    }
+    case 'registrar_origem': {
+      if (!leadId) return 'Sem lead identificado: siga a conversa.';
+      const origem = String(entrada.origem ?? '') as keyof typeof ORIGENS;
+      if (!(origem in ORIGENS)) return 'Origem inválida.';
+      const { data: ld } = await db.from('leads').select('name, phone, origem_contato, pesquisa_dica').eq('id', leadId).maybeSingle();
+      if (ld?.origem_contato) return 'A origem já estava registrada. Siga a conversa.';
+      // Quem quer contratar ganha a pesquisa na internet (nome do perfil, telefone e o que disse até aqui).
+      const pesquisar = ['indicacao_arthur', 'site_loja', 'sistema', 'instagram_anuncio'].includes(origem);
+      await db
+        .from('leads')
+        .update({
+          origem_contato: origem,
+          ...(pesquisar
+            ? { pesquisa_status: 'pendente', pesquisa_dica: `${ld?.pesquisa_dica ?? ''}\nContato que chamou primeiro pelo WhatsApp. Nome no perfil: ${ld?.name ?? '-'}. Telefone: +${ld?.phone ?? ''}. Origem: ${ORIGENS[origem]}.`.slice(0, 4000) }
+            : {}),
+        })
+        .eq('id', leadId);
+      if (origem === 'indicacao_arthur')
+        await avisarArthur(db, cfg, {
+          titulo: '🤝 Disse que foi indicado por você',
+          texto: `${ld?.name ?? 'Um contato novo'} (+${ld?.phone ?? ''}) chamou a Lia dizendo que você indicou.`,
+          pergunta: 'Você confirma? Se for de graça, a Lia não fala de preço.',
+          conversaId,
+          leadId,
+          opcoes: [
+            { id: `ind:sim:${leadId}`, titulo: 'Confirmo' },
+            { id: `ind:gratis:${leadId}`, titulo: 'Confirmo, é de graça' },
+            { id: `ind:nao:${leadId}`, titulo: 'Não conheço' },
+          ],
+        });
+      return `Registrado (${ORIGENS[origem]}). ${blocoDoContatoNovo(origem).trim()}`;
     }
     case 'confirmar_briefing': {
       if (!leadId) return 'Sem lead identificado: só agradeça e siga.';
@@ -1005,6 +1039,50 @@ const FERRAMENTA_AJUSTE: Anthropic.Beta.BetaTool = {
   },
 };
 
+const ORIGENS = {
+  indicacao_arthur: 'O Arthur me indicou',
+  site_loja: 'Quero um site ou loja',
+  sistema: 'Quero um sistema',
+  cliente: 'Já sou cliente',
+  instagram_anuncio: 'Vi no Instagram/anúncio',
+  outro: 'Outro assunto',
+} as const;
+
+const FERRAMENTA_ORIGEM: Anthropic.Beta.BetaTool = {
+  name: 'registrar_origem',
+  description: 'Contato novo: grava como a pessoa chegou, assim que ela disser (tocando numa opção ou escrevendo). Use uma vez.',
+  input_schema: {
+    type: 'object',
+    properties: { origem: { type: 'string', enum: Object.keys(ORIGENS) } },
+    required: ['origem'],
+    additionalProperties: false,
+  },
+};
+
+/** Contato que chamou primeiro (0107): saudação com opções e o caminho de cada origem. */
+function blocoDoContatoNovo(origem: string | null): string {
+  if (!origem)
+    return `
+
+CONTATO NOVO (chamou a Lia primeiro; não veio da captação nem de indicação registrada pelo Arthur):
+- Se a mensagem dele JÁ disser por que chamou (ex.: "o Arthur pediu pra eu falar com vocês", "quero um site pra minha clínica"), use registrar_origem e siga o caminho certo, sem perguntar de novo.
+- Senão, responda SÓ com esta saudação e as opções (exatamente assim):
+"Oi! 👋 Aqui é a Lia, assistente da Prog Soluções. Pra eu te ajudar melhor, me conta como chegou até aqui?"
+[[opções: ${Object.values(ORIGENS).join(' | ')}]]
+- Quando ele responder (tocando ou escrevendo), use registrar_origem e siga o caminho que a ferramenta devolver.`;
+  const caminho: Record<string, string> = {
+    indicacao_arthur: 'Indicação (o Arthur confirma por botão). Faça o processo COMPLETO desde o começo: descoberta, proposta e fechamento, falando de valores normalmente. Só não fale de preço se o contexto disser que é cortesia (modo projeto).',
+    site_loja: 'Quer site ou loja: processo COMPLETO desde o começo (descoberta, exemplos, proposta, fechamento).',
+    sistema: 'Quer um sistema: processo COMPLETO desde o começo, com descoberta mais detalhada (perfis de usuário, funções, telas).',
+    instagram_anuncio: 'Veio do Instagram/anúncio: processo COMPLETO desde o começo.',
+    cliente: 'Diz que já é cliente: pergunte o nome e qual projeto e use chamar_arthur com o que ele precisa. Não venda.',
+    outro: 'Outro assunto: pergunte do que se trata. Se não for alguém querendo contratar, use chamar_arthur com um resumo e encerre com educação, sem vender.',
+  };
+  return `
+
+ORIGEM DO CONTATO: ${ORIGENS[origem as keyof typeof ORIGENS] ?? origem}. ${caminho[origem] ?? ''}`;
+}
+
 const FERRAMENTA_CONFIRMAR_BRIEFING: Anthropic.Beta.BetaTool = {
   name: 'confirmar_briefing',
   description:
@@ -1237,7 +1315,10 @@ async function responder(conversaId: string, avisoInterno?: string): Promise<str
     ...(projetoCliente ? [...base, FERRAMENTA_AJUSTE, ...(projetoCliente.entregue ? [FERRAMENTA_POS_ENTREGA] : [])] : base),
     // Descoberta confirmada (0106): no modo projeto ou com projeto aberto ainda não entregue.
     ...(projeto || (projetoCliente && !projetoCliente.entregue) ? [FERRAMENTA_CONFIRMAR_BRIEFING] : []),
+    // Contato que chamou primeiro (0107): registra como chegou.
+    ...(lead?.source === 'whatsapp_direto' && !lead.origem_contato ? [FERRAMENTA_ORIGEM] : []),
   ];
+  const blocoContatoNovo = lead?.source === 'whatsapp_direto' && !projeto ? blocoDoContatoNovo(lead.origem_contato ?? null) : '';
   // Pós-entrega (0105): orientação da etapa de acompanhamento em andamento.
   const { data: cfgPos } = projetoCliente?.entregue ? await db.from('ia_config').select('link_avaliacao_google').eq('id', true).maybeSingle() : { data: null };
   const posEntrega = projetoCliente?.entregue
@@ -1338,7 +1419,8 @@ CLIENTE COM PROJETO (${projetoCliente.cliente}): ele já é cliente. Se pedir mu
   const primeiraDaIa = !(historico ?? []).some((m) => m.author === 'ia');
   let abertura = conversa.abertura as 'A' | 'B' | null;
   if (!abertura && primeiraDaIa && !avisoInterno) {
-    abertura = lead && !projeto && parseInt(conversaId.replace(/-/g, '').slice(-2), 16) % 2 === 1 ? 'B' : 'A';
+    // Contato que chamou primeiro (0107) não entra: não tem diagnóstico e a abertura é a saudação com opções.
+    abertura = lead && !projeto && lead.source !== 'whatsapp_direto' && parseInt(conversaId.replace(/-/g, '').slice(-2), 16) % 2 === 1 ? 'B' : 'A';
     await db.from('ia_conversations').update({ abertura }).eq('id', conversaId);
   }
   const instrucaoDaAbertura =
@@ -1350,7 +1432,7 @@ CLIENTE COM PROJETO (${projetoCliente.cliente}): ele já é cliente. Se pedir mu
     // Cache de 1 h: o cliente de WhatsApp costuma demorar mais que os 5 min do padrão para responder.
     { type: 'text', text: instrucoesFixas(), cache_control: { type: 'ephemeral', ttl: '1h' } },
     ...(aprendido ? [{ type: 'text' as const, text: aprendido, cache_control: { type: 'ephemeral' as const, ttl: '1h' as const } }] : []),
-    { type: 'text', text: contexto + blocoExtra + blocoCliente + instrucaoDaAbertura },
+    { type: 'text', text: contexto + blocoExtra + blocoCliente + blocoContatoNovo + instrucaoDaAbertura },
   ];
 
   // Modelo pelo momento (o mesmo em todas as rodadas desta resposta, para aproveitar o cache).
