@@ -9,6 +9,7 @@ import { PEDIDO_DE_RELATORIO, relatorioDaCaptacao } from '@/lib/atendente/relato
 import { lerConfig } from '@/lib/atendente/agente';
 import { enviarTexto } from '@/lib/atendente/whatsapp-api';
 import { anotarDoDono, mandarCodigoDasIdeias, pedeCodigo } from '@/lib/atendente/ideias';
+import { ehDoManual, repassarAoManual } from '@/lib/atendente/manual';
 import { conversaDaEncomenda, temProjetoAtivo } from '@/lib/atendente/encomenda';
 import { ehDecisao, tratarDecisao } from '@/lib/atendente/decisoes';
 import { kitDoVendedor, textoDaFila, relatorioDoVendedor, PEDIDO_DE_FILA, PEDIDO_DE_RELATORIO_DO_VENDEDOR } from '@/lib/atendente/fila-do-vendedor';
@@ -59,6 +60,12 @@ export async function POST(req: NextRequest) {
   const paraResponder = new Map<string, string>();
   const audios: MensagemRecebida[] = [];
   for (const m of mensagens) {
+    // PROVISÓRIO: número do Manual do Empreendedorismo Médico (Ian, LM) só é repassado à porta do Manual.
+    // A Lia não responde nem grava nada dele (ver src/lib/atendente/manual.ts).
+    if (ehDoManual(m.de)) {
+      if (!m.reacao) after(() => repassarAoManual(m));
+      continue;
+    }
     // O Arthur escrevendo para o número da Lia (ex.: respondendo a um aviso) não é
     // lead: só abre a janela de 24 h para os próximos avisos saírem como texto.
     if (mesmoTelefone(m.de, cfg?.owner_whatsapp)) {
