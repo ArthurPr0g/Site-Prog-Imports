@@ -21,7 +21,8 @@ async function main() {
   const { lerConfig } = await import('../src/lib/atendente/agente');
   const { avisarArthur } = await import('../src/lib/atendente/avisos');
   const db = dbDoAtendente();
-  await avisarArthur(db, await lerConfig(db), { titulo, texto, link: 'https://www.prog-imports.com/admin/gastos' });
+  // 3º argumento opcional: o link do aviso (padrão: página Gastos).
+  await avisarArthur(db, await lerConfig(db), { titulo, texto, link: process.argv[4] || 'https://www.prog-imports.com/admin/gastos' });
   const { data } = await db.from('ia_avisos').select('via, status, error').order('created_at', { ascending: false }).limit(1).single();
   console.log(JSON.stringify(data));
 }
