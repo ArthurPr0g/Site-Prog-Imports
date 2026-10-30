@@ -6,7 +6,7 @@
 // visível; o placar usa os leads do painel (relidos a cada minuto).
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { Bell, Bot, CalendarDays, Mail, CheckCircle2, CircleAlert, FlaskConical, GraduationCap, Hand, MessageCircle, Search, Send, Settings, Sparkles, Trash2, Trophy, UserRound } from 'lucide-react';
+import { ArrowLeft, Bell, Bot, CalendarDays, Check, CheckCheck, Clock, Info, Mail, CheckCircle2, CircleAlert, FlaskConical, GraduationCap, Hand, MessageCircle, Search, Send, Settings, Sparkles, Trash2, Trophy, UserRound } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { LEAD_STATUS_LABEL, type Lead } from '@/lib/captacao';
 import { TrilhaDaVenda, BarraDaEtapa } from './TrilhaDaVenda';
@@ -805,6 +805,8 @@ function Conversa({
   // Responder como Arthur (a IA para) ou orientar a Lia (ela responde seguindo a instrução).
   const [modoDoTexto, setModoDoTexto] = useState<'arthur' | 'lia'>('arthur');
   const [excluindo, setExcluindo] = useState(false);
+  // Dados do cliente (trilha da venda e resumo) ficam num painel que abre ao tocar no nome, como no WhatsApp.
+  const [info, setInfo] = useState(false);
   const [pending, start] = useTransition();
   const toast = useToast();
   const fim = useRef<HTMLDivElement>(null);
@@ -855,97 +857,115 @@ function Conversa({
       aoMudar();
     });
 
+  const nome = conversa?.leadName ?? conversa?.contactName ?? (conversa ? `+${conversa.contactId}` : '…');
+  const agora = versao ?? 0;
+
   return (
-    <div className="flex min-h-[420px] flex-col rounded-[14px] border border-border bg-page/40">
-      <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2.5">
-        <button onClick={aoVoltar} className="text-[12.5px] font-bold text-accent lg:hidden">
-          ← Conversas
+    // Tela de conversa igual ao WhatsApp (pedido do Arthur, 30/10/2026): modo escuro do WhatsApp Web,
+    // balões com rabinho, hora e tiques dentro do balão, separador de dia e caixa de texto com Enter.
+    <div className="flex h-[78vh] min-h-[520px] flex-col overflow-hidden rounded-[14px] border border-[#222d34] bg-[#0b141a] lg:h-[calc(100vh-300px)]">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-[#202c33] px-3 py-2.5">
+        <button onClick={aoVoltar} aria-label="Voltar às conversas" className="text-[#aebac1] lg:hidden">
+          <ArrowLeft size={22} />
         </button>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[14px] font-extrabold">
-            {conversa?.leadName ?? conversa?.contactName ?? (conversa ? `+${conversa.contactId}` : '…')}
-          </div>
-          <div className="text-[11.5px] text-fg-tertiary">
-            {conversa ? `+${conversa.contactId}` : ''}
-            {conversa?.mode === 'humano' ? ' · com você' : ' · a IA responde'}
-            {conversa && !janelaAberta ? ' · janela de 24 h fechada' : ''}
-            {conversa ? ` · IA gastou ${gasto(conversa.gastoUsd, cotacaoDolar)}` : ''}
-          </div>
+        <button onClick={() => setInfo((v) => !v)} className="flex min-w-0 flex-1 items-center gap-3 text-left" title="Dados do cliente">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#6a7175] text-[15px] font-bold text-[#e9edef]">
+            {iniciais(nome)}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-[16px] text-[#e9edef]">{nome}</span>
+            <span className="block truncate text-[13px] text-[#8696a0]">
+              {conversa ? `+${conversa.contactId}` : ''}
+              {conversa?.mode === 'humano' ? ' · com você' : ' · a Lia responde'}
+              {conversa && !janelaAberta ? ' · janela de 24 h fechada' : ''}
+              {conversa ? ` · IA ${gasto(conversa.gastoUsd, cotacaoDolar)}` : ''}
+            </span>
+          </span>
+        </button>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            onClick={() => setInfo((v) => !v)}
+            aria-label="Dados do cliente"
+            className={`grid h-8 w-8 place-items-center rounded-full ${info ? 'bg-[#374248] text-[#e9edef]' : 'text-[#aebac1] hover:bg-[#374248]'}`}
+          >
+            <Info size={18} />
+          </button>
+          {conversa?.leadId && (
+            <button onClick={() => aoAbrirLead(conversa.leadId!)} className="rounded-full border border-[#8696a0]/40 px-2.5 py-1 text-[12px] font-medium text-[#d1d7db] hover:bg-[#374248]">
+              Ficha do lead
+            </button>
+          )}
+          {conversa?.isTest && (
+            <button
+              disabled={pending}
+              onClick={() => {
+                if (!excluindo) return setExcluindo(true);
+                start(async () => {
+                  const r = await seguro(() => excluirConversaDeTesteAction(id), (m) => toast({ ok: false, message: m }));
+                  if (!r) return;
+                  toast(r);
+                  if (r.ok) {
+                    aoVoltar();
+                    aoMudar();
+                  }
+                });
+              }}
+              onBlur={() => setExcluindo(false)}
+              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-medium ${excluindo ? 'bg-[#f15c6d] text-[#111b21]' : 'border border-[#f15c6d]/50 text-[#f15c6d]'}`}
+              title="Exclui esta conversa de teste e as mensagens dela"
+            >
+              <Trash2 size={13} /> {excluindo ? 'Confirmar exclusão' : 'Excluir teste'}
+            </button>
+          )}
+          {conversa?.needsHuman && (
+            <button
+              disabled={pending}
+              onClick={() => acao(() => resolverChamadoAction(id))}
+              className="flex items-center gap-1 rounded-full border border-[#00a884]/60 px-2.5 py-1 text-[12px] font-medium text-[#00a884]"
+            >
+              <CheckCircle2 size={13} /> Resolvido
+            </button>
+          )}
+          {conversa && (
+            <button
+              disabled={pending}
+              onClick={() => acao(() => alternarModoAction(id, conversa.mode === 'ia' ? 'humano' : 'ia'))}
+              className="flex items-center gap-1 rounded-full bg-[#00a884] px-3 py-1 text-[12px] font-bold text-[#111b21] disabled:opacity-50"
+            >
+              {conversa.mode === 'ia' ? (
+                <>
+                  <Hand size={13} /> Assumir
+                </>
+              ) : (
+                <>
+                  <Bot size={13} /> Devolver para a Lia
+                </>
+              )}
+            </button>
+          )}
         </div>
-        {conversa?.leadId && (
-          <button
-            onClick={() => aoAbrirLead(conversa.leadId!)}
-            className="rounded-control border border-border-strong px-2.5 py-1 text-[12px] font-bold"
-          >
-            Ficha do lead
-          </button>
-        )}
-        {conversa?.isTest && (
-          <button
-            disabled={pending}
-            onClick={() => {
-              if (!excluindo) return setExcluindo(true);
-              start(async () => {
-                const r = await seguro(() => excluirConversaDeTesteAction(id), (m) => toast({ ok: false, message: m }));
-                if (!r) return;
-                toast(r);
-                if (r.ok) {
-                  aoVoltar();
-                  aoMudar();
-                }
-              });
-            }}
-            onBlur={() => setExcluindo(false)}
-            className={`flex items-center gap-1 rounded-control px-2.5 py-1 text-[12px] font-bold ${excluindo ? 'bg-error text-page' : 'border border-error/50 text-error'}`}
-            title="Exclui esta conversa de teste e as mensagens dela"
-          >
-            <Trash2 size={13} /> {excluindo ? 'Confirmar exclusão' : 'Excluir teste'}
-          </button>
-        )}
-        {conversa?.needsHuman && (
-          <button
-            disabled={pending}
-            onClick={() => acao(() => resolverChamadoAction(id))}
-            className="flex items-center gap-1 rounded-control border border-success/60 px-2.5 py-1 text-[12px] font-bold text-success"
-          >
-            <CheckCircle2 size={13} /> Resolvido
-          </button>
-        )}
-        {conversa && (
-          <button
-            disabled={pending}
-            onClick={() => acao(() => alternarModoAction(id, conversa.mode === 'ia' ? 'humano' : 'ia'))}
-            className="flex items-center gap-1 rounded-control bg-accent px-2.5 py-1 text-[12px] font-extrabold text-page disabled:opacity-50"
-          >
-            {conversa.mode === 'ia' ? (
-              <>
-                <Hand size={13} /> Assumir
-              </>
-            ) : (
-              <>
-                <Bot size={13} /> Devolver para a IA
-              </>
-            )}
-          </button>
-        )}
       </div>
-      {conversa && <TrilhaDaVenda conversa={conversa} />}
-      {conversa?.needsHuman && conversa.needsHumanReason && (
-        <div className="mx-3 mt-2 rounded-[10px] border border-error/40 bg-error/[.06] px-3 py-2 text-[12.5px]">
-          <b>Precisa de você:</b> {conversa.needsHumanReason}
+      {info && conversa && (
+        <div className="max-h-[45%] overflow-y-auto border-b border-[#222d34] bg-[#111b21] pb-2">
+          <TrilhaDaVenda conversa={conversa} />
+          <ResumoDaConversa resumo={conversa.summary} descoberta={conversa.descoberta} />
         </div>
       )}
-      {conversa && <ResumoDaConversa resumo={conversa.summary} descoberta={conversa.descoberta} />}
-      <div className="max-h-[440px] flex-1 space-y-2 overflow-y-auto p-3">
+      <div className="fundo-whatsapp flex-1 overflow-y-auto px-[4%] py-3">
+        {conversa?.needsHuman && conversa.needsHumanReason && (
+          <div className="mx-auto mb-3 w-fit max-w-[90%] rounded-[7.5px] bg-[#182229] px-3 py-1.5 text-center text-[12.5px] text-[#ffd279]">
+            ⚠️ Precisa de você: {conversa.needsHumanReason}
+          </div>
+        )}
         {!mensagens && falhou ? (
-          <div className="grid place-items-center gap-2 py-10 text-center text-[13px] text-fg-tertiary">
+          <div className="grid place-items-center gap-2 py-10 text-center text-[13px] text-[#8696a0]">
             <span>Não carregou as mensagens desta conversa.</span>
             <button
               onClick={() => {
                 setFalhou(false);
                 setTentativa((t) => t + 1);
               }}
-              className="rounded-full bg-accent px-3 py-1.5 text-[12.5px] font-extrabold text-page"
+              className="rounded-full bg-[#00a884] px-3 py-1.5 text-[12.5px] font-bold text-[#111b21]"
             >
               Tentar de novo
             </button>
@@ -958,76 +978,176 @@ function Conversa({
             <Esqueleto className="ml-auto h-10 w-1/2" />
           </div>
         ) : (
-          mensagens.map((m) =>
-            m.author === 'sistema' ? (
-              <div key={m.id} className="text-center text-[11.5px] text-fg-faded">
-                {m.body} · {hora(m.createdAt)}
+          mensagens.map((m, i) => {
+            const antes = mensagens[i - 1];
+            const dia = diaDaMensagem(m.createdAt, agora);
+            const novoDia = !antes || diaDaMensagem(antes.createdAt, agora) !== dia;
+            const separador = novoDia && (
+              <div className="sticky top-0 z-[1] my-3 flex justify-center">
+                <span className="rounded-[7.5px] bg-[#182229] px-3 py-[5px] text-[12.5px] uppercase text-[#8696a0] shadow-[0_1px_0.5px_rgba(11,20,26,.13)]">{dia}</span>
               </div>
-            ) : (
-              <div key={m.id} className={`flex ${m.direction === 'out' ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-[85%] whitespace-pre-wrap rounded-[14px] px-3 py-2 text-[13px] leading-snug ${
-                    m.direction === 'out' ? (m.author === 'arthur' ? 'bg-accent/20' : 'bg-accent/10') : 'bg-card'
-                  }`}
-                >
-                  {m.body}
-                  <div className="mt-1 text-right text-[10.5px] text-fg-faded">
-                    {m.author === 'ia' ? 'IA · ' : m.author === 'arthur' ? 'Você · ' : ''}
-                    {hora(m.createdAt)}
-                    {m.status === 'read' ? ' · lida' : m.status === 'failed' ? ` · não saiu: ${m.error ?? ''}` : ''}
+            );
+            if (m.author === 'sistema')
+              return (
+                <div key={m.id}>
+                  {separador}
+                  <div className="my-2 flex justify-center">
+                    <span className="max-w-[90%] rounded-[7.5px] bg-[#182229] px-3 py-[5px] text-center text-[12.5px] text-[#8696a0]">
+                      {m.body} · {hora(m.createdAt)}
+                    </span>
                   </div>
                 </div>
+              );
+            const saiu = m.direction === 'out';
+            // Primeira de uma sequência (mesmo lado e autor): leva o rabinho e, se saiu, o nome de quem mandou.
+            const primeira = novoDia || !antes || antes.direction !== m.direction || antes.author !== m.author;
+            return (
+              <div key={m.id}>
+                {separador}
+                <div className={`flex ${saiu ? 'justify-end' : 'justify-start'} ${primeira ? 'mt-3' : 'mt-[2px]'}`}>
+                  <div
+                    className={`relative max-w-[88%] rounded-[7.5px] px-[9px] pb-[8px] pt-[6px] text-[14.2px] leading-[19px] text-[#e9edef] shadow-[0_1px_0.5px_rgba(11,20,26,.13)] sm:max-w-[65%] ${
+                      saiu ? 'bg-[#005c4b]' : 'bg-[#202c33]'
+                    } ${primeira ? (saiu ? 'rounded-tr-none' : 'rounded-tl-none') : ''}`}
+                  >
+                    {primeira && (
+                      <svg
+                        viewBox="0 0 8 13"
+                        width="8"
+                        height="13"
+                        aria-hidden
+                        className={`absolute top-0 ${saiu ? '-right-[8px] text-[#005c4b]' : '-left-[8px] -scale-x-100 text-[#202c33]'}`}
+                      >
+                        <path fill="currentColor" d="M0 0h8C6 2.5 3.5 6.5 0 13z" />
+                      </svg>
+                    )}
+                    {primeira && saiu && (
+                      <span className={`block text-[12.8px] font-medium ${m.author === 'arthur' ? 'text-[#ffd279]' : 'text-[#53bdeb]'}`}>
+                        {m.author === 'arthur' ? 'Você' : 'Lia (IA)'}
+                      </span>
+                    )}
+                    <span className="whitespace-pre-wrap break-words">
+                      <TextoDoWhatsapp texto={m.body} />
+                    </span>
+                    {/* Espaço para a hora e os tiques não ficarem por cima do texto. */}
+                    <span className={`inline-block ${saiu ? 'w-[72px]' : 'w-[50px]'}`} />
+                    <span className="absolute bottom-[4px] right-[7px] flex items-center gap-[3px] text-[11px] leading-none text-[#ffffff99]">
+                      {hora(m.createdAt)}
+                      {saiu && <Tique status={m.status} />}
+                    </span>
+                  </div>
+                </div>
+                {m.status === 'failed' && (
+                  <div className="mt-0.5 text-right text-[11px] text-[#f15c6d]">Não saiu: {m.error ?? 'erro do WhatsApp'}</div>
+                )}
               </div>
-            )
-          )
+            );
+          })
         )}
         <div ref={fim} />
       </div>
-      {janelaAberta && conversa?.mode === 'ia' && (
-        <div className="flex gap-1.5 border-t border-border px-2.5 pt-2.5 text-[12px] font-bold">
-          {(
-            [
-              ['arthur', 'Responder como você', <UserRound key="a" size={12} />],
-              ['lia', 'Orientar a Lia', <Sparkles key="l" size={12} />],
-            ] as const
-          ).map(([k, t, icone]) => (
-            <button
-              key={k}
-              onClick={() => setModoDoTexto(k)}
-              className={`flex items-center gap-1 rounded-full px-3 py-1 ${
-                modoDoTexto === k ? 'bg-accent text-page' : 'border border-border-strong text-fg-secondary'
-              }`}
-            >
-              {icone} {t}
-            </button>
-          ))}
+      <div className="bg-[#202c33] px-3 py-2">
+        {janelaAberta && conversa?.mode === 'ia' && (
+          <div className="mb-2 flex flex-wrap gap-1.5 text-[12px] font-medium">
+            {(
+              [
+                ['arthur', 'Responder como você', <UserRound key="a" size={12} />],
+                ['lia', 'Orientar a Lia (o cliente não vê)', <Sparkles key="l" size={12} />],
+              ] as const
+            ).map(([k, t, icone]) => (
+              <button
+                key={k}
+                onClick={() => setModoDoTexto(k)}
+                className={`flex items-center gap-1 rounded-full px-3 py-1 ${modoDoTexto === k ? 'bg-[#00a884] text-[#111b21]' : 'bg-[#2a3942] text-[#d1d7db]'}`}
+              >
+                {icone} {t}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="flex items-end gap-2">
+          <textarea
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            onKeyDown={(e) => {
+              // Como no WhatsApp Web: Enter envia, Shift+Enter quebra a linha.
+              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                if (!pending && texto.trim() && janelaAberta) enviar();
+              }
+            }}
+            rows={1}
+            disabled={!janelaAberta}
+            placeholder={
+              !janelaAberta
+                ? 'Mais de 24 h sem mensagem do cliente: o WhatsApp não deixa responder por aqui.'
+                : modoDoTexto === 'lia' && conversa?.mode === 'ia'
+                  ? 'Diga à Lia o que fazer (o cliente não vê)'
+                  : 'Digite uma mensagem'
+            }
+            className="max-h-[140px] min-h-[42px] flex-1 resize-none rounded-[8px] bg-[#2a3942] px-3 py-[10px] text-[15px] leading-[21px] text-[#d1d7db] outline-none [field-sizing:content] placeholder:text-[#8696a0] disabled:opacity-60"
+          />
+          <button
+            onClick={enviar}
+            disabled={pending || !texto.trim() || !janelaAberta}
+            aria-label="Enviar"
+            className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-full bg-[#00a884] text-[#111b21] disabled:opacity-50"
+          >
+            <Send size={18} />
+          </button>
         </div>
-      )}
-      <div className={`flex items-end gap-2 p-2.5 ${janelaAberta && conversa?.mode === 'ia' ? '' : 'border-t border-border'}`}>
-        <textarea
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          rows={2}
-          disabled={!janelaAberta}
-          placeholder={
-            !janelaAberta
-              ? 'Mais de 24 h sem mensagem do cliente: o WhatsApp não deixa responder por aqui.'
-              : modoDoTexto === 'lia' && conversa?.mode === 'ia'
-                ? 'Diga à Lia o que fazer (ex.: mande você mesma 2 exemplos de site). O cliente não vê isto.'
-                : 'Responder como Arthur (a IA para nesta conversa)'
-          }
-          className={`flex-1 resize-none ${inputClass}`}
-        />
-        <button
-          onClick={enviar}
-          disabled={pending || !texto.trim() || !janelaAberta}
-          aria-label="Enviar"
-          className="grid h-11 w-11 place-items-center rounded-full bg-accent text-page disabled:opacity-50"
-        >
-          <Send size={16} />
-        </button>
       </div>
     </div>
+  );
+}
+
+/** Iniciais para a "foto" do contato (como o WhatsApp sem foto): "Felipe - Personal" → "FP". */
+function iniciais(nome: string): string {
+  const p = nome.replace(/[^\p{L}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean);
+  return ((p[0]?.[0] ?? '') + (p[1]?.[0] ?? '')).toUpperCase() || '?';
+}
+
+/** "HOJE", "ONTEM", dia da semana (até 6 dias) ou a data, no fuso de Brasília. */
+function diaDaMensagem(iso: string, agora: number): string {
+  const fmt = (d: Date) => d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  const d = new Date(iso);
+  const ref = new Date(agora || d.getTime());
+  if (fmt(d) === fmt(ref)) return 'Hoje';
+  if (fmt(d) === fmt(new Date(ref.getTime() - 86400_000))) return 'Ontem';
+  if (ref.getTime() - d.getTime() < 6 * 86400_000) return d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long' });
+  return fmt(d);
+}
+
+/** Tiques do WhatsApp: relógio (saindo), ✓ enviada, ✓✓ entregue, ✓✓ azul lida, alerta se falhou. */
+function Tique({ status }: { status: string | null }) {
+  if (status === 'failed') return <CircleAlert size={14} className="text-[#f15c6d]" aria-label="não saiu" />;
+  if (status === 'read') return <CheckCheck size={16} className="text-[#53bdeb]" aria-label="lida" />;
+  if (status === 'delivered') return <CheckCheck size={16} aria-label="entregue" />;
+  if (status === 'sent') return <Check size={16} aria-label="enviada" />;
+  return <Clock size={12} aria-label="enviando" />;
+}
+
+/** Formatação do WhatsApp: *negrito*, _itálico_, ~riscado~ e links clicáveis. */
+function TextoDoWhatsapp({ texto }: { texto: string }) {
+  const partes = texto.split(/(https?:\/\/[^\s]+|\*[^*\n]+\*|_[^_\n]+_|~[^~\n]+~)/g);
+  return (
+    <>
+      {partes.map((p, i) =>
+        /^https?:\/\//.test(p) ? (
+          <a key={i} href={p} target="_blank" rel="noreferrer" className="break-all text-[#53bdeb] hover:underline">
+            {p}
+          </a>
+        ) : /^\*[^*\n]+\*$/.test(p) ? (
+          <strong key={i}>{p.slice(1, -1)}</strong>
+        ) : /^_[^_\n]+_$/.test(p) ? (
+          <em key={i}>{p.slice(1, -1)}</em>
+        ) : /^~[^~\n]+~$/.test(p) ? (
+          <s key={i}>{p.slice(1, -1)}</s>
+        ) : (
+          p
+        )
+      )}
+    </>
   );
 }
 
