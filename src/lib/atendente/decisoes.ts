@@ -6,13 +6,15 @@
 //   pagou:asaas|pix|cartao:<enc>      onde foi pago
 //   desc:ok|nao:<pedido de desconto>  desconto extra pedido pela Lia
 //   conv:assumir|lia:<conversa>       cliente chamou o Arthur
+//   proj:<chave>|outro:<ideia>        projeto de um pedido "Claude, ..." (0100)
 
 import type { DbDoAtendente } from './db';
 import { enviarTexto, type MensagemRecebida } from './whatsapp-api';
 import { decidirEncomenda, decidirFinanceiro, responderDuvida } from './encomenda';
 import { SITE_URL } from '@/lib/seo';
+import { escolherProjeto } from './ideias';
 
-const ACAO = /^(enc|duv|pag|pagou|desc|conv):([a-z]+):([0-9a-f-]{36})$/;
+const ACAO = /^(enc|duv|pag|pagou|desc|conv|proj):([a-z]+):([0-9a-f-]{36})$/;
 
 export const ehDecisao = (m: MensagemRecebida) => !!m.botaoId && ACAO.test(m.botaoId);
 
@@ -22,6 +24,8 @@ export async function tratarDecisao(db: DbDoAtendente, m: MensagemRecebida): Pro
   switch (tipo) {
     case 'enc':
       return decidirEncomenda(db, id, valor === 'ok', de);
+    case 'proj':
+      return escolherProjeto(db, id, valor, null, de);
     case 'duv':
       return responderDuvida(db, id, { letra: valor }, de);
     case 'pag':

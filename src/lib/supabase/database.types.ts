@@ -526,6 +526,7 @@ export type Database = {
       }
       ideias: {
         Row: {
+          projeto: string | null
           atualizado_em: string
           avisado_status: string | null
           criado_em: string
@@ -545,6 +546,7 @@ export type Database = {
           titulo: string | null
         }
         Insert: {
+          projeto?: string | null
           atualizado_em?: string
           avisado_status?: string | null
           criado_em?: string
@@ -564,6 +566,7 @@ export type Database = {
           titulo?: string | null
         }
         Update: {
+          projeto?: string | null
           atualizado_em?: string
           avisado_status?: string | null
           criado_em?: string
