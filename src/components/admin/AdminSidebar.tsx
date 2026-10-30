@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { ehDaProgSolucoes } from '@/lib/areas';
+import { ProgMark } from '@/brand/ProgMark';
 
 // `pendente` marca a página que ainda é placeholder do roadmap do ERP. Serve
 // para bater o olho no menu e saber o que falta construir, sem abrir uma por
@@ -142,23 +143,26 @@ const NAV_SOLUCOES: NavGroup[] = [
 
 const ALL_ITEMS = [...NAV, ...NAV_SOLUCOES].flatMap((g) => g.items);
 
-/** Marca da Prog Soluções no lugar do logo da loja: emblema "P" azul + nome. */
+/** Marca da Prog Soluções no lugar do logo da loja: o "P modular" do design system + "Prog Soluções" em Sora. */
 function MarcaSolucoes({ comNome }: { comNome: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-[11px] bg-[linear-gradient(135deg,#6a82ff,#3349f0)] text-[19px] font-extrabold text-white shadow-[0_6px_18px_-6px_rgba(51,73,240,0.9)]">
-        P
-      </span>
-      {comNome && <span className="whitespace-nowrap text-[14px] font-extrabold tracking-[-0.01em] text-[#eef1ff]">Prog Soluções</span>}
+      <ProgMark s={36} className="flex-shrink-0" />
+      {comNome && (
+        <span className="whitespace-nowrap font-[family-name:var(--font-sora)] text-[16px] tracking-[-0.03em] text-[#F4F5F7]">
+          <span className="font-semibold">Prog</span> <span className="font-normal text-[#A3A8B2]">Soluções</span>
+        </span>
+      )}
     </div>
   );
 }
 
-// Cores da área da Prog Soluções (azul-noite) aplicadas por variável no painel inteiro.
+// Cores da área da Prog Soluções aplicadas por variável no painel inteiro: design system Prog Soluções
+// (pedido do Arthur, 30/10/2026; docs/DESIGN-SYSTEM-PROG.md). Panel #0D0E13 na sidebar, acento periwinkle.
 const VARS_SOLUCOES = {
-  '--color-card-dark': '#0a0f2a',
-  '--color-divider-strong': 'rgba(130, 148, 255, 0.14)',
-  '--brand-accent-rgb': '91 116 255',
+  '--color-card-dark': '#0D0E13',
+  '--color-divider-strong': 'rgba(255, 255, 255, 0.09)',
+  '--brand-accent-rgb': '129 170 247',
 } as React.CSSProperties;
 
 // Tudo em classe, nada em `style` inline: estilo inline vence classe, e era por
@@ -172,7 +176,12 @@ const ITEM_BASE =
   'hover:bg-[rgb(var(--brand-accent-rgb)/.07)] hover:text-accent ' +
   'active:bg-[rgb(var(--brand-accent-rgb)/.16)]';
 
-function classeDoItem(active: boolean, pendente?: boolean): string {
+function classeDoItem(active: boolean, pendente?: boolean, solucoes?: boolean): string {
+  // Prog Soluções: item ativo em Accent strong 600 sobre oklch(72% .1 262 / .14); demais na cor Nav.
+  if (solucoes) {
+    if (active) return `${ITEM_BASE} bg-[oklch(72%_.1_262/.14)] !font-semibold !text-[#B1D2FF]${pendente ? ' opacity-75' : ''}`;
+    return `${ITEM_BASE} !font-medium hover:!text-[#F4F5F7] ${pendente ? 'text-[#5D626B]' : 'text-[#9BA1AB]'}`;
+  }
   if (active) {
     return `${ITEM_BASE} bg-[rgb(var(--brand-accent-rgb)/.1)] text-accent${pendente ? ' opacity-75' : ''}`;
   }
@@ -201,7 +210,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const voltar = solucoes ? { href: '/admin', rotulo: 'Gerenciamento da loja' } : { href: '/', rotulo: 'Ver loja' };
 
   return (
-    <div className={clsx('min-h-screen bg-page lg:flex', solucoes && 'tema-apple [color-scheme:dark]')} style={solucoes ? VARS_SOLUCOES : undefined}>
+    <div className={clsx('min-h-screen bg-page lg:flex', solucoes && 'tema-apple ds-prog [color-scheme:dark]')} style={solucoes ? VARS_SOLUCOES : undefined}>
       <div className="sticky top-0 z-40 flex items-center gap-3 border-b border-divider-strong bg-card-dark px-4 py-3 lg:hidden">
         <button
           onClick={() => setMobileOpen(true)}
@@ -250,7 +259,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
                     title={item.pendente ? `${item.label} — ainda não construída` : item.label}
-                    className={classeDoItem(active, item.pendente)}
+                    className={classeDoItem(active, item.pendente, solucoes)}
                   >
                     <item.Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={2} />
                     {item.label}
@@ -316,7 +325,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                     key={item.href}
                     href={item.href}
                     title={item.pendente ? `${item.label} — ainda não construída` : item.label}
-                    className={classeDoItem(active, item.pendente)}
+                    className={classeDoItem(active, item.pendente, solucoes)}
                   >
                     <item.Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={2} />
                     <AnimatePresence>

@@ -807,3 +807,136 @@ textarea::placeholder {
    se o JavaScript falhar. */
 .ps-splash { animation: ps-splash-limite 0s linear 14s forwards; }
 @keyframes ps-splash-limite { to { visibility: hidden; pointer-events: none; } }
+
+/* ===== Design system Prog Soluções (30/10/2026) — só a área Prog Soluções do admin =====
+   Pedido do Arthur: o sistema da Prog Soluções no design system oficial (docs/DESIGN-SYSTEM-PROG.md),
+   substituindo o "Noite azul" SÓ ali. Loja, Gerenciamento, Estúdio, vendedor e diagnóstico não mudam.
+   `.ds-prog` fica na casca do admin (AdminShell) quando a rota é da Prog Soluções; as páginas têm o
+   próprio `.tema-apple` por dentro, por isso as variáveis valem também em `.ds-prog .tema-apple`.
+   Fica no fim do arquivo para vencer as regras de mesmo peso do tema acima. */
+.tema-apple.ds-prog,
+.ds-prog .tema-apple {
+  --color-page: #08080A;
+  --color-card: rgba(255, 255, 255, 0.035);
+  --color-card-hover: rgba(255, 255, 255, 0.055);
+  --color-card-dark: #0D0E13;
+  --color-input: rgba(255, 255, 255, 0.04);
+  --color-border: rgba(255, 255, 255, 0.09);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+  --color-divider: rgba(255, 255, 255, 0.07);
+  --color-fg: #F4F5F7;
+  --color-fg-secondary: #ECEEF1;
+  --color-fg-tertiary: #A3A8B2;
+  --color-fg-faded: #8B919B;
+  --color-fg-muted: #6D727C;
+  --color-accent: #81AAF7;
+  --color-info: #81AAF7;
+  --color-success: #5FD37F;
+  --azul: #81AAF7;
+  --verde: #5FD37F;
+  --font-display: var(--font-sora), sans-serif;
+  --font-body: var(--font-dm-sans), system-ui, sans-serif;
+  --radius-control: 14px;
+  --radius-card: 24px;
+  --radius-card-lg: 24px;
+  --radius-section: 32px;
+  --mola: cubic-bezier(0.16, 1, 0.3, 1);
+  --sombra: none;
+  --sombra-2: none;
+  --brilho-borda: inset 0 0 0 0 transparent;
+  font-family: var(--font-body);
+  color: var(--color-fg);
+}
+.ds-prog :is(h1, h2, h3, .font-display) { font-family: var(--font-display); letter-spacing: -0.035em; }
+
+/* Fundo: aura azul no topo + grade de 74 px com máscara radial (sem estrelas nem horizonte). */
+.ds-prog .aurora,
+.ds-prog .aurora-suave {
+  background:
+    radial-gradient(55% 45% at 50% -8%, rgba(129, 170, 247, 0.3), transparent 70%),
+    radial-gradient(40% 40% at 100% 30%, rgba(98, 72, 140, 0.22), transparent 70%),
+    #08080A;
+  background-size: 100% 100%;
+}
+.ds-prog .aurora::after,
+.ds-prog .aurora-suave::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 74px 74px;
+  -webkit-mask-image: radial-gradient(70% 60% at 50% 0%, #000 0%, transparent 80%);
+  mask-image: radial-gradient(70% 60% at 50% 0%, #000 0%, transparent 80%);
+}
+
+/* Card padrão: gradiente .05 → .015, borda .09, sem sombra nem vidro. */
+.ds-prog .bg-card {
+  background-color: transparent;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: none;
+  transition: border-color 0.15s var(--mola), background-color 0.15s var(--mola);
+}
+.ds-prog .bg-card:hover { border-color: rgba(255, 255, 255, 0.14); box-shadow: none; }
+
+/* Cartão em destaque: elevado (#12141A, borda .14) com a borda do ladrilho em azul. */
+.ds-prog .borda-degrade,
+.ds-prog .borda-dinheiro {
+  border-color: oklch(74% 0.12 262 / 0.4) !important;
+  background: linear-gradient(180deg, rgba(129, 170, 247, 0.08), rgba(129, 170, 247, 0) 60%), #12141A;
+  box-shadow: none;
+}
+
+/* Destaque de texto: gradiente Accent strong → ciano (o único uso permitido do ciano). */
+.ds-prog .texto-degrade,
+.ds-prog .texto-dinheiro {
+  background: linear-gradient(120deg, #B1D2FF, #43D5DC);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.ds-prog .barra-cor { background: #81AAF7; }
+
+/* Botões: o sólido é paper com texto ink (um por área); secundários em pílula com contorno. */
+.ds-prog .bg-accent,
+.ds-prog .cta-verde {
+  background: #F2F3F5;
+  color: #08080A;
+  box-shadow: none;
+}
+.ds-prog .bg-accent * { color: #08080A; }
+.ds-prog .bg-accent:not(:disabled):hover,
+.ds-prog .cta-verde:not(:disabled):hover { filter: none; background: #FFFFFF; }
+.ds-prog button.rounded-full:not(.bg-accent):not(.tela-whatsapp *),
+.ds-prog a.rounded-full:not(.bg-accent):not(.tela-whatsapp *) {
+  background-color: transparent;
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #D7DAE0;
+}
+.ds-prog button.rounded-full:not(.bg-accent):not(.tela-whatsapp *):hover,
+.ds-prog a.rounded-full:not(.bg-accent):not(.tela-whatsapp *):hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #F4F5F7;
+}
+.ds-prog :is(button, a[href], [role="button"]):not(:disabled) {
+  transition: background-color 0.15s var(--mola), border-color 0.15s var(--mola), color 0.15s var(--mola);
+}
+
+/* Barras fixas, campos e foco */
+.ds-prog .vidro {
+  background: rgba(8, 8, 10, 0.82);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.07);
+}
+.ds-prog :is(input, select, textarea):focus-visible {
+  outline: none;
+  border-color: #81AAF7;
+  box-shadow: 0 0 0 3px rgba(129, 170, 247, 0.18);
+}
+.ds-prog ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); }
