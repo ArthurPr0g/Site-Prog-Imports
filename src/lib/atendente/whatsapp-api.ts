@@ -61,6 +61,31 @@ async function respostaDoEnvio(r: Response): Promise<ResultadoDoEnvio> {
  * botões (título até 20 caracteres); de 4 a 10, uma lista (até 24). Só dentro da
  * janela de 24 h. O toque volta pelo webhook como texto (o título da opção).
  */
+/**
+ * Mensagem com um botão que abre um link (interactive cta_url, só dentro da janela de 24 h). Usada nos avisos
+ * ao Arthur em vez de colar o link no texto (30/10/2026): a prévia automática de link em mensagem enviada pela
+ * API chegava como miniatura borrada. Rótulo do botão até 20 caracteres.
+ */
+export async function enviarComLink(para: string, texto: string, url: string, rotulo: string): Promise<ResultadoDoEnvio> {
+  if (!whatsappConfigurado()) return { ok: false, erro: 'WhatsApp não configurado' };
+  try {
+    return await respostaDoEnvio(
+      await chamar({
+        recipient_type: 'individual',
+        to: para,
+        type: 'interactive',
+        interactive: {
+          type: 'cta_url',
+          body: { text: texto.slice(0, 1024) },
+          action: { name: 'cta_url', parameters: { display_text: rotulo.slice(0, 20), url } },
+        },
+      })
+    );
+  } catch (e) {
+    return { ok: false, erro: e instanceof Error ? e.message : 'falha de rede' };
+  }
+}
+
 export async function enviarComOpcoes(para: string, texto: string, opcoes: string[], ids?: string[]): Promise<ResultadoDoEnvio> {
   // ids: ação de cada botão (ex.: "desc:ok:<id>"), que volta no webhook em botaoId (decisões do Arthur, 0095).
   const id = (i: number) => ids?.[i]?.slice(0, 256) || `op${i}`;

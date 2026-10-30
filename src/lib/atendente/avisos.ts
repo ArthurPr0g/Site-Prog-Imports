@@ -10,7 +10,7 @@
 
 import type { DbDoAtendente } from '@/lib/atendente/db';
 import type { ConfigDoAtendente } from '@/lib/atendente/regras';
-import { enviarTexto, enviarComOpcoes, enviarModelo, criarModelo, statusDoModelo, whatsappConfigurado, JANELA_MS } from '@/lib/atendente/whatsapp-api';
+import { enviarTexto, enviarComOpcoes, enviarComLink, enviarModelo, criarModelo, statusDoModelo, whatsappConfigurado, JANELA_MS } from '@/lib/atendente/whatsapp-api';
 import { modeloAprovado } from '@/lib/atendente/modelos';
 import { enviarEmail, emailConfigurado } from '@/lib/atendente/email';
 import { SITE_URL } from '@/lib/seo';
@@ -40,6 +40,16 @@ async function lerDono(db: DbDoAtendente): Promise<Dono> {
     janelaAte: data?.owner_last_inbound_at ? new Date(data.owner_last_inbound_at).getTime() + JANELA_MS : 0,
     modeloAprovado: data?.aviso_template_status === 'APPROVED',
   };
+}
+
+/** Rótulo do botão do aviso pelo destino do link (até 20 caracteres). */
+function rotuloDoLink(link: string): string {
+  if (link.includes('/ideias')) return 'Abrir Ideias';
+  if (link.includes('conversa=')) return 'Abrir conversa';
+  if (link.includes('/gastos')) return 'Abrir Gastos';
+  if (link.includes('/pos-venda')) return 'Abrir Pós-venda';
+  if (link.includes('/captacao')) return 'Abrir Captação';
+  return 'Abrir';
 }
 
 const linkDaConversa = (conversaId: string | null) =>
@@ -90,7 +100,9 @@ export async function avisarArthur(
 
     if (dono.whatsapp && whatsappConfigurado()) {
       if (Date.now() < dono.janelaAte) {
-        const r = await enviarTexto(dono.whatsapp, `🔔 *${a.titulo}*\n${a.texto}\n\n${link}`);
+        // Botão "Abrir" no lugar do link colado (a prévia automática vinha borrada); sem botão, texto com o link.
+        let r = await enviarComLink(dono.whatsapp, `🔔 *${a.titulo}*\n${a.texto}`, link, rotuloDoLink(link));
+        if (!r.ok) r = await enviarTexto(dono.whatsapp, `🔔 *${a.titulo}*\n${a.texto}\n\n${link}`);
         await db.from('ia_avisos').insert({ ...base, via: 'texto', ...(r.ok ? { external_id: r.id, status: 'sent' } : { status: 'failed', error: r.erro }) });
         if (r.ok) return;
       }
