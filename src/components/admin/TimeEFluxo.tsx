@@ -155,7 +155,8 @@ const ETAPAS: Etapa[] = [
   },
   {
     titulo: 'Identidade e protótipo', fase: 'design', quem: ['duda', 'nina'],
-    voce: 'Você cola os pedidos no Claude Design',
+    voce: 'Copia os pedidos no Pós-venda e cola no Claude Design',
+    auto: 'Liberados só com descoberta confirmada',
     texto: 'A Duda define cores, fontes e componentes. A Nina desenha as telas navegáveis e gera o pacote de handoff.',
   },
   {

@@ -349,6 +349,8 @@ function simular(e: Estado, nome: string, entrada: Record<string, unknown>): str
       return 'Ajuste registrado (simulador: nada é executado). Diga ao cliente o que vai mudar e que avisa quando estiver no ar.';
     case 'registrar_pos_entrega':
       return 'Registrado (simulador). Agradeça e siga a conversa.';
+    case 'confirmar_briefing':
+      return 'Descoberta registrada como confirmada (simulador). Agradeça e diga o próximo passo: a equipe começa o design.';
     case 'mudar_etapa': {
       const etapa = String(entrada.etapa) as LeadStatus;
       e.leadStatus = etapa;
@@ -544,6 +546,20 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
         leadId,
       });
       return 'Ajuste registrado e já na fila de execução. Diga ao cliente, em uma frase, o que vai mudar e que avisa por aqui assim que estiver no ar (normalmente no mesmo dia).';
+    }
+    case 'confirmar_briefing': {
+      if (!leadId) return 'Sem lead identificado: só agradeça e siga.';
+      const agora = new Date().toISOString();
+      const resumo = String(entrada.resumo ?? '').trim().slice(0, 2500);
+      await db.from('leads').update({ briefing_confirmado_em: agora }).eq('id', leadId);
+      await db.from('projetos').update({ briefing_confirmado_em: agora }).eq('lead_id', leadId).is('briefing_confirmado_em', null);
+      await avisarArthur(db, cfg, {
+        titulo: '✅ Descoberta confirmada pelo cliente',
+        texto: `${e.nomeDoCliente ?? 'Cliente'} confirmou o resumo:\n${resumo.slice(0, 700)}\n\nCom o projeto aberto e o financeiro ok, a Bia prepara os pedidos do Claude Design e eu te aviso.`,
+        conversaId,
+        leadId,
+      });
+      return 'Registrado. Agradeça em uma frase e diga que a equipe começa agora a parte visual do projeto e que você avisa por aqui as próximas etapas. Não peça mais nada nesta mensagem.';
     }
     case 'registrar_pos_entrega': {
       const pj = await projetoDoCliente(db, leadId);
@@ -953,7 +969,7 @@ function blocoDoProjeto(
 - Uma ou duas perguntas por mensagem, curtas, com opções [[opções: ...]] quando couber. Grave cada resposta com registrar_briefing NA MESMA RESPOSTA (o Arthur acompanha pelo painel).
 - Ainda falta saber: ${faltam.join(', ') || 'nada essencial'}.
 - Briefing já registrado: ${Object.keys(briefing).length ? JSON.stringify(briefing).slice(0, 2500) : 'nada ainda'}.
-- Quando tiver o essencial, mande um resumo curto do que entendeu para o cliente confirmar e ofereça a reunião de alinhamento com o Arthur (horarios_livres, tipo "alinhamento").
+- Quando tiver o essencial, mande um resumo curto do que entendeu para o cliente confirmar e ofereça a reunião de alinhamento com o Arthur (horarios_livres, tipo "alinhamento"). Quando ele disser que o resumo está certo, use confirmar_briefing (é o que libera o design).
 - Financeiro: ${financeiro}`,
   );
   return `\n\n${partes.join('\n\n')}`;
@@ -970,6 +986,18 @@ const FERRAMENTA_AJUSTE: Anthropic.Beta.BetaTool = {
       simples: { type: 'boolean', description: 'true = pequeno, claro e sem dúvida; false = grande, arriscado ou ainda com dúvida.' },
     },
     required: ['descricao', 'simples'],
+    additionalProperties: false,
+  },
+};
+
+const FERRAMENTA_CONFIRMAR_BRIEFING: Anthropic.Beta.BetaTool = {
+  name: 'confirmar_briefing',
+  description:
+    'Use SÓ quando o cliente disser que o resumo da descoberta que você mandou está certo (ex.: "isso mesmo", "perfeito", "pode seguir"). Libera o início do design. Se ele corrigiu algo, grave a correção com registrar_briefing e mande o resumo de novo antes.',
+  input_schema: {
+    type: 'object',
+    properties: { resumo: { type: 'string', description: 'O resumo que o cliente confirmou, como você mandou.' } },
+    required: ['resumo'],
     additionalProperties: false,
   },
 };
@@ -1190,7 +1218,11 @@ async function responder(conversaId: string, avisoInterno?: string): Promise<str
     : pesquisa?.itens?.length
       ? [...tools, FERRAMENTA_PESQUISA]
       : tools;
-  const ferramentas = projetoCliente ? [...base, FERRAMENTA_AJUSTE, ...(projetoCliente.entregue ? [FERRAMENTA_POS_ENTREGA] : [])] : base;
+  const ferramentas = [
+    ...(projetoCliente ? [...base, FERRAMENTA_AJUSTE, ...(projetoCliente.entregue ? [FERRAMENTA_POS_ENTREGA] : [])] : base),
+    // Descoberta confirmada (0106): no modo projeto ou com projeto aberto ainda não entregue.
+    ...(projeto || (projetoCliente && !projetoCliente.entregue) ? [FERRAMENTA_CONFIRMAR_BRIEFING] : []),
+  ];
   // Pós-entrega (0105): orientação da etapa de acompanhamento em andamento.
   const { data: cfgPos } = projetoCliente?.entregue ? await db.from('ia_config').select('link_avaliacao_google').eq('id', true).maybeSingle() : { data: null };
   const posEntrega = projetoCliente?.entregue

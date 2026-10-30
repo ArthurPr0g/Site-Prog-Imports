@@ -740,6 +740,8 @@ export type Database = {
           site_url: string | null
           pasta: string | null
           pos_entrega: Json
+          briefing_confirmado_em: string | null
+          pedidos_design: Json
           cliente: string
           created_at: string
           entrega_prevista: string | null
@@ -763,6 +765,8 @@ export type Database = {
           site_url?: string | null
           pasta?: string | null
           pos_entrega?: Json
+          briefing_confirmado_em?: string | null
+          pedidos_design?: Json
           cliente: string
           created_at?: string
           entrega_prevista?: string | null
@@ -786,6 +790,8 @@ export type Database = {
           site_url?: string | null
           pasta?: string | null
           pos_entrega?: Json
+          briefing_confirmado_em?: string | null
+          pedidos_design?: Json
           cliente?: string
           created_at?: string
           entrega_prevista?: string | null
@@ -1648,6 +1654,7 @@ export type Database = {
       leads: {
         Row: {
           briefing: Json
+          briefing_confirmado_em: string | null
           pesquisa_dica: string | null
           pesquisa_status: string | null
           pesquisa: Json | null
@@ -1720,6 +1727,7 @@ export type Database = {
         }
         Insert: {
           briefing?: Json
+          briefing_confirmado_em?: string | null
           pesquisa_dica?: string | null
           pesquisa_status?: string | null
           pesquisa?: Json | null
@@ -1792,6 +1800,7 @@ export type Database = {
         }
         Update: {
           briefing?: Json
+          briefing_confirmado_em?: string | null
           pesquisa_dica?: string | null
           pesquisa_status?: string | null
           pesquisa?: Json | null

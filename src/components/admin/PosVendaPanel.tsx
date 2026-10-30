@@ -7,7 +7,7 @@
 // incluído vira orçamento.
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
-import { CalendarDays, CheckCircle2, ClipboardList, FileText, History, Plus, Repeat } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Circle, ClipboardList, Copy, FileText, History, Palette, Plus, Repeat } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import {
   painelDoPosVendaAction,
@@ -19,6 +19,7 @@ import {
   marcarReuniaoDoProjetoAction,
   salvarAtaAction,
   excluirProjetoAction,
+  marcarDescobertaConfirmadaAction,
   type ProjetoDoPainel,
 } from '@/app/actions/pos-venda';
 import { NOMES, type Escolha } from '@/lib/simulador';
@@ -570,6 +571,8 @@ function DetalheDoProjeto({
         </div>
       </div>
 
+      <ClaudeDesign p={p} aoMudar={aoMudar} />
+
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-[12px] font-bold text-fg-tertiary">
           Pasta do código (no PC)
@@ -633,6 +636,79 @@ function DetalheDoProjeto({
         </ol>
       </div>
     </section>
+  );
+}
+
+/**
+ * Pedidos do Claude Design (pedido do Arthur em 30/10/2026): só ficam para copiar depois das etapas
+ * anteriores (projeto aberto, financeiro resolvido, descoberta confirmada pelo cliente). A Bia gera a
+ * versão final quando as três estão ok.
+ */
+function ClaudeDesign({ p, aoMudar }: { p: ProjetoDoPainel; aoMudar: () => void }) {
+  const toast = useToast();
+  const [pending, start] = useTransition();
+  const d = p.design;
+  const etapas: [boolean, string, string][] = [
+    [d.aberto, 'Projeto aberto', 'A Bia cria a pasta e o briefing quando o projeto abre.'],
+    [d.financeiro, 'Financeiro resolvido', 'Sinal ou total pago, ou projeto de graça.'],
+    [d.descoberta, 'Descoberta confirmada pelo cliente', 'A Lia manda o resumo e o cliente confirma.'],
+  ];
+  const copiar = (texto: string, quem: string) =>
+    navigator.clipboard?.writeText(texto).then(
+      () => toast({ ok: true, message: `Pedido da ${quem} copiado. Cole no Claude Design.` }),
+      () => toast({ ok: false, message: 'Não consegui copiar. Tente de novo.' }),
+    );
+  return (
+    <div className="rounded-[14px] border border-border p-3">
+      <Titulo icone={<Palette size={13} />} texto="Claude Design (Duda e Nina)" />
+      <ol className="mb-3 grid gap-1.5 sm:grid-cols-3">
+        {etapas.map(([ok, nome, dica]) => (
+          <li key={nome} className="flex gap-2 text-[12.5px]">
+            {ok ? <CheckCircle2 size={15} className="mt-0.5 flex-shrink-0 text-success" /> : <Circle size={15} className="mt-0.5 flex-shrink-0 text-fg-faded" />}
+            <span>
+              <b className={ok ? '' : 'text-fg-tertiary'}>{nome}</b>
+              {!ok && <span className="block text-[11.5px] text-fg-faded">{dica}</span>}
+            </span>
+          </li>
+        ))}
+      </ol>
+      {d.prontos ? (
+        <div className="flex flex-wrap gap-2">
+          {d.duda && (
+            <button onClick={() => copiar(d.duda!, 'Duda')} className="flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-[12.5px] font-extrabold text-page">
+              <Copy size={13} /> Copiar pedido da Duda (identidade)
+            </button>
+          )}
+          {d.nina && (
+            <button onClick={() => copiar(d.nina!, 'Nina')} className="flex items-center gap-1.5 rounded-full border border-accent/60 px-3 py-1.5 text-[12.5px] font-extrabold text-accent">
+              <Copy size={13} /> Copiar pedido da Nina (telas)
+            </button>
+          )}
+          <span className="self-center text-[11.5px] text-fg-faded">Primeiro a Duda; quando ela terminar, a Nina.</span>
+        </div>
+      ) : d.liberado ? (
+        <p className="text-[12.5px] text-fg-tertiary">⏳ Tudo certo: a Bia está preparando a versão final dos pedidos{d.pedidoEm ? '' : ' (entra na fila em até 1 minuto)'}. Te aviso no WhatsApp quando estiverem prontos.</p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-fg-tertiary">
+          <span>Os pedidos aparecem aqui quando as três etapas estiverem ok.</span>
+          {!d.descoberta && (
+            <button
+              disabled={pending}
+              onClick={() =>
+                start(async () => {
+                  const r = await marcarDescobertaConfirmadaAction(p.id).catch(() => ({ ok: false, message: 'Falha de conexão.' }));
+                  toast(r);
+                  if (r.ok) aoMudar();
+                })
+              }
+              className="rounded-full border border-border px-3 py-1 text-[12px] font-bold text-fg-secondary"
+            >
+              Marcar descoberta como confirmada
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -15,6 +15,7 @@ import { garantirModeloDaFila, mandarFilasDoDia } from '@/lib/atendente/fila-do-
 import { bomDia } from '@/lib/atendente/bom-dia';
 import { baterRelogio, verificarSaude } from '@/lib/atendente/saude';
 import { cuidarDoPosEntrega } from '@/lib/atendente/pos-entrega';
+import { cuidarDosPedidosDeDesign } from '@/lib/atendente/design-do-projeto';
 import { avisarPromptsTerminados } from '@/lib/atendente/ideias';
 import { enviarEncomendasPendentes, retomarEncomendas } from '@/lib/atendente/encomenda';
 import { garantirModelos } from '@/lib/atendente/modelos';
@@ -68,10 +69,12 @@ export async function POST(req: NextRequest) {
   const modeloDaFila = await garantirModeloDaFila(db);
   const filas = await mandarFilasDoDia(db);
   const posEntrega = await cuidarDoPosEntrega(db, cfg);
+  // (0106) pedidos do Claude Design só depois das etapas anteriores.
+  const design = await cuidarDosPedidosDeDesign(db, cfg);
   const encomendas = await enviarEncomendasPendentes(db);
   const retomadas = await retomarEncomendas(db);
   const lembretesDeReuniao = await lembrarReunioes(db);
-  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas, posEntrega, promptsAvisados, saude, bomDiaEnviado, modelos, encomendas, retomadas, lembretesDeReuniao });
+  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas, posEntrega, design, promptsAvisados, saude, bomDiaEnviado, modelos, encomendas, retomadas, lembretesDeReuniao });
 }
 
 async function resolverDescontos(db: DbDoAtendente): Promise<number> {

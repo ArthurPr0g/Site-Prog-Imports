@@ -14,6 +14,7 @@ import { lerConfig } from '@/lib/atendente/agente';
 import { avisarArthur } from '@/lib/atendente/avisos';
 import { calcularProposta } from '@/lib/atendente/regras';
 import { tabelaBRL, TABELA_USD } from '@/lib/precos-captacao';
+import { etapasDoDesign, type EtapasDoDesign, type PedidosDesign } from '@/lib/pedidos-design';
 import { criarProjetoDaVenda, abrirRodada, escolhaDoJson, prazosDoCatalogo } from '@/lib/pos-venda';
 import { agendaConectada, criarEventoNaAgenda } from '@/lib/google-agenda';
 import type { Escolha } from '@/lib/simulador';
@@ -61,6 +62,8 @@ export type ProjetoDoPainel = {
     status: 'aberta' | 'entregue' | 'aceita';
   }[];
   reunioes: { id: string; titulo: string; inicio: string; link: string | null; rodadaId: string | null; ata: string | null }[];
+  /** Pedidos do Claude Design (0106): só liberados depois das etapas anteriores. */
+  design: EtapasDoDesign & { pedidoEm: string | null; duda: string | null; nina: string | null };
 };
 
 export async function painelDoPosVendaAction(): Promise<{ projetos: ProjetoDoPainel[]; orcamentos: { id: string; titulo: string }[] } | null> {
@@ -70,16 +73,31 @@ export async function painelDoPosVendaAction(): Promise<{ projetos: ProjetoDoPai
     supabase
       .from('projetos')
       .select(
-        '*, projeto_servicos(*), rodadas(*), reunioes(id, titulo, inicio, meet_link, rodada_id, ata, status), service_quotes(id, title), leads(phone, email, cobrancas(parcela, valor, pago_em, status))'
+        '*, projeto_servicos(*), rodadas(*), reunioes(id, titulo, inicio, meet_link, rodada_id, ata, status), service_quotes(id, title), leads(phone, email, briefing_confirmado_em, cobrancas(parcela, valor, pago_em, status))'
       )
       .order('vendido_em', { ascending: false })
       .limit(200),
     supabase.from('service_quotes').select('id, title, created_at').order('created_at', { ascending: false }).limit(60),
   ]);
+  // Financeiro das indicações (encomendas): pago, sinal ou de graça libera o design.
+  const leadIds = (projetos ?? []).map((p) => p.lead_id).filter(Boolean) as string[];
+  const { data: encomendas } = leadIds.length
+    ? await supabase.from('encomendas').select('lead_id, pagamento').in('lead_id', leadIds).neq('status', 'cancelada')
+    : { data: [] };
+  const pagamentoDo = new Map((encomendas ?? []).map((e) => [e.lead_id, e.pagamento]));
   return {
     orcamentos: (orcamentos ?? []).map((o) => ({ id: o.id, titulo: o.title })),
     projetos: (projetos ?? []).map((p) => {
       const sinal = (p.leads?.cobrancas ?? []).find((c) => c.parcela === 'sinal');
+      const pedidos = (p.pedidos_design ?? {}) as PedidosDesign;
+      const etapas = etapasDoDesign({
+        pasta: p.pasta,
+        sinalPago: !!sinal?.pago_em,
+        pagamentoDaIndicacao: p.lead_id ? (pagamentoDo.get(p.lead_id) ?? null) : null,
+        temPrestacao: !!p.service_order_id,
+        briefingConfirmadoEm: p.briefing_confirmado_em ?? p.leads?.briefing_confirmado_em ?? null,
+        pedidos,
+      });
       return {
         id: p.id,
         leadId: p.lead_id,
@@ -121,6 +139,7 @@ export async function painelDoPosVendaAction(): Promise<{ projetos: ProjetoDoPai
           .filter((r) => r.status === 'marcada')
           .sort((a, b) => a.inicio.localeCompare(b.inicio))
           .map((r) => ({ id: r.id, titulo: r.titulo, inicio: r.inicio, link: r.meet_link, rodadaId: r.rodada_id, ata: r.ata })),
+        design: { ...etapas, pedidoEm: pedidos.pedido_em ?? null, duda: etapas.prontos ? (pedidos.duda ?? null) : null, nina: etapas.prontos ? (pedidos.nina ?? null) : null },
       };
     }),
   };
@@ -316,4 +335,14 @@ export async function excluirProjetoAction(id: string): Promise<ActionResult> {
   if (error) return errResult(friendlyDbError(error, 'Não foi possível excluir.'));
   revalidar();
   return okResult('Projeto excluído.');
+}
+
+/** O Arthur marca à mão que a descoberta foi confirmada (quando a confirmação veio fora da Lia, ex.: reunião). */
+export async function marcarDescobertaConfirmadaAction(projetoId: string): Promise<ActionResult> {
+  const supabase = await admin();
+  if (!supabase) return errResult('Sem permissão.');
+  const { error } = await supabase.from('projetos').update({ briefing_confirmado_em: new Date().toISOString() }).eq('id', projetoId);
+  if (error) return errResult(friendlyDbError(error, 'Não foi possível marcar.'));
+  revalidatePath('/admin/pos-venda');
+  return okResult('Descoberta marcada como confirmada. Se o resto estiver ok, a Bia prepara os pedidos do Claude Design.');
 }
