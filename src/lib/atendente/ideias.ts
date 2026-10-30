@@ -14,8 +14,9 @@ import { custoDaChamada } from './regras';
 import { baixarMidia, enviarTexto, type MensagemRecebida } from './whatsapp-api';
 import { transcrever, transcricaoConfigurada } from './transcricao';
 
-/** "Claude, ..." / "prompt: ..." / "para o Claude: ..." no começo da mensagem. */
-const PREFIXO_DE_PROMPT = /^\s*(?:para o\s+)?(?:claude(?:\s+code)?|prompt)\b[\s,:;.\-–—]*/i;
+/** "Claude, ..." / "prompt: ..." / "para o Claude: ..." no começo da mensagem. No áudio, o Whisper
+ *  costuma ouvir "Claude" como "Cláudio", "Claudio", "Cloud" ou "Clóde": todos valem. */
+const PREFIXO_DE_PROMPT = /^\s*(?:(?:para|pro)\s+o\s+)?(?:(?:claude|cl[aá]udio|cl[oó]ude?|clode|cloud)(?:\s+code)?|prompt)\b[\s,:;.!\-–—]*/i;
 
 export function separarPrompt(texto: string): { tipo: 'ideia' | 'prompt'; texto: string } {
   const m = texto.match(PREFIXO_DE_PROMPT);

@@ -20,6 +20,9 @@ export async function transcrever(dados: Buffer, mime: string): Promise<string |
   form.append('file', new Blob([new Uint8Array(dados)], { type: mime || 'audio/ogg' }), `audio.${ext}`);
   form.append('model', process.env.TRANSCRICAO_MODELO || MODELO_PADRAO);
   form.append('response_format', 'json');
+  // Português e vocabulário que aparece nas mensagens: sem isso, "Claude" vira "Cláudio".
+  form.append('language', 'pt');
+  form.append('prompt', 'Claude, Claude Code, Lia, Hub, Prog Imports, Prog Soluções, Liberdade Médica, Workshop, captação, lead, deploy.');
   try {
     const r = await fetch(process.env.TRANSCRICAO_URL || URL_PADRAO, {
       method: 'POST',
