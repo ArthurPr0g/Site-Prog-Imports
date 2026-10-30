@@ -9,13 +9,21 @@ Pedido do dono em 27/10/2026: "pode fazer todos" (itens 1 a 12).
 
 ---
 
-## Prog Soluções no celular, principalmente iPhone/Safari (30/10/2026) — fazendo, HOJE
+## Prog Soluções no celular, principalmente iPhone/Safari (30/10/2026) — no ar (df4e14f), falta o teste no iPhone dele
 
 Pedido do dono: "passe a limpo o sistema da Prog Soluções na versão mobile, principalmente no iOS, que é onde eu uso.
 Veja se está tudo certo, se o tamanho da tela está correto. Safari não está dando zoom."
 Telas: Captação (todas as abas), Pós-venda, Gastos, Prestação de serviço, Orçamentos de serviços, Catálogo; menu da
 área no celular. Conferir: zoom de pinça no Safari, largura sem rolagem lateral, campos que dão zoom sozinho ao tocar
 (fonte < 16px no iOS), cartões e tabelas que estouram, botões pequenos demais para o dedo.
+
+Feito: (1) zoom de pinça no app instalado: o "puxar para atualizar" (só no app da tela inicial) segurava o gesto
+quando o segundo dedo entrava no topo da página; agora larga o gesto com 2 dedos. (2) Seletor de áreas (4 opções)
+estourava a largura em todas as telas (+23 px): agora rola por dentro. (3) Catálogo de serviços estourava 226 px:
+virou lista de celular (nome · valor · ações; categoria, prazo e situação embaixo) com botões de 36 px.
+Conferido em 390 px (quadro na aba logada): Captação, Atendimento, Pós-venda, Gastos, Prestação, Orçamentos e
+Catálogo sem nada passando da largura. Campos já tinham 16 px no toque (sem zoom automático). **Falta:** o Arthur
+testar a pinça no iPhone dele (simulador não reproduz gesto de dois dedos nem o app instalado).
 
 ## Separar visualmente a Prog Imports (loja) da Prog Soluções (serviços) (30/10/2026) — no ar (b280bb6)
 
