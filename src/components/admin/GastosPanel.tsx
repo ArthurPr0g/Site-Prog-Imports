@@ -5,7 +5,7 @@
 // magnitude. Cada gráfico tem dica ao passar o mouse e a tabela dos números logo abaixo.
 
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
-import { Bot, CalendarDays, Coins, Gauge, MessageCircle, Mic, Plus, Receipt, Save, Settings2, Target, Trash2, TrendingUp, TriangleAlert, CircleCheck } from 'lucide-react';
+import { Bot, CalendarDays, Users, Coins, Gauge, MessageCircle, Mic, Plus, Receipt, Save, Settings2, Target, Trash2, TrendingUp, TriangleAlert, CircleCheck } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { gastosAction, salvarCustosAction, type ConfigDeCustos, type CustoFixo, type Gastos, type Periodo } from '@/app/actions/gastos';
 
@@ -333,6 +333,55 @@ export function GastosPanel() {
           </span>
           <span>Ao atingir, a Lia para de responder e te avisa</span>
         </div>
+      </Cartao>
+
+      {/* Gasto por agente (0110) */}
+      <Cartao atraso={280}>
+        <Titulo Icon={Users} dica={`${nomePeriodo} · dólar a ${brl(d.dolar)}`}>
+          Gasto por agente
+        </Titulo>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[520px] text-[13px]">
+            <thead>
+              <tr className="text-left text-[11px] font-bold uppercase tracking-[.06em] text-fg-faded">
+                <th className="pb-2">Agente</th>
+                <th className="pb-2 text-right">Execuções</th>
+                <th className="pb-2 text-right">Dólar</th>
+                <th className="pb-2 text-right">Real</th>
+                <th className="pb-2 text-right">Por execução</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.agentes.map((a) => {
+                const medidas = a.execucoes - a.semMedicao;
+                return (
+                  <tr key={a.chave} className="border-t border-white/5">
+                    <td className="py-2 pr-2">
+                      <span className="font-bold text-fg">{a.nome}</span>{' '}
+                      <span
+                        className={`ml-1 rounded-full px-1.5 py-0.5 text-[10.5px] font-bold ${a.cobranca === 'api' ? 'bg-accent/15 text-accent' : 'bg-white/8 text-fg-tertiary'}`}
+                        title={a.cobranca === 'api' ? 'Cobrado na API da Anthropic' : 'Roda pela assinatura do Claude: valor equivalente em preço de API, não cobrado à parte'}
+                      >
+                        {a.cobranca === 'api' ? 'API' : 'assinatura'}
+                      </span>
+                      <span className="block text-[11.5px] text-fg-tertiary">
+                        {a.papel}
+                        {a.semMedicao ? ` · ${a.semMedicao} sem medição` : ''}
+                      </span>
+                    </td>
+                    <td className="py-2 text-right tabular-nums">{mil(a.execucoes)}</td>
+                    <td className="py-2 text-right tabular-nums">{usd(a.usd)}</td>
+                    <td className="py-2 text-right font-bold tabular-nums text-fg">{brl(a.usd * d.dolar)}</td>
+                    <td className="py-2 text-right tabular-nums text-fg-tertiary">{medidas > 0 ? usd(a.usd / medidas) : '–'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-2 text-[12px] text-fg-tertiary">
+          <b className="text-fg">Lia</b>: gasto real na API (execuções = chamadas à IA). <b className="text-fg">Agentes do Claude Code</b>: rodam pela sua assinatura do Claude; o valor é o equivalente em preço de API que cada execução informa, para comparar quem pesa mais. Medição desde 30/10/2026, só das execuções no PC.
+        </p>
       </Cartao>
 
       <div className="grid gap-4 lg:grid-cols-2">

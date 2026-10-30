@@ -526,6 +526,10 @@ export type Database = {
       }
       ideias: {
         Row: {
+          custo_usd: number | null
+          duracao_ms: number | null
+          tokens_entrada: number | null
+          tokens_saida: number | null
           agente: string | null
           pasta_exclusiva: string | null
           rodada_id: string | null
@@ -550,6 +554,10 @@ export type Database = {
           titulo: string | null
         }
         Insert: {
+          custo_usd?: number | null
+          duracao_ms?: number | null
+          tokens_entrada?: number | null
+          tokens_saida?: number | null
           agente?: string | null
           pasta_exclusiva?: string | null
           rodada_id?: string | null
@@ -574,6 +582,10 @@ export type Database = {
           titulo?: string | null
         }
         Update: {
+          custo_usd?: number | null
+          duracao_ms?: number | null
+          tokens_entrada?: number | null
+          tokens_saida?: number | null
           agente?: string | null
           pasta_exclusiva?: string | null
           rodada_id?: string | null

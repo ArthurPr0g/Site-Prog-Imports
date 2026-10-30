@@ -9,6 +9,7 @@ import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/a
 import { buscarCotacaoMercado } from '@/lib/usd-rate';
 import type { Json } from '@/lib/supabase/database.types';
 import { MODELOS } from '@/lib/atendente/modelos';
+import { TIME, type ChaveDoAgente } from '@/lib/agentes/time';
 
 export type CustoFixo = { id: string; nome: string; valor_brl: number; periodo: 'mensal' | 'anual'; categoria: string };
 export type ConfigDeCustos = {
@@ -44,6 +45,12 @@ export type Gastos = {
   vendas: { fechadas: number; custoPorVendaBrl: number | null; iaDasFechadasUsd: number };
   estimativa: { usd: number; partes: { nome: string; usd: number }[]; base: { porResposta: number; porPesquisa: number; medidoPorResposta: boolean; medidoPorPesquisa: boolean } };
   leads: { id: string; nome: string; status: string; usd: number }[];
+  /**
+   * Gasto por agente (pedido do Arthur, 30/10/2026; 0110). A Lia é API de verdade (ia_usage). Os agentes do
+   * Claude Code rodam pela assinatura do Claude: o valor é o equivalente em preço de API que o claude -p
+   * informa em cada execução (não é cobrado à parte). Execuções da nuvem e anteriores a 30/10 não têm medição.
+   */
+  agentes: { chave: string; nome: string; papel: string; cobranca: 'api' | 'assinatura'; usd: number; execucoes: number; semMedicao: number; tokens: number }[];
 };
 
 const PADRAO: ConfigDeCustos = {
@@ -92,7 +99,7 @@ export async function gastosAction(periodo: Periodo = 'mes'): Promise<Gastos | n
   const desde = inicio(periodo).toISOString();
   const mes = inicio('mes').toISOString();
 
-  const [{ data: cfgRow }, { data: usos }, { data: msgs }, { data: avisos }, { data: audiosIdeias }, cot, { count: fechadas }] = await Promise.all([
+  const [{ data: cfgRow }, { data: usos }, { data: msgs }, { data: avisos }, { data: audiosIdeias }, cot, { count: fechadas }, { data: execucoes }] = await Promise.all([
     db.from('ia_config').select('custos, monthly_budget_usd, modelos_categoria').eq('id', true).maybeSingle(),
     db.from('ia_usage').select('created_at, model, cost_usd, finalidade, conversation_id, lead_id, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens').gte('created_at', desde < mes ? desde : mes).limit(50000),
     db.from('ia_messages').select('created_at, direction, author, body, media_type, status').gte('created_at', desde).limit(50000),
@@ -100,6 +107,7 @@ export async function gastosAction(periodo: Periodo = 'mes'): Promise<Gastos | n
     db.from('ideias').select('criado_em').eq('origem', 'whatsapp_audio').gte('criado_em', desde).limit(20000),
     buscarCotacaoMercado(),
     db.from('leads').select('id', { count: 'exact', head: true }).eq('status', 'fechado'),
+    db.from('ideias').select('agente, custo_usd, tokens_entrada, tokens_saida').eq('tipo', 'prompt').in('status', ['feito', 'parcial']).gte('atualizado_em', desde).limit(20000),
   ]);
   const config: ConfigDeCustos = { ...PADRAO, ...((cfgRow?.custos ?? {}) as Partial<ConfigDeCustos>) };
   const dolarDoDia = config.dolar === null || !(Number(config.dolar) > 0);
@@ -225,7 +233,39 @@ export async function gastosAction(periodo: Periodo = 'mes'): Promise<Gastos | n
     vendas: { fechadas: fechadas ?? 0, custoPorVendaBrl: fechadas ? totalBrl / fechadas : null, iaDasFechadasUsd: iaDasFechadas },
     estimativa: { usd: estPartes.reduce((s, p) => s + p.usd, 0), partes: estPartes, base: { porResposta, porPesquisa, medidoPorResposta: medidoResp, medidoPorPesquisa: medidoPesq } },
     leads: listaLeads.slice(0, 10),
+    agentes: gastoPorAgente(iaUsd, noPeriodo.length, noPeriodo.reduce((s, u) => s + u.input_tokens + u.output_tokens + u.cache_read_tokens + u.cache_write_tokens, 0), execucoes ?? []),
   };
+}
+
+/** Lia (API real) primeiro; depois os agentes do Claude Code pelo custo equivalente, do maior para o menor. */
+function gastoPorAgente(
+  liaUsd: number,
+  liaChamadas: number,
+  liaTokens: number,
+  execucoes: { agente: string | null; custo_usd: number | null; tokens_entrada: number | null; tokens_saida: number | null }[]
+): Gastos['agentes'] {
+  const mapa = new Map<string, Gastos['agentes'][number]>();
+  for (const e of execucoes) {
+    const chave = e.agente && e.agente in TIME ? e.agente : 'arthur';
+    const a = TIME[chave as ChaveDoAgente];
+    const v = mapa.get(chave) ?? {
+      chave,
+      nome: a?.nome ?? 'Pedidos seus',
+      papel: a?.papel ?? 'o que você pede ao Claude pelo WhatsApp',
+      cobranca: 'assinatura' as const,
+      usd: 0,
+      execucoes: 0,
+      semMedicao: 0,
+      tokens: 0,
+    };
+    v.execucoes += 1;
+    if (e.custo_usd === null) v.semMedicao += 1;
+    v.usd += Number(e.custo_usd ?? 0);
+    v.tokens += Number(e.tokens_entrada ?? 0) + Number(e.tokens_saida ?? 0);
+    mapa.set(chave, v);
+  }
+  const lia = { chave: 'lia', nome: 'Lia', papel: TIME.lia.papel, cobranca: 'api' as const, usd: liaUsd, execucoes: liaChamadas, semMedicao: 0, tokens: liaTokens };
+  return [lia, ...[...mapa.values()].sort((a, b) => b.usd - a.usd || b.execucoes - a.execucoes)];
 }
 
 const num = (v: unknown, min: number, max: number, padrao: number) => {

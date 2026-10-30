@@ -12,6 +12,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { DbDoAtendente } from './db';
 import { custoDaChamada, type ConfigDoAtendente } from './regras';
 import { avisarArthur } from './avisos';
+import { buscarCotacaoMercado } from '@/lib/usd-rate';
 import { baixarMidia, enviarComOpcoes, enviarTexto, JANELA_MS, type MensagemRecebida } from './whatsapp-api';
 import { enviarModeloAoCliente } from './modelos';
 import { transcrever, transcricaoConfigurada } from './transcricao';
@@ -378,7 +379,7 @@ export async function escolherProjeto(db: DbDoAtendente, id: string, chave: stri
 export async function avisarPromptsTerminados(db: DbDoAtendente, cfg: ConfigDoAtendente): Promise<number> {
   const { data } = await db
     .from('ideias')
-    .select('id, titulo, texto, status, resultado, falta, avisado_status, criado_em, executor, origem, conversation_id, rodada_id, agente, projeto, pasta_exclusiva')
+    .select('id, titulo, texto, status, resultado, falta, avisado_status, criado_em, executor, origem, conversation_id, rodada_id, agente, projeto, pasta_exclusiva, custo_usd')
     .eq('tipo', 'prompt')
     .in('status', ['feito', 'parcial', 'em_execucao'])
     .order('atualizado_em', { ascending: true })
@@ -429,9 +430,16 @@ export async function avisarPromptsTerminados(db: DbDoAtendente, cfg: ConfigDoAt
     const responder = /Aguardando você:/.test(i.resultado ?? '')
       ? '\n\n↩️ *Responda esta mensagem* (número da opção, texto ou áudio) e eu continuo daqui.'
       : '\n\n↩️ Quer mudar algo? Responda esta mensagem (texto ou áudio).';
+    // Gasto por agente (0110): quanto a execução custou (equivalente em API; roda pela assinatura).
+    let custo = '';
+    if (i.custo_usd !== null) {
+      const cot = await buscarCotacaoMercado();
+      const usd = Number(i.custo_usd);
+      custo = `\n💲 Custo: US$ ${usd.toFixed(2)}${cot.ok ? ` (R$ ${(usd * cot.cotacao.valor).toFixed(2).replace('.', ',')})` : ''} em preço de API, coberto pela assinatura`;
+    }
     const texto =
       i.status === 'feito'
-        ? `${quem}📝 *Pedido:* ${pedido}\n\n🛠️ *O que fiz:* ${limpo}\n\n${naNuvem ? '☁️ Feito na nuvem' : '💻 Feito no PC'}${vistoria}${responder}`
+        ? `${quem}📝 *Pedido:* ${pedido}\n\n🛠️ *O que fiz:* ${limpo}\n\n${naNuvem ? '☁️ Feito na nuvem' : '💻 Feito no PC'}${custo}${vistoria}${responder}`
         : `${quem}📝 *Pedido:* ${pedido}\n\n☁️ *Já feito na nuvem:* ${limpo}\n\n💻 *Fica para o PC terminar:* ${(i.falta ?? '').trim().slice(0, 600)}`;
     await avisarArthur(db, cfg, {
       // Conserto automático de alarme/ensaio (30/10/2026): o Arthur pediu mensagem própria na conclusão.
