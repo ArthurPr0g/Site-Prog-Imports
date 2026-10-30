@@ -31,10 +31,13 @@ export default async function AdminCaptacaoPage() {
 
   return (
     <div>
-      <AdminPageHeader
-        title="Captação"
-        subtitle="Empresas do Google Maps (Brasil e EUA) com chance de fechar site, loja, sistema ou marca."
-      />
+      {/* Cabeçalho dentro do tema "Noite azul": fora dele o título ficava escuro sobre o céu escuro. */}
+      <div className="tema-apple [color-scheme:dark]">
+        <AdminPageHeader
+          title="Captação"
+          subtitle="Empresas do Google Maps (Brasil e EUA) com chance de fechar site, loja, sistema ou marca."
+        />
+      </div>
       <CaptacaoPanel
         leads={leads}
         catalogo={catalogo}

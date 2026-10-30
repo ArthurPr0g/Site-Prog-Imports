@@ -390,7 +390,9 @@ async function ocupados(db: DbDoAtendente, de: Date, ate: Date): Promise<{ lista
 
 async function executar(e: Estado, nome: string, entrada: Record<string, unknown>): Promise<string> {
   const { db, cfg, conversaId } = e;
-  const leadId = e.simulado ? null : e.leadId;
+  // No simulador o lead fica de fora (teste não suja lead real), menos no ensaio com lead fictício.
+  const ensaio = e.contato.startsWith(`${SIMULADOR}ensaio-`);
+  const leadId = e.simulado && !ensaio ? null : e.leadId;
   if (e.simulado) {
     const fingido = simular(e, nome, entrada);
     if (fingido) return fingido;

@@ -8,10 +8,13 @@ import { PosVendaPanel } from '@/components/admin/PosVendaPanel';
 export default function AdminPosVendaPage() {
   return (
     <div>
-      <AdminPageHeader
-        title="Pós-venda"
-        subtitle="Projetos vendidos da Prog Soluções: rodadas de ajuste, reuniões, prazos e entregas."
-      />
+      {/* Cabeçalho dentro do tema "Noite azul": fora dele o título ficava escuro sobre o céu escuro. */}
+      <div className="tema-apple [color-scheme:dark]">
+        <AdminPageHeader
+          title="Pós-venda"
+          subtitle="Projetos vendidos da Prog Soluções: rodadas de ajuste, reuniões, prazos e entregas."
+        />
+      </div>
       <PosVendaPanel />
     </div>
   );
