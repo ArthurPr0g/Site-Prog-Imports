@@ -27,6 +27,10 @@ export const SITE_DESCRIPTION =
   process.env.NEXT_PUBLIC_BRAND_DESCRIPTION ||
   'Importação de tecnologia premium direto dos Estados Unidos. MacBooks, iPhones, notebooks gamer e mais, com garantia e atendimento personalizado.';
 
+/** Endereço público com www (30/10/2026): o domínio sem www responde com redirecionamento 308, e o robô
+ *  da prévia do WhatsApp lida mal com isso (a imagem saía borrada). Imagens de prévia usam este. */
+export const URL_PUBLICA = SITE_URL.replace('://prog-imports.com', '://www.prog-imports.com');
+
 /** URL absoluta a partir de um caminho do site. */
 export function urlAbsoluta(caminho: string): string {
   return `${SITE_URL}${caminho.startsWith('/') ? caminho : `/${caminho}`}`;
@@ -45,10 +49,9 @@ export function descricaoCurta(texto: string, limite = 155): string {
   return `${cortado.slice(0, ultimoEspaco > 60 ? ultimoEspaco : limite).trim()}…`;
 }
 
-/** Imagem padrão de compartilhamento. A logo é o que existe hoje no projeto;
- *  quando o dono fornecer uma arte 1200 × 630, é só trocar o caminho. */
+/** Imagem padrão de compartilhamento: arte 1200 × 630 gerada com o logo centralizado (/og/prog-imports, 30/10/2026). */
 export const OG_IMAGE_PADRAO = {
-  url: urlAbsoluta('/images/logo.png'),
+  url: `${URL_PUBLICA}/og/prog-imports`,
   width: 1200,
   height: 630,
   alt: SITE_NAME,

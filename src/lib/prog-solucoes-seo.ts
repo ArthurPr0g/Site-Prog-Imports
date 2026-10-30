@@ -4,7 +4,7 @@
 // privadas). A loja continua com os metadados dela (pedido do dono, 28/10/2026).
 
 import type { Metadata } from 'next';
-import { SITE_URL } from '@/lib/seo';
+import { URL_PUBLICA } from '@/lib/seo';
 
 export function metadadosProgSolucoes(o: {
   titulo: string;
@@ -19,7 +19,7 @@ export function metadadosProgSolucoes(o: {
     s: o.subtituloDaImagem ?? 'Prog Soluções · Goiânia',
     ...(o.ingles ? { l: 'en' } : {}),
   });
-  const imagem = { url: `${SITE_URL}/og/prog-solucoes?${q}`, width: 1200, height: 630, alt: o.titulo };
+  const imagem = { url: `${URL_PUBLICA}/og/prog-solucoes?${q}`, width: 1200, height: 630, alt: o.titulo };
   return {
     title: { absolute: o.titulo },
     description: o.descricao,

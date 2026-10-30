@@ -15,6 +15,14 @@ import { custoDaChamada, type ConfigDoAtendente } from './regras';
 import { avisarArthur } from './avisos';
 
 const MODELO = 'claude-sonnet-5-5';
+/** Até ~420 caracteres, terminando numa frase inteira (o aviso no WhatsApp não corta no meio da palavra). */
+const frase = (t: string) => {
+  const s = (t ?? '').trim();
+  if (s.length <= 420) return s;
+  const corte = s.slice(0, 420);
+  const fim = Math.max(corte.lastIndexOf('. '), corte.lastIndexOf('! '), corte.lastIndexOf('? '));
+  return fim > 120 ? corte.slice(0, fim + 1) : `${corte.slice(0, corte.lastIndexOf(' '))}…`;
+};
 const MAX_BUSCAS = 6;
 
 const CAMPOS = ['nome_do_negocio', 'ramo', 'cidade', 'estado', 'site', 'instagram', 'facebook', 'linkedin', 'endereco', 'email'] as const;
@@ -186,7 +194,7 @@ export async function pesquisarProximo(db: DbDoAtendente, cfg: ConfigDoAtendente
 
   await avisarArthur(db, cfg, {
     titulo: `🔎 Pesquisa de ${l.name} ${velhos.length ? 'atualizada' : 'pronta'}`,
-    texto: `${limpo(resultado.resumo) || 'Pouca coisa pública encontrada.'}\n\n📌 ${novos} informação(ões) nova(s) para a Lia confirmar com o cliente.`,
+    texto: `${frase(resultado.resumo) || 'Pouca coisa pública encontrada.'}\n\n📌 ${novos} informação(ões) nova(s) para a Lia confirmar com o cliente.`,
     leadId: l.id,
   });
   return l.id;

@@ -13,7 +13,9 @@ for (const l of readFileSync(join(RAIZ, '.env.local'), 'utf8').split(/\r?\n/)) {
 }
 
 async function main() {
-  const [titulo, texto] = process.argv.slice(2);
+  // Quebras de linha vão como "\n" literal: o npx no Windows corta o argumento na primeira quebra real.
+  const [titulo, bruto] = process.argv.slice(2);
+  const texto = bruto?.replace(/\\n/g, '\n');
   if (!titulo || !texto) throw new Error('Uso: avisar-dono.ts "Título" "Texto"');
   const { dbDoAtendente } = await import('../src/lib/atendente/db');
   const { lerConfig } = await import('../src/lib/atendente/agente');

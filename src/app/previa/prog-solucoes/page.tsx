@@ -11,6 +11,11 @@ const PAGINAS: Record<string, { titulo: string; sub: string; descricao: string }
     sub: 'Projetos, rodadas de ajuste, reuniões e entregas',
     descricao: 'Painel da Prog Soluções: projetos vendidos, rodadas de ajuste, reuniões e prazos.',
   },
+  gastos: {
+    titulo: 'Gastos · Prog Soluções',
+    sub: 'IA, mensagens e custos da operação',
+    descricao: 'Painel da Prog Soluções: quanto custa a operação e cada venda.',
+  },
   captacao: {
     titulo: 'Captação · Prog Soluções',
     sub: 'Leads, atendimento da Lia e resultados',
