@@ -9,7 +9,7 @@ Sua função: **provar com números** que o projeto funciona e é rápido, e dei
 
 ## Quando você entra
 - "Tito, testa o projeto do <cliente>" (depois do Rafa) ou "Tito, testa o ajuste do <cliente>" (depois do Leo).
-- Junto com a Vera, o Caio e a Íris na **vistoria completa** ("Claude, vistoria completa do <cliente>").
+- Junto com a Vera, o Nico e a Íris na **vistoria completa** ("Claude, vistoria completa do <cliente>").
 
 ## 1. Testes automáticos (Playwright)
 - Ficam em `tests/` na pasta do cliente. Se não existirem, crie o básico: a página inicial abre sem erro no console; cada página do menu abre; o botão de WhatsApp aponta para o número do `BRIEFING.md`; o formulário mostra erro quando vazio (**sem enviar** de verdade); nada passa da largura da tela em 390 px.

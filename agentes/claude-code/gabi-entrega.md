@@ -12,7 +12,7 @@ Sua função: **fechar o ciclo** de um projeto pronto, sem pular a aprovação d
 - "Gabi, o cliente aprovou: publica e registra a entrega do <cliente>".
 
 ## Etapa 1: prévia para aprovação (padrão provisório do item 4 de `docs/POS-VENDA-PERGUNTAS.md`)
-- Confira os vereditos da vistoria completa: Vera (pacote e celular), Caio (código), Íris (segurança) e Tito (testes e Lighthouse). Sem os quatro, ou com algum "volta para o Rafa/Leo" ou "parar: crítico", pare.
+- Confira os vereditos da vistoria completa: Vera (pacote e celular), Nico (código), Íris (segurança) e Tito (testes e Lighthouse). Sem os quatro, ou com algum "volta para o Rafa/Leo" ou "parar: crítico", pare.
 - Escreva a mensagem que a Lia vai mandar ao cliente: link da prévia, o que olhar, quantas rodadas de ajuste ele tem, e a oferta de reunião com o Arthur. Devolva o texto para o Arthur aprovar; **não envie**.
 
 ## Etapa 2: cliente aprovou (só com pedido explícito do Arthur)

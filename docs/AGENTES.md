@@ -17,7 +17,7 @@ A **Lia** continua sendo a única que fala com o cliente; os outros trabalham po
 | 5 | **Nina** | Protótipo navegável das telas + handoff para o Claude Code | Claude Design | Depois da Duda | `agentes/claude-design/nina-prototipo.md` |
 | 6 | **Rafa** | Constrói o site/loja a partir do handoff, repositório e prévia | Claude Code (`rafa-construcao`) | "Rafa, constrói o projeto do X" | `agentes/claude-code/rafa-construcao.md` |
 | 7 | **Vera** | Vistoria: build, celular, pacote vendido, protótipo. Não altera código | Claude Code (`vera-vistoria`) | Depois do Rafa ou do Leo | `agentes/claude-code/vera-vistoria.md` |
-| 7b | **Caio** | Revisão de código: bugs, erros silenciosos, código duplicado, tipos. Não altera código | Claude Code (`caio-revisao`) | Vistoria completa | `agentes/claude-code/caio-revisao.md` |
+| 7b | **Nico** | Revisão de código: bugs, erros silenciosos, código duplicado, tipos. Não altera código | Claude Code (`nico-revisao`) | Vistoria completa | `agentes/claude-code/nico-revisao.md` |
 | 7c | **Íris** | Cibersegurança: chaves expostas, banco (RLS), cabeçalhos, bibliotecas, formulários, LGPD. Só verificações não destrutivas do próprio cliente | Claude Code (`iris-seguranca`) | Vistoria completa | `agentes/claude-code/iris-seguranca.md` |
 | 7d | **Tito** | Testes automáticos (Playwright em `tests/`), Lighthouse no celular, links quebrados. Só escreve testes | Claude Code (`tito-testes`) | Vistoria completa | `agentes/claude-code/tito-testes.md` |
 | 8 | **Leo** | Ajustes pedidos pelo cliente, só na pasta do projeto dele | Claude Code (`leo-ajustes`) | **Automático** quando o cliente pede ajuste à Lia | `agentes/claude-code/leo-ajustes.md` |
@@ -29,14 +29,14 @@ A **Lia** continua sendo a única que fala com o cliente; os outros trabalham po
 Lia vende ─▶ cliente paga o sinal (Asaas)
               └─▶ [automático] prestação aberta + Lia pede o material + Bia na fila do PC
 Bia abre o projeto ─▶ Arthur cola o pedido no Claude Design ─▶ Duda (identidade) ─▶ Nina (telas + handoff)
-Handoff salvo em handoff/ ─▶ Rafa constrói ─▶ vistoria completa (Vera + Caio + Íris + Tito, juntos) ─▶ Gabi prepara a entrega
+Handoff salvo em handoff/ ─▶ Rafa constrói ─▶ vistoria completa (Vera + Nico + Íris + Tito, juntos) ─▶ Gabi prepara a entrega
 Cliente aprova ─▶ Gabi publica e registra ─▶ Téo gera a cobrança da entrega (Arthur confirma) ─▶ Lia manda
 Depois: cliente pede ajuste à Lia ─▶ [automático] Leo ─▶ Lia avisa o cliente
 ```
 
 ## Como chamar um agente
 - Pelo WhatsApp da Lia: **"Claude, Rafa, constrói o projeto do <cliente>"** (vai para a fila do PC como qualquer pedido).
-- **Vistoria completa** (os 4 de qualidade de uma vez): "Claude, vistoria completa do <cliente>" — o Claude Code chama Vera, Caio, Íris e Tito em paralelo e junta os vereditos.
+- **Vistoria completa** (os 4 de qualidade de uma vez): "Claude, vistoria completa do <cliente>" — o Claude Code chama Vera, Nico, Íris e Tito em paralelo e junta os vereditos.
 - Numa sessão do Claude Code: "use a Vera para conferir o projeto do <cliente>" (ou `@vera-vistoria`).
 - Os avisos de "Comecei" e "Pedido concluído" no WhatsApp mostram **🤖 Agente: <nome>** quando o pedido veio de um agente.
 

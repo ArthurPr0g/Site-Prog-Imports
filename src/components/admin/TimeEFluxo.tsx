@@ -85,10 +85,10 @@ const TIME: Agente[] = [
     comando: 'Claude, Vera, confere o projeto do <cliente>',
   },
   {
-    chave: 'caio', nome: 'Caio', papel: 'Revisão de código', fase: 'qualidade', Icon: CodeXml, onde: 'Claude Code',
+    chave: 'nico', nome: 'Nico', papel: 'Revisão de código', fase: 'qualidade', Icon: CodeXml, onde: 'Claude Code',
     faz: ['Lê o código como um revisor sênior', 'Caça bugs, erros silenciosos e código duplicado', 'Aponta arquivo e linha, com a correção sugerida'],
     naoFaz: 'Mexer no código ou apontar gosto pessoal.',
-    comando: 'Claude, Caio, revisa o projeto do <cliente>',
+    comando: 'Claude, Nico, revisa o projeto do <cliente>',
   },
   {
     chave: 'iris', nome: 'Íris', papel: 'Cibersegurança', fase: 'qualidade', Icon: ShieldCheck, onde: 'Claude Code',
@@ -164,10 +164,10 @@ const ETAPAS: Etapa[] = [
     texto: 'O Rafa transforma o protótipo em site de verdade, com repositório privado e prévia publicada na Vercel.',
   },
   {
-    titulo: 'Vistoria completa', fase: 'qualidade', quem: ['vera', 'caio', 'iris', 'tito'], paralelo: true,
+    titulo: 'Vistoria completa', fase: 'qualidade', quem: ['vera', 'nico', 'iris', 'tito'], paralelo: true,
     voce: '"Claude, vistoria completa do X"',
     volta: 'Reprovou? Volta para o Rafa',
-    texto: 'Os quatro conferem ao mesmo tempo: o que se vê (Vera), o código (Caio), a segurança (Íris) e os testes e a velocidade (Tito).',
+    texto: 'Os quatro conferem ao mesmo tempo: o que se vê (Vera), o código (Nico), a segurança (Íris) e os testes e a velocidade (Tito).',
   },
   {
     titulo: 'Aprovação do cliente', fase: 'entrega', quem: ['gabi', 'lia'],
@@ -205,7 +205,7 @@ const FUNCOES: Funcao[] = [
   { grupo: 'whatsapp', Icon: LayoutDashboard, titulo: 'Relatório da captação', texto: 'Funil, meta do semestre e custo da IA na hora.', comando: 'relatório' },
   { grupo: 'whatsapp', Icon: Bot, titulo: 'Pedido para o Claude Code', texto: 'Texto ou áudio começando com "Claude" vira pedido na fila. PC ligado: roda no PC. Desligado: a rotina na nuvem tenta a cada hora.', comando: 'Claude, ...' },
   { grupo: 'whatsapp', Icon: Users, titulo: 'Chamar um agente', texto: 'Diga o nome do agente depois de "Claude". Os avisos dizem qual agente fez.', comando: 'Claude, Rafa, constrói o projeto do <cliente>' },
-  { grupo: 'whatsapp', Icon: ShieldCheck, titulo: 'Vistoria completa', texto: 'Vera, Caio, Íris e Tito conferem ao mesmo tempo e juntam os vereditos.', comando: 'Claude, vistoria completa do <cliente>' },
+  { grupo: 'whatsapp', Icon: ShieldCheck, titulo: 'Vistoria completa', texto: 'Vera, Nico, Íris e Tito conferem ao mesmo tempo e juntam os vereditos.', comando: 'Claude, vistoria completa do <cliente>' },
   { grupo: 'whatsapp', Icon: Sparkles, titulo: 'Anotar uma ideia', texto: 'Qualquer mensagem ou áudio que não seja pedido vira Ideia no Hub, já organizada.' },
   { grupo: 'whatsapp', Icon: FolderOpen, titulo: 'Dizer de qual projeto é', texto: 'Quando a Lia pergunta o projeto, toque no botão ou escreva.', comando: 'Projeto: Portfólio' },
   { grupo: 'whatsapp', Icon: RotateCcw, titulo: 'Desfazer mensagem errada', texto: 'Arquiva a última anotação dos últimos 30 minutos.', comando: 'desconsidera, mandei errado' },
