@@ -335,33 +335,34 @@ async function montarPreBriefing(
     ? `${pesquisa.resumo ?? ''}\n${(pesquisa.itens ?? []).slice(0, 30).map((i) => `- ${i.campo}: ${i.valor}${i.fonte ? ` (${i.fonte})` : ''}`).join('\n')}`
     : 'A pesquisa não achou nada (ou não rodou).';
   try {
-    const r = await new Anthropic().messages.create({
-      model: 'claude-sonnet-5-5',
-      max_tokens: 1500,
-      system: `${REGRAS_DO_PREPARO}\n\n${await textoDoCatalogo(db)}`,
-      tools: [
-        {
-          name: 'registrar_pre_briefing',
-          description: 'Registra o pré-briefing. Chame uma vez.',
-          input_schema: { type: 'object', properties: Object.fromEntries(CAMPOS_DO_PREPARO.map((k) => [k, { type: 'string' }])), required: [...CAMPOS_DO_PREPARO] },
-        },
-      ],
-      tool_choice: { type: 'tool', name: 'registrar_pre_briefing' },
-      messages: [{ role: 'user', content: `<formulario>\n${formulario}\n</formulario>\n\n<pesquisa>\n${doLead}\n${achados}\n</pesquisa>` }],
-    });
-    const u = r.usage;
-    await db.from('ia_usage').insert({
-      model: r.model,
-      finalidade: 'preparo_portfolio',
-      lead_id: leadId,
-      input_tokens: u.input_tokens,
-      output_tokens: u.output_tokens,
-      cache_read_tokens: u.cache_read_input_tokens ?? 0,
-      cache_write_tokens: u.cache_creation_input_tokens ?? 0,
-      cost_usd: custoDaChamada(r.model, { entrada: u.input_tokens, saida: u.output_tokens, cacheLido: u.cache_read_input_tokens ?? 0, cacheEscrito: u.cache_creation_input_tokens ?? 0 }),
-    });
-    const uso = r.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use');
-    const e = (uso?.input ?? {}) as Record<string, unknown>;
+    // O Sonnet 5.5 não aceita tool_choice forçado: a ferramenta fica livre e, se ele responder em texto,
+    // pede uma vez para chamar (mesmo jeito da pesquisa.ts).
+    const sistema = `${REGRAS_DO_PREPARO}\n\n${await textoDoCatalogo(db)}\n\nNo fim, chame registrar_pre_briefing uma vez.`;
+    const ferramenta: Anthropic.Tool = {
+      name: 'registrar_pre_briefing',
+      description: 'Registra o pré-briefing. Chame uma vez.',
+      input_schema: { type: 'object', properties: Object.fromEntries(CAMPOS_DO_PREPARO.map((k) => [k, { type: 'string' }])), required: [...CAMPOS_DO_PREPARO] },
+    };
+    const mensagens: Anthropic.MessageParam[] = [{ role: 'user', content: `<formulario>\n${formulario}\n</formulario>\n\n<pesquisa>\n${doLead}\n${achados}\n</pesquisa>` }];
+    let uso: Anthropic.ToolUseBlock | undefined;
+    for (let volta = 0; volta < 2 && !uso; volta++) {
+      const r = await new Anthropic().messages.create({ model: 'claude-sonnet-5-5', max_tokens: 2000, system: sistema, tools: [ferramenta], messages: mensagens });
+      const u = r.usage;
+      await db.from('ia_usage').insert({
+        model: r.model,
+        finalidade: 'preparo_portfolio',
+        lead_id: leadId,
+        input_tokens: u.input_tokens,
+        output_tokens: u.output_tokens,
+        cache_read_tokens: u.cache_read_input_tokens ?? 0,
+        cache_write_tokens: u.cache_creation_input_tokens ?? 0,
+        cost_usd: custoDaChamada(r.model, { entrada: u.input_tokens, saida: u.output_tokens, cacheLido: u.cache_read_input_tokens ?? 0, cacheEscrito: u.cache_creation_input_tokens ?? 0 }),
+      });
+      uso = r.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use' && b.name === ferramenta.name);
+      if (!uso) mensagens.push({ role: 'assistant', content: r.content }, { role: 'user', content: 'Agora chame registrar_pre_briefing com o pré-briefing.' });
+    }
+    if (!uso) return reserva;
+    const e = (uso.input ?? {}) as Record<string, unknown>;
     const v = (k: (typeof CAMPOS_DO_PREPARO)[number], max = 400) => String(e[k] ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
     const assunto = v('assunto', 120).replace(/[*_]+/g, '').replace(/[.!]+$/, '');
     return {
