@@ -1023,6 +1023,7 @@ export type Database = {
         Row: {
           custos: Json
           modelos: Json
+          modelos_categoria: Json
           encomenda_template_status: string | null
           agenda: Json
           active: boolean
@@ -1048,6 +1049,7 @@ export type Database = {
         Insert: {
           custos?: Json
           modelos?: Json
+          modelos_categoria?: Json
           encomenda_template_status?: string | null
           agenda?: Json
           active?: boolean
@@ -1073,6 +1075,7 @@ export type Database = {
         Update: {
           custos?: Json
           modelos?: Json
+          modelos_categoria?: Json
           encomenda_template_status?: string | null
           agenda?: Json
           active?: boolean

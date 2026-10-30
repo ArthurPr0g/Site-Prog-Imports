@@ -197,13 +197,19 @@ export async function enviarModelo(para: string, nome: string, parametros: strin
 
 /** Status do modelo na conta (APPROVED, PENDING, REJECTED...). null = não existe. */
 export async function statusDoModelo(wabaId: string, nome: string): Promise<string | null> {
+  return (await infoDoModelo(wabaId, nome))?.status ?? null;
+}
+
+/** Status e categoria do modelo na Meta (a Meta pode trocar UTILITY por MARKETING, que custa mais). */
+export async function infoDoModelo(wabaId: string, nome: string): Promise<{ status: string; categoria: string } | null> {
   try {
-    const r = await fetch(`${BASE}/${VERSAO}/${wabaId}/message_templates?name=${encodeURIComponent(nome)}&fields=name,status`, {
+    const r = await fetch(`${BASE}/${VERSAO}/${wabaId}/message_templates?name=${encodeURIComponent(nome)}&fields=name,status,category`, {
       headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` },
       signal: AbortSignal.timeout(15000),
     });
-    const j = (await r.json()) as { data?: { name: string; status: string }[] };
-    return j.data?.find((t) => t.name === nome)?.status ?? null;
+    const j = (await r.json()) as { data?: { name: string; status: string; category?: string }[] };
+    const t = j.data?.find((x) => x.name === nome);
+    return t ? { status: t.status, categoria: t.category ?? '' } : null;
   } catch {
     return null;
   }

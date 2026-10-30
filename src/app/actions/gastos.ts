@@ -8,6 +8,7 @@ import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
 import { buscarCotacaoMercado } from '@/lib/usd-rate';
 import type { Json } from '@/lib/supabase/database.types';
+import { MODELOS } from '@/lib/atendente/modelos';
 
 export type CustoFixo = { id: string; nome: string; valor_brl: number; periodo: 'mensal' | 'anual'; categoria: string };
 export type ConfigDeCustos = {
@@ -92,7 +93,7 @@ export async function gastosAction(periodo: Periodo = 'mes'): Promise<Gastos | n
   const mes = inicio('mes').toISOString();
 
   const [{ data: cfgRow }, { data: usos }, { data: msgs }, { data: avisos }, { data: audiosIdeias }, cot, { count: fechadas }] = await Promise.all([
-    db.from('ia_config').select('custos, monthly_budget_usd').eq('id', true).maybeSingle(),
+    db.from('ia_config').select('custos, monthly_budget_usd, modelos_categoria').eq('id', true).maybeSingle(),
     db.from('ia_usage').select('created_at, model, cost_usd, finalidade, conversation_id, lead_id, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens').gte('created_at', desde < mes ? desde : mes).limit(50000),
     db.from('ia_messages').select('created_at, direction, author, body, media_type, status').gte('created_at', desde).limit(50000),
     db.from('ia_avisos').select('created_at, via, status').gte('created_at', desde).limit(20000),
@@ -116,13 +117,22 @@ export async function gastosAction(periodo: Periodo = 'mes'): Promise<Gastos | n
 
   // Mensagens da Meta: modelos (cobrados por entrega) e serviço (texto livre na janela de 24 h).
   const enviadas = (msgs ?? []).filter((m) => m.direction === 'out' && m.author !== 'sistema' && m.status !== 'failed');
-  const modelosCliente = enviadas.filter((m) => m.body.includes('\n[botões:')).length;
+  // Preço pela categoria REAL de cada modelo na Meta (0104): a Meta reclassificou parte deles como marketing.
+  const categorias = (cfgRow?.modelos_categoria ?? {}) as Record<string, string>;
+  const precoDe = (nome: string | null) =>
+    nome && categorias[nome] === 'MARKETING' ? Number(config.meta_marketing_usd) : Number(config.meta_utilidade_usd);
+  const modeloDaMensagem = (body: string) => MODELOS.find((m) => body.endsWith(`[botões: ${m.botoes.join(' | ')}]`))?.nome ?? null;
+  const msgsModelo = enviadas.filter((m) => m.body.includes('\n[botões:'));
+  const modelosCliente = msgsModelo.length;
   const modelosArthur = (avisos ?? []).filter((a) => a.via === 'modelo' && a.status !== 'failed').length;
   const modelos = modelosCliente + modelosArthur;
   const servico = enviadas.length - modelosCliente + (avisos ?? []).filter((a) => a.via === 'texto' && a.status !== 'failed').length;
   const gratis = Number(config.meta_servico_gratis_mes);
   const servicoPago = Math.max(0, servico - gratis);
-  const metaUsd = modelos * Number(config.meta_utilidade_usd) + servicoPago * Number(config.meta_servico_usd);
+  const metaUsd =
+    msgsModelo.reduce((s, m) => s + precoDe(modeloDaMensagem(m.body)), 0) +
+    modelosArthur * precoDe('aviso_ao_arthur') +
+    servicoPago * Number(config.meta_servico_usd);
 
   const audios = (msgs ?? []).filter((m) => m.direction === 'in' && m.media_type === 'audio').length + (audiosIdeias?.length ?? 0);
   const transcricaoUsd = (audios * Number(config.minutos_por_audio) * Number(config.transcricao_usd_hora)) / 60;
@@ -147,10 +157,10 @@ export async function gastosAction(periodo: Periodo = 'mes'): Promise<Gastos | n
     v.ia += Number(u.cost_usd);
     porDiaMap.set(d, v);
   }
-  for (const m of enviadas.filter((x) => x.body.includes('\n[botões:'))) {
+  for (const m of msgsModelo) {
     const d = diaBr(m.created_at);
     const v = porDiaMap.get(d) ?? { ia: 0, meta: 0 };
-    v.meta += Number(config.meta_utilidade_usd);
+    v.meta += precoDe(modeloDaMensagem(m.body));
     porDiaMap.set(d, v);
   }
 
@@ -181,7 +191,8 @@ export async function gastosAction(periodo: Periodo = 'mes'): Promise<Gastos | n
   const estPartes = [
     { nome: `${config.respostas_por_projeto} respostas da Lia`, usd: porResposta * config.respostas_por_projeto },
     { nome: `${config.pesquisas_por_projeto} pesquisa(s) do lead`, usd: porPesquisa * config.pesquisas_por_projeto },
-    { nome: `${config.modelos_por_projeto} mensagens modelo`, usd: config.modelos_por_projeto * Number(config.meta_utilidade_usd) },
+    // Média dos modelos que a Lia usa num projeto, pela categoria que a Meta deu a cada um.
+    { nome: `${config.modelos_por_projeto} mensagens modelo`, usd: config.modelos_por_projeto * (MODELOS.reduce((s, m) => s + precoDe(m.nome), 0) / MODELOS.length) },
   ];
 
   const totalBrl = partes.reduce((s, p) => s + p.brl, 0);

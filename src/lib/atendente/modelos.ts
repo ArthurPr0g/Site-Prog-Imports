@@ -9,7 +9,7 @@
 
 import type { DbDoAtendente } from './db';
 import type { Json } from '@/lib/supabase/database.types';
-import { criarModelo, enviarModelo, statusDoModelo, whatsappConfigurado, type ResultadoDoEnvio } from './whatsapp-api';
+import { criarModelo, enviarModelo, infoDoModelo, whatsappConfigurado, type ResultadoDoEnvio } from './whatsapp-api';
 
 export type ModeloDoCliente = {
   nome: string;
@@ -122,9 +122,10 @@ export async function modeloAprovado(db: DbDoAtendente, nome: string): Promise<b
 /** Relógio: cria os modelos que faltam na Meta e acompanha os pendentes (até 4 por minuto). */
 export async function garantirModelos(db: DbDoAtendente): Promise<number> {
   if (!whatsappConfigurado()) return 0;
-  const { data: c } = await db.from('ia_config').select('waba_id, modelos').eq('id', true).maybeSingle();
+  const { data: c } = await db.from('ia_config').select('waba_id, modelos, modelos_categoria').eq('id', true).maybeSingle();
   if (!c?.waba_id) return 0;
   const atual = { ...((c.modelos ?? {}) as Record<string, string>) };
+  const categorias = { ...((c.modelos_categoria ?? {}) as Record<string, string>) };
   const abertos = MODELOS.filter((m) => !FINAIS.has(atual[m.nome] ?? ''));
   // Revezamento: quem nunca foi consultado primeiro; os pendentes giram a cada minuto (antes eram sempre os
   // mesmos 4 e os outros nunca saíam de "em análise" no banco, mesmo aprovados na Meta — 30/10/2026).
@@ -134,7 +135,12 @@ export async function garantirModelos(db: DbDoAtendente): Promise<number> {
   const fila = [...novos, ...pendentes.slice(giro), ...pendentes.slice(0, giro)];
   let mudou = 0;
   for (const m of fila.slice(0, 4)) {
-    let status = await statusDoModelo(c.waba_id, m.nome);
+    const info = await infoDoModelo(c.waba_id, m.nome);
+    let status = info?.status ?? null;
+    if (info?.categoria && info.categoria !== categorias[m.nome]) {
+      categorias[m.nome] = info.categoria;
+      mudou++;
+    }
     if (!status && !atual[m.nome]?.startsWith('ERRO')) {
       const r = await criarModelo(c.waba_id, {
         name: m.nome,
@@ -153,7 +159,7 @@ export async function garantirModelos(db: DbDoAtendente): Promise<number> {
       mudou++;
     }
   }
-  if (mudou) await db.from('ia_config').update({ modelos: atual as Json }).eq('id', true);
+  if (mudou) await db.from('ia_config').update({ modelos: atual as Json, modelos_categoria: categorias as Json }).eq('id', true);
   return mudou;
 }
 
