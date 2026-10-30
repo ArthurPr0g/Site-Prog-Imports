@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={logo} width={580} height={202} alt="Prog Imports" />
+        <img src={logo} width={500} height={174} alt="Prog Imports" />
         <div style={{ display: 'flex', marginTop: 34, fontSize: 30, color: '#4a4540', letterSpacing: '0.02em' }}>
           Tecnologia importada premium
         </div>

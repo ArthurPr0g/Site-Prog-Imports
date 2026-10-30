@@ -30,6 +30,7 @@ import {
   PiggyBank,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
+import { ehDaProgSolucoes } from '@/lib/areas';
 
 // `pendente` marca a página que ainda é placeholder do roadmap do ERP. Serve
 // para bater o olho no menu e saber o que falta construir, sem abrir uma por
@@ -60,7 +61,6 @@ const NAV: NavGroup[] = [
     items: [
       { href: '/admin/clientes', label: 'Clientes', Icon: Users },
       { href: '/admin/produtos', label: 'Produtos', Icon: Package },
-      { href: '/admin/servicos-internos', label: 'Serviços', Icon: Briefcase },
     ],
   },
   {
@@ -74,15 +74,15 @@ const NAV: NavGroup[] = [
   {
     group: 'Operacional',
     items: [
-      { href: '/admin/captacao', label: 'Captação', Icon: Magnet },
-      { href: '/admin/pos-venda', label: 'Pós-venda', Icon: ClipboardCheck },
-      { href: '/admin/gastos', label: 'Gastos', Icon: PiggyBank },
       { href: '/admin/orcamentos-loja', label: 'Orçamentos Loja', Icon: FileText },
-      { href: '/admin/orcamentos-servicos', label: 'Orçamentos Serviços', Icon: FileSpreadsheet },
       { href: '/admin/vendas', label: 'Vendas', Icon: ClipboardList },
       { href: '/admin/avaliacao-troca', label: 'Avaliação de Troca', Icon: ArrowLeftRight },
-      { href: '/admin/prestacao-servico', label: 'Prestação de Serviço', Icon: HandPlatter },
     ],
+  },
+  // A Prog Soluções tem área própria (menu, marca e cores): atalho para ela.
+  {
+    group: 'Prog Soluções',
+    items: [{ href: '/admin/captacao', label: 'Abrir Prog Soluções', Icon: Magnet }],
   },
   // O Estúdio aparece aqui e no seletor de área. No seletor porque é outro
   // modo de trabalho; aqui porque quem está no Gerenciamento precisa de um
@@ -97,7 +97,52 @@ const NAV: NavGroup[] = [
   },
 ];
 
-const ALL_ITEMS = NAV.flatMap((g) => g.items);
+// Área da Prog Soluções (sites, sistemas, marca), separada da loja de importados a pedido do dono
+// (30/10/2026): mesmo login e rotas sob /admin, mas menu, marca e cores próprios (design "Noite azul").
+const NAV_SOLUCOES: NavGroup[] = [
+  {
+    group: 'Comercial',
+    items: [
+      { href: '/admin/captacao', label: 'Captação', Icon: Magnet },
+      { href: '/admin/pos-venda', label: 'Pós-venda', Icon: ClipboardCheck },
+    ],
+  },
+  {
+    group: 'Projetos',
+    items: [
+      { href: '/admin/prestacao-servico', label: 'Prestação de Serviço', Icon: HandPlatter },
+      { href: '/admin/orcamentos-servicos', label: 'Orçamentos de Serviços', Icon: FileSpreadsheet },
+    ],
+  },
+  {
+    group: 'Gestão',
+    items: [
+      { href: '/admin/gastos', label: 'Gastos', Icon: PiggyBank },
+      { href: '/admin/servicos-internos', label: 'Catálogo de serviços', Icon: Briefcase },
+    ],
+  },
+];
+
+const ALL_ITEMS = [...NAV, ...NAV_SOLUCOES].flatMap((g) => g.items);
+
+/** Marca da Prog Soluções no lugar do logo da loja: emblema "P" azul + nome. */
+function MarcaSolucoes({ comNome }: { comNome: boolean }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-[11px] bg-[linear-gradient(135deg,#6a82ff,#3349f0)] text-[19px] font-extrabold text-white shadow-[0_6px_18px_-6px_rgba(51,73,240,0.9)]">
+        P
+      </span>
+      {comNome && <span className="whitespace-nowrap text-[14px] font-extrabold tracking-[-0.01em] text-[#eef1ff]">Prog Soluções</span>}
+    </div>
+  );
+}
+
+// Cores da área da Prog Soluções (azul-noite) aplicadas por variável no painel inteiro.
+const VARS_SOLUCOES = {
+  '--color-card-dark': '#0a0f2a',
+  '--color-divider-strong': 'rgba(130, 148, 255, 0.14)',
+  '--brand-accent-rgb': '91 116 255',
+} as React.CSSProperties;
 
 // Tudo em classe, nada em `style` inline: estilo inline vence classe, e era por
 // isso que o `hover:text-accent` daqui nunca surtia efeito — a cor inline
@@ -134,9 +179,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const solucoes = ehDaProgSolucoes(pathname);
+  const menu = solucoes ? NAV_SOLUCOES : NAV;
+  const voltar = solucoes ? { href: '/admin', rotulo: 'Gerenciamento da loja' } : { href: '/', rotulo: 'Ver loja' };
 
   return (
-    <div className="min-h-screen bg-page lg:flex">
+    <div className={clsx('min-h-screen bg-page lg:flex', solucoes && 'tema-apple [color-scheme:dark]')} style={solucoes ? VARS_SOLUCOES : undefined}>
       <div className="sticky top-0 z-40 flex items-center gap-3 border-b border-divider-strong bg-card-dark px-4 py-3 lg:hidden">
         <button
           onClick={() => setMobileOpen(true)}
@@ -145,8 +193,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         >
           ☰
         </button>
-        <Logo height={37} />
-        <span className="text-[10px] font-extrabold uppercase tracking-[.14em] text-accent">Admin</span>
+        {solucoes ? <MarcaSolucoes comNome /> : <Logo height={37} />}
+        {!solucoes && <span className="text-[10px] font-extrabold uppercase tracking-[.14em] text-accent">Admin</span>}
       </div>
 
       {mobileOpen && (
@@ -161,8 +209,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         )}
       >
         <div className="flex items-center gap-2.5 border-b border-divider-strong px-5 pb-3.5 pt-5">
-          <Logo height={51} />
-          <div className="text-[10px] font-extrabold uppercase tracking-[.14em] text-accent">Admin</div>
+          {solucoes ? <MarcaSolucoes comNome /> : <Logo height={51} />}
+          {!solucoes && <div className="text-[10px] font-extrabold uppercase tracking-[.14em] text-accent">Admin</div>}
           <button
             onClick={() => setMobileOpen(false)}
             aria-label="Fechar menu"
@@ -172,7 +220,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
-          {NAV.map((grupo) => (
+          {menu.map((grupo) => (
             <div key={grupo.group} className="mb-1">
               <div className="px-3.5 pb-1 pt-3 text-[10px] font-extrabold uppercase tracking-[.12em] text-fg-faded">
                 {grupo.group}
@@ -196,8 +244,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="border-t border-divider-strong px-5 py-4 text-xs text-fg-faded">
-          <Link href="/" className="font-bold text-fg-tertiary hover:text-accent">
-            ← Ver loja
+          <Link href={voltar.href} className="font-bold text-fg-tertiary hover:text-accent">
+            ← {voltar.rotulo}
           </Link>
         </div>
       </aside>
@@ -211,9 +259,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         className="sticky top-0 z-30 hidden h-screen flex-shrink-0 flex-col overflow-hidden border-r border-divider-strong bg-card-dark lg:flex"
       >
         <div className="flex items-center gap-2.5 border-b border-divider-strong px-5 pb-3.5 pt-5">
-          <Logo height={41} />
+          {solucoes ? <MarcaSolucoes comNome={hovered} /> : <Logo height={41} />}
           <AnimatePresence>
-            {hovered && (
+            {hovered && !solucoes && (
               <motion.span
                 initial={{ opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -227,7 +275,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </AnimatePresence>
         </div>
         <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden p-3">
-          {NAV.map((grupo, i) => (
+          {menu.map((grupo, i) => (
             <div key={grupo.group}>
               {/* Recolhida, a barra não tem largura para o rótulo do grupo — ele
                   vira um traço, que preserva a separação visual entre as áreas
@@ -274,7 +322,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="border-t border-divider-strong px-5 py-4 text-xs text-fg-faded">
-          <Link href="/" className="flex items-center gap-3 whitespace-nowrap font-bold text-fg-tertiary hover:text-accent">
+          <Link href={voltar.href} className="flex items-center gap-3 whitespace-nowrap font-bold text-fg-tertiary hover:text-accent">
             <span className="flex-shrink-0">←</span>
             <AnimatePresence>
               {hovered && (
@@ -284,7 +332,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   exit={{ opacity: 0, x: -6 }}
                   transition={{ duration: 0.15 }}
                 >
-                  Ver loja
+                  {voltar.rotulo}
                 </motion.span>
               )}
             </AnimatePresence>
