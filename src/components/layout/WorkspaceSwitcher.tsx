@@ -23,13 +23,13 @@ export function WorkspaceSwitcher({ active }: { active: AreaDeTrabalho }) {
   // As telas da Prog Soluções usam o cabeçalho padrão do admin: a área vem da rota.
   const ativa = active === 'admin' && ehDaProgSolucoes(pathname ?? '') ? 'solucoes' : active;
   return (
-    <div className="flex flex-shrink-0 flex-wrap items-center gap-1 rounded-full border border-border-strong bg-input-alt p-1">
+    <div className="flex min-w-0 max-w-full items-center gap-1 overflow-x-auto rounded-full border border-border-strong bg-input-alt p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {AREAS.map((area) => (
         <Link
           key={area.chave}
           href={area.href}
           className={clsx(
-            'rounded-full px-3.5 py-1.5 text-xs font-extrabold transition-colors',
+            'whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-extrabold transition-colors sm:px-3.5',
             ativa === area.chave
               ? area.chave === 'solucoes'
                 ? 'bg-[linear-gradient(135deg,#6a82ff,#3349f0)] text-white'

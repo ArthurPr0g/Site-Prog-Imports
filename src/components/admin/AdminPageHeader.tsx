@@ -20,7 +20,7 @@ export function AdminPageHeader({
         <h1 className="font-display text-2xl font-bold tracking-[-.02em] sm:text-[26px]">{title}</h1>
         <div className="mt-1 text-[13px] text-fg-tertiary">{subtitle}</div>
       </div>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
         {action}
         <WorkspaceSwitcher active={area} />
         <div className="flex items-center gap-2.5 rounded-full border border-border bg-card py-1.75 pl-2 pr-4">

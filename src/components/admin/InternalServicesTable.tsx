@@ -10,7 +10,8 @@ import { saveInternalServiceAction, deleteInternalServiceAction, type InternalSe
 const inputClass =
   'rounded-control border border-border-strong bg-input px-3.5 py-2.5 text-[13.5px] outline-none focus:border-accent';
 
-const COLUNAS = 'grid grid-cols-[1.8fr_1fr_120px_110px_90px_70px] gap-2';
+// No celular (30/10/2026): nome · valor · ações numa linha; categoria, prazo e situação embaixo do nome.
+const COLUNAS = 'grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-1 sm:grid-cols-[1.8fr_1fr_120px_110px_90px_70px] sm:gap-2';
 
 function formVazio(): InternalServiceInput {
   return { name: '', description: '', category: '', price: 0, billingType: 'unico', leadTimeDays: 0, active: true };
@@ -78,8 +79,8 @@ export function InternalServicesTable({ services }: { services: InternalService[
         </button>
       </div>
 
-      <div className="rounded-[18px] border border-border bg-card p-6">
-        <div className={`${COLUNAS} border-b border-border pb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded`}>
+      <div className="rounded-[18px] border border-border bg-card p-4 sm:p-6">
+        <div className="hidden gap-2 border-b border-border pb-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded sm:grid sm:grid-cols-[1.8fr_1fr_120px_110px_90px_70px]">
           <div>Serviço</div>
           <div>Categoria</div>
           <div className="text-right">Valor</div>
@@ -104,16 +105,19 @@ export function InternalServicesTable({ services }: { services: InternalService[
             <div className="min-w-0">
               <div className="truncate font-bold">{s.name}</div>
               {s.description && <div className="truncate text-[11.5px] text-fg-tertiary">{s.description}</div>}
+              <div className="truncate text-[11.5px] text-fg-secondary sm:hidden">
+                {[s.category, s.billingType === 'mensal' ? 'Plano mensal' : formatPrazo(s.leadTimeDays), s.active ? null : 'Inativo'].filter(Boolean).join(' · ')}
+              </div>
             </div>
-            <div className="truncate text-fg-secondary">{s.category || '—'}</div>
+            <div className="hidden truncate text-fg-secondary sm:block">{s.category || '—'}</div>
             <div className="text-right font-bold text-accent">
               {formatBRL(s.price)}
               {s.billingType === 'mensal' && <span className="text-[11px] font-bold text-fg-tertiary">/mês</span>}
             </div>
-            <div className="text-fg-secondary">
+            <div className="hidden text-fg-secondary sm:block">
               {s.billingType === 'mensal' ? 'Plano mensal' : formatPrazo(s.leadTimeDays)}
             </div>
-            <div>
+            <div className="hidden sm:block">
               <span
                 className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-extrabold ${
                   s.active ? 'bg-accent/12 text-accent' : 'bg-fg-faded/12 text-fg-tertiary'
@@ -139,7 +143,7 @@ export function InternalServicesTable({ services }: { services: InternalService[
                 disabled={pending}
                 title="Editar"
                 aria-label={`Editar ${s.name}`}
-                className="grid h-7 w-7 place-items-center rounded-full border border-border-strong text-fg-tertiary hover:border-accent hover:text-accent disabled:opacity-50"
+                className="grid h-9 w-9 place-items-center rounded-full border border-border-strong text-fg-tertiary hover:border-accent hover:text-accent disabled:opacity-50 sm:h-7 sm:w-7"
               >
                 <Pencil size={12} />
               </button>
@@ -148,7 +152,7 @@ export function InternalServicesTable({ services }: { services: InternalService[
                 disabled={pending}
                 title="Excluir"
                 aria-label={`Excluir ${s.name}`}
-                className="grid h-7 w-7 place-items-center rounded-full border border-border-strong text-fg-tertiary hover:border-error hover:text-error disabled:opacity-50"
+                className="grid h-9 w-9 place-items-center rounded-full border border-border-strong text-fg-tertiary hover:border-error hover:text-error disabled:opacity-50 sm:h-7 sm:w-7"
               >
                 <Trash2 size={12} />
               </button>

@@ -52,6 +52,16 @@ export function PuxarParaAtualizar() {
       inicio.current = e.touches[0].clientY;
     };
     const aoMover = (e: TouchEvent) => {
+      // Segundo dedo entrou = pinça de zoom (30/10/2026: "Safari não está dando zoom"): larga o gesto
+      // sem preventDefault, senão o zoom da página fica bloqueado no topo da tela.
+      if (e.touches.length !== 1) {
+        inicio.current = null;
+        if (puxadoRef.current) {
+          puxadoRef.current = 0;
+          setPuxado(0);
+        }
+        return;
+      }
       if (inicio.current === null) return;
       const dy = e.touches[0].clientY - inicio.current;
       if (dy <= 0 || window.scrollY > 0) {

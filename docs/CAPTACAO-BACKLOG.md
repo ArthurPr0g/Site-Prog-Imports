@@ -9,6 +9,14 @@ Pedido do dono em 27/10/2026: "pode fazer todos" (itens 1 a 12).
 
 ---
 
+## Prog Soluções no celular, principalmente iPhone/Safari (30/10/2026) — fazendo, HOJE
+
+Pedido do dono: "passe a limpo o sistema da Prog Soluções na versão mobile, principalmente no iOS, que é onde eu uso.
+Veja se está tudo certo, se o tamanho da tela está correto. Safari não está dando zoom."
+Telas: Captação (todas as abas), Pós-venda, Gastos, Prestação de serviço, Orçamentos de serviços, Catálogo; menu da
+área no celular. Conferir: zoom de pinça no Safari, largura sem rolagem lateral, campos que dão zoom sozinho ao tocar
+(fonte < 16px no iOS), cartões e tabelas que estouram, botões pequenos demais para o dedo.
+
 ## Separar visualmente a Prog Imports (loja) da Prog Soluções (serviços) (30/10/2026) — no ar (b280bb6)
 
 Pedido do dono: "Hoje os dois estão integrados visualmente, e eu quero separar os dois visualmente para
