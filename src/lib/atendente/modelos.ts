@@ -126,10 +126,14 @@ export async function garantirModelos(db: DbDoAtendente): Promise<number> {
   if (!c?.waba_id) return 0;
   const atual = { ...((c.modelos ?? {}) as Record<string, string>) };
   const abertos = MODELOS.filter((m) => !FINAIS.has(atual[m.nome] ?? ''));
-  // Revezamento: começa por quem nunca foi consultado, depois os pendentes.
-  abertos.sort((a, b) => Number(!!atual[a.nome]) - Number(!!atual[b.nome]));
+  // Revezamento: quem nunca foi consultado primeiro; os pendentes giram a cada minuto (antes eram sempre os
+  // mesmos 4 e os outros nunca saíam de "em análise" no banco, mesmo aprovados na Meta — 30/10/2026).
+  const novos = abertos.filter((m) => !atual[m.nome]);
+  const pendentes = abertos.filter((m) => atual[m.nome]);
+  const giro = pendentes.length ? Math.floor(Date.now() / 60_000) % pendentes.length : 0;
+  const fila = [...novos, ...pendentes.slice(giro), ...pendentes.slice(0, giro)];
   let mudou = 0;
-  for (const m of abertos.slice(0, 4)) {
+  for (const m of fila.slice(0, 4)) {
     let status = await statusDoModelo(c.waba_id, m.nome);
     if (!status && !atual[m.nome]?.startsWith('ERRO')) {
       const r = await criarModelo(c.waba_id, {
