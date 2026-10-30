@@ -141,6 +141,11 @@ export async function anotarDoDono(db: DbDoAtendente, m: MensagemRecebida): Prom
     }
     bruto = texto;
   }
+  // "Mandei errado, desconsidere" (30/10/2026): arquiva a última anotação dos últimos 30 min em vez de anotar o aviso.
+  if (!m.reacao && pedeParaDesconsiderar(bruto)) {
+    await desconsiderarUltima(db, m.de);
+    return;
+  }
   // "Projeto: ..." responde ao último pedido que espera o projeto (botão "Outro"), 0100.
   const projetoEscrito = bruto.match(/^\s*projeto\s*[:\-–—]\s*([\s\S]+)$/i);
   if (projetoEscrito && !m.reacao) {
@@ -212,6 +217,37 @@ export async function anotarDoDono(db: DbDoAtendente, m: MensagemRecebida): Prom
       ? `🤖 *Pedido para o Claude Code na fila* ✅${proj ? ` (${proj.nome})` : ''}\n\n${cab}${eco}\n\n⏱️ Com o PC ligado, começa em até 10 min. Com ele desligado, fica na fila e começa assim que o PC ligar.\n📲 Te aviso aqui quando começar e quando terminar.`
       : `💡 *Anotado nas suas Ideias* ✅${origem === 'whatsapp_audio' ? ' 🎙️ (áudio transcrito)' : ''}\n\n${cab}${eco}`,
   );
+}
+
+/** "mandei errado", "desconsidere", "ignora a última", "foi engano"... (mensagem curta). */
+// Tolerante a erro de digitação ("erraado"); em qualquer ponto da frase curta, menos quando é uma ideia/pedido.
+const DESCONSIDERAR =
+  /\b(?:desconsid\w*|foi engano|era (?:pra|para) outr\w*|(?:mandei|enviei|mand[eo]u)\b.{0,30}\berr+a+d\w*)|^\s*(?:(?:opa|ops|eita|desculp\w*)[\s,!.]*)?(?:ignor[ae]\b|apag[ae]\b.{0,20}(?:isso|essa|esse|[uú]ltim)|cancel[ae]\b.{0,20}(?:isso|essa|esse|[uú]ltim))/i;
+export const pedeParaDesconsiderar = (t: string) =>
+  t.trim().length <= 90 && !/^\s*(?:ideia|claude|cl[aá]udio|prompt|projeto|lia)\b/i.test(t) && DESCONSIDERAR.test(t);
+
+/** Arquiva a última ideia/pedido do Arthur (até 30 min). Pedido que já começou não dá para parar: avisa. */
+async function desconsiderarUltima(db: DbDoAtendente, para: string): Promise<void> {
+  const { data: i } = await db
+    .from('ideias')
+    .select('id, tipo, titulo, texto, status')
+    .in('origem', ['whatsapp', 'whatsapp_audio'])
+    .neq('status', 'arquivada')
+    .gte('criado_em', new Date(Date.now() - 30 * 60_000).toISOString())
+    .order('criado_em', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!i) {
+    await enviarTexto(para, '👍 Tudo bem, não anotei nada. (Não achei nenhuma anotação sua dos últimos 30 minutos para apagar.)');
+    return;
+  }
+  const nome = i.titulo || (i.texto.length > 60 ? i.texto.slice(0, 57) + '…' : i.texto);
+  if (i.tipo === 'prompt' && ['em_execucao', 'feito', 'parcial'].includes(i.status)) {
+    await enviarTexto(para, `⚠️ O pedido *${nome}* já ${i.status === 'em_execucao' ? 'começou a rodar' : 'foi feito'} e não dá para desfazer daqui. Se precisar, me peça para reverter.`);
+    return;
+  }
+  await db.from('ideias').update({ status: 'arquivada', atualizado_em: new Date().toISOString() }).eq('id', i.id);
+  await enviarTexto(para, `🗑️ Desconsiderei: *${nome}*\\n\\nTirei das suas Ideias${i.tipo === 'prompt' ? ' e da fila do Claude' : ''}.`);
 }
 
 /** Lia avisa o cliente que o ajuste pedido está no ar (texto na janela de 24 h; fora, modelo novidade_projeto). */
