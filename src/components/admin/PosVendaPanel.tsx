@@ -24,6 +24,7 @@ import {
 } from '@/app/actions/pos-venda';
 import { NOMES, type Escolha } from '@/lib/simulador';
 import { inputClass } from '@/components/admin/captacao/comum';
+import { AppLoader } from '@/brand/loaders/AppLoader';
 
 type Painel = NonNullable<Awaited<ReturnType<typeof painelDoPosVendaAction>>>;
 
@@ -119,7 +120,7 @@ export function PosVendaPanel() {
       )}
 
       {!painel ? (
-        <div className="text-[13px] text-fg-tertiary">Carregando…</div>
+        <AppLoader rotulo="Buscando os projetos do pós-venda" />
       ) : painel.projetos.length === 0 ? (
         <section className="rounded-[18px] border border-border bg-card p-5 text-[13.5px] text-fg-tertiary">
           Nenhuma venda ainda. Quando a Lia fechar, quando o Felipe marcar &quot;venda feita&quot; ou quando você registrar aqui, o projeto

@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { Bot, CalendarDays, CreditCard, Users, Coins, Gauge, MessageCircle, Mic, Plus, Receipt, Save, Settings2, Target, Trash2, TrendingUp, TriangleAlert, CircleCheck } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { gastosAction, salvarCustosAction, type ConfigDeCustos, type CustoFixo, type Gastos, type Periodo, type RecargaDeCredito } from '@/app/actions/gastos';
+import { AppLoader } from '@/brand/loaders/AppLoader';
 
 const PERIODOS: [Periodo, string][] = [
   ['mes', 'Este mês'],
@@ -237,11 +238,8 @@ export function GastosPanel() {
 
   if (!d || !cfg) {
     return (
-      <div className="tema-apple gastos grid gap-4 [color-scheme:dark] sm:grid-cols-4">
-        <div className="aurora" aria-hidden />
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-[110px] animate-pulse rounded-[18px] border border-border bg-card" />
-        ))}
+      <div className="tema-apple gastos [color-scheme:dark]">
+        <AppLoader rotulo="Somando os gastos do período" />
       </div>
     );
   }

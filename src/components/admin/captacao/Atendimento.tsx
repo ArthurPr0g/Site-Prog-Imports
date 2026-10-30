@@ -42,6 +42,7 @@ import { AgendaEReunioes } from './AgendaEReunioes';
 import { ModelosDaMeta } from './ModelosDaMeta';
 import { CustoDaIa } from './CustoDaIa';
 import { avisarVersaoNova, ERRO_DE_VERSAO_NOVA, Esqueleto } from '@/components/admin/VersaoNova';
+import { AppLoader } from '@/brand/loaders/AppLoader';
 
 const RELER_A_CADA = 10_000;
 
@@ -276,26 +277,7 @@ export function Atendimento({
           </div>
         </div>
         {!painel ? (
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,320px)_1fr]" aria-busy="true" aria-label="Carregando conversas">
-            <ul className="space-y-2">
-              {[0, 1, 2, 3].map((i) => (
-                <li key={i} className="rounded-[14px] border border-border p-3" style={{ animationDelay: `${i * 90}ms` }}>
-                  <div className="mb-2 flex justify-between gap-3">
-                    <Esqueleto className="h-3.5 w-2/5" />
-                    <Esqueleto className="h-3 w-16" />
-                  </div>
-                  <Esqueleto className="mb-2.5 h-3 w-4/5" />
-                  <Esqueleto className="h-1.5 w-full" />
-                </li>
-              ))}
-            </ul>
-            <div className="hidden space-y-3 rounded-[14px] border border-border p-4 lg:block">
-              <Esqueleto className="h-4 w-1/3" />
-              <Esqueleto className="h-14 w-3/5" />
-              <Esqueleto className="ml-auto h-10 w-1/2" />
-              <Esqueleto className="h-16 w-2/3" />
-            </div>
-          </div>
+          <AppLoader rotulo="Buscando as conversas" />
         ) : conversas.length === 0 ? (
           <div className="p-3 text-[13px] text-fg-tertiary">
             {todas.length === 0
