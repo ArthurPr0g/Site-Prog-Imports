@@ -158,7 +158,7 @@ export async function anotarDoDono(db: DbDoAtendente, m: MensagemRecebida): Prom
   await enviarTexto(
     m.de,
     tipo === 'prompt'
-      ? `🤖 *Pedido para o Claude Code na fila* ✅\n\n${cab}${eco}\n\n⏱️ Com o PC ligado, começa em até 10 min; desligado, a nuvem faz o que der.\n📲 Te aviso aqui quando terminar.`
+      ? `🤖 *Pedido para o Claude Code na fila* ✅\n\n${cab}${eco}\n\n⏱️ Com o PC ligado, começa em até 10 min. Com ele desligado, fica na fila e começa assim que o PC ligar.\n📲 Te aviso aqui quando começar e quando terminar.`
       : `💡 *Anotado nas suas Ideias* ✅${origem === 'whatsapp_audio' ? ' 🎙️ (áudio transcrito)' : ''}\n\n${cab}${eco}`,
   );
 }
@@ -168,16 +168,29 @@ export async function anotarDoDono(db: DbDoAtendente, m: MensagemRecebida): Prom
 export async function avisarPromptsTerminados(db: DbDoAtendente, cfg: ConfigDoAtendente): Promise<number> {
   const { data } = await db
     .from('ideias')
-    .select('id, titulo, texto, status, resultado, falta, avisado_status')
+    .select('id, titulo, texto, status, resultado, falta, avisado_status, criado_em, executor')
     .eq('tipo', 'prompt')
-    .in('status', ['feito', 'parcial'])
+    .in('status', ['feito', 'parcial', 'em_execucao'])
     .order('atualizado_em', { ascending: true })
     .limit(10);
-  const novos = (data ?? []).filter((i) => i.avisado_status !== i.status).slice(0, 3);
+  // "Comecei" só para quem esperou mais de 10 min na fila (ex.: o PC estava desligado, 30/10/2026): o
+  // pedido imediato já tem o aviso de recebido e o de concluído.
+  const esperou = (i: { criado_em: string }) => Date.now() - new Date(i.criado_em).getTime() > 10 * 60_000;
+  const novos = (data ?? [])
+    .filter((i) => i.avisado_status !== i.status && (i.status !== 'em_execucao' || (!i.avisado_status && esperou(i))))
+    .slice(0, 3);
   for (const i of novos) {
     // Marca antes: o próximo tick não repete o aviso enquanto este sai.
     await db.from('ideias').update({ avisado_status: i.status }).eq('id', i.id);
     const pedido = i.titulo || (i.texto.length > 80 ? i.texto.slice(0, 77) + '…' : i.texto);
+    if (i.status === 'em_execucao') {
+      await avisarArthur(db, cfg, {
+        titulo: 'Comecei seu pedido ▶️',
+        texto: `📝 *Pedido:* ${pedido}\n\n${i.executor === 'nuvem' ? '☁️ Rodando na nuvem' : '💻 Rodando no PC'}. Te aviso quando terminar.`,
+        link: 'https://hub-prog.vercel.app/ideias',
+      });
+      continue;
+    }
     const feito = (i.resultado ?? '').trim().slice(-900) || 'Sem detalhes.';
     // O resultado do executor vem com "[PC]"/"[Nuvem]" e "Aguardando você: ...": vira linhas com emoji.
     const limpo = feito.replace(/\[(PC|Nuvem)\]\s*/g, '').replace(/\n?Aguardando você:\s*/g, '\n⏸️ Aguardando você: ');
