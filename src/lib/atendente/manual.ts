@@ -13,6 +13,8 @@ function numerosDoManual(): string[] {
 }
 
 export function ehDoManual(telefone: string): boolean {
+  // Só desvia com o canal completo (porta + token); configuração pela metade não pode engolir mensagens.
+  if (!process.env.MANUAL_PORTA_URL || (process.env.MANUAL_TOKEN ?? '').length < 32) return false;
   return numerosDoManual().some((n) => mesmoTelefone(n, telefone));
 }
 
