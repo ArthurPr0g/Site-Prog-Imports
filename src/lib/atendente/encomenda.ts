@@ -379,7 +379,7 @@ export async function tratarEncomenda(db: DbDoAtendente, de: string, texto: stri
 }
 
 /** Mostra ao Arthur o que a Lia entendeu e espera o toque "Pode chamar" antes de escrever ao cliente. */
-async function pedirConfirmacao(db: DbDoAtendente, id: string, de: string): Promise<void> {
+export async function pedirConfirmacao(db: DbDoAtendente, id: string, de: string): Promise<void> {
   const { data: e } = await db.from('encomendas').select('*').eq('id', id).maybeSingle();
   if (!e?.telefone || !e.instrucoes) return;
   // 1ª vez: a Lia interpreta o pedido; se faltar algo essencial, pergunta antes (uma dúvida por vez).
@@ -395,9 +395,14 @@ async function pedirConfirmacao(db: DbDoAtendente, id: string, de: string): Prom
   }
   const assunto = e.assunto ?? (await assuntoDoPedido(db, e.instrucoes));
   await db.from('encomendas').update({ assunto, status: 'aguardando_confirmacao' }).eq('id', id);
+  // Financeiro ANTES de chamar o cliente (pedido do Arthur em 30/10/2026): a resposta volta aqui (decidirFinanceiro).
+  if (!e.pagamento) {
+    await perguntarFinanceiro(db, id);
+    return;
+  }
   const pedido = e.instrucoes.length > 400 ? e.instrucoes.slice(0, 397) + '…' : e.instrucoes;
   const texto =
-    `🧐 *Confere antes de eu chamar:*\n\n👤 ${e.nome ?? 'sem nome'}\n📱 ${formatar(e.telefone)}\n🎯 Assunto: ${assunto}\n📝 Seu pedido: ${pedido}\n\n` +
+    `🧐 *Confere antes de eu chamar:*\n\n👤 ${e.nome ?? 'sem nome'}\n📱 ${formatar(e.telefone)}\n🎯 Assunto: ${assunto}\n💰 Financeiro: ${rotuloDoFinanceiro(e)}\n📝 Seu pedido: ${pedido}\n\n` +
     'Eu vou pesquisar a pessoa/empresa na internet e no Google Maps, chamar no WhatsApp e fazer toda a descoberta.';
   const r = await enviarComOpcoes(de, texto, ['Pode chamar', 'Cancelar'], [`enc:ok:${id}`, `enc:nao:${id}`]);
   if (!r.ok) await enviarTexto(de, `${texto}\n\nResponda *sim* para eu chamar ou *cancela*.`);
@@ -418,7 +423,24 @@ export async function decidirEncomenda(db: DbDoAtendente, id: string, ok: boolea
   }
   await db.from('encomendas').update({ status: 'aguardando_modelo' }).eq('id', id);
   await iniciar(db, id, de);
+  // Financeiro respondido antes (o normal agora): com o lead criado, projeto de graça ou já pago abre no Pós-venda.
+  const { data: f } = await db.from('encomendas').select('nome, lead_id, valor_total, pagamento, pago_onde').eq('id', id).maybeSingle();
+  if (f?.lead_id && (f.pagamento === 'gratis' || ((f.pagamento === 'sinal' || f.pagamento === 'total') && f.pago_onde))) {
+    const aberto = await abrirProjetoDaEncomenda(db, f, f.pagamento === 'gratis' ? 'projeto de graça' : f.pagamento === 'sinal' ? 'sinal pago' : 'pago 100%');
+    if (aberto) await enviarTexto(de, aberto.trim());
+  }
   await perguntarFinanceiro(db, id);
+}
+
+/** Como o financeiro aparece na confirmação. */
+function rotuloDoFinanceiro(e: { pagamento: string | null; pago_onde: string | null; valor_total: number | null }): string {
+  const onde = e.pago_onde === 'asaas' ? ' (Asaas)' : e.pago_onde === 'pix' ? ' (Pix direto)' : e.pago_onde === 'cartao' ? ' (cartão/outro)' : '';
+  const valor = e.valor_total ? ` · valor ${brl(Number(e.valor_total))}` : '';
+  if (e.pagamento === 'gratis') return '🎁 de graça';
+  if (e.pagamento === 'total') return `pago 100%${onde}${valor}`;
+  if (e.pagamento === 'sinal') return `sinal (50%) pago${onde}${valor}`;
+  if (e.pagamento === 'nada') return `nada pago ainda: eu cobro o sinal pelo Asaas${valor}`;
+  return 'você informa depois';
 }
 
 /** Cria lead e conversa, pede a pesquisa, guarda a explicação e chama o cliente. `de` = número do Arthur para responder na hora. */
@@ -607,7 +629,7 @@ export async function decidirFinanceiro(db: DbDoAtendente, acao: string, valorDa
       );
     } else if (pagamento === 'gratis') {
       if (e.lead_id) await db.from('leads').update({ closed_value: null }).eq('id', e.lead_id);
-      const aberto = await abrirProjetoDaEncomenda(db, e, 'projeto de graça');
+      const aberto = e.lead_id ? await abrirProjetoDaEncomenda(db, e, 'projeto de graça') : '';
       await enviarTexto(de, `🎁 Anotado: o projeto de ${quem} é *de graça*. Não vou falar de preço nem gerar cobrança.${aberto}`);
     } else if (pagamento === 'depois') {
       await enviarTexto(de, `👍 Sem problema. Quando souber, me manda *Lia, valor 3500* e me diga se já houve pagamento.`);
@@ -621,6 +643,8 @@ export async function decidirFinanceiro(db: DbDoAtendente, acao: string, valorDa
       if (!r.ok) await enviarTexto(de, 'Onde foi o pagamento: Asaas, Pix direto ou cartão?');
     }
     await anotarNoLead(db, e.lead_id, `Financeiro (Arthur): ${pagamento === 'nada' ? 'nada pago ainda' : pagamento === 'sinal' ? 'sinal (50%) pago' : pagamento === 'total' ? 'pago 100%' : pagamento === 'gratis' ? 'projeto de graça (não cobrar)' : 'informa depois'}.`);
+    // Ainda não chamou o cliente: agora vem a confirmação (sinal/total esperam o "onde foi pago").
+    if (e.status === 'aguardando_confirmacao' && pagamento !== 'sinal' && pagamento !== 'total') await pedirConfirmacao(db, id, de);
     return;
   }
 
@@ -649,8 +673,9 @@ export async function decidirFinanceiro(db: DbDoAtendente, acao: string, valorDa
     await db.from('encomendas').update({ asaas_resumo: resumo.slice(0, 2000) }).eq('id', id);
   }
   await anotarNoLead(db, e.lead_id, `Pagamento feito por: ${onde === 'asaas' ? 'Asaas' : onde === 'pix' ? 'Pix direto' : 'cartão/outro'}.`);
-  const aberto = e.pagamento === 'sinal' || e.pagamento === 'total' ? await abrirProjetoDaEncomenda(db, e, e.pagamento === 'sinal' ? 'sinal pago' : 'pago 100%') : '';
+  const aberto = e.lead_id && (e.pagamento === 'sinal' || e.pagamento === 'total') ? await abrirProjetoDaEncomenda(db, e, e.pagamento === 'sinal' ? 'sinal pago' : 'pago 100%') : '';
   await enviarTexto(de, `${resumo ? resumo + '\n\n' : ''}👍 Anotado: pago por ${onde === 'asaas' ? 'Asaas' : onde === 'pix' ? 'Pix direto' : 'cartão/outro'}. Não vou cobrar o que já foi pago.${aberto}${pedirValor}`);
+  if (e.status === 'aguardando_confirmacao') await pedirConfirmacao(db, id, de);
 }
 
 async function registrarValor(
