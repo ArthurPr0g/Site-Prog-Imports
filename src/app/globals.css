@@ -552,13 +552,13 @@ textarea::placeholder {
 .tema-apple .bg-accent * { color: #fff; }
 .tema-apple .bg-accent:not(:disabled):hover,
 .tema-apple .cta-verde:not(:disabled):hover { filter: brightness(1.1); }
-.tema-apple button.rounded-full:not(.bg-accent),
-.tema-apple a.rounded-full:not(.bg-accent) {
+.tema-apple button.rounded-full:not(.bg-accent):not(.tela-whatsapp *),
+.tema-apple a.rounded-full:not(.bg-accent):not(.tela-whatsapp *) {
   background-color: rgba(255, 255, 255, 0.05);
   border-color: rgba(130, 148, 255, 0.16);
 }
-.tema-apple button.rounded-full:not(.bg-accent):hover,
-.tema-apple a.rounded-full:not(.bg-accent):hover { background-color: rgba(91, 116, 255, 0.16); border-color: rgba(130, 148, 255, 0.35); }
+.tema-apple button.rounded-full:not(.bg-accent):not(.tela-whatsapp *):hover,
+.tema-apple a.rounded-full:not(.bg-accent):not(.tela-whatsapp *):hover { background-color: rgba(91, 116, 255, 0.16); border-color: rgba(130, 148, 255, 0.35); }
 .tema-apple :is(button, a[href], [role="button"]):not(:disabled) {
   transition: filter 0.2s var(--mola), background-color 0.2s var(--mola), box-shadow 0.2s var(--mola), border-color 0.2s var(--mola), color 0.2s var(--mola);
 }

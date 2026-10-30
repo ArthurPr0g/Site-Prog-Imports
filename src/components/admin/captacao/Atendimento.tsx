@@ -868,7 +868,7 @@ function Conversa({
   return (
     // Tela de conversa igual ao WhatsApp (pedido do Arthur, 30/10/2026): modo escuro do WhatsApp Web,
     // balões com rabinho, hora e tiques dentro do balão, separador de dia e caixa de texto com Enter.
-    <div className="flex h-[78vh] min-h-[520px] flex-col overflow-hidden rounded-[14px] border border-[#222d34] bg-[#0b141a] lg:h-[calc(100vh-300px)]">
+    <div className="tela-whatsapp flex h-[78vh] min-h-[520px] flex-col overflow-hidden rounded-[14px] border border-[#222d34] bg-[#0b141a] lg:h-[calc(100vh-300px)]">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-[#202c33] px-3 py-2.5">
         <button onClick={aoVoltar} aria-label="Voltar às conversas" className="text-[#aebac1] lg:hidden">
           <ArrowLeft size={22} />
