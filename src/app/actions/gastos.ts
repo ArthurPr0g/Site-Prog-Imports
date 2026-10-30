@@ -10,6 +10,7 @@ import { buscarCotacaoMercado } from '@/lib/usd-rate';
 import type { Json } from '@/lib/supabase/database.types';
 import { MODELOS } from '@/lib/atendente/modelos';
 import { TIME, type ChaveDoAgente } from '@/lib/agentes/time';
+import { dbDoAtendente } from '@/lib/atendente/db';
 
 export type CustoFixo = { id: string; nome: string; valor_brl: number; periodo: 'mensal' | 'anual'; categoria: string };
 /**
@@ -109,16 +110,18 @@ export async function gastosAction(periodo: Periodo = 'mes'): Promise<Gastos | n
   if (!db) return null;
   const desde = inicio(periodo).toISOString();
   const mes = inicio('mes').toISOString();
+  // ideias não tem política de RLS para admin (só o atendente lê/escreve): lê pela chave do servidor, já com o admin conferido acima.
+  const fila = dbDoAtendente();
 
   const [{ data: cfgRow }, { data: usos }, { data: msgs }, { data: avisos }, { data: audiosIdeias }, cot, { count: fechadas }, { data: execucoes }] = await Promise.all([
     db.from('ia_config').select('custos, monthly_budget_usd, modelos_categoria').eq('id', true).maybeSingle(),
     db.from('ia_usage').select('created_at, model, cost_usd, finalidade, conversation_id, lead_id, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens').gte('created_at', desde < mes ? desde : mes).limit(50000),
     db.from('ia_messages').select('created_at, direction, author, body, media_type, status').gte('created_at', desde).limit(50000),
     db.from('ia_avisos').select('created_at, via, status').gte('created_at', desde).limit(20000),
-    db.from('ideias').select('criado_em').eq('origem', 'whatsapp_audio').gte('criado_em', desde).limit(20000),
+    fila.from('ideias').select('criado_em').eq('origem', 'whatsapp_audio').gte('criado_em', desde).limit(20000),
     buscarCotacaoMercado(),
     db.from('leads').select('id', { count: 'exact', head: true }).eq('status', 'fechado'),
-    db.from('ideias').select('agente, custo_usd, tokens_entrada, tokens_saida').eq('tipo', 'prompt').in('status', ['feito', 'parcial']).gte('atualizado_em', desde).limit(20000),
+    fila.from('ideias').select('agente, custo_usd, tokens_entrada, tokens_saida').eq('tipo', 'prompt').in('status', ['feito', 'parcial']).gte('atualizado_em', desde).limit(20000),
   ]);
   const config: ConfigDeCustos = { ...PADRAO, ...((cfgRow?.custos ?? {}) as Partial<ConfigDeCustos>) };
   const dolarDoDia = config.dolar === null || !(Number(config.dolar) > 0);
