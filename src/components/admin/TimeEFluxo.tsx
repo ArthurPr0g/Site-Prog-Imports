@@ -342,7 +342,7 @@ function SecaoTime() {
           );
         })}
       </div>
-      <div key={fase} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div key={fase} className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 [&>*]:min-w-0">
         {lista.map((a, k) => <CartaoDoAgente key={a.chave} a={a} k={k} />)}
       </div>
     </section>
@@ -453,7 +453,7 @@ function SecaoFluxo() {
             const cor = FASES[e.fase].cor;
             const estado = i === ativa ? 'ativa' : i < ativa ? 'feita' : 'futura';
             return (
-              <li key={e.titulo} className="relative grid grid-cols-[40px_1fr] gap-3 sm:grid-cols-[48px_1fr]">
+              <li key={e.titulo} className="relative grid grid-cols-[40px_minmax(0,1fr)] gap-3 sm:grid-cols-[48px_minmax(0,1fr)]">
                 <span
                   ref={(el) => { nos.current[i] = el; }}
                   className={`t-no t-no-${estado} z-[1] mt-4 grid h-10 w-10 place-items-center rounded-full border-2 text-[14px] font-bold tabular-nums sm:h-12 sm:w-12`}
@@ -566,7 +566,7 @@ function SecaoFuncoes() {
         </div>
       </div>
       {lista.length ? (
-        <div key={`${grupo}-${busca}`} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div key={`${grupo}-${busca}`} className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 [&>*]:min-w-0">
           {lista.map((f, k) => {
             const corpo = (
               <>
@@ -648,7 +648,7 @@ function Resumo() {
     [ETAPAS.filter((e) => e.voce).length, 'pontos em que você decide', UserRound],
   ];
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 [&>*]:min-w-0">
       {itens.map(([n, rotulo, Icon], k) => (
         <div key={rotulo} className="t-entrar t-cartao t-brilho flex items-center gap-3 rounded-[18px] border border-border bg-card p-4" style={{ ...ENTRAR(k), ['--cor' as string]: '#5b74ff' }}>
           <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-accent/15 text-accent"><Icon size={18} /></span>
