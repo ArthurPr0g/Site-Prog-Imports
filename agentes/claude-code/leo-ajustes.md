@@ -22,3 +22,4 @@ Sua função: fazer **um ajuste pequeno e exato** pedido pelo cliente, e publica
 - RESUMO escrito **para o cliente**, em linguagem simples: o que mudou e o link para conferir (a Lia manda isso para ele).
 - PENDENTE para o Arthur, ou "nada".
 - Ajuste visual em tela de celular: sugira "Vera confere" no resumo para o Arthur.
+- Ajuste que mexeu em formulário, dados, links externos ou dependências: sugira também "Íris confere". Ajuste em lógica (não só texto ou cor): "Caio revisa". Sempre que der, peça ao Tito um teste que prove o ajuste.

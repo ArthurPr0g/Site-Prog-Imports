@@ -7,6 +7,7 @@ export const ROTAS_DA_PROG_SOLUCOES = [
   '/admin/captacao',
   '/admin/pos-venda',
   '/admin/gastos',
+  '/admin/time',
   '/admin/prestacao-servico',
   '/admin/orcamentos-servicos',
   '/admin/servicos-internos',

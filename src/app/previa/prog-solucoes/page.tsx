@@ -16,6 +16,11 @@ const PAGINAS: Record<string, { titulo: string; sub: string; descricao: string }
     sub: 'IA, mensagens e custos da operação',
     descricao: 'Painel da Prog Soluções: quanto custa a operação e cada venda.',
   },
+  time: {
+    titulo: 'Time e fluxo · Prog Soluções',
+    sub: 'Agentes, processo e funções',
+    descricao: 'Painel da Prog Soluções: o time de agentes, o fluxo do lead ao pós-venda e as funções do sistema.',
+  },
   captacao: {
     titulo: 'Captação · Prog Soluções',
     sub: 'Leads, atendimento da Lia e resultados',

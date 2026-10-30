@@ -652,3 +652,117 @@ textarea::placeholder {
   .tema-apple.gastos .g-pilula { transition: none; }
   .tema-apple.gastos .g-cartao:hover { transform: none; }
 }
+
+/* ===== Time e fluxo (30/10/2026): time de agentes, fluxograma e funções, com animações e micro animações.
+   Cada cartão define --cor (a cor da fase). Tudo dentro de .tema-apple.time; desliga com movimento reduzido. */
+.tema-apple.time .t-entrar { animation: tema-entrar 0.65s var(--mola) both; }
+.tema-apple.time .t-cartao {
+  transition: transform 0.35s var(--mola), box-shadow 0.35s var(--mola), border-color 0.35s var(--mola);
+}
+.tema-apple.time .t-cartao:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--cor) 50%, transparent);
+  box-shadow: var(--sombra), 0 18px 44px -20px var(--cor);
+}
+.tema-apple.time .t-avatar {
+  background: radial-gradient(120% 120% at 30% 20%, color-mix(in srgb, var(--cor) 85%, #fff 15%), color-mix(in srgb, var(--cor) 70%, #0a0f2a));
+  box-shadow: 0 8px 22px -10px var(--cor), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  animation: t-pop 0.55s var(--mola) both;
+  transition: transform 0.4s var(--mola);
+}
+.tema-apple.time .t-cartao:hover .t-avatar { transform: scale(1.08) rotate(-5deg); }
+@keyframes t-pop {
+  from { transform: scale(0.4); opacity: 0; }
+  70% { transform: scale(1.08); }
+  to { transform: scale(1); opacity: 1; }
+}
+.tema-apple.time .t-chip {
+  border-color: var(--color-border);
+  color: var(--color-fg-tertiary);
+  transition: background 0.25s, border-color 0.25s, color 0.25s, transform 0.2s var(--mola);
+}
+.tema-apple.time .t-chip:hover { color: var(--color-fg); }
+.tema-apple.time .t-chip:active { transform: scale(0.94); }
+.tema-apple.time .t-chip-ativo { background: rgba(91, 116, 255, 0.18); border-color: rgba(91, 116, 255, 0.55); color: #fff; }
+.tema-apple.time .t-comando { transition: border-color 0.25s, background 0.25s, transform 0.2s var(--mola); }
+.tema-apple.time .t-comando:hover { border-color: color-mix(in srgb, var(--cor, #5b74ff) 55%, transparent); background: rgba(91, 116, 255, 0.08); }
+.tema-apple.time .t-comando:active { transform: scale(0.98); }
+.tema-apple.time .t-copiado { transition: background 0.2s, color 0.2s; }
+.tema-apple.time .t-icone { transition: transform 0.4s var(--mola); }
+.tema-apple.time .t-cartao:hover .t-icone { transform: scale(1.1) rotate(-6deg); }
+.tema-apple.time .t-pilula { transition: transform 0.45s var(--mola), width 0.45s var(--mola); }
+.tema-apple.time .t-pulso { animation: g-pulso 1.8s ease-in-out infinite; }
+.tema-apple.time .t-play { transition: transform 0.2s var(--mola), filter 0.2s; }
+.tema-apple.time .t-play:hover { filter: brightness(1.12); }
+.tema-apple.time .t-play:active { transform: scale(0.95); }
+.tema-apple.time .t-brilho { position: relative; overflow: hidden; }
+.tema-apple.time .t-brilho::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.07) 50%, transparent 60%);
+  transform: translateX(-100%);
+  animation: g-varrer 2.8s var(--mola) 0.8s both;
+  pointer-events: none;
+}
+/* Fluxograma: trilho que acende até a etapa ativa, com uma luz correndo para baixo. */
+.tema-apple.time .t-trilho {
+  background: linear-gradient(180deg, transparent, var(--cor) 30%, #fff 50%, var(--cor) 70%, transparent) 0 0 / 100% 220px,
+    linear-gradient(180deg, #5b74ff, var(--cor));
+  box-shadow: 0 0 14px -2px var(--cor);
+  animation: t-correr 1.8s linear infinite;
+  transition: height 0.8s var(--mola), box-shadow 0.6s;
+}
+@keyframes t-correr { to { background-position: 0 220px, 0 0; } }
+.tema-apple.time .t-no {
+  background: #0c1230;
+  border-color: var(--color-border-strong);
+  color: var(--color-fg-tertiary);
+  transition: background 0.5s var(--mola), border-color 0.5s, color 0.5s, transform 0.5s var(--mola), box-shadow 0.5s;
+}
+.tema-apple.time .t-no-feita { border-color: color-mix(in srgb, var(--cor) 60%, transparent); color: var(--cor); }
+.tema-apple.time .t-no-ativa {
+  background: var(--cor);
+  border-color: color-mix(in srgb, var(--cor) 70%, #fff);
+  color: #0a0f2a;
+  transform: scale(1.12);
+  animation: t-no-pulso 1.6s ease-in-out infinite;
+}
+@keyframes t-no-pulso {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--cor) 55%, transparent); }
+  50% { box-shadow: 0 0 0 10px transparent; }
+}
+.tema-apple.time .t-etapa {
+  transition: transform 0.5s var(--mola), border-color 0.5s, box-shadow 0.5s, opacity 0.5s;
+  opacity: 0.62;
+}
+.tema-apple.time .t-etapa:hover { opacity: 0.9; }
+.tema-apple.time .t-etapa-feita { opacity: 0.8; }
+.tema-apple.time .t-etapa-ativa {
+  opacity: 1;
+  transform: translateX(4px);
+  border-color: color-mix(in srgb, var(--cor) 55%, transparent);
+  box-shadow: var(--sombra-2), 0 0 0 1px color-mix(in srgb, var(--cor) 25%, transparent), 0 20px 50px -24px var(--cor);
+}
+.tema-apple.time .t-etapa-ativa .t-par { animation: t-pop 0.55s var(--mola) both; }
+.tema-apple.time .t-etapa-ativa .t-etiqueta { animation: tema-entrar 0.5s var(--mola) both; }
+.tema-apple.time .t-par { transition: border-color 0.3s, transform 0.3s var(--mola); }
+.tema-apple.time .t-par:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--cor) 55%, transparent); }
+@media (prefers-reduced-motion: reduce) {
+  .tema-apple.time .t-entrar,
+  .tema-apple.time .t-avatar,
+  .tema-apple.time .t-pulso,
+  .tema-apple.time .t-brilho::after,
+  .tema-apple.time .t-trilho,
+  .tema-apple.time .t-no-ativa,
+  .tema-apple.time .t-etapa-ativa .t-par,
+  .tema-apple.time .t-etapa-ativa .t-etiqueta { animation: none; }
+  .tema-apple.time .t-cartao,
+  .tema-apple.time .t-pilula,
+  .tema-apple.time .t-trilho,
+  .tema-apple.time .t-no,
+  .tema-apple.time .t-etapa { transition: none; }
+  .tema-apple.time .t-cartao:hover,
+  .tema-apple.time .t-etapa-ativa,
+  .tema-apple.time .t-no-ativa { transform: none; }
+}

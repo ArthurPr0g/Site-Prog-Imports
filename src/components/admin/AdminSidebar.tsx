@@ -10,6 +10,7 @@ import {
   Package,
   ClipboardList,
   Users,
+  Workflow,
   Tag,
   Layers,
   GalleryHorizontalEnd,
@@ -117,6 +118,7 @@ const NAV_SOLUCOES: NavGroup[] = [
   {
     group: 'Gestão',
     items: [
+      { href: '/admin/time', label: 'Time e fluxo', Icon: Workflow },
       { href: '/admin/gastos', label: 'Gastos', Icon: PiggyBank },
       { href: '/admin/servicos-internos', label: 'Catálogo de serviços', Icon: Briefcase },
     ],

@@ -7,7 +7,7 @@
 
 import type { DbDoAtendente } from '@/lib/atendente/db';
 
-export type ChaveDoAgente = 'lia' | 'teo' | 'bia' | 'duda' | 'nina' | 'rafa' | 'vera' | 'leo' | 'gabi';
+export type ChaveDoAgente = 'lia' | 'teo' | 'bia' | 'duda' | 'nina' | 'rafa' | 'vera' | 'caio' | 'iris' | 'tito' | 'leo' | 'gabi';
 
 export type Agente = {
   nome: string;
@@ -25,6 +25,9 @@ export const TIME: Record<ChaveDoAgente, Agente> = {
   nina: { nome: 'Nina', papel: 'protótipo das telas', onde: 'Claude Design' },
   rafa: { nome: 'Rafa', papel: 'construção', onde: 'Claude Code', subagente: 'rafa-construcao' },
   vera: { nome: 'Vera', papel: 'vistoria', onde: 'Claude Code', subagente: 'vera-vistoria' },
+  caio: { nome: 'Caio', papel: 'revisão de código', onde: 'Claude Code', subagente: 'caio-revisao' },
+  iris: { nome: 'Íris', papel: 'cibersegurança', onde: 'Claude Code', subagente: 'iris-seguranca' },
+  tito: { nome: 'Tito', papel: 'testes e desempenho', onde: 'Claude Code', subagente: 'tito-testes' },
   leo: { nome: 'Leo', papel: 'ajustes do cliente', onde: 'Claude Code', subagente: 'leo-ajustes' },
   gabi: { nome: 'Gabi', papel: 'entrega', onde: 'Claude Code', subagente: 'gabi-entrega' },
 };
