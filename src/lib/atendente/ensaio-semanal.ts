@@ -11,6 +11,7 @@ import type { Json } from '@/lib/supabase/database.types';
 import { custoDaChamada } from './regras';
 import { responderConversa, SIMULADOR } from './agente';
 import { avisarArthur } from './avisos';
+import { pedirConserto } from './conserto';
 import { SITE_URL } from '@/lib/seo';
 import { ehFaltaDeCredito, marcarSemCredito } from './credito';
 
@@ -256,16 +257,27 @@ async function relatar(db: DbDoAtendente, cfg: ConfigDoAtendente, rodada: string
   // Nada rodou (ex.: créditos da Anthropic acabaram): diz o motivo uma vez, sem nota zero enganosa.
   if (!avaliadas.length) {
     const motivos = [...new Set(linhas.map((l) => l.resumo ?? 'falhou'))].join('; ');
+    const semCredito = /créditos/.test(motivos);
+    const pedido = !semCredito && (await pedirConserto(db, 'ensaio', `O ensaio da Lia não rodou (${rodada.slice(0, 10)})`, `Motivo: ${motivos}`));
     await avisarArthur(db, cfg, {
       titulo: '🧪 O ensaio da Lia não rodou',
-      texto: `Motivo: ${motivos}.${/créditos/.test(motivos) ? ' Recarregue em https://console.anthropic.com/settings/billing e o ensaio roda de novo na próxima segunda (ou peça ao Claude para rodar agora).' : ''}`,
+      texto: `Motivo: ${motivos}.${semCredito ? ' Recarregue em https://console.anthropic.com/settings/billing e o ensaio roda de novo na próxima segunda (ou peça ao Claude para rodar agora).' : ''}${pedido ? '\n\n🔧 Já pedi ao Claude para resolver.' : ''}`,
       link: `${SITE_URL}/admin/atendimento`,
     });
     return 'relatado';
   }
+  const reprovadas = linhas.filter((l) => l.status === 'erro' || (l.status === 'avaliado' && !l.aprovado));
+  const pedido =
+    reprovadas.length > 0 &&
+    (await pedirConserto(
+      db,
+      'ensaio',
+      `Ensaio da Lia: ${reprovadas.length} perfil(is) com problema (${rodada.slice(0, 10)})`,
+      `Resultado do ensaio semanal (tabela ensaios_lia, rodada ${rodada}; cada perfil tem conversation_id em ia_conversations):\n${linhasTexto.join('\n')}\n\nCorrija o comportamento da Lia (instruções e regras em src/lib/atendente) para que esses perfis passem, sem piorar os que já passaram.`
+    ));
   await avisarArthur(db, cfg, {
     titulo: aprovadas === linhas.length ? '🧪 Ensaio da Lia: tudo certo' : '🧪 Ensaio da Lia: tem o que melhorar',
-    texto: `\n${aprovadas} de ${linhas.length} perfis aprovados · nota média ${media.toFixed(1)}\n\n${linhasTexto.join('\n')}`,
+    texto: `\n${aprovadas} de ${linhas.length} perfis aprovados · nota média ${media.toFixed(1)}\n\n${linhasTexto.join('\n')}${pedido ? '\n\n🔧 Já pedi ao Claude para corrigir os que falharam.' : ''}`,
     link: `${SITE_URL}/admin/atendimento`,
   });
   return 'relatado';

@@ -7,7 +7,7 @@
 
 import type { DbDoAtendente } from '@/lib/atendente/db';
 
-export type ChaveDoAgente = 'lia' | 'teo' | 'bia' | 'duda' | 'nina' | 'rafa' | 'vera' | 'nico' | 'iris' | 'tito' | 'leo' | 'gabi' | 'vistoria';
+export type ChaveDoAgente = 'lia' | 'teo' | 'bia' | 'duda' | 'nina' | 'rafa' | 'vera' | 'nico' | 'iris' | 'tito' | 'leo' | 'gabi' | 'vistoria' | 'conserto';
 
 export type Agente = {
   nome: string;
@@ -31,6 +31,7 @@ export const TIME: Record<ChaveDoAgente, Agente> = {
   vistoria: { nome: 'Vistoria completa', papel: 'Vera, Nico, Íris e Tito juntos', onde: 'Claude Code' },
   leo: { nome: 'Leo', papel: 'ajustes do cliente', onde: 'Claude Code', subagente: 'leo-ajustes' },
   gabi: { nome: 'Gabi', papel: 'entrega', onde: 'Claude Code', subagente: 'gabi-entrega' },
+  conserto: { nome: 'Conserto automático', papel: 'resolve os erros e pendências dos alarmes', onde: 'Claude Code' },
 };
 
 /** "Bia (abertura do projeto)": como o agente aparece nos avisos. */

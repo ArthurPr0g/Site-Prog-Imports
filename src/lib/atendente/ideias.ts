@@ -374,7 +374,15 @@ export async function avisarPromptsTerminados(db: DbDoAtendente, cfg: ConfigDoAt
         ? `${quem}📝 *Pedido:* ${pedido}\n\n🛠️ *O que fiz:* ${limpo}\n\n${naNuvem ? '☁️ Feito na nuvem' : '💻 Feito no PC'}${vistoria}`
         : `${quem}📝 *Pedido:* ${pedido}\n\n☁️ *Já feito na nuvem:* ${limpo}\n\n💻 *Fica para o PC terminar:* ${(i.falta ?? '').trim().slice(0, 600)}`;
     await avisarArthur(db, cfg, {
-      titulo: i.status === 'feito' ? 'Pedido concluído ✅' : 'Pedido feito em parte ⏳',
+      // Conserto automático de alarme/ensaio (30/10/2026): o Arthur pediu mensagem própria na conclusão.
+      titulo:
+        i.agente === 'conserto'
+          ? i.status === 'feito'
+            ? 'Conserto concluído 🔧✅'
+            : 'Conserto feito em parte 🔧⏳'
+          : i.status === 'feito'
+            ? 'Pedido concluído ✅'
+            : 'Pedido feito em parte ⏳',
       texto,
       link: 'https://hub-prog.vercel.app/ideias',
     });

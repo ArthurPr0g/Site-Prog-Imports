@@ -214,6 +214,7 @@ const FUNCOES: Funcao[] = [
   { grupo: 'whatsapp', Icon: Check, titulo: 'Decidir com botões', texto: 'Desconto, financeiro, dúvidas de um pedido e projeto: é só tocar. Se a janela de 24 h fechou, vem como modelo com "Sim" e "Não".' },
   { grupo: 'automatico', Icon: Bell, titulo: 'Bom dia às 8h', texto: 'Todo dia no seu WhatsApp: o que depende de você, agenda, o que os agentes terminaram, pós-venda, números de ontem e saúde do sistema.' },
   { grupo: 'automatico', Icon: ShieldCheck, titulo: 'Alarme do sistema', texto: 'Te avisa se um relógio parar, a Meta recusar ou demorar com um modelo, a fila do Claude travar, a IA gastar demais ou mensagens falharem.' },
+  { grupo: 'automatico', Icon: Wrench, titulo: 'Conserto automático', texto: 'Alarme ou ensaio com falha já vira "resolva os erros e pendências" na fila do Claude. Quando termina, chega no seu WhatsApp um resumo curto do que foi corrigido.' },
   { grupo: 'automatico', Icon: Eye, titulo: 'Vistoria automática', texto: 'Quando o Rafa constrói ou o Leo ajusta, Vera, Nico, Íris e Tito entram na fila sozinhos.' },
   { grupo: 'automatico', Icon: Sparkles, titulo: 'Pós-entrega', texto: '1 semana: avaliação no Google e portfólio. 1 mês: oferta de manutenção mensal. 3 meses: novo serviço. Você recebe o que o cliente topar.' },
   { grupo: 'automatico', Icon: FlaskConical, titulo: 'Ensaio semanal da Lia', texto: 'Toda segunda de manhã, 5 clientes difíceis simulados conversam com a Lia e um avaliador dá nota. Resultado no seu WhatsApp.' },

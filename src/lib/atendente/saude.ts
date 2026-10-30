@@ -12,6 +12,7 @@ import type { DbDoAtendente } from './db';
 import type { ConfigDoAtendente } from './regras';
 import type { Json } from '@/lib/supabase/database.types';
 import { avisarArthur } from './avisos';
+import { pedirConserto, SO_O_ARTHUR_RESOLVE } from './conserto';
 import { gastoDoMes } from './agente';
 import { SITE_URL } from '@/lib/seo';
 
@@ -129,9 +130,14 @@ export async function verificarSaude(db: DbDoAtendente, cfg: ConfigDoAtendente, 
     .update({ saude: { ...estado, verificado_em: new Date().toISOString(), avisados } as unknown as Json })
     .eq('id', true);
   if (!novos.length) return 0;
+  // Pedido do Arthur (30/10/2026): alarme já vira "resolva os erros e pendências" na fila do Claude.
+  const consertaveis = novos.filter((p) => !SO_O_ARTHUR_RESOLVE.has(p.chave));
+  const pedido = consertaveis.length
+    ? await pedirConserto(db, 'alarme', `Alarme do sistema: ${consertaveis.map((p) => p.chave).join(', ')}`, consertaveis.map((p) => p.texto).join('\n'))
+    : false;
   await avisarArthur(db, cfg, {
     titulo: '⚠️ Alarme do sistema',
-    texto: novos.map((p) => p.texto).join('\n'),
+    texto: novos.map((p) => p.texto).join('\n') + (pedido ? '\n\n🔧 Já pedi ao Claude para resolver; o resultado chega aqui.' : ''),
     link: `${SITE_URL}/admin/time`,
   });
   return novos.length;
