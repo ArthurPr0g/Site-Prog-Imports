@@ -17,7 +17,7 @@ type Icone = typeof Bot;
 type Fase = 'atendimento' | 'financeiro' | 'design' | 'construcao' | 'qualidade' | 'entrega';
 
 const FASES: Record<Fase, { nome: string; cor: string }> = {
-  atendimento: { nome: 'Atendimento', cor: '#5b74ff' },
+  atendimento: { nome: 'Atendimento', cor: '#81AAF7' },
   financeiro: { nome: 'Financeiro', cor: '#34d3b4' },
   design: { nome: 'Abertura e design', cor: '#a08bff' },
   construcao: { nome: 'Construção', cor: '#f59e5b' },
@@ -338,7 +338,7 @@ function SecaoTime() {
       <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
         {(['todas', ...Object.keys(FASES)] as (Fase | 'todas')[]).map((f) => {
           const ativo = fase === f;
-          const cor = f === 'todas' ? '#5b74ff' : FASES[f].cor;
+          const cor = f === 'todas' ? '#81AAF7' : FASES[f].cor;
           return (
             <button
               key={f}
@@ -437,7 +437,7 @@ function SecaoFluxo() {
             if (!tocando && ativa >= ETAPAS.length - 1) setAtiva(0);
             setTocando((t) => !t);
           }}
-          className={`t-play flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#6a82ff,#3349f0)] px-4 py-2 text-[13px] font-semibold text-white ${tocando ? '' : 't-pulso'}`}
+          className={`t-play flex items-center gap-2 rounded-full bg-[#F2F3F5] px-4 py-2 text-[13px] font-semibold text-[#08080A] ${tocando ? '' : 't-pulso'}`}
         >
           {tocando ? <Pause size={14} /> : <Play size={14} />}
           {tocando ? 'Pausar' : 'Ver acontecendo'}
@@ -592,12 +592,12 @@ function SecaoFuncoes() {
               </>
             );
             return f.href ? (
-              <Link key={f.titulo} href={f.href} className="t-entrar t-cartao flex flex-col gap-2 rounded-[18px] border border-border bg-card p-4" style={{ ...ENTRAR(k), ['--cor' as string]: '#5b74ff' }}>
+              <Link key={f.titulo} href={f.href} className="t-entrar t-cartao flex flex-col gap-2 rounded-[18px] border border-border bg-card p-4" style={{ ...ENTRAR(k), ['--cor' as string]: '#81AAF7' }}>
                 {corpo}
                 <span className="mt-auto text-[12px] font-semibold text-accent">Abrir →</span>
               </Link>
             ) : (
-              <div key={f.titulo} className="t-entrar t-cartao flex flex-col gap-2 rounded-[18px] border border-border bg-card p-4" style={{ ...ENTRAR(k), ['--cor' as string]: '#5b74ff' }}>
+              <div key={f.titulo} className="t-entrar t-cartao flex flex-col gap-2 rounded-[18px] border border-border bg-card p-4" style={{ ...ENTRAR(k), ['--cor' as string]: '#81AAF7' }}>
                 {corpo}
                 {f.comando && <div className="mt-auto"><Copiar texto={f.comando} /></div>}
               </div>
@@ -634,14 +634,14 @@ function Navegacao() {
   return (
     <nav className="sticky top-2 z-20 flex justify-center">
       <div className="vidro relative flex gap-1 rounded-full border border-border bg-[#0c1230]/80 p-1 backdrop-blur-xl">
-        <span className="t-pilula absolute bottom-1 top-1 rounded-full bg-[linear-gradient(135deg,#6a82ff,#3349f0)]" style={{ transform: `translateX(${pilula.x - 4}px)`, width: pilula.w, left: 4 }} aria-hidden />
+        <span className="t-pilula absolute bottom-1 top-1 rounded-full bg-[oklch(72%_.1_262/.22)]" style={{ transform: `translateX(${pilula.x - 4}px)`, width: pilula.w, left: 4 }} aria-hidden />
         {SECOES.map((s) => (
           <button
             key={s.id}
             ref={(el) => { botoes.current[s.id] = el; }}
             type="button"
             onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-            className={`relative z-[1] rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${ativa === s.id ? 'text-white' : 'text-fg-tertiary hover:text-fg'}`}
+            className={`relative z-[1] rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${ativa === s.id ? 'text-[#B1D2FF]' : 'text-fg-tertiary hover:text-fg'}`}
           >
             {s.nome}
           </button>
@@ -661,7 +661,7 @@ function Resumo() {
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 [&>*]:min-w-0">
       {itens.map(([n, rotulo, Icon], k) => (
-        <div key={rotulo} className="t-entrar t-cartao t-brilho flex items-center gap-3 rounded-[18px] border border-border bg-card p-4" style={{ ...ENTRAR(k), ['--cor' as string]: '#5b74ff' }}>
+        <div key={rotulo} className="t-entrar t-cartao t-brilho flex items-center gap-3 rounded-[18px] border border-border bg-card p-4" style={{ ...ENTRAR(k), ['--cor' as string]: '#81AAF7' }}>
           <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-accent/15 text-accent"><Icon size={18} /></span>
           <div className="min-w-0">
             <b className="block text-[24px] font-bold leading-none tabular-nums">{n}</b>

@@ -32,7 +32,7 @@ export function WorkspaceSwitcher({ active }: { active: AreaDeTrabalho }) {
             'whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-extrabold transition-colors sm:px-3.5',
             ativa === area.chave
               ? area.chave === 'solucoes'
-                ? 'bg-[linear-gradient(135deg,#6a82ff,#3349f0)] text-white'
+                ? 'bg-[#F2F3F5] text-[#08080A]' // design system Prog Soluções: item ativo sólido em paper
                 : 'bg-surface-light text-ink'
               : 'text-fg-secondary hover:text-accent'
           )}
