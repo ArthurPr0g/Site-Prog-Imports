@@ -85,6 +85,23 @@ export async function problemasAtuais(db: DbDoAtendente, cfg: ConfigDoAtendente,
     db.from('ia_avisos').select('id', { count: 'exact', head: true }).eq('status', 'failed').gte('created_at', desde(1)),
     db.from('ia_messages').select('id', { count: 'exact', head: true }).eq('direction', 'out').eq('status', 'failed').gte('created_at', desde(1)),
   ]);
+  // A IA não conseguiu responder (créditos da Anthropic acabaram, chave inválida, limite): a Lia está parada.
+  const { data: falhasDaIa } = await db
+    .from('ia_messages')
+    .select('body')
+    .eq('author', 'sistema')
+    .like('body', '%A IA não conseguiu responder%')
+    .gte('created_at', desde(1))
+    .limit(20);
+  if (falhasDaIa?.length) {
+    const credito = falhasDaIa.some((m) => /créditos da Anthropic/i.test(m.body));
+    problemas.push({
+      chave: credito ? 'ia_sem_credito' : 'ia_falhando',
+      texto: credito
+        ? '🚨 Acabaram os créditos da Anthropic: a Lia, a pesquisa e o ensaio pararam. Recarregue em https://console.anthropic.com/settings/billing'
+        : `🚨 A IA falhou ${falhasDaIa.length} vez(es) na última hora e não respondeu os clientes. Veja em Captação → Atendimento.`,
+    });
+  }
   if ((avisosFalhos ?? 0) >= 3) problemas.push({ chave: 'avisos_falhando', texto: `📵 ${avisosFalhos} avisos para você falharam na última hora.` });
   if ((msgsFalhas ?? 0) >= 3) problemas.push({ chave: 'mensagens_falhando', texto: `📵 ${msgsFalhas} mensagens da Lia para clientes falharam na última hora.` });
 

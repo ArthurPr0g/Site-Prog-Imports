@@ -1467,15 +1467,18 @@ CLIENTE COM PROJETO (${projetoCliente.cliente}): ele já é cliente. Se pedir mu
       });
     } catch (erro) {
       console.error('[atendente] Claude falhou', erro);
-      const msg =
-        erro instanceof Anthropic.RateLimitError
+      // Créditos da Anthropic acabaram (30/10/2026): o aviso dizia só "erro 400"; agora diz o que é e onde recarregar.
+      const semCredito = erro instanceof Anthropic.APIError && /credit balance is too low/i.test(String(erro.message));
+      const msg = semCredito
+        ? 'acabaram os créditos da Anthropic: recarregue em https://console.anthropic.com/settings/billing'
+        : erro instanceof Anthropic.RateLimitError
           ? 'limite de uso da API da Anthropic'
           : erro instanceof Anthropic.AuthenticationError
             ? 'chave da Anthropic inválida'
             : erro instanceof Anthropic.APIError
               ? `erro ${erro.status} da API da Anthropic`
               : 'falha ao falar com a IA';
-      await chamarArthur(db, cfg, conversaId, `A IA não conseguiu responder (${msg}). Responda você.`, 'A IA falhou');
+      await chamarArthur(db, cfg, conversaId, `A IA não conseguiu responder (${msg}). Responda você.`, semCredito ? '⚠️ Créditos da IA acabaram: a Lia parou' : 'A IA falhou');
       return msg;
     }
 
