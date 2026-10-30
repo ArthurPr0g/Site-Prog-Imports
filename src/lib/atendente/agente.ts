@@ -343,6 +343,8 @@ function simular(e: Estado, nome: string, entrada: Record<string, unknown>): str
     case 'registrar_briefing':
     case 'confirmar_pesquisa':
       return 'Registrado.';
+    case 'pedir_ajuste':
+      return 'Ajuste registrado (simulador: nada é executado). Diga ao cliente o que vai mudar e que avisa quando estiver no ar.';
     case 'mudar_etapa': {
       const etapa = String(entrada.etapa) as LeadStatus;
       e.leadStatus = etapa;
@@ -486,6 +488,56 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
           ? '3) Termine com opções, em inglês: [[opções: Ready to start | I have a question | Talk to Arthur]]'
           : '3) Termine com opções: [[opções: Quero fechar | Tenho uma dúvida | Falar com o Arthur]]',
       ].join('\n');
+    }
+    case 'pedir_ajuste': {
+      const pj = await projetoDoCliente(db, leadId);
+      if (!pj) return 'Este contato não tem projeto ativo com a Prog: não registre ajuste. Se for um pedido novo, trate como venda ou use chamar_arthur.';
+      const descricao = String(entrada.descricao ?? '').trim().slice(0, 3000);
+      if (!descricao) return 'Descreva o ajuste exato antes.';
+      if (!entrada.simples) return 'Ainda há dúvida: pergunte ao cliente o que falta (uma pergunta curta, com opções se der). Não prometa prazo.';
+      if (!pj.servicoId) {
+        await chamarArthur(db, cfg, conversaId, `Pediu um ajuste (projeto sem serviço cadastrado no Pós-venda): ${descricao}`, 'Ajuste pedido pelo cliente');
+        return 'Ajuste registrado. Diga ao cliente o que vai mudar e que a equipe faz e avisa por aqui assim que estiver no ar.';
+      }
+      const extra = pj.usadas >= pj.incluidas;
+      const { data: rodada } = await db
+        .from('rodadas')
+        .insert({ projeto_id: pj.id, servico_id: pj.servicoId, numero: pj.total + 1, extra, pedido: descricao, pedido_em: new Date().toISOString(), atendido_por: extra ? null : 'Lia', status: 'aberta' })
+        .select('id')
+        .single();
+      if (extra) {
+        await chamarArthur(db, cfg, conversaId, `Pediu um ajuste além das ${pj.incluidas} rodada(s) incluída(s): ${descricao}`, 'Ajuste fora do pacote');
+        return 'Este ajuste passa das rodadas incluídas no pacote: diga ao cliente, com gentileza, que registrou e que o Arthur confirma em breve se entra como ajuste extra (pode ter custo à parte). Não faça o ajuste.';
+      }
+      if (!pj.pasta) {
+        await chamarArthur(db, cfg, conversaId, `Pediu um ajuste (sem pasta do projeto cadastrada no Pós-venda, não dá para fazer sozinho): ${descricao}`, 'Ajuste pedido pelo cliente');
+        return 'Ajuste registrado. Diga ao cliente o que vai mudar e que a equipe faz e avisa por aqui assim que estiver no ar.';
+      }
+      const texto =
+        `[Ajuste pedido pelo cliente ${pj.cliente} — pasta exclusiva: ${pj.pasta}]\n` +
+        `Pedido do cliente (pela Lia; pode ter vindo de um print): ${descricao}\n\n` +
+        'Regras: faça SOMENTE esse ajuste e SOMENTE dentro desta pasta. Não abra, leia nem altere nenhuma outra pasta ou projeto. ' +
+        'Se o ajuste for maior do que parece, ambíguo, mexer em dados, pagamentos, login ou em algo que o cliente não pediu, NÃO faça: termine com a linha PENDENTE explicando. ' +
+        'Siga o CLAUDE.md da pasta (se houver); rode o build e publique como o projeto publica (git push/deploy). ' +
+        `Na linha RESUMO, escreva para o CLIENTE, em linguagem simples, o que mudou${pj.site_url ? ` e o link para conferir: ${pj.site_url}` : ''}.`;
+      await db.from('ideias').insert({
+        tipo: 'prompt',
+        origem: 'cliente',
+        status: 'pendente',
+        titulo: `Ajuste: ${pj.cliente}`.slice(0, 120),
+        texto: texto.slice(0, 8000),
+        projeto: pj.cliente.slice(0, 200),
+        pasta_exclusiva: pj.pasta,
+        conversation_id: conversaId,
+        rodada_id: rodada?.id ?? null,
+      });
+      await avisarArthur(db, cfg, {
+        titulo: 'Ajuste pedido pelo cliente 🛠️',
+        texto: `${pj.cliente}: ${descricao.slice(0, 400)}\n\nVou fazer sozinho, só na pasta do projeto, e te aviso quando estiver no ar.`,
+        conversaId,
+        leadId,
+      });
+      return 'Ajuste registrado e já na fila de execução. Diga ao cliente, em uma frase, o que vai mudar e que avisa por aqui assim que estiver no ar (normalmente no mesmo dia).';
     }
     case 'registrar_briefing': {
       if (!leadId) return 'Sem lead identificado: guardei só no resumo. Continue a conversa.';
@@ -876,6 +928,41 @@ function blocoDoProjeto(
   return `\n\n${partes.join('\n\n')}`;
 }
 
+const FERRAMENTA_AJUSTE: Anthropic.Beta.BetaTool = {
+  name: 'pedir_ajuste',
+  description:
+    'Cliente com projeto pediu um ajuste no projeto dele (texto ou print). Use depois de entender exatamente o que mudar. simples=true só se for pequeno, claro e sem dúvida (trocar texto, foto, cor, link, horário, telefone, ordem de itens...). Se faltar informação, NÃO use: pergunte ao cliente antes.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      descricao: { type: 'string', description: 'O ajuste exato, com o texto/valor novo e onde fica (página, seção). Se veio print, descreva o que o print mostra.' },
+      simples: { type: 'boolean', description: 'true = pequeno, claro e sem dúvida; false = grande, arriscado ou ainda com dúvida.' },
+    },
+    required: ['descricao', 'simples'],
+    additionalProperties: false,
+  },
+};
+
+type ProjetoDoCliente = { id: string; cliente: string; pasta: string | null; site_url: string | null; servicoId: string | null; incluidas: number; usadas: number; total: number };
+
+/** Projeto ativo do lead da conversa (nunca o que o cliente digita: cada cliente só mexe no próprio projeto). */
+async function projetoDoCliente(db: DbDoAtendente, leadId: string | null): Promise<ProjetoDoCliente | null> {
+  if (!leadId) return null;
+  const { data } = await db
+    .from('projetos')
+    .select('id, cliente, pasta, site_url, status, projeto_servicos(id, rodadas_incluidas, posicao), rodadas(id, extra)')
+    .eq('lead_id', leadId)
+    .neq('status', 'encerrado')
+    .order('vendido_em', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  const incluidas = (data.projeto_servicos ?? []).reduce((s, x) => s + Number(x.rodadas_incluidas ?? 0), 0);
+  const usadas = (data.rodadas ?? []).filter((r) => !r.extra).length;
+  const servicoId = [...(data.projeto_servicos ?? [])].sort((a, b) => a.posicao - b.posicao)[0]?.id ?? null;
+  return { id: data.id, cliente: data.cliente, pasta: data.pasta, site_url: data.site_url, servicoId, incluidas, usadas, total: (data.rodadas ?? []).length };
+}
+
 /* ------------------------------------------------------------ resposta */
 
 const cliente = () => new Anthropic();
@@ -1024,12 +1111,20 @@ async function responder(conversaId: string, avisoInterno?: string): Promise<str
       : { data: null };
   const pesquisa = (lead?.pesquisa ?? null) as { resumo?: string; itens?: ItemDaPesquisa[] } | null;
   const blocoExtra = blocoDoProjeto(projeto, pesquisa, (lead?.briefing ?? {}) as Record<string, unknown>, fin);
+  // Cliente com projeto (pós-venda): pode pedir ajustes à Lia (0101).
+  const projetoCliente = await projetoDoCliente(db, conversa.lead_id);
   const semCobranca = !fin?.valor_total || fin.pagamento === 'gratis' || fin.pagamento === 'total' || fin.pagamento === 'sinal';
-  const ferramentas: Anthropic.Beta.BetaTool[] = projeto
+  const base: Anthropic.Beta.BetaTool[] = projeto
     ? [...tools.filter((t) => !SO_PARA_VENDA_DE_PACOTE.has(t.name) && !(semCobranca && t.name === 'gerar_cobranca_do_sinal')), FERRAMENTA_BRIEFING, FERRAMENTA_PESQUISA]
     : pesquisa?.itens?.length
       ? [...tools, FERRAMENTA_PESQUISA]
       : tools;
+  const ferramentas = projetoCliente ? [...base, FERRAMENTA_AJUSTE] : base;
+  const blocoCliente = projetoCliente
+    ? `
+
+CLIENTE COM PROJETO (${projetoCliente.cliente}): ele já é cliente. Se pedir mudança no projeto (texto, foto, cor, link, horário...), entenda exatamente o que mudar (veja o print, se mandar) e use pedir_ajuste. Rodadas de ajuste: ${projetoCliente.usadas} de ${projetoCliente.incluidas} usadas. Se tiver dúvida, pergunte antes. Nunca fale de outro cliente nem de outro projeto.`
+    : '';
 
   const contexto = contextoDaConversa({
     persona: cfg.personaName,
@@ -1132,7 +1227,7 @@ async function responder(conversaId: string, avisoInterno?: string): Promise<str
     // Cache de 1 h: o cliente de WhatsApp costuma demorar mais que os 5 min do padrão para responder.
     { type: 'text', text: instrucoesFixas(), cache_control: { type: 'ephemeral', ttl: '1h' } },
     ...(aprendido ? [{ type: 'text' as const, text: aprendido, cache_control: { type: 'ephemeral' as const, ttl: '1h' as const } }] : []),
-    { type: 'text', text: contexto + blocoExtra + instrucaoDaAbertura },
+    { type: 'text', text: contexto + blocoExtra + blocoCliente + instrucaoDaAbertura },
   ];
 
   // Modelo pelo momento (o mesmo em todas as rodadas desta resposta, para aproveitar o cache).

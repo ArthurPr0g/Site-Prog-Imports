@@ -570,6 +570,29 @@ function DetalheDoProjeto({
         </div>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block text-[12px] font-bold text-fg-tertiary">
+          Pasta do código (no PC)
+          <input
+            defaultValue={p.pasta ?? ''}
+            placeholder="C:\\Apps\\1 - Dev\\Prog Soluções\\1 - Clientes\\..."
+            onBlur={(x) => x.target.value !== (p.pasta ?? '') && acao(() => atualizarProjetoAction(p.id, { pasta: x.target.value }))}
+            className={`mt-1 w-full ${inputClass}`}
+          />
+          <span className="mt-1 block font-normal text-fg-faded">Com a pasta preenchida, a Lia faz sozinha os ajustes simples que o cliente pedir, só aqui dentro.</span>
+        </label>
+        <label className="block text-[12px] font-bold text-fg-tertiary">
+          Site publicado
+          <input
+            defaultValue={p.siteUrl ?? ''}
+            placeholder="https://..."
+            onBlur={(x) => x.target.value !== (p.siteUrl ?? '') && acao(() => atualizarProjetoAction(p.id, { siteUrl: x.target.value }))}
+            className={`mt-1 w-full ${inputClass}`}
+          />
+          <span className="mt-1 block font-normal text-fg-faded">O link que a Lia manda para o cliente conferir o ajuste.</span>
+        </label>
+      </div>
+
       <label className="block text-[12px] font-bold text-fg-tertiary">
         Observações
         <textarea

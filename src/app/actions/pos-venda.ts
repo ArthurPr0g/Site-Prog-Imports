@@ -41,6 +41,9 @@ export type ProjetoDoPainel = {
   entregueEm: string | null;
   status: 'em_andamento' | 'entregue' | 'em_suporte' | 'encerrado';
   observacoes: string | null;
+  /** Pasta do código e site publicado: a Lia faz ajustes simples pedidos pelo cliente só nessa pasta (0101). */
+  pasta: string | null;
+  siteUrl: string | null;
   orcamento: { id: string; titulo: string } | null;
   contato: { telefone: string | null; email: string | null };
   sinal: { valor: number; pagoEm: string | null; status: string } | null;
@@ -92,6 +95,8 @@ export async function painelDoPosVendaAction(): Promise<{ projetos: ProjetoDoPai
         entregueEm: p.entregue_em,
         status: p.status as ProjetoDoPainel['status'],
         observacoes: p.observacoes,
+        pasta: p.pasta,
+        siteUrl: p.site_url,
         orcamento: p.service_quotes ? { id: p.service_quotes.id, titulo: p.service_quotes.title } : null,
         contato: { telefone: p.leads?.phone ?? null, email: p.leads?.email ?? null },
         sinal: sinal ? { valor: Number(sinal.valor), pagoEm: sinal.pago_em, status: sinal.status } : null,
@@ -193,7 +198,7 @@ export async function registrarVendaAction(v: {
 
 export async function atualizarProjetoAction(
   id: string,
-  c: Partial<{ status: ProjetoDoPainel['status']; entregaPrevista: string | null; entregueEm: string | null; observacoes: string | null; responsavel: string | null; orcamentoId: string | null }>
+  c: Partial<{ status: ProjetoDoPainel['status']; entregaPrevista: string | null; entregueEm: string | null; observacoes: string | null; responsavel: string | null; orcamentoId: string | null; pasta: string | null; siteUrl: string | null }>
 ): Promise<ActionResult> {
   const supabase = await admin();
   if (!supabase) return errResult('Sem permissão.');
@@ -206,6 +211,8 @@ export async function atualizarProjetoAction(
       ...(c.observacoes !== undefined ? { observacoes: c.observacoes } : {}),
       ...(c.responsavel !== undefined ? { responsavel: c.responsavel } : {}),
       ...(c.orcamentoId !== undefined ? { service_quote_id: c.orcamentoId || null } : {}),
+      ...(c.pasta !== undefined ? { pasta: c.pasta?.trim() || null } : {}),
+      ...(c.siteUrl !== undefined ? { site_url: c.siteUrl?.trim() || null } : {}),
     })
     .eq('id', id);
   if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar.'));

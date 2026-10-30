@@ -12,7 +12,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { DbDoAtendente } from './db';
 import { custoDaChamada, type ConfigDoAtendente } from './regras';
 import { avisarArthur } from './avisos';
-import { baixarMidia, enviarComOpcoes, enviarTexto, type MensagemRecebida } from './whatsapp-api';
+import { baixarMidia, enviarComOpcoes, enviarTexto, JANELA_MS, type MensagemRecebida } from './whatsapp-api';
+import { enviarModeloAoCliente } from './modelos';
 import { transcrever, transcricaoConfigurada } from './transcricao';
 import { tratarEncomenda } from './encomenda';
 
@@ -213,6 +214,24 @@ export async function anotarDoDono(db: DbDoAtendente, m: MensagemRecebida): Prom
   );
 }
 
+/** Lia avisa o cliente que o ajuste pedido está no ar (texto na janela de 24 h; fora, modelo novidade_projeto). */
+async function avisarClienteDoAjuste(db: DbDoAtendente, cfg: ConfigDoAtendente, conversaId: string, resumo: string): Promise<void> {
+  const { data: c } = await db.from('ia_conversations').select('contact_id, contact_name, last_inbound_at, lead_id').eq('id', conversaId).maybeSingle();
+  if (!c || c.contact_id.startsWith('simulador:')) return;
+  const texto = `Oi! ✅ O ajuste que você pediu já está pronto.\n\n${resumo.slice(0, 700)}\n\nDá uma conferida e me diz se ficou como você queria 😊`;
+  const janela = !!c.last_inbound_at && Date.now() - new Date(c.last_inbound_at).getTime() < JANELA_MS - 5 * 60_000;
+  if (janela) {
+    const r = await enviarTexto(c.contact_id, texto);
+    await db.from('ia_messages').insert({ conversation_id: conversaId, direction: 'out', author: 'ia', body: texto, ...(r.ok ? { external_id: r.id, status: 'sent' } : { status: 'failed', error: r.erro }) });
+    if (r.ok) return;
+  } else {
+    const nome = (c.contact_name ?? '').trim().split(/\s+/)[0] || 'tudo bem';
+    const r = await enviarModeloAoCliente(db, conversaId, c.contact_id, 'novidade_projeto', [nome, 'seu projeto', `o ajuste que você pediu já está pronto. ${resumo.slice(0, 300)}`]);
+    if (r.ok) return;
+  }
+  await avisarArthur(db, cfg, { titulo: 'Avise o cliente do ajuste', texto: `Não consegui avisar o cliente (fora da janela de 24 h e sem modelo aprovado). Ajuste: ${resumo.slice(0, 300)}`, conversaId, leadId: c.lead_id });
+}
+
 /** Arthur escolheu o projeto do pedido (botão proj:<chave>:<id> ou texto "Projeto: ..."): libera para a fila. */
 export async function escolherProjeto(db: DbDoAtendente, id: string, chave: string | null, escrito: string | null, de: string): Promise<void> {
   const { data: i } = await db.from('ideias').select('status, texto, titulo').eq('id', id).maybeSingle();
@@ -239,7 +258,7 @@ export async function escolherProjeto(db: DbDoAtendente, id: string, chave: stri
 export async function avisarPromptsTerminados(db: DbDoAtendente, cfg: ConfigDoAtendente): Promise<number> {
   const { data } = await db
     .from('ideias')
-    .select('id, titulo, texto, status, resultado, falta, avisado_status, criado_em, executor')
+    .select('id, titulo, texto, status, resultado, falta, avisado_status, criado_em, executor, origem, conversation_id, rodada_id')
     .eq('tipo', 'prompt')
     .in('status', ['feito', 'parcial', 'em_execucao'])
     .order('atualizado_em', { ascending: true })
@@ -254,6 +273,11 @@ export async function avisarPromptsTerminados(db: DbDoAtendente, cfg: ConfigDoAt
     // Marca antes: o próximo tick não repete o aviso enquanto este sai.
     await db.from('ideias').update({ avisado_status: i.status }).eq('id', i.id);
     const pedido = i.titulo || (i.texto.length > 80 ? i.texto.slice(0, 77) + '…' : i.texto);
+    // Ajuste pedido pelo cliente (0101): pronto = Lia avisa o cliente e a rodada é entregue.
+    if (i.origem === 'cliente' && i.status === 'feito' && i.conversation_id && !/Aguardando você:/.test(i.resultado ?? '')) {
+      await avisarClienteDoAjuste(db, cfg, i.conversation_id, (i.resultado ?? '').replace(/\[(PC|Nuvem)\]\s*/g, '').trim());
+      if (i.rodada_id) await db.from('rodadas').update({ status: 'entregue', entregue_em: new Date().toISOString() }).eq('id', i.rodada_id);
+    }
     if (i.status === 'em_execucao') {
       await avisarArthur(db, cfg, {
         titulo: 'Comecei seu pedido ▶️',

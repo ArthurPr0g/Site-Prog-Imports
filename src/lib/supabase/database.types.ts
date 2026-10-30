@@ -526,6 +526,9 @@ export type Database = {
       }
       ideias: {
         Row: {
+          pasta_exclusiva: string | null
+          rodada_id: string | null
+          conversation_id: string | null
           projeto: string | null
           atualizado_em: string
           avisado_status: string | null
@@ -546,6 +549,9 @@ export type Database = {
           titulo: string | null
         }
         Insert: {
+          pasta_exclusiva?: string | null
+          rodada_id?: string | null
+          conversation_id?: string | null
           projeto?: string | null
           atualizado_em?: string
           avisado_status?: string | null
@@ -566,6 +572,9 @@ export type Database = {
           titulo?: string | null
         }
         Update: {
+          pasta_exclusiva?: string | null
+          rodada_id?: string | null
+          conversation_id?: string | null
           projeto?: string | null
           atualizado_em?: string
           avisado_status?: string | null
@@ -725,6 +734,8 @@ export type Database = {
       }
       projetos: {
         Row: {
+          site_url: string | null
+          pasta: string | null
           cliente: string
           created_at: string
           entrega_prevista: string | null
@@ -745,6 +756,8 @@ export type Database = {
           vendido_por: string
         }
         Insert: {
+          site_url?: string | null
+          pasta?: string | null
           cliente: string
           created_at?: string
           entrega_prevista?: string | null
@@ -765,6 +778,8 @@ export type Database = {
           vendido_por: string
         }
         Update: {
+          site_url?: string | null
+          pasta?: string | null
           cliente?: string
           created_at?: string
           entrega_prevista?: string | null
