@@ -1431,10 +1431,13 @@ CLIENTE COM PROJETO (${projetoCliente.cliente}): ele já é cliente. Se pedir mu
       ? '\n\nABERTURA DESTA CONVERSA (teste A/B, versão B; vale só para esta primeira resposta e substitui o passo 1 do roteiro): apresente-se em uma frase, cite UM achado concreto do diagnóstico e já use enviar_proposta_pdf com o pacote que o diagnóstico indica (serviços sugeridos; marca = 0 se não houver sinal de que falta logo), sem perguntar nada antes. Siga o que a ferramenta indicar e termine com as opções, no idioma do cliente: [[opções: Quero fechar | Ajustar o pacote | Tenho uma dúvida]]. Se o cliente já fez uma pergunta, responda em uma frase antes.'
       : '';
 
+  const ttlDoCache: '5m' | '1h' = conversa?.is_test ? '5m' : '1h';
   const system: Anthropic.Beta.BetaTextBlockParam[] = [
     // Cache de 1 h: o cliente de WhatsApp costuma demorar mais que os 5 min do padrão para responder.
-    { type: 'text', text: instrucoesFixas(), cache_control: { type: 'ephemeral', ttl: '1h' } },
-    ...(aprendido ? [{ type: 'text' as const, text: aprendido, cache_control: { type: 'ephemeral' as const, ttl: '1h' as const } }] : []),
+    // Conversa de teste vai com 5 min (gravação a 1,25x em vez de 2x): o teste responde em sequência,
+    // então o cache curto basta (pedido do Arthur, 30/10/2026, para baixar o gasto dos testes).
+    { type: 'text', text: instrucoesFixas(), cache_control: { type: 'ephemeral', ttl: ttlDoCache } },
+    ...(aprendido ? [{ type: 'text' as const, text: aprendido, cache_control: { type: 'ephemeral' as const, ttl: ttlDoCache } }] : []),
     { type: 'text', text: contexto + blocoExtra + blocoCliente + blocoContatoNovo + instrucaoDaAbertura },
   ];
 
