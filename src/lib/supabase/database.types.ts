@@ -1000,6 +1000,7 @@ export type Database = {
       }
       ia_config: {
         Row: {
+          custos: Json
           modelos: Json
           encomenda_template_status: string | null
           agenda: Json
@@ -1024,6 +1025,7 @@ export type Database = {
           waba_id: string | null
         }
         Insert: {
+          custos?: Json
           modelos?: Json
           encomenda_template_status?: string | null
           agenda?: Json
@@ -1048,6 +1050,7 @@ export type Database = {
           waba_id?: string | null
         }
         Update: {
+          custos?: Json
           modelos?: Json
           encomenda_template_status?: string | null
           agenda?: Json

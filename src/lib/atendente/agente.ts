@@ -335,6 +335,9 @@ const ORDEM: LeadStatus[] = ['novo', 'contatado', 'respondeu', 'reuniao', 'propo
 
 /** No simulador, o que grava (lead, cobrança, desconto, reunião) só devolve a resposta que a IA veria. */
 function simular(e: Estado, nome: string, entrada: Record<string, unknown>): string | null {
+  // Ensaio com lead fictício (scripts/ensaio-preparar.ts): briefing, pesquisa e descoberta gravam de verdade,
+  // para provar que a gravação funciona; o lead é apagado no fim do ensaio.
+  if (e.contato.startsWith(`${SIMULADOR}ensaio-`) && ['registrar_briefing', 'confirmar_pesquisa', 'registrar_descoberta'].includes(nome)) return null;
   switch (nome) {
     case 'registrar_descoberta':
     case 'registrar_briefing':
@@ -771,6 +774,8 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
 
 // Lead que o Arthur indicou ("Lia, faça todo o projeto", source indicacao_dono): a Lia não vende pacote,
 // faz a descoberta completa do projeto sob medida e segue o financeiro que o Arthur informou.
+// Instagram da Prog para o cliente marcar (o do portfólio: portfolio-arthur-prog.vercel.app).
+const INSTAGRAM_DA_PROG = '@prog.arthur';
 const SO_PARA_VENDA_DE_PACOTE = new Set(['calcular_preco', 'enviar_proposta_pdf', 'pedir_desconto_extra']);
 
 const CAMPOS_DO_BRIEFING = new Map<string, string>([
@@ -846,7 +851,7 @@ function blocoDoProjeto(
   const v = fin?.valor_total ? Number(fin.valor_total) : null;
   const financeiro =
     fin?.pagamento === 'gratis'
-      ? 'Projeto DE GRAÇA (cortesia do Arthur): nunca fale de preço, pagamento, sinal ou cobrança. Se o cliente perguntar, diga com naturalidade que este projeto é cortesia do Arthur.'
+      ? `Projeto DE GRAÇA (cortesia do Arthur): nunca fale de preço, pagamento, sinal ou cobrança. Se o cliente perguntar, diga com naturalidade que este projeto é cortesia do Arthur. Na entrega, ou quando ele elogiar o resultado, peça com carinho, UMA vez, que publique o que foi desenvolvido e marque o Instagram ${INSTAGRAM_DA_PROG}: é o que ajuda a Prog a crescer.`
       : fin?.pagamento === 'total'
         ? 'Já está PAGO 100%: não cobre nada nem fale de valores.'
         : fin?.pagamento === 'sinal'
