@@ -415,6 +415,7 @@ export type Database = {
       }
       lead_search_requests: {
         Row: {
+          lead_id: string | null
           city: string
           country: string
           created_at: string
@@ -427,6 +428,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          lead_id?: string | null
           city: string
           country?: string
           created_at?: string
@@ -439,6 +441,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          lead_id?: string | null
           city?: string
           country?: string
           created_at?: string
@@ -622,6 +625,7 @@ export type Database = {
       }
       reunioes: {
         Row: {
+          lembrete_em: string | null
           tipo: string
           conversation_id: string | null
           created_at: string
@@ -639,6 +643,7 @@ export type Database = {
           titulo: string
         }
         Insert: {
+          lembrete_em?: string | null
           tipo?: string
           conversation_id?: string | null
           created_at?: string
@@ -656,6 +661,7 @@ export type Database = {
           titulo: string
         }
         Update: {
+          lembrete_em?: string | null
           tipo?: string
           conversation_id?: string | null
           created_at?: string
@@ -934,6 +940,11 @@ export type Database = {
       }
       encomendas: {
         Row: {
+          asaas_resumo: string | null
+          valor_total: number | null
+          pago_onde: string | null
+          pagamento: string | null
+          retomada_em: string | null
           assunto: string | null
           contatado_em: string | null
           conversation_id: string | null
@@ -947,6 +958,11 @@ export type Database = {
           telefone: string | null
         }
         Insert: {
+          asaas_resumo?: string | null
+          valor_total?: number | null
+          pago_onde?: string | null
+          pagamento?: string | null
+          retomada_em?: string | null
           assunto?: string | null
           contatado_em?: string | null
           conversation_id?: string | null
@@ -960,6 +976,11 @@ export type Database = {
           telefone?: string | null
         }
         Update: {
+          asaas_resumo?: string | null
+          valor_total?: number | null
+          pago_onde?: string | null
+          pagamento?: string | null
+          retomada_em?: string | null
           assunto?: string | null
           contatado_em?: string | null
           conversation_id?: string | null
@@ -976,6 +997,7 @@ export type Database = {
       }
       ia_config: {
         Row: {
+          modelos: Json
           encomenda_template_status: string | null
           agenda: Json
           active: boolean
@@ -999,6 +1021,7 @@ export type Database = {
           waba_id: string | null
         }
         Insert: {
+          modelos?: Json
           encomenda_template_status?: string | null
           agenda?: Json
           active?: boolean
@@ -1022,6 +1045,7 @@ export type Database = {
           waba_id?: string | null
         }
         Update: {
+          modelos?: Json
           encomenda_template_status?: string | null
           agenda?: Json
           active?: boolean
@@ -1302,6 +1326,8 @@ export type Database = {
       }
       ia_usage: {
         Row: {
+          lead_id: string | null
+          finalidade: string | null
           cache_read_tokens: number
           cache_write_tokens: number
           conversation_id: string | null
@@ -1313,6 +1339,8 @@ export type Database = {
           output_tokens: number
         }
         Insert: {
+          lead_id?: string | null
+          finalidade?: string | null
           cache_read_tokens?: number
           cache_write_tokens?: number
           conversation_id?: string | null
@@ -1324,6 +1352,8 @@ export type Database = {
           output_tokens?: number
         }
         Update: {
+          lead_id?: string | null
+          finalidade?: string | null
           cache_read_tokens?: number
           cache_write_tokens?: number
           conversation_id?: string | null
@@ -1521,6 +1551,10 @@ export type Database = {
       }
       leads: {
         Row: {
+          briefing: Json
+          pesquisa_dica: string | null
+          pesquisa_status: string | null
+          pesquisa: Json | null
           ab_variant: string | null
           address: string | null
           category: string | null
@@ -1589,6 +1623,10 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          briefing?: Json
+          pesquisa_dica?: string | null
+          pesquisa_status?: string | null
+          pesquisa?: Json | null
           ab_variant?: string | null
           address?: string | null
           category?: string | null
@@ -1657,6 +1695,10 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          briefing?: Json
+          pesquisa_dica?: string | null
+          pesquisa_status?: string | null
+          pesquisa?: Json | null
           ab_variant?: string | null
           address?: string | null
           category?: string | null

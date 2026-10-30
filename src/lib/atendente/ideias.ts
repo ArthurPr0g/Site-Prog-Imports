@@ -66,6 +66,7 @@ export async function organizar(db: DbDoAtendente, bruto: string, tipo: 'ideia' 
     const u = r.usage;
     await db.from('ia_usage').insert({
       model: r.model,
+      finalidade: tipo === 'prompt' ? 'organizar_prompt' : 'organizar_ideia',
       input_tokens: u.input_tokens,
       output_tokens: u.output_tokens,
       cache_read_tokens: u.cache_read_input_tokens ?? 0,

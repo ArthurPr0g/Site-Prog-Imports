@@ -61,7 +61,9 @@ async function respostaDoEnvio(r: Response): Promise<ResultadoDoEnvio> {
  * botões (título até 20 caracteres); de 4 a 10, uma lista (até 24). Só dentro da
  * janela de 24 h. O toque volta pelo webhook como texto (o título da opção).
  */
-export async function enviarComOpcoes(para: string, texto: string, opcoes: string[]): Promise<ResultadoDoEnvio> {
+export async function enviarComOpcoes(para: string, texto: string, opcoes: string[], ids?: string[]): Promise<ResultadoDoEnvio> {
+  // ids: ação de cada botão (ex.: "desc:ok:<id>"), que volta no webhook em botaoId (decisões do Arthur, 0095).
+  const id = (i: number) => ids?.[i]?.slice(0, 256) || `op${i}`;
   if (!whatsappConfigurado()) return { ok: false, erro: 'WhatsApp não configurado' };
   const corpo = { text: texto.slice(0, 1024) };
   const interactive =
@@ -69,14 +71,14 @@ export async function enviarComOpcoes(para: string, texto: string, opcoes: strin
       ? {
           type: 'button',
           body: corpo,
-          action: { buttons: opcoes.map((t, i) => ({ type: 'reply', reply: { id: `op${i}`, title: t.slice(0, 20) } })) },
+          action: { buttons: opcoes.map((t, i) => ({ type: 'reply', reply: { id: id(i), title: t.slice(0, 20) } })) },
         }
       : {
           type: 'list',
           body: corpo,
           action: {
             button: 'Ver opções',
-            sections: [{ title: 'Opções', rows: opcoes.slice(0, 10).map((t, i) => ({ id: `op${i}`, title: t.slice(0, 24) })) }],
+            sections: [{ title: 'Opções', rows: opcoes.slice(0, 10).map((t, i) => ({ id: id(i), title: t.slice(0, 24) })) }],
           },
         };
   try {
@@ -137,7 +139,7 @@ export async function marcarLidaEDigitando(mensagemId: string): Promise<void> {
  * Manda um modelo aprovado (fora da janela de 24 h). Os parâmetros não podem ter
  * quebra de linha, tab nem mais de 4 espaços seguidos (regra da Meta).
  */
-export async function enviarModelo(para: string, nome: string, parametros: string[]): Promise<ResultadoDoEnvio> {
+export async function enviarModelo(para: string, nome: string, parametros: string[], acoesDosBotoes?: string[]): Promise<ResultadoDoEnvio> {
   if (!whatsappConfigurado()) return { ok: false, erro: 'WhatsApp não configurado' };
   const limpo = (t: string) => t.replace(/\s*\n+\s*/g, ' · ').replace(/\t/g, ' ').replace(/ {4,}/g, ' ').trim().slice(0, 900);
   try {
@@ -148,7 +150,16 @@ export async function enviarModelo(para: string, nome: string, parametros: strin
       template: {
         name: nome,
         language: { code: 'pt_BR' },
-        components: [{ type: 'body', parameters: parametros.map((p) => ({ type: 'text', text: limpo(p) })) }],
+        components: [
+          { type: 'body', parameters: parametros.map((p) => ({ type: 'text', text: limpo(p) })) },
+          // Botões de resposta rápida com a ação de cada um (volta no webhook em button.payload).
+          ...(acoesDosBotoes ?? []).map((payload, i) => ({
+            type: 'button',
+            sub_type: 'quick_reply',
+            index: String(i),
+            parameters: [{ type: 'payload', payload: payload.slice(0, 256) }],
+          })),
+        ],
       },
     });
     const j = (await r.json()) as { messages?: { id: string }[]; error?: { message?: string } };
@@ -206,6 +217,8 @@ export type MensagemRecebida = {
   midia: MidiaRecebida | null;
   /** Reação (emoji numa mensagem): grava, mas não pede resposta. */
   reacao: boolean;
+  /** Ação do botão tocado (id do botão interativo ou payload do botão do modelo); null se não foi botão. */
+  botaoId: string | null;
 };
 
 /**
@@ -241,8 +254,8 @@ type CorpoDoWebhook = {
           timestamp: string;
           type: string;
           text?: { body?: string };
-          button?: { text?: string };
-          interactive?: { button_reply?: { title?: string }; list_reply?: { title?: string } };
+          button?: { text?: string; payload?: string };
+          interactive?: { button_reply?: { id?: string; title?: string }; list_reply?: { id?: string; title?: string } };
           image?: Midia;
           document?: Midia & { filename?: string };
           audio?: Midia & { voice?: boolean };
@@ -332,6 +345,7 @@ export function lerWebhook(corpo: unknown): { mensagens: MensagemRecebida[]; sta
           quando: new Date(Number(m.timestamp) * 1000).toISOString(),
           midia,
           reacao: m.type === 'reaction',
+          botaoId: m.interactive?.button_reply?.id ?? m.interactive?.list_reply?.id ?? m.button?.payload ?? null,
         });
       }
       for (const s of v.statuses ?? []) {

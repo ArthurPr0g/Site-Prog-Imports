@@ -10,6 +10,7 @@ import { lerConfig } from '@/lib/atendente/agente';
 import { enviarTexto } from '@/lib/atendente/whatsapp-api';
 import { anotarDoDono, mandarCodigoDasIdeias, pedeCodigo } from '@/lib/atendente/ideias';
 import { conversaDaEncomenda } from '@/lib/atendente/encomenda';
+import { ehDecisao, tratarDecisao } from '@/lib/atendente/decisoes';
 import { kitDoVendedor, textoDaFila, relatorioDoVendedor, PEDIDO_DE_FILA, PEDIDO_DE_RELATORIO_DO_VENDEDOR } from '@/lib/atendente/fila-do-vendedor';
 
 // Webhook do WhatsApp Cloud API (configurado no app da Meta).
@@ -62,8 +63,14 @@ export async function POST(req: NextRequest) {
     // lead: só abre a janela de 24 h para os próximos avisos saírem como texto.
     if (mesmoTelefone(m.de, cfg?.owner_whatsapp)) {
       await db.from('ia_config').update({ owner_last_inbound_at: m.quando }).eq('id', true);
-      // "relatório" / "como está a captação?": responde ao dono com funil, meta e custo da IA.
-      if (PEDIDO_DE_RELATORIO.test(m.texto)) {
+      // Toque num botão de decisão (chamar cliente, financeiro, desconto, assumir conversa), 0095.
+      if (ehDecisao(m)) {
+        after(async () => {
+          await marcarLidaEDigitando(m.id);
+          await tratarDecisao(db, m);
+        });
+      } else if (PEDIDO_DE_RELATORIO.test(m.texto)) {
+        // "relatório" / "como está a captação?": responde ao dono com funil, meta e custo da IA.
         const para = m.de;
         after(async () => {
           await marcarLidaEDigitando(m.id);

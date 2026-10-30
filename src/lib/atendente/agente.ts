@@ -99,7 +99,17 @@ export async function chamarArthur(
   // Simulador do painel: fica só no histórico, sem aviso no WhatsApp do Arthur.
   if (c?.contact_id.startsWith(SIMULADOR)) return;
   const quem = c?.leads?.name ?? c?.contact_name;
-  await avisarArthur(db, cfg, { titulo, texto: quem ? `${quem}: ${motivo}` : motivo, conversaId, leadId: c?.lead_id ?? null });
+  await avisarArthur(db, cfg, {
+    titulo,
+    texto: quem ? `${quem}: ${motivo}` : motivo,
+    conversaId,
+    leadId: c?.lead_id ?? null,
+    pergunta: 'Assume a conversa ou deixa com a Lia?',
+    opcoes: [
+      { id: `conv:assumir:${conversaId}`, titulo: 'Assumo a conversa' },
+      { id: `conv:lia:${conversaId}`, titulo: 'Deixa com a Lia' },
+    ],
+  });
 }
 
 async function registrar(
@@ -327,6 +337,8 @@ const ORDEM: LeadStatus[] = ['novo', 'contatado', 'respondeu', 'reuniao', 'propo
 function simular(e: Estado, nome: string, entrada: Record<string, unknown>): string | null {
   switch (nome) {
     case 'registrar_descoberta':
+    case 'registrar_briefing':
+    case 'confirmar_pesquisa':
       return 'Registrado.';
     case 'mudar_etapa': {
       const etapa = String(entrada.etapa) as LeadStatus;
@@ -470,6 +482,43 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
           : '3) Termine com opções: [[opções: Quero fechar | Tenho uma dúvida | Falar com o Arthur]]',
       ].join('\n');
     }
+    case 'registrar_briefing': {
+      if (!leadId) return 'Sem lead identificado: guardei só no resumo. Continue a conversa.';
+      const { data: l } = await db.from('leads').select('briefing').eq('id', leadId).maybeSingle();
+      const atual = (l?.briefing ?? {}) as Record<string, string | string[]>;
+      for (const [k, v] of Object.entries(entrada)) {
+        if (!CAMPOS_DO_BRIEFING.has(k)) continue;
+        if (Array.isArray(v)) {
+          const antes = Array.isArray(atual[k]) ? (atual[k] as string[]) : [];
+          atual[k] = [...new Set([...antes, ...v.map((x) => String(x).trim()).filter(Boolean)])].slice(0, 60);
+        } else if (String(v ?? '').trim()) atual[k] = String(v).trim().slice(0, 2000);
+      }
+      // Instagram novo (pedido do Arthur, 30/10): vai para o lead e a pesquisa roda de novo com ele.
+      const insta = String(entrada.instagram ?? '').trim();
+      const extra: { instagram?: string; pesquisa_status?: string; pesquisa_dica?: string } = {};
+      if (insta) {
+        const arroba = insta.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/[/?].*$/, '').replace(/^@/, '');
+        const { data: atualLead } = await db.from('leads').select('instagram, pesquisa_dica').eq('id', leadId).maybeSingle();
+        if (arroba && !(atualLead?.instagram ?? '').toLowerCase().includes(arroba.toLowerCase())) {
+          extra.instagram = `https://www.instagram.com/${arroba}`;
+          extra.pesquisa_status = 'pendente';
+          extra.pesquisa_dica = `${atualLead?.pesquisa_dica ?? ''}\nInstagram confirmado pelo cliente: @${arroba}`.slice(0, 4000);
+        }
+      }
+      await db.from('leads').update({ briefing: atual as Json, ...extra }).eq('id', leadId);
+      return 'Registrado no briefing.';
+    }
+    case 'confirmar_pesquisa': {
+      if (!leadId) return 'Sem lead identificado.';
+      const { data: l } = await db.from('leads').select('pesquisa').eq('id', leadId).maybeSingle();
+      const p = (l?.pesquisa ?? null) as { itens?: { situacao?: string; correcao?: string }[] } | null;
+      const i = Number(entrada.item);
+      if (!p?.itens?.[i]) return 'Item da pesquisa não encontrado.';
+      p.itens[i].situacao = String(entrada.situacao ?? 'confirmado');
+      if (String(entrada.correcao ?? '').trim()) p.itens[i].correcao = String(entrada.correcao).trim().slice(0, 500);
+      await db.from('leads').update({ pesquisa: p as Json }).eq('id', leadId);
+      return 'Registrado.';
+    }
     case 'registrar_descoberta': {
       if (!leadId) return 'Sem lead identificado: guardei só no resumo. Continue a conversa.';
       const { data: l } = await db.from('leads').select('discovery').eq('id', leadId).maybeSingle();
@@ -601,13 +650,17 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
       if (e.descontoNegado) return 'O superior já negou nesta conversa. Ofereça outra saída (parcelamento, nível abaixo).';
       const pct = Math.round(Math.min(Math.max(Number(entrada.percentual) || 0, 1), cfg.extraDiscountMax) * 10) / 10;
       const libera = new Date(Date.now() + cfg.discountWaitMinutes * 60_000).toISOString();
-      const { error } = await db.from('ia_discount_requests').insert({
-        conversation_id: conversaId,
-        lead_id: leadId,
-        percent: pct,
-        reason: String(entrada.motivo ?? '').slice(0, 500),
-        release_at: libera,
-      });
+      const { data: pedido, error } = await db
+        .from('ia_discount_requests')
+        .insert({
+          conversation_id: conversaId,
+          lead_id: leadId,
+          percent: pct,
+          reason: String(entrada.motivo ?? '').slice(0, 500),
+          release_at: libera,
+        })
+        .select('id')
+        .single();
       if (error) return 'Não consegui registrar o pedido agora. Diga que vai confirmar com o responsável.';
       e.descontoPendente = true;
       await avisarArthur(db, cfg, {
@@ -615,6 +668,15 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
         texto: `${String(entrada.motivo ?? '').slice(0, 300)} Se você não negar em ${cfg.discountWaitMinutes} min, a ${cfg.personaName} libera sozinha.`,
         conversaId,
         leadId,
+        ...(pedido
+          ? {
+              pergunta: `Aprova ${pct}%?`,
+              opcoes: [
+                { id: `desc:ok:${pedido.id}`, titulo: 'Aprovar desconto' },
+                { id: `desc:nao:${pedido.id}`, titulo: 'Negar desconto' },
+              ],
+            }
+          : {}),
       });
       return 'Pedido enviado ao superior. Agora diga ao cliente, com naturalidade, que vai ver com seu superior se consegue uma condição melhor e que volta em alguns minutos. Não diga percentual.';
     }
@@ -703,6 +765,108 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
     default:
       return `Ferramenta desconhecida: ${nome}`;
   }
+}
+
+/* ------------------------------------------------------------ modo projeto (0094/0096) */
+
+// Lead que o Arthur indicou ("Lia, faça todo o projeto", source indicacao_dono): a Lia não vende pacote,
+// faz a descoberta completa do projeto sob medida e segue o financeiro que o Arthur informou.
+const SO_PARA_VENDA_DE_PACOTE = new Set(['calcular_preco', 'enviar_proposta_pdf', 'pedir_desconto_extra']);
+
+const CAMPOS_DO_BRIEFING = new Map<string, string>([
+  ['instagram', 'Instagram que mais ajuda a criar o site (o da empresa ou o profissional da pessoa): @ ou link'],
+  ['negocio', 'O negócio: o que faz, há quanto tempo, como funciona hoje'],
+  ['dor', 'A dor principal: o que incomoda ou dá trabalho hoje, nas palavras do cliente'],
+  ['objetivo', 'Aonde quer chegar com o projeto (resultado esperado)'],
+  ['publico', 'Quem vai usar / quem é o cliente final'],
+  ['perfis_de_usuario', 'Perfis que acessam o sistema e o que cada um pode fazer (ex.: personal, aluno, administrador)'],
+  ['funcoes', 'Funções que precisa (lista)'],
+  ['telas_ou_paginas', 'Telas ou páginas que imagina (lista)'],
+  ['identidade_visual', 'Logo, cores, fontes, estilo'],
+  ['referencias', 'Sites, apps ou perfis de referência de que gosta (e o que gosta neles)'],
+  ['conteudo_disponivel', 'Textos, fotos, vídeos, dados que já tem'],
+  ['integracoes', 'Pagamento, WhatsApp, agenda, planilhas, apps que precisa integrar'],
+  ['dominio_e_hospedagem', 'Domínio e hospedagem que já tem ou precisa'],
+  ['prazo', 'Prazo desejado e por quê'],
+  ['orcamento', 'Faixa de investimento que imagina (só se ele mesmo falar)'],
+  ['observacoes', 'Qualquer outra coisa importante'],
+]);
+
+const LISTAS_DO_BRIEFING = new Set(['funcoes', 'telas_ou_paginas', 'perfis_de_usuario', 'referencias', 'integracoes']);
+
+const FERRAMENTA_BRIEFING: Anthropic.Beta.BetaTool = {
+  name: 'registrar_briefing',
+  description:
+    'Grava no painel o briefing do projeto sob medida (modo projeto). Mande só os campos que souber; listas somam ao que já existe. Use NA MESMA RESPOSTA em que o cliente contar algo.',
+  input_schema: {
+    type: 'object',
+    properties: Object.fromEntries(
+      [...CAMPOS_DO_BRIEFING].map(([k, d]) => [k, LISTAS_DO_BRIEFING.has(k) ? { type: 'array', items: { type: 'string' }, description: d } : { type: 'string', description: d }])
+    ),
+    additionalProperties: false,
+  },
+};
+
+const FERRAMENTA_PESQUISA: Anthropic.Beta.BetaTool = {
+  name: 'confirmar_pesquisa',
+  description:
+    'Depois que o cliente confirmar, corrigir ou negar uma informação de "O QUE ACHAMOS NA INTERNET", grave o resultado. item = número entre colchetes.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      item: { type: 'integer', description: 'Número do item (entre colchetes).' },
+      situacao: { type: 'string', enum: ['confirmado', 'corrigido', 'descartado'] },
+      correcao: { type: 'string', description: 'O valor certo, se o cliente corrigiu; senão "".' },
+    },
+    required: ['item', 'situacao', 'correcao'],
+    additionalProperties: false,
+  },
+};
+
+type ItemDaPesquisa = { campo: string; valor: string; fonte?: string; situacao?: string; correcao?: string };
+
+/** Texto extra do contexto: o que a pesquisa achou (a confirmar) e, no modo projeto, as regras e o financeiro. */
+function blocoDoProjeto(
+  projeto: boolean,
+  pesquisa: { resumo?: string; itens?: ItemDaPesquisa[] } | null,
+  briefing: Record<string, unknown>,
+  fin: { pagamento: string | null; valor_total: number | null; pago_onde: string | null } | null,
+): string {
+  const partes: string[] = [];
+  const itens = (pesquisa?.itens ?? []).map((it, i) => ({ ...it, i })).filter((it) => !it.situacao || it.situacao === 'a_confirmar');
+  if (pesquisa?.resumo || itens.length) {
+    partes.push(
+      'O QUE ACHAMOS NA INTERNET SOBRE ESTE CLIENTE (pode estar errado ou velho: confirme com naturalidade, um item por vez, quando couber na conversa, sem parecer que vigiou a pessoa. Ex.: "vi que você está no Instagram como @x, é esse mesmo?". Depois use confirmar_pesquisa):' +
+        (pesquisa?.resumo ? `\nResumo: ${pesquisa.resumo}` : '') +
+        itens.slice(0, 12).map((it) => `\n[${it.i}] ${it.campo}: ${it.valor}${it.fonte ? ` (fonte: ${it.fonte})` : ''}`).join(''),
+    );
+  }
+  if (!projeto) return partes.length ? `\n\n${partes.join('\n\n')}` : '';
+  const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const v = fin?.valor_total ? Number(fin.valor_total) : null;
+  const financeiro =
+    fin?.pagamento === 'gratis'
+      ? 'Projeto DE GRAÇA (cortesia do Arthur): nunca fale de preço, pagamento, sinal ou cobrança. Se o cliente perguntar, diga com naturalidade que este projeto é cortesia do Arthur.'
+      : fin?.pagamento === 'total'
+        ? 'Já está PAGO 100%: não cobre nada nem fale de valores.'
+        : fin?.pagamento === 'sinal'
+          ? `O sinal (50%) JÁ FOI PAGO${fin.pago_onde ? ` (${fin.pago_onde})` : ''}; o restante é na entrega. Não gere cobrança.`
+          : v
+            ? `Valor do projeto definido pelo Arthur: ${brl(v)} (sinal de 50% = ${brl(v / 2)}, restante na entrega). Só fale de valor se o cliente perguntar ou quando a descoberta estiver completa e ele quiser seguir; aí use mudar_etapa "fechado" e gerar_cobranca_do_sinal (pede CPF/CNPJ) e mande o link.`
+            : 'O Arthur ainda vai definir o valor: não fale de preço. Se perguntarem, diga que o Arthur monta a proposta assim que você entender tudo do projeto.';
+  const faltam = [...CAMPOS_DO_BRIEFING.keys()].filter((k) => k !== 'orcamento' && k !== 'observacoes' && !briefing[k]);
+  partes.push(
+    `MODO PROJETO (este cliente foi indicado pelo Arthur; estas regras valem ACIMA do roteiro de vendas):
+- Não ofereça pacotes do catálogo, não mande proposta em PDF nem o link do diagnóstico. O projeto é sob medida.
+- Sua missão é a DESCOBERTA COMPLETA para o Arthur começar o desenvolvimento: ${[...CAMPOS_DO_BRIEFING.values()].slice(0, 14).join('; ')}.
+- Peça cedo o Instagram que mais ajuda a criar o site (normalmente o da empresa ou o perfil profissional da pessoa); se a pesquisa já achou um, só confirme. Grave em registrar_briefing.instagram.
+- Uma ou duas perguntas por mensagem, curtas, com opções [[opções: ...]] quando couber. Grave cada resposta com registrar_briefing NA MESMA RESPOSTA (o Arthur acompanha pelo painel).
+- Ainda falta saber: ${faltam.join(', ') || 'nada essencial'}.
+- Briefing já registrado: ${Object.keys(briefing).length ? JSON.stringify(briefing).slice(0, 2500) : 'nada ainda'}.
+- Quando tiver o essencial, mande um resumo curto do que entendeu para o cliente confirmar e ofereça a reunião de alinhamento com o Arthur (horarios_livres, tipo "alinhamento").
+- Financeiro: ${financeiro}`,
+  );
+  return `\n\n${partes.join('\n\n')}`;
 }
 
 /* ------------------------------------------------------------ resposta */
@@ -845,6 +1009,21 @@ async function responder(conversaId: string, avisoInterno?: string): Promise<str
     }
   }
 
+  // Modo projeto: lead indicado pelo Arthur. Financeiro vem da encomenda mais recente desse lead.
+  const projeto = lead?.source === 'indicacao_dono';
+  const { data: fin } =
+    projeto && lead
+      ? await db.from('encomendas').select('pagamento, valor_total, pago_onde').eq('lead_id', lead.id).neq('status', 'cancelada').order('criado_em', { ascending: false }).limit(1).maybeSingle()
+      : { data: null };
+  const pesquisa = (lead?.pesquisa ?? null) as { resumo?: string; itens?: ItemDaPesquisa[] } | null;
+  const blocoExtra = blocoDoProjeto(projeto, pesquisa, (lead?.briefing ?? {}) as Record<string, unknown>, fin);
+  const semCobranca = !fin?.valor_total || fin.pagamento === 'gratis' || fin.pagamento === 'total' || fin.pagamento === 'sinal';
+  const ferramentas: Anthropic.Beta.BetaTool[] = projeto
+    ? [...tools.filter((t) => !SO_PARA_VENDA_DE_PACOTE.has(t.name) && !(semCobranca && t.name === 'gerar_cobranca_do_sinal')), FERRAMENTA_BRIEFING, FERRAMENTA_PESQUISA]
+    : pesquisa?.itens?.length
+      ? [...tools, FERRAMENTA_PESQUISA]
+      : tools;
+
   const contexto = contextoDaConversa({
     persona: cfg.personaName,
     descontoMax: cfg.extraDiscountMax,
@@ -934,7 +1113,7 @@ async function responder(conversaId: string, avisoInterno?: string): Promise<str
   const primeiraDaIa = !(historico ?? []).some((m) => m.author === 'ia');
   let abertura = conversa.abertura as 'A' | 'B' | null;
   if (!abertura && primeiraDaIa && !avisoInterno) {
-    abertura = lead && parseInt(conversaId.replace(/-/g, '').slice(-2), 16) % 2 === 1 ? 'B' : 'A';
+    abertura = lead && !projeto && parseInt(conversaId.replace(/-/g, '').slice(-2), 16) % 2 === 1 ? 'B' : 'A';
     await db.from('ia_conversations').update({ abertura }).eq('id', conversaId);
   }
   const instrucaoDaAbertura =
@@ -946,7 +1125,7 @@ async function responder(conversaId: string, avisoInterno?: string): Promise<str
     // Cache de 1 h: o cliente de WhatsApp costuma demorar mais que os 5 min do padrão para responder.
     { type: 'text', text: instrucoesFixas(), cache_control: { type: 'ephemeral', ttl: '1h' } },
     ...(aprendido ? [{ type: 'text' as const, text: aprendido, cache_control: { type: 'ephemeral' as const, ttl: '1h' as const } }] : []),
-    { type: 'text', text: contexto + instrucaoDaAbertura },
+    { type: 'text', text: contexto + blocoExtra + instrucaoDaAbertura },
   ];
 
   // Modelo pelo momento (o mesmo em todas as rodadas desta resposta, para aproveitar o cache).
@@ -971,7 +1150,7 @@ async function responder(conversaId: string, avisoInterno?: string): Promise<str
         model: modelo,
         max_tokens: 8000,
         system,
-        tools,
+        tools: ferramentas,
         messages: mensagens,
         output_config: { effort: 'low' },
         // Recusa do modelo por engano: a própria API tenta de novo em outro modelo.
@@ -1002,6 +1181,8 @@ async function responder(conversaId: string, avisoInterno?: string): Promise<str
     };
     await db.from('ia_usage').insert({
       conversation_id: conversaId,
+      lead_id: conversa.lead_id,
+      finalidade: 'atendimento',
       model: r.model,
       input_tokens: uso.entrada,
       output_tokens: uso.saida,

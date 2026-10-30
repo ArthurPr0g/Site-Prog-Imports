@@ -167,6 +167,52 @@ async function tirarPrints(supabase: Cliente, alvos: { chave: string; site: stri
   return ok;
 }
 
+/**
+ * Pesquisa do lead indicado pelo Arthur (0094): a busca no Maps foi por ESTE lead. Escolhe o lugar que
+ * bate (mesmo telefone ou nome parecido) e completa só os campos vazios do lead; o que achou entra em
+ * leads.pesquisa como "a confirmar" para a Lia confirmar com o cliente. Não importa a lista toda.
+ */
+async function completarLead(supabase: Cliente, leadId: string, arquivos: string[]): Promise<string> {
+  const { data: lead } = await supabase.from('leads').select('*').eq('id', leadId).maybeSingle();
+  if (!lead) return 'lead não existe mais';
+  const linhas = arquivos.flatMap((a) => linhasDoCsv(readFileSync(a, 'utf8')));
+  const fim = (t: string | null) => (t ?? '').replace(/\D/g, '').slice(-8);
+  const palavras = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/\W+/).filter((w) => w.length > 2);
+  const doLead = new Set(palavras(lead.name));
+  const pontos = (l: (typeof linhas)[number]) =>
+    (fim(l.phone) && fim(l.phone) === fim(lead.phone) ? 100 : 0) + palavras(l.name).filter((w) => doLead.has(w)).length * 10;
+  const melhor = [...linhas].sort((a, b) => pontos(b) - pontos(a))[0];
+  if (!melhor || pontos(melhor) < 20) return `nada no Maps que bata com ${lead.name} (${linhas.length} resultado(s))`;
+  const vazio = (k: keyof typeof lead) => lead[k] === null || lead[k] === '';
+  const novos: Record<string, unknown> = {};
+  const par: [keyof typeof lead, unknown][] = [
+    ['address', melhor.address],
+    ['website', melhor.website],
+    ['category', melhor.category],
+    ['rating', melhor.rating],
+    ['review_count', melhor.reviewCount],
+    ['instagram', melhor.instagram],
+    ['facebook', melhor.facebook],
+    ['linkedin', melhor.linkedin],
+    ['place_id', melhor.placeId],
+    ['maps_url', melhor.mapsUrl],
+    ['latitude', melhor.latitude],
+    ['longitude', melhor.longitude],
+    ['site_check', melhor.siteCheck],
+  ];
+  for (const [k, v] of par) if (v !== null && v !== undefined && v !== '' && vazio(k)) novos[k as string] = v;
+  type Item = { campo: string; valor: string; fonte: string; situacao: string };
+  const pesquisa = (lead.pesquisa ?? { itens: [] }) as { itens?: Item[] };
+  const itens: Item[] = [
+    { campo: 'Google Maps', valor: `${melhor.name}${melhor.address ? `, ${melhor.address}` : ''}`, fonte: melhor.mapsUrl ?? 'Google Maps', situacao: 'a_confirmar' },
+    ...(melhor.rating ? [{ campo: 'Nota no Google', valor: `${melhor.rating} (${melhor.reviewCount ?? 0} avaliações)`, fonte: melhor.mapsUrl ?? 'Google Maps', situacao: 'a_confirmar' }] : []),
+  ];
+  pesquisa.itens = [...(pesquisa.itens ?? []), ...itens.filter((i) => !(pesquisa.itens ?? []).some((x) => x.campo === i.campo))];
+  await supabase.from('leads').update({ ...novos, pesquisa }).eq('id', leadId);
+  if (melhor.website && !lead.screenshot_url) await tirarPrints(supabase, [{ chave: lead.dedupe_key, site: melhor.website }]);
+  return `achou ${melhor.name}: ${Object.keys(novos).length} campo(s) completado(s)`;
+}
+
 async function atenderUm(supabase: Cliente): Promise<boolean> {
   const { data: pedido } = await supabase
     .from('lead_search_requests')
@@ -191,6 +237,12 @@ async function atenderUm(supabase: Cliente): Promise<boolean> {
   try {
     const arquivos = await captar(pedido.niche, pedido.city, pedido.country as Pais);
     if (!arquivos.length) throw new Error('A busca não trouxe arquivo (Google bloqueou ou não achou nada).');
+    if (pedido.lead_id) {
+      const msg = await completarLead(supabase, pedido.lead_id, arquivos);
+      await supabase.from('lead_search_requests').update({ status: 'feito', finished_at: new Date().toISOString(), new_leads: 0, message: msg }).eq('id', pedido.id);
+      log('  pesquisa do lead:', msg);
+      return true;
+    }
     const r = await importar(supabase, arquivos);
     const prints = await tirarPrints(supabase, r.comSite);
     const msg = `${r.novos} novo(s), ${r.atualizados} atualizado(s), ${prints} print(s)`;

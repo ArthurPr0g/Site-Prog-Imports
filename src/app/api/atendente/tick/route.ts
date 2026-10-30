@@ -14,7 +14,9 @@ import { avisarLeadsQuentes } from '@/lib/atendente/lead-quente';
 import { garantirModeloDaFila, mandarFilasDoDia } from '@/lib/atendente/fila-do-vendedor';
 import { resumoDoPosVenda } from '@/lib/pos-venda-resumo';
 import { avisarPromptsTerminados } from '@/lib/atendente/ideias';
-import { enviarEncomendasPendentes, garantirModeloDaEncomenda } from '@/lib/atendente/encomenda';
+import { enviarEncomendasPendentes, retomarEncomendas } from '@/lib/atendente/encomenda';
+import { garantirModelos } from '@/lib/atendente/modelos';
+import { lembrarReunioes } from '@/lib/atendente/lembrete-reuniao';
 
 // Relógio do atendente: o pg_cron do Supabase chama a cada minuto (migration
 // 0067) com o segredo ATENDENTE_TICK_SECRET. Cada chamada:
@@ -27,7 +29,8 @@ import { enviarEncomendasPendentes, garantirModeloDaEncomenda } from '@/lib/aten
 // 6. avisa o Arthur de quem abriu o diagnóstico e não chamou (lead quente);
 // 7. manda a fila do dia ao vendedor às 8h dos dias úteis (e cria o modelo dela na Meta);
 // 8. resumo das pendências do pós-venda no WhatsApp do Arthur (9h dos dias úteis);
-// 9. "Lia, faça todo o projeto" (0093): cria o modelo da 1ª mensagem e chama quem esperava a aprovação.
+// 9. "Lia, faça todo o projeto" (0093): chama quem esperava a aprovação do modelo e retoma 1x quem não respondeu em 48 h;
+// 10. modelos de mensagem da Meta (0094): cria e acompanha a aprovação; lembrete de reunião ao cliente ~2 h antes.
 
 export const maxDuration = 60;
 
@@ -43,11 +46,11 @@ export async function POST(req: NextRequest) {
   const arquivos = await guardarArquivosDeClientes(db);
   // Modelo do aviso ao Arthur na Meta: cria uma vez e acompanha a aprovação.
   const modeloDoAviso = await garantirModeloDoAviso(db);
-  const modeloDaEncomenda = await garantirModeloDaEncomenda(db);
+  const modelos = await garantirModelos(db);
   const cfg = await lerConfig(db);
   // Pedidos do Arthur pelo WhatsApp que terminaram (PC ou nuvem): avisa mesmo com a atendente desligada.
   const promptsAvisados = await avisarPromptsTerminados(db, cfg);
-  if (!cfg.active) return NextResponse.json({ ok: true, ativo: false, arquivos, modeloDoAviso, promptsAvisados });
+  if (!cfg.active) return NextResponse.json({ ok: true, ativo: false, arquivos, modeloDoAviso, promptsAvisados, modelos });
 
   const descontos = await resolverDescontos(db);
   const emails = emailConfigurado() && horarioComercial() ? await mandarEmails(db, cfg) : 0;
@@ -58,7 +61,9 @@ export async function POST(req: NextRequest) {
   const filas = await mandarFilasDoDia(db);
   const posVenda = await resumoDoPosVenda(db, cfg);
   const encomendas = await enviarEncomendasPendentes(db);
-  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas, posVenda, promptsAvisados, modeloDaEncomenda, encomendas });
+  const retomadas = await retomarEncomendas(db);
+  const lembretesDeReuniao = await lembrarReunioes(db);
+  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas, posVenda, promptsAvisados, modelos, encomendas, retomadas, lembretesDeReuniao });
 }
 
 async function resolverDescontos(db: DbDoAtendente): Promise<number> {

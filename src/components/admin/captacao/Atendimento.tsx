@@ -38,6 +38,7 @@ import { inputClass, semCentavos } from './comum';
 import { ResultadosDaLiaPainel, TestarALia } from './LiaResultadosETeste';
 import { ResumoDaConversa } from './ResumoDaConversa';
 import { AgendaEReunioes } from './AgendaEReunioes';
+import { ModelosDaMeta } from './ModelosDaMeta';
 
 const RELER_A_CADA = 10_000;
 
@@ -337,6 +338,7 @@ function Situacao({ painel, cotacaoDolar }: { painel: PainelDoAtendente; cotacao
       <AvisosNoWhatsapp avisos={painel.avisos} />
       <AgendaDoGoogle estado={painel.agenda} />
       <AgendaEReunioes />
+      <ModelosDaMeta />
       {i.email && (
         <EmailDeTeste
           padrao={[c.ownerEmail, 'arthur.matos@liberdademedicaedu.com.br', 'progimports01@gmail.com'].filter(Boolean).join(', ')}

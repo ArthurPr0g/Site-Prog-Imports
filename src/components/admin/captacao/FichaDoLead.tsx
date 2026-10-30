@@ -4,6 +4,7 @@
 // Contato e mensagens, Oportunidade, Como agir, Ligação, Checklist, Registro),
 // com as mensagens no nome do Arthur e gravando pelas ações do painel.
 
+import { PesquisaEBriefing } from './PesquisaEBriefing';
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText, MessageCircle } from 'lucide-react';
@@ -248,6 +249,7 @@ export function FichaDoLead({
       aviso={
         <div className="space-y-2">
         <QuemAtende leadId={lead.id} kits={kits} />
+        <PesquisaEBriefing leadId={lead.id} />
         {vendedor && (
           <div className="rounded-[10px] border border-accent/40 bg-accent/10 px-3 py-2 text-[12.5px] leading-snug">
             {lead.status === 'novo' ? (

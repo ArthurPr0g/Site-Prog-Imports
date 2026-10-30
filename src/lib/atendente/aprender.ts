@@ -121,6 +121,7 @@ ${transcricao}
   const u = r.usage;
   await db.from('ia_usage').insert({
     conversation_id: conversa.id,
+    finalidade: 'aprender',
     model: r.model,
     input_tokens: u.input_tokens,
     output_tokens: u.output_tokens,

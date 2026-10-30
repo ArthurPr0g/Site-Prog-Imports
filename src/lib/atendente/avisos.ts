@@ -10,7 +10,8 @@
 
 import type { DbDoAtendente } from '@/lib/atendente/db';
 import type { ConfigDoAtendente } from '@/lib/atendente/regras';
-import { enviarTexto, enviarModelo, criarModelo, statusDoModelo, whatsappConfigurado, JANELA_MS } from '@/lib/atendente/whatsapp-api';
+import { enviarTexto, enviarComOpcoes, enviarModelo, criarModelo, statusDoModelo, whatsappConfigurado, JANELA_MS } from '@/lib/atendente/whatsapp-api';
+import { modeloAprovado } from '@/lib/atendente/modelos';
 import { enviarEmail, emailConfigurado } from '@/lib/atendente/email';
 import { SITE_URL } from '@/lib/seo';
 
@@ -48,12 +49,44 @@ const linkDaConversa = (conversaId: string | null) =>
 export async function avisarArthur(
   db: DbDoAtendente,
   cfg: ConfigDoAtendente,
-  a: { titulo: string; texto: string; conversaId?: string | null; leadId?: string | null; link?: string }
+  a: {
+    titulo: string;
+    texto: string;
+    conversaId?: string | null;
+    leadId?: string | null;
+    link?: string;
+    /**
+     * Decisão do Arthur com botões (pedido de 30/10/2026): dentro das 24 h, mensagem interativa com
+     * até 3 opções; fora, o modelo decisao_arthur ("Sim" = 1ª opção, "Não" = 2ª). O toque volta pelo
+     * webhook com o id da opção (decisoes.ts).
+     */
+    opcoes?: { id: string; titulo: string }[];
+    pergunta?: string;
+  }
 ): Promise<void> {
   try {
     const dono = await lerDono(db);
     const link = a.link ?? linkDaConversa(a.conversaId ?? null);
     const base = { titulo: a.titulo, texto: a.texto, conversation_id: a.conversaId ?? null, lead_id: a.leadId ?? null };
+
+    if (dono.whatsapp && whatsappConfigurado() && a.opcoes?.length) {
+      const pergunta = a.pergunta ? `\n\n❓ ${a.pergunta}` : '';
+      if (Date.now() < dono.janelaAte) {
+        const r = await enviarComOpcoes(
+          dono.whatsapp,
+          `🔔 *${a.titulo}*\n${a.texto}${pergunta}\n\n${link}`,
+          a.opcoes.map((o) => o.titulo),
+          a.opcoes.map((o) => o.id),
+        );
+        await db.from('ia_avisos').insert({ ...base, via: 'texto', ...(r.ok ? { external_id: r.id, status: 'sent' } : { status: 'failed', error: r.erro }) });
+        if (r.ok) return;
+      }
+      if (a.opcoes.length >= 2 && (await modeloAprovado(db, 'decisao_arthur'))) {
+        const r = await enviarModelo(dono.whatsapp, 'decisao_arthur', [`${a.titulo}: ${a.texto} ${a.pergunta ?? ''}`.trim()], [a.opcoes[0].id, a.opcoes[1].id]);
+        await db.from('ia_avisos').insert({ ...base, via: 'modelo', ...(r.ok ? { external_id: r.id, status: 'sent' } : { status: 'failed', error: r.erro }) });
+        if (r.ok) return;
+      }
+    }
 
     if (dono.whatsapp && whatsappConfigurado()) {
       if (Date.now() < dono.janelaAte) {
