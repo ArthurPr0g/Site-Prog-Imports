@@ -40,20 +40,20 @@ import { ResumoDaConversa } from './ResumoDaConversa';
 import { AgendaEReunioes } from './AgendaEReunioes';
 import { ModelosDaMeta } from './ModelosDaMeta';
 import { CustoDaIa } from './CustoDaIa';
+import { avisarVersaoNova, ERRO_DE_VERSAO_NOVA, Esqueleto } from '@/components/admin/VersaoNova';
 
 const RELER_A_CADA = 10_000;
 
-// Site atualizado com a aba aberta: a página antiga chama ações que o servidor
-// novo não tem mais. Recarrega em vez de derrubar a tela; outras falhas de rede
-// mantêm os dados que já estão na tela e avisam.
-const VERSAO_NOVA = /Server Action .* was not found|UnrecognizedActionError|Failed to find Server Action/i;
+// Site atualizado com a aba aberta: a página antiga chama ações que o servidor novo não tem mais. Antes
+// recarregava na hora (e a tela voltava para o topo no meio da leitura, 30/10/2026); agora só avisa
+// ("Saiu uma versão nova · Atualizar", que volta para o mesmo lugar). Outras falhas mantêm o que está na tela.
 async function seguro<T>(f: () => Promise<T>, aoFalhar?: (msg: string) => void): Promise<T | undefined> {
   try {
     return await f();
   } catch (e) {
     const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
-    if (VERSAO_NOVA.test(msg)) {
-      window.location.reload();
+    if (ERRO_DE_VERSAO_NOVA.test(msg)) {
+      avisarVersaoNova();
       return undefined;
     }
     console.error('[atendimento]', e);
@@ -90,6 +90,13 @@ export function Atendimento({
     typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('conversa')
   );
   const [filtro, setFiltro] = useState<'todas' | 'precisa' | 'comigo'>('todas');
+  // A conversa aberta fica no endereço (?conversa=): atualizar a página volta para ela.
+  useEffect(() => {
+    const u = new URL(window.location.href);
+    if (aberta) u.searchParams.set('conversa', aberta);
+    else u.searchParams.delete('conversa');
+    if (u.href !== window.location.href) window.history.replaceState(window.history.state, '', u.href);
+  }, [aberta]);
 
   const reler = useCallback(async () => {
     const p = await seguro(() => painelDoAtendenteAction());
@@ -175,7 +182,26 @@ export function Atendimento({
           </div>
         </div>
         {!painel ? (
-          <div className="p-3 text-[13px] text-fg-tertiary">Carregando…</div>
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,320px)_1fr]" aria-busy="true" aria-label="Carregando conversas">
+            <ul className="space-y-2">
+              {[0, 1, 2, 3].map((i) => (
+                <li key={i} className="rounded-[14px] border border-border p-3" style={{ animationDelay: `${i * 90}ms` }}>
+                  <div className="mb-2 flex justify-between gap-3">
+                    <Esqueleto className="h-3.5 w-2/5" />
+                    <Esqueleto className="h-3 w-16" />
+                  </div>
+                  <Esqueleto className="mb-2.5 h-3 w-4/5" />
+                  <Esqueleto className="h-1.5 w-full" />
+                </li>
+              ))}
+            </ul>
+            <div className="hidden space-y-3 rounded-[14px] border border-border p-4 lg:block">
+              <Esqueleto className="h-4 w-1/3" />
+              <Esqueleto className="h-14 w-3/5" />
+              <Esqueleto className="ml-auto h-10 w-1/2" />
+              <Esqueleto className="h-16 w-2/3" />
+            </div>
+          </div>
         ) : conversas.length === 0 ? (
           <div className="p-3 text-[13px] text-fg-tertiary">
             Nenhuma conversa ainda. Elas aparecem aqui quando um lead chama a atendente no WhatsApp.
@@ -683,6 +709,8 @@ function Conversa({
   aoAbrirLead: (id: string) => void;
 }) {
   const [mensagens, setMensagens] = useState<MensagemDoPainel[] | null>(null);
+  const [falhou, setFalhou] = useState(false);
+  const [tentativa, setTentativa] = useState(0);
   const [texto, setTexto] = useState('');
   // Responder como Arthur (a IA para) ou orientar a Lia (ela responde seguindo a instrução).
   const [modoDoTexto, setModoDoTexto] = useState<'arthur' | 'lia'>('arthur');
@@ -692,11 +720,17 @@ function Conversa({
 
   useEffect(() => {
     let vivo = true;
-    void seguro(() => mensagensDaConversaAction(id)).then((m) => vivo && m && setMensagens(m));
+    void seguro(() => mensagensDaConversaAction(id)).then((m) => {
+      if (!vivo) return;
+      if (m) {
+        setMensagens(m);
+        setFalhou(false);
+      } else setFalhou(true); // sem mensagens ainda na tela: mostra "Tentar de novo" em vez de "Carregando…" para sempre
+    });
     return () => {
       vivo = false;
     };
-  }, [id, versao]);
+  }, [id, versao, tentativa]);
   // Mensagem nova: rola só a caixa da conversa até o fim (scrollIntoView rolava
   // a página inteira e brigava com a rolagem de quem estava lendo).
   useEffect(() => {
@@ -790,8 +824,26 @@ function Conversa({
       )}
       {conversa && <ResumoDaConversa resumo={conversa.summary} descoberta={conversa.descoberta} />}
       <div className="max-h-[440px] flex-1 space-y-2 overflow-y-auto p-3">
-        {!mensagens ? (
-          <div className="text-[13px] text-fg-tertiary">Carregando…</div>
+        {!mensagens && falhou ? (
+          <div className="grid place-items-center gap-2 py-10 text-center text-[13px] text-fg-tertiary">
+            <span>Não carregou as mensagens desta conversa.</span>
+            <button
+              onClick={() => {
+                setFalhou(false);
+                setTentativa((t) => t + 1);
+              }}
+              className="rounded-full bg-accent px-3 py-1.5 text-[12.5px] font-extrabold text-page"
+            >
+              Tentar de novo
+            </button>
+          </div>
+        ) : !mensagens ? (
+          <div className="space-y-2.5" aria-busy="true" aria-label="Carregando mensagens">
+            <Esqueleto className="h-12 w-3/5" />
+            <Esqueleto className="ml-auto h-9 w-2/5" />
+            <Esqueleto className="h-16 w-2/3" />
+            <Esqueleto className="ml-auto h-10 w-1/2" />
+          </div>
         ) : (
           mensagens.map((m) =>
             m.author === 'sistema' ? (

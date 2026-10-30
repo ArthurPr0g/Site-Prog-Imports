@@ -766,3 +766,31 @@ textarea::placeholder {
   .tema-apple.time .t-etapa-ativa,
   .tema-apple.time .t-no-ativa { transform: none; }
 }
+
+/* ===== Carregamentos (30/10/2026): esqueleto com brilho passando e aviso de versão nova. */
+.esqueleto {
+  position: relative;
+  overflow: hidden;
+  background: rgba(130, 148, 255, 0.08);
+}
+.esqueleto::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.07), transparent);
+  transform: translateX(-100%);
+  animation: esqueleto-brilho 1.3s ease-in-out infinite;
+}
+@keyframes esqueleto-brilho {
+  to { transform: translateX(100%); }
+}
+.aviso-versao > div {
+  animation: aviso-subir 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes aviso-subir {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .esqueleto::after,
+  .aviso-versao > div { animation: none; }
+}

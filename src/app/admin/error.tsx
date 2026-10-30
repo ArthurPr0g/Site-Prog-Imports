@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ERRO_DE_VERSAO_NOVA, atualizarSemPerderOLugar } from '@/components/admin/VersaoNova';
 
 // Painel aberto durante um deploy: a página antiga chama uma ação que o
 // servidor novo não tem mais ("Server Action ... was not found"). Não é erro
 // de dados: recarregar resolve, então recarrega sozinho (uma vez por minuto,
 // para não entrar em laço se o problema for outro).
-const VERSAO_NOVA = /Server Action .* was not found|UnrecognizedActionError|Failed to find Server Action|ChunkLoadError|Loading chunk/i;
+const VERSAO_NOVA = ERRO_DE_VERSAO_NOVA;
 const CHAVE = 'admin-recarregou-por-versao';
 
 export default function AdminError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
@@ -25,7 +26,7 @@ export default function AdminError({ error, reset }: { error: Error & { digest?:
       sessionStorage.setItem(CHAVE, String(Date.now()));
     } catch {}
     setRecarregando(true);
-    window.location.reload();
+    atualizarSemPerderOLugar();
   }, [error, versaoNova]);
 
   return (
@@ -41,7 +42,7 @@ export default function AdminError({ error, reset }: { error: Error & { digest?:
             : 'Não foi possível carregar estes dados. Tente novamente — se persistir, verifique sua conexão ou contate o suporte técnico.'}
       </p>
       <button
-        onClick={() => (versaoNova ? window.location.reload() : reset())}
+        onClick={() => (versaoNova ? atualizarSemPerderOLugar() : reset())}
         className="rounded-control bg-accent px-6 py-3 text-[13.5px] font-extrabold text-page transition-all hover:-translate-y-0.5"
       >
         {versaoNova ? 'Recarregar' : 'Tentar novamente'}
