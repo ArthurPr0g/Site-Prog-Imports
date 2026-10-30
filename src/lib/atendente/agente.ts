@@ -30,7 +30,7 @@ import {
   horarioPorExtenso,
   horariosLivres,
   ocupadosNaAgenda,
-  DURACAO_DA_REUNIAO_MIN,
+  agendaDe,
   type Intervalo,
 } from '@/lib/google-agenda';
 
@@ -258,7 +258,7 @@ const tools: Anthropic.Beta.BetaTool[] = [
   {
     name: 'horarios_livres',
     description:
-      'Próximos horários livres do Arthur para uma reunião de 30 min por vídeo (dias úteis, 9h às 18h, já sem os compromissos da agenda dele). Use quando o cliente quiser conversar por vídeo/ligação ou precisar de uma reunião para decidir. Ofereça 2 ou 3 opções em dias diferentes.',
+      'Próximos horários livres do Arthur para uma reunião por vídeo, nos dias e faixas que ele configurou e sem os compromissos da agenda dele. Use quando o cliente quiser conversar por vídeo/ligação, precisar de uma reunião para decidir, quiser alinhar pontos do projeto ou fazer a reunião de entrega/fechamento. Ofereça 2 ou 3 opções em dias diferentes.',
     input_schema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {
@@ -271,8 +271,14 @@ const tools: Anthropic.Beta.BetaTool[] = [
         inicio: { type: 'string', description: 'Início exato, no formato devolvido por horarios_livres (ex.: 2026-10-30T13:00:00.000Z).' },
         email: { type: 'string', description: 'E-mail do cliente para o convite, ou "" se ele não quiser passar.' },
         assunto: { type: 'string', description: 'Assunto em poucas palavras (ex.: "site novo da academia").' },
+        tipo: {
+          type: 'string',
+          enum: ['descoberta', 'alinhamento', 'fechamento', 'rodada', 'outra'],
+          description:
+            'descoberta = conversa de venda; alinhamento = cliente que já comprou quer fechar pontos do projeto; fechamento = entrega/aprovação final; rodada = ajustes; outra.',
+        },
       },
-      required: ['inicio', 'email', 'assunto'],
+      required: ['inicio', 'email', 'assunto', 'tipo'],
       additionalProperties: false,
     },
     strict: true,
@@ -341,6 +347,20 @@ function simular(e: Estado, nome: string, entrada: Record<string, unknown>): str
 }
 
 /** Horários já ocupados: agenda do Arthur (se conectada) e reuniões que a Lia marcou. */
+/** Disponibilidade que o Arthur configurou no painel (ia_config.agenda, 0092). */
+async function lerAgenda(db: DbDoAtendente) {
+  const { data } = await db.from('ia_config').select('agenda').eq('id', true).maybeSingle();
+  return agendaDe(data?.agenda);
+}
+
+const NOME_DO_TIPO: Record<string, string> = {
+  descoberta: 'conversa',
+  alinhamento: 'alinhamento do projeto',
+  fechamento: 'reunião de entrega',
+  rodada: 'rodada de ajustes',
+  outra: 'reunião',
+};
+
 async function ocupados(db: DbDoAtendente, de: Date, ate: Date): Promise<{ lista: Intervalo[]; agenda: boolean }> {
   const [daAgenda, { data: marcadas }] = await Promise.all([
     ocupadosNaAgenda(db, de, ate),
@@ -609,11 +629,12 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
     }
     case 'horarios_livres': {
       const agora = new Date();
-      const { lista, agenda } = await ocupados(db, agora, new Date(agora.getTime() + 15 * 24 * 3600_000));
-      const livres = horariosLivres(lista, agora.getTime());
-      if (!livres.length) return 'Sem horário livre nas próximas 2 semanas: use chamar_arthur para ele combinar com o cliente.';
+      const cfgAgenda = await lerAgenda(db);
+      const { lista, agenda } = await ocupados(db, agora, new Date(agora.getTime() + (cfgAgenda.horizonte_dias + 1) * 24 * 3600_000));
+      const livres = horariosLivres(lista, agora.getTime(), 6, cfgAgenda);
+      if (!livres.length) return `Sem horário livre nos próximos ${cfgAgenda.horizonte_dias} dias: use chamar_arthur para ele combinar com o cliente.`;
       return [
-        `Horários livres (reunião de ${DURACAO_DA_REUNIAO_MIN} min, horário de Brasília). Ofereça 2 ou 3, em dias diferentes; para marcar, use o valor entre parênteses:`,
+        `Horários livres (reunião de ${cfgAgenda.duracao_min} min, horário de Brasília). Ofereça 2 ou 3, em dias diferentes; para marcar, use o valor entre parênteses:`,
         ...livres.map((d) => `• ${horarioPorExtenso(d)} em Brasília${e.fuso ? ` = ${horarioNoFuso(d, e.fuso)} no horário do cliente` : ''} (${d.toISOString()})`),
         ...(e.fuso ? ['Cliente de fora do Brasil: ofereça SÓ no horário dele (o segundo), no idioma dele.'] : []),
         ...(agenda ? [] : ['(A agenda do Arthur não está conectada: esses horários só evitam as reuniões já marcadas por aqui.)']),
@@ -622,7 +643,9 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
     case 'marcar_reuniao': {
       const inicio = new Date(String(entrada.inicio ?? ''));
       if (!Number.isFinite(inicio.getTime()) || inicio.getTime() < Date.now()) return 'Horário inválido: use um dos que horarios_livres devolveu.';
-      const fim = new Date(inicio.getTime() + DURACAO_DA_REUNIAO_MIN * 60_000);
+      const cfgAgenda = await lerAgenda(db);
+      const tipo = ['descoberta', 'alinhamento', 'fechamento', 'rodada', 'outra'].includes(String(entrada.tipo)) ? String(entrada.tipo) : 'descoberta';
+      const fim = new Date(inicio.getTime() + cfgAgenda.duracao_min * 60_000);
       const { lista } = await ocupados(db, new Date(inicio.getTime() - 3600_000), new Date(fim.getTime() + 3600_000));
       if (lista.some((o) => o.inicio < fim.getTime() && o.fim > inicio.getTime()))
         return 'Esse horário acabou de ser ocupado: chame horarios_livres de novo e ofereça outras opções.';
@@ -632,7 +655,7 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
       const { data: conv } = await db.from('ia_conversations').select('contact_id, contact_name').eq('id', conversaId).maybeSingle();
       const quem = l?.name ?? conv?.contact_name ?? `+${conv?.contact_id ?? ''}`;
       const assunto = String(entrada.assunto ?? '').trim().slice(0, 80) || 'projeto';
-      const titulo = `Prog Soluções × ${quem}: ${assunto}`;
+      const titulo = `Prog Soluções × ${quem}: ${assunto}${tipo !== 'descoberta' ? ` (${NOME_DO_TIPO[tipo]})` : ''}`;
       const ev = (await agendaConectada(db))
         ? await criarEventoNaAgenda(db, {
             titulo,
@@ -651,13 +674,15 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
         email_cliente: emailValido,
         google_event_id: ev?.ok ? ev.id : null,
         meet_link: ev?.ok ? ev.meet : null,
+        tipo,
       });
-      if (leadId && (!e.leadStatus || ORDEM.indexOf(e.leadStatus) < ORDEM.indexOf('reuniao'))) {
+      // Só a conversa de venda move o lead para "Reunião"; alinhamento e entrega são de quem já comprou.
+      if (tipo === 'descoberta' && leadId && (!e.leadStatus || ORDEM.indexOf(e.leadStatus) < ORDEM.indexOf('reuniao'))) {
         await executar(e, 'mudar_etapa', { etapa: 'reuniao', motivo: `Reunião marcada para ${horarioPorExtenso(inicio)}`, responsavel: '' });
       }
       const quando = horarioPorExtenso(inicio) + (e.fuso ? ` em Brasília (${horarioNoFuso(inicio, e.fuso)} para o cliente)` : '');
       await avisarArthur(db, cfg, {
-        titulo: 'Reunião marcada pela Lia',
+        titulo: `${tipo === 'descoberta' ? 'Reunião' : NOME_DO_TIPO[tipo].charAt(0).toUpperCase() + NOME_DO_TIPO[tipo].slice(1)} marcada pela Lia 📅`,
         texto: `${quem}, ${quando} (${assunto}).${ev?.ok && ev.meet ? ` Meet: ${ev.meet}` : ev && !ev.ok ? ` Não entrou na sua agenda (${ev.erro}): crie você.` : ' Agenda não conectada: crie o evento você.'}`,
         conversaId,
         leadId,

@@ -622,6 +622,7 @@ export type Database = {
       }
       reunioes: {
         Row: {
+          tipo: string
           conversation_id: string | null
           created_at: string
           email_cliente: string | null
@@ -638,6 +639,7 @@ export type Database = {
           titulo: string
         }
         Insert: {
+          tipo?: string
           conversation_id?: string | null
           created_at?: string
           email_cliente?: string | null
@@ -654,6 +656,7 @@ export type Database = {
           titulo: string
         }
         Update: {
+          tipo?: string
           conversation_id?: string | null
           created_at?: string
           email_cliente?: string | null
@@ -931,6 +934,7 @@ export type Database = {
       }
       ia_config: {
         Row: {
+          agenda: Json
           active: boolean
           auto_model: boolean
           daily_email_cap: number
@@ -952,6 +956,7 @@ export type Database = {
           waba_id: string | null
         }
         Insert: {
+          agenda?: Json
           active?: boolean
           auto_model?: boolean
           daily_email_cap?: number
@@ -973,6 +978,7 @@ export type Database = {
           waba_id?: string | null
         }
         Update: {
+          agenda?: Json
           active?: boolean
           auto_model?: boolean
           daily_email_cap?: number

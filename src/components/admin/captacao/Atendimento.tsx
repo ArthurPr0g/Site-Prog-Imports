@@ -37,6 +37,7 @@ import {
 import { inputClass, semCentavos } from './comum';
 import { ResultadosDaLiaPainel, TestarALia } from './LiaResultadosETeste';
 import { ResumoDaConversa } from './ResumoDaConversa';
+import { AgendaEReunioes } from './AgendaEReunioes';
 
 const RELER_A_CADA = 10_000;
 
@@ -335,6 +336,7 @@ function Situacao({ painel, cotacaoDolar }: { painel: PainelDoAtendente; cotacao
       <Cartao rotulo="E-mails de 1º contato hoje" valor={`${painel.emailsHoje} de ${c.dailyEmailCap}`} ok />
       <AvisosNoWhatsapp avisos={painel.avisos} />
       <AgendaDoGoogle estado={painel.agenda} />
+      <AgendaEReunioes />
       {i.email && (
         <EmailDeTeste
           padrao={[c.ownerEmail, 'arthur.matos@liberdademedicaedu.com.br', 'progimports01@gmail.com'].filter(Boolean).join(', ')}

@@ -143,10 +143,8 @@ export async function criarEventoNaAgenda(
 
 // Goiânia não tem horário de verão desde 2019: UTC−3 o ano todo.
 const FUSO_MS = 3 * 3600_000;
+/** Duração padrão; a configurada fica em ia_config.agenda.duracao_min. */
 export const DURACAO_DA_REUNIAO_MIN = 30;
-const PRIMEIRO = 9 * 60; // 9h
-const ULTIMO = 17 * 60 + 30; // última começa 17h30 (termina 18h)
-const ANTECEDENCIA_MS = 2 * 3600_000;
 
 /** Horário local de Goiânia em texto ("qui 30/10 às 10h30"). */
 export function horarioPorExtenso(d: Date): string {
@@ -159,29 +157,76 @@ export function horarioPorExtenso(d: Date): string {
   return `${dia} ${dd}/${mm} às ${h}h${min ? String(min).padStart(2, '0') : ''}`;
 }
 
+/** Disponibilidade do Arthur (ia_config.agenda, migration 0092). Horários de Brasília. */
+export type AgendaConfig = {
+  /** 0 = domingo … 6 = sábado → faixas ["HH:MM", "HH:MM"] em que a Lia pode oferecer reunião. */
+  dias: Record<string, [string, string][]>;
+  duracao_min: number;
+  antecedencia_h: number;
+  max_por_dia: number;
+  horizonte_dias: number;
+  /** Datas sem reunião (AAAA-MM-DD), ex.: feriados e viagens. */
+  bloqueios: string[];
+};
+
+export const AGENDA_PADRAO: AgendaConfig = {
+  dias: Object.fromEntries(['1', '2', '3', '4', '5'].map((d) => [d, [['09:00', '12:00'], ['14:00', '18:00']] as [string, string][]])),
+  duracao_min: 30,
+  antecedencia_h: 2,
+  max_por_dia: 2,
+  horizonte_dias: 14,
+  bloqueios: [],
+};
+
+/** Lê a configuração salva no banco, completando o que faltar com o padrão. */
+export function agendaDe(bruto: unknown): AgendaConfig {
+  const a = (bruto && typeof bruto === 'object' ? bruto : {}) as Partial<AgendaConfig>;
+  const num = (v: unknown, padrao: number, min: number, max: number) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : padrao;
+  };
+  return {
+    dias: a.dias && typeof a.dias === 'object' ? a.dias : AGENDA_PADRAO.dias,
+    duracao_min: num(a.duracao_min, 30, 15, 180),
+    antecedencia_h: num(a.antecedencia_h, 2, 0, 72),
+    max_por_dia: num(a.max_por_dia, 2, 1, 12),
+    horizonte_dias: num(a.horizonte_dias, 14, 1, 60),
+    bloqueios: Array.isArray(a.bloqueios) ? a.bloqueios.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d))) : [],
+  };
+}
+
+const minutos = (hhmm: string) => {
+  const [h, m] = String(hhmm).split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
+
 /**
- * Próximos horários livres em dias úteis (9h às 18h, reuniões de 30 min), sem
- * bater com a agenda do Arthur nem com reuniões já marcadas pela Lia. Até
- * `quantos`, no máximo 2 por dia, para o cliente ter dias diferentes.
+ * Próximos horários livres dentro das faixas que o Arthur configurou (Atendimento › Agenda e reuniões),
+ * sem bater com a agenda do Google nem com reuniões já marcadas. Até `quantos`, respeitando o máximo
+ * por dia e espalhando os do mesmo dia (pelo menos 2 h entre eles), para o cliente ter opções diferentes.
  */
-export function horariosLivres(ocupados: Intervalo[], agora = Date.now(), quantos = 6): Date[] {
+export function horariosLivres(ocupados: Intervalo[], agora = Date.now(), quantos = 6, agenda: AgendaConfig = AGENDA_PADRAO): Date[] {
   const livres: Date[] = [];
-  const dur = DURACAO_DA_REUNIAO_MIN * 60_000;
+  const dur = agenda.duracao_min * 60_000;
   const hojeLocal = new Date(agora - FUSO_MS);
-  for (let d = 0; d < 14 && livres.length < quantos; d++) {
+  for (let d = 0; d < agenda.horizonte_dias && livres.length < quantos; d++) {
     const dia = new Date(Date.UTC(hojeLocal.getUTCFullYear(), hojeLocal.getUTCMonth(), hojeLocal.getUTCDate() + d));
-    const semana = dia.getUTCDay();
-    if (semana === 0 || semana === 6) continue;
+    if (agenda.bloqueios.includes(dia.toISOString().slice(0, 10))) continue;
+    const faixas = agenda.dias[String(dia.getUTCDay())] ?? [];
     let doDia = 0;
-    for (let min = PRIMEIRO; min <= ULTIMO && doDia < 2 && livres.length < quantos; min += 30) {
-      const inicio = dia.getTime() + min * 60_000 + FUSO_MS;
-      const fim = inicio + dur;
-      if (inicio < agora + ANTECEDENCIA_MS) continue;
-      if (ocupados.some((o) => o.inicio < fim && o.fim > inicio)) continue;
-      livres.push(new Date(inicio));
-      doDia++;
-      // Espalha: o segundo horário do dia fica pelo menos 2 h depois do primeiro.
-      min += 90;
+    let ultimo = -Infinity;
+    for (const [de, ate] of faixas) {
+      for (let min = minutos(de); min + agenda.duracao_min <= minutos(ate); min += 30) {
+        if (doDia >= agenda.max_por_dia || livres.length >= quantos) break;
+        const inicio = dia.getTime() + min * 60_000 + FUSO_MS;
+        const fim = inicio + dur;
+        if (inicio < agora + agenda.antecedencia_h * 3600_000) continue;
+        if (inicio - ultimo < 2 * 3600_000) continue;
+        if (ocupados.some((o) => o.inicio < fim && o.fim > inicio)) continue;
+        livres.push(new Date(inicio));
+        ultimo = inicio;
+        doDia++;
+      }
     }
   }
   return livres;
