@@ -8,8 +8,8 @@ import { GastosPanel } from '@/components/admin/GastosPanel';
 export default function AdminGastosPage() {
   return (
     <div>
-      {/* Cabeçalho dentro do tema "Noite azul": fora dele o título ficava escuro sobre o céu escuro. */}
-      <div className="tema-apple [color-scheme:dark]">
+      {/* Cabeçalho dentro do tema "Noite azul": o céu fixo do painel (z -1) era pintado por cima dele; z-[1] o põe à frente. */}
+      <div className="tema-apple relative z-[1] [color-scheme:dark]">
         <AdminPageHeader title="Gastos" subtitle="Quanto custa a operação: IA, mensagens da Meta, transcrição e custos fixos, e quanto custou cada venda." />
       </div>
       <GastosPanel />

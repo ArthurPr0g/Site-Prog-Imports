@@ -586,47 +586,47 @@ textarea::placeholder {
 }
 
 /* ===== Página de Gastos (30/10/2026): o Arthur pediu animações e micro animações nesta página,
-   no mesmo azul "Noite azul". Tudo dentro de .tema-apple .gastos; desliga com movimento reduzido. */
-.tema-apple .gastos .g-entrar {
+   no mesmo azul "Noite azul". Tudo dentro de .tema-apple.gastos; desliga com movimento reduzido. */
+.tema-apple.gastos .g-entrar {
   animation: tema-entrar 0.65s var(--mola) both;
 }
-.tema-apple .gastos .g-cartao {
+.tema-apple.gastos .g-cartao {
   transition: transform 0.35s var(--mola), box-shadow 0.35s var(--mola), border-color 0.35s var(--mola);
 }
-.tema-apple .gastos .g-cartao:hover {
+.tema-apple.gastos .g-cartao:hover {
   transform: translateY(-3px);
 }
-.tema-apple .gastos .g-barra {
+.tema-apple.gastos .g-barra {
   transform-origin: left center;
   animation: tema-crescer 1.1s var(--mola) both;
   transition: width 0.6s var(--mola);
 }
-.tema-apple .gastos .g-coluna {
+.tema-apple.gastos .g-coluna {
   transform-origin: bottom center;
   animation: g-subir 0.9s var(--mola) both;
   transition: filter 0.2s, transform 0.2s var(--mola);
 }
-.tema-apple .gastos .g-coluna:hover {
+.tema-apple.gastos .g-coluna:hover {
   filter: brightness(1.25);
 }
 @keyframes g-subir {
   from { transform: scaleY(0); opacity: 0.3; }
 }
-.tema-apple .gastos .g-pilula {
+.tema-apple.gastos .g-pilula {
   transition: transform 0.45s var(--mola), width 0.45s var(--mola);
 }
-.tema-apple .gastos .g-pulso {
+.tema-apple.gastos .g-pulso {
   animation: g-pulso 1.6s ease-in-out infinite;
 }
 @keyframes g-pulso {
   0%, 100% { box-shadow: 0 8px 24px -8px rgba(51, 73, 240, 0.85), 0 0 0 0 rgba(91, 116, 255, 0.45); }
   50% { box-shadow: 0 8px 24px -8px rgba(51, 73, 240, 0.85), 0 0 0 8px rgba(91, 116, 255, 0); }
 }
-.tema-apple .gastos .g-brilho {
+.tema-apple.gastos .g-brilho {
   position: relative;
   overflow: hidden;
 }
-.tema-apple .gastos .g-brilho::after {
+.tema-apple.gastos .g-brilho::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -638,17 +638,17 @@ textarea::placeholder {
 @keyframes g-varrer {
   to { transform: translateX(100%); }
 }
-.tema-apple .gastos .g-dica {
+.tema-apple.gastos .g-dica {
   animation: tema-entrar 0.2s var(--mola) both;
 }
 @media (prefers-reduced-motion: reduce) {
-  .tema-apple .gastos .g-entrar,
-  .tema-apple .gastos .g-barra,
-  .tema-apple .gastos .g-coluna,
-  .tema-apple .gastos .g-pulso,
-  .tema-apple .gastos .g-brilho::after,
-  .tema-apple .gastos .g-dica { animation: none; }
-  .tema-apple .gastos .g-cartao,
-  .tema-apple .gastos .g-pilula { transition: none; }
-  .tema-apple .gastos .g-cartao:hover { transform: none; }
+  .tema-apple.gastos .g-entrar,
+  .tema-apple.gastos .g-barra,
+  .tema-apple.gastos .g-coluna,
+  .tema-apple.gastos .g-pulso,
+  .tema-apple.gastos .g-brilho::after,
+  .tema-apple.gastos .g-dica { animation: none; }
+  .tema-apple.gastos .g-cartao,
+  .tema-apple.gastos .g-pilula { transition: none; }
+  .tema-apple.gastos .g-cartao:hover { transform: none; }
 }

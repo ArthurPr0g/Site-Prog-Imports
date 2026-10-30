@@ -31,8 +31,8 @@ export default async function AdminCaptacaoPage() {
 
   return (
     <div>
-      {/* Cabeçalho dentro do tema "Noite azul": fora dele o título ficava escuro sobre o céu escuro. */}
-      <div className="tema-apple [color-scheme:dark]">
+      {/* Cabeçalho dentro do tema "Noite azul": o céu fixo do painel (z -1) era pintado por cima dele; z-[1] o põe à frente. */}
+      <div className="tema-apple relative z-[1] [color-scheme:dark]">
         <AdminPageHeader
           title="Captação"
           subtitle="Empresas do Google Maps (Brasil e EUA) com chance de fechar site, loja, sistema ou marca."
