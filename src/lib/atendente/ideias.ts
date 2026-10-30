@@ -10,7 +10,8 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import type { DbDoAtendente } from './db';
-import { custoDaChamada } from './regras';
+import { custoDaChamada, type ConfigDoAtendente } from './regras';
+import { avisarArthur } from './avisos';
 import { baixarMidia, enviarTexto, type MensagemRecebida } from './whatsapp-api';
 import { transcrever, transcricaoConfigurada } from './transcricao';
 
@@ -98,9 +99,7 @@ export async function mandarCodigoDasIdeias(db: DbDoAtendente, para: string): Pr
   await enviarTexto(
     para,
     data?.codigo_hub
-      ? `O código da sua página Ideias é *${data.codigo_hub}*
-
-https://hub-prog.vercel.app/ideias`
+      ? `🔑 O código da sua página Ideias é *${data.codigo_hub}*\n\n🔗 https://hub-prog.vercel.app/ideias`
       : 'Não achei o código da página Ideias agora. Tenta de novo em instantes?',
   );
 }
@@ -151,11 +150,43 @@ export async function anotarDoDono(db: DbDoAtendente, m: MensagemRecebida): Prom
     return;
   }
   const eco = texto.length > 700 ? texto.slice(0, 697) + '…' : texto;
-  const cab = org?.titulo ? `*${org.titulo}*\n` : '';
+  const cab = org?.titulo ? `📌 *${org.titulo}*\n` : '';
   await enviarTexto(
     m.de,
     tipo === 'prompt'
-      ? `Prompt guardado para o Claude Code ✓\n\n${cab}${eco}\n\nEle pega na próxima vez que você mandar algo no chat.`
-      : `Anotado nas suas Ideias ✓${origem === 'whatsapp_audio' ? ' (áudio transcrito)' : ''}\n\n${cab}${eco}`,
+      ? `🤖 *Pedido para o Claude Code na fila* ✅\n\n${cab}${eco}\n\n⏱️ Com o PC ligado, começa em até 10 min; desligado, a nuvem faz o que der.\n📲 Te aviso aqui quando terminar.`
+      : `💡 *Anotado nas suas Ideias* ✅${origem === 'whatsapp_audio' ? ' 🎙️ (áudio transcrito)' : ''}\n\n${cab}${eco}`,
   );
+}
+
+/** Relógio: avisa o Arthur no WhatsApp quando um prompt dele termina, pelo PC ou pela nuvem (0091).
+ *  'parcial' avisa o que já foi feito e o que ficou para o PC; quando o PC terminar, sai o aviso de 'feito'. */
+export async function avisarPromptsTerminados(db: DbDoAtendente, cfg: ConfigDoAtendente): Promise<number> {
+  const { data } = await db
+    .from('ideias')
+    .select('id, titulo, texto, status, resultado, falta, avisado_status')
+    .eq('tipo', 'prompt')
+    .in('status', ['feito', 'parcial'])
+    .order('atualizado_em', { ascending: true })
+    .limit(10);
+  const novos = (data ?? []).filter((i) => i.avisado_status !== i.status).slice(0, 3);
+  for (const i of novos) {
+    // Marca antes: o próximo tick não repete o aviso enquanto este sai.
+    await db.from('ideias').update({ avisado_status: i.status }).eq('id', i.id);
+    const pedido = i.titulo || (i.texto.length > 80 ? i.texto.slice(0, 77) + '…' : i.texto);
+    const feito = (i.resultado ?? '').trim().slice(-900) || 'Sem detalhes.';
+    // O resultado do executor vem com "[PC]"/"[Nuvem]" e "Aguardando você: ...": vira linhas com emoji.
+    const limpo = feito.replace(/\[(PC|Nuvem)\]\s*/g, '').replace(/\n?Aguardando você:\s*/g, '\n⏸️ Aguardando você: ');
+    const naNuvem = /\[Nuvem\]/.test(i.resultado ?? '') && !/\[PC\]/.test(i.resultado ?? '');
+    const texto =
+      i.status === 'feito'
+        ? `📝 *Pedido:* ${pedido}\n\n🛠️ *O que fiz:* ${limpo}\n\n${naNuvem ? '☁️ Feito na nuvem' : '💻 Feito no PC'}`
+        : `📝 *Pedido:* ${pedido}\n\n☁️ *Já feito na nuvem:* ${limpo}\n\n💻 *Fica para o PC terminar:* ${(i.falta ?? '').trim().slice(0, 600)}`;
+    await avisarArthur(db, cfg, {
+      titulo: i.status === 'feito' ? 'Pedido concluído ✅' : 'Pedido feito em parte ⏳',
+      texto,
+      link: 'https://hub-prog.vercel.app/ideias',
+    });
+  }
+  return novos.length;
 }

@@ -524,11 +524,15 @@ export type Database = {
       ideias: {
         Row: {
           atualizado_em: string
+          avisado_status: string | null
           criado_em: string
           entregue_em: string | null
+          executor: string | null
           external_id: string | null
+          falta: string | null
           id: string
           origem: string
+          pego_em: string | null
           original: string | null
           resultado: string | null
           status: string
@@ -539,11 +543,15 @@ export type Database = {
         }
         Insert: {
           atualizado_em?: string
+          avisado_status?: string | null
           criado_em?: string
           entregue_em?: string | null
+          executor?: string | null
           external_id?: string | null
+          falta?: string | null
           id?: string
           origem?: string
+          pego_em?: string | null
           original?: string | null
           resultado?: string | null
           status?: string
@@ -554,12 +562,16 @@ export type Database = {
         }
         Update: {
           atualizado_em?: string
+          avisado_status?: string | null
           criado_em?: string
           entregue_em?: string | null
+          executor?: string | null
           external_id?: string | null
+          falta?: string | null
           id?: string
           origem?: string
           original?: string | null
+          pego_em?: string | null
           resultado?: string | null
           status?: string
           tags?: string[]
