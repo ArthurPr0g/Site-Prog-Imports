@@ -64,19 +64,21 @@ const REGRAS = `Você pesquisa na internet um cliente que o Arthur (Prog Soluç�
 
 type Resultado = { resumo: string; itens: { campo: string; valor: string; fonte: string }[] } & Record<(typeof CAMPOS)[number], string>;
 
-/** Pesquisa um lead pendente (um por chamada). Devolve o id pesquisado ou null se não havia. */
-export async function pesquisarProximo(db: DbDoAtendente, cfg: ConfigDoAtendente): Promise<string | null> {
+/**
+ * Pesquisa um lead pendente (um por chamada). Devolve o id pesquisado ou null se não havia.
+ * `leadId`: pesquisa ESTE lead na hora, sem esperar a fila (formulário do portfólio, 0111).
+ */
+export async function pesquisarProximo(db: DbDoAtendente, cfg: ConfigDoAtendente, leadId?: string): Promise<string | null> {
   // Sem crédito (0108): espera o relógio confirmar que voltou, em vez de tentar a cada 2 min.
   const { data: credito } = await db.from('ia_config').select('ia_sem_credito_desde').eq('id', true).maybeSingle();
   if (credito?.ia_sem_credito_desde) return null;
   // Pega um pendente (ou um "rodando" travado há mais de 15 min).
-  const { data: l } = await db
+  let fila = db
     .from('leads')
-    .select('id, name, phone, city, state, website, instagram, facebook, linkedin, address, email, niche, category, pesquisa, pesquisa_dica, pesquisa_status, updated_at, place_id')
-    .in('pesquisa_status', ['pendente', 'rodando'])
-    .order('updated_at', { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .select('id, name, phone, city, state, website, instagram, facebook, linkedin, address, email, niche, category, pesquisa, pesquisa_dica, pesquisa_status, updated_at, place_id, source')
+    .in('pesquisa_status', ['pendente', 'rodando']);
+  if (leadId) fila = fila.eq('id', leadId);
+  const { data: l } = await fila.order('updated_at', { ascending: true }).limit(1).maybeSingle();
   if (!l) return null;
   if (l.pesquisa_status === 'rodando' && Date.now() - new Date(l.updated_at ?? 0).getTime() < 15 * 60_000) return null;
   const { data: pego } = await db.from('leads').update({ pesquisa_status: 'rodando' }).eq('id', l.id).eq('pesquisa_status', l.pesquisa_status ?? 'pendente').select('id');
@@ -202,6 +204,8 @@ export async function pesquisarProximo(db: DbDoAtendente, cfg: ConfigDoAtendente
     .update({ ...atualizar, pesquisa: pesquisa as unknown as Json, pesquisa_status: 'feita' })
     .eq('id', l.id);
 
+  // Formulário do portfólio (0111): o aviso sai depois, junto com o pré-briefing (portfolio.ts).
+  if (l.source === 'portfolio') return l.id;
   await avisarArthur(db, cfg, {
     titulo: `🔎 Pesquisa de ${l.name} ${velhos.length ? 'atualizada' : 'pronta'}`,
     texto: `${frase(resultado.resumo) || 'Pouca coisa pública encontrada.'}\n\n📌 ${novos} informação(ões) nova(s) para a Lia confirmar com o cliente.`,

@@ -11,6 +11,7 @@ import { enviarTexto } from '@/lib/atendente/whatsapp-api';
 import { anotarDoDono, mandarCodigoDasIdeias, pedeCodigo } from '@/lib/atendente/ideias';
 import { ehDoManual, repassarAoManual } from '@/lib/atendente/manual';
 import { conversaDaEncomenda, temProjetoAtivo } from '@/lib/atendente/encomenda';
+import { conversaDoPortfolio, segurarResposta } from '@/lib/atendente/portfolio';
 import { ehDecisao, tratarDecisao } from '@/lib/atendente/decisoes';
 import { kitDoVendedor, textoDaFila, relatorioDoVendedor, PEDIDO_DE_FILA, PEDIDO_DE_RELATORIO_DO_VENDEDOR } from '@/lib/atendente/fila-do-vendedor';
 
@@ -150,6 +151,8 @@ export async function POST(req: NextRequest) {
           .limit(1)
           .maybeSingle();
         if (ultima?.external_id !== msgId) continue;
+        // Formulário do portfólio (0111): a resposta espera a pesquisa e o pré-briefing (até ~10 min).
+        if (await segurarResposta(db, conversaId)) continue;
         try {
           await responderConversa(conversaId);
         } catch (e) {
@@ -177,6 +180,15 @@ async function gravarRecebida(db: DbDoAtendente, m: MensagemRecebida, ehVendedor
     const daEncomenda = await conversaDaEncomenda(db, m.de);
     if (daEncomenda) {
       const { data: c } = await db.from('ia_conversations').select('id, lead_id').eq('id', daEncomenda).maybeSingle();
+      conversaId = c?.id;
+      leadId = c?.lead_id ?? null;
+    }
+  }
+  // Quem preencheu o formulário do portfólio (0111) escrevendo de um número sem o 9.
+  if (!conversaId) {
+    const doPortfolio = await conversaDoPortfolio(db, m.de);
+    if (doPortfolio) {
+      const { data: c } = await db.from('ia_conversations').select('id, lead_id').eq('id', doPortfolio).maybeSingle();
       conversaId = c?.id;
       leadId = c?.lead_id ?? null;
     }

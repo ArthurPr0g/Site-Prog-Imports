@@ -33,6 +33,15 @@ export const MODELOS: ModeloDoCliente[] = [
     para: 'cliente',
   },
   {
+    nome: 'contato_portfolio',
+    quando: 'Primeira mensagem a quem preencheu o formulário do portfólio e não escreveu no WhatsApp (só depois da pesquisa e do pré-briefing)',
+    corpo:
+      'Olá, {{1}}! 👋 Aqui é a Lia, da Prog Soluções.\n\nRecebi sua mensagem pelo nosso portfólio sobre *{{2}}* 🚀\n\nPosso te fazer algumas perguntas rápidas por aqui para entender o que você precisa?',
+    exemplo: ['Mariana', 'o novo site da Clínica Sorriso'],
+    botoes: ['Pode perguntar', 'Prefiro uma ligação', 'Agora não'],
+    para: 'cliente',
+  },
+  {
     nome: 'retomar_conversa',
     quando: 'Cliente indicado que parou de responder há 2 dias (uma vez só)',
     corpo: 'Oi, {{1}}! 😊 Ficamos no meio da nossa conversa sobre *{{2}}*.\n\nQuer continuar de onde paramos?',

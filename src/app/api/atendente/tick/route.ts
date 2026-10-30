@@ -21,6 +21,7 @@ import { avisarPromptsTerminados } from '@/lib/atendente/ideias';
 import { enviarEncomendasPendentes, retomarEncomendas } from '@/lib/atendente/encomenda';
 import { garantirModelos } from '@/lib/atendente/modelos';
 import { lembrarReunioes } from '@/lib/atendente/lembrete-reuniao';
+import { cuidarDosContatosDoPortfolio } from '@/lib/atendente/portfolio';
 
 // Relógio do atendente: o pg_cron do Supabase chama a cada minuto (migration
 // 0067) com o segredo ATENDENTE_TICK_SECRET. Cada chamada:
@@ -77,7 +78,9 @@ export async function POST(req: NextRequest) {
   const encomendas = await enviarEncomendasPendentes(db);
   const retomadas = await retomarEncomendas(db);
   const lembretesDeReuniao = await lembrarReunioes(db);
-  return NextResponse.json({ ok: true, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas, posEntrega, design, retomadasPorCredito, promptsAvisados, saude, bomDiaEnviado, modelos, encomendas, retomadas, lembretesDeReuniao });
+  // (0111) formulário do portfólio: conclui a preparação, responde quem esperou 10 min, chama quem aguardava o modelo.
+  const portfolio = await cuidarDosContatosDoPortfolio(db);
+  return NextResponse.json({ ok: true, portfolio, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas, posEntrega, design, retomadasPorCredito, promptsAvisados, saude, bomDiaEnviado, modelos, encomendas, retomadas, lembretesDeReuniao });
 }
 
 async function resolverDescontos(db: DbDoAtendente): Promise<number> {

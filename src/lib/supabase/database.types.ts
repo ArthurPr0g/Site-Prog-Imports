@@ -1028,6 +1028,72 @@ export type Database = {
         }
         Relationships: []
       }
+      contatos_portfolio: {
+        Row: {
+          id: string
+          criado_em: string
+          nome: string
+          telefone: string | null
+          email: string | null
+          mensagem: string | null
+          idioma: string | null
+          pagina: string | null
+          ip_hash: string | null
+          lead_id: string | null
+          conversation_id: string | null
+          status: string
+          preparo: Json | null
+          preparado_em: string | null
+          cliente_escreveu_em: string | null
+          respondido_em: string | null
+          contatado_em: string | null
+          erro: string | null
+          is_test: boolean
+        }
+        Insert: {
+          id?: string
+          criado_em?: string
+          nome: string
+          telefone?: string | null
+          email?: string | null
+          mensagem?: string | null
+          idioma?: string | null
+          pagina?: string | null
+          ip_hash?: string | null
+          lead_id?: string | null
+          conversation_id?: string | null
+          status?: string
+          preparo?: Json | null
+          preparado_em?: string | null
+          cliente_escreveu_em?: string | null
+          respondido_em?: string | null
+          contatado_em?: string | null
+          erro?: string | null
+          is_test?: boolean
+        }
+        Update: {
+          id?: string
+          criado_em?: string
+          nome?: string
+          telefone?: string | null
+          email?: string | null
+          mensagem?: string | null
+          idioma?: string | null
+          pagina?: string | null
+          ip_hash?: string | null
+          lead_id?: string | null
+          conversation_id?: string | null
+          status?: string
+          preparo?: Json | null
+          preparado_em?: string | null
+          cliente_escreveu_em?: string | null
+          respondido_em?: string | null
+          contatado_em?: string | null
+          erro?: string | null
+          is_test?: boolean
+        }
+        Relationships: []
+      }
       encomendas: {
         Row: {
           duvidas: Json | null
