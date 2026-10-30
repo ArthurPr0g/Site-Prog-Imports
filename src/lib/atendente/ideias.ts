@@ -166,6 +166,8 @@ export async function anotarDoDono(db: DbDoAtendente, m: MensagemRecebida): Prom
     await desconsiderarUltima(db, m.de);
     return;
   }
+  // Resposta (o "Responder" do WhatsApp) a um aviso de pedido concluído: continua aquele pedido (0109).
+  if (m.respondeA && bruto && !m.reacao && (await continuarPedido(db, m, bruto, origem))) return;
   // "Projeto: ..." responde ao último pedido que espera o projeto (botão "Outro"), 0100.
   const projetoEscrito = bruto.match(/^\s*projeto\s*[:\-–—]\s*([\s\S]+)$/i);
   if (projetoEscrito && !m.reacao) {
@@ -245,6 +247,60 @@ export async function anotarDoDono(db: DbDoAtendente, m: MensagemRecebida): Prom
       ? `🤖 *Pedido para o Claude Code na fila* ✅${proj ? ` (${proj.nome})` : ''}${agente ? `\n👤 Vai para: *${rotuloDoAgente(agente)}*` : ''}\n\n${cab}${eco}\n\n⏱️ Com o PC ligado, começa em até 10 min. Com ele desligado, fica na fila e começa assim que o PC ligar.\n📲 Te aviso aqui quando começar e quando terminar.`
       : `💡 *Anotado nas suas Ideias* ✅${origem === 'whatsapp_audio' ? ' 🎙️ (áudio transcrito)' : ''}\n\n${cab}${eco}`,
   );
+}
+
+/**
+ * O Arthur respondeu o aviso de um pedido (ex.: o conserto não resolveu e trouxe opções): a resposta, por
+ * escrito ou em áudio já transcrito, vira um pedido novo com o contexto do anterior, mesmo agente e projeto.
+ * false se a mensagem respondida não é aviso de pedido (segue o caminho normal).
+ */
+async function continuarPedido(db: DbDoAtendente, m: MensagemRecebida, bruto: string, origem: 'whatsapp' | 'whatsapp_audio'): Promise<boolean> {
+  const { data: aviso } = await db.from('ia_avisos').select('ideia_id').eq('external_id', m.respondeA!).not('ideia_id', 'is', null).limit(1).maybeSingle();
+  if (!aviso?.ideia_id) return false;
+  const { data: i } = await db
+    .from('ideias')
+    .select('id, titulo, texto, resultado, falta, agente, projeto, pasta_exclusiva')
+    .eq('id', aviso.ideia_id)
+    .maybeSingle();
+  if (!i) return false;
+  const nome = i.titulo || (i.texto.length > 60 ? i.texto.slice(0, 57) + '…' : i.texto);
+  const feito = (i.resultado ?? '').replace(/\[(PC|Nuvem)\]\s*/g, '').trim();
+  const texto = [
+    `Continuação de um pedido anterior: o Arthur respondeu ${origem === 'whatsapp_audio' ? 'por áudio (transcrito)' : 'por escrito'} ao aviso de conclusão no WhatsApp.`,
+    '',
+    `Pedido anterior:\n${i.texto.slice(0, 3000)}`,
+    '',
+    `O que já foi feito e onde parou:\n${feito.slice(-2500) || 'sem detalhes'}`,
+    ...(i.falta ? ['', `Ficou faltando:\n${i.falta.slice(0, 1000)}`] : []),
+    '',
+    `Resposta do Arthur (siga isto; um número é uma das opções numeradas acima):\n${bruto}`,
+  ].join('\n');
+  const { error } = await db.from('ideias').upsert(
+    {
+      tipo: 'prompt',
+      origem,
+      status: 'pendente',
+      titulo: `Continuação: ${nome}`.slice(0, 120),
+      texto: texto.slice(0, 8000),
+      original: bruto.slice(0, 8000),
+      projeto: i.projeto,
+      agente: i.agente,
+      pasta_exclusiva: i.pasta_exclusiva,
+      external_id: m.id,
+    },
+    { onConflict: 'external_id', ignoreDuplicates: true },
+  );
+  if (error) {
+    console.error('[ideias] falha ao gravar continuação', error);
+    await enviarTexto(m.de, 'Não consegui pôr a continuação na fila agora. Tenta de novo em instantes?');
+    return true;
+  }
+  const eco = bruto.length > 500 ? bruto.slice(0, 497) + '…' : bruto;
+  await enviarTexto(
+    m.de,
+    `🤖 *Continuação na fila* ✅${origem === 'whatsapp_audio' ? ' 🎙️' : ''}\n📌 *${nome}*\n\n🗣️ ${eco}\n\n📲 Te aviso quando começar e quando terminar.`,
+  );
+  return true;
 }
 
 /** "mandei errado", "desconsidere", "ignora a última", "foi engano"... (mensagem curta). */
@@ -369,9 +425,13 @@ export async function avisarPromptsTerminados(db: DbDoAtendente, cfg: ConfigDoAt
     // O resultado do executor vem com "[PC]"/"[Nuvem]" e "Aguardando você: ...": vira linhas com emoji.
     const limpo = feito.replace(/\[(PC|Nuvem)\]\s*/g, '').replace(/\n?Aguardando você:\s*/g, '\n⏸️ Aguardando você: ');
     const naNuvem = /\[Nuvem\]/.test(i.resultado ?? '') && !/\[PC\]/.test(i.resultado ?? '');
+    // Responder esta mensagem (texto ou áudio) continua o pedido (0109); com pendência, o convite fica explícito.
+    const responder = /Aguardando você:/.test(i.resultado ?? '')
+      ? '\n\n↩️ *Responda esta mensagem* (número da opção, texto ou áudio) e eu continuo daqui.'
+      : '\n\n↩️ Quer mudar algo? Responda esta mensagem (texto ou áudio).';
     const texto =
       i.status === 'feito'
-        ? `${quem}📝 *Pedido:* ${pedido}\n\n🛠️ *O que fiz:* ${limpo}\n\n${naNuvem ? '☁️ Feito na nuvem' : '💻 Feito no PC'}${vistoria}`
+        ? `${quem}📝 *Pedido:* ${pedido}\n\n🛠️ *O que fiz:* ${limpo}\n\n${naNuvem ? '☁️ Feito na nuvem' : '💻 Feito no PC'}${vistoria}${responder}`
         : `${quem}📝 *Pedido:* ${pedido}\n\n☁️ *Já feito na nuvem:* ${limpo}\n\n💻 *Fica para o PC terminar:* ${(i.falta ?? '').trim().slice(0, 600)}`;
     await avisarArthur(db, cfg, {
       // Conserto automático de alarme/ensaio (30/10/2026): o Arthur pediu mensagem própria na conclusão.
@@ -385,6 +445,7 @@ export async function avisarPromptsTerminados(db: DbDoAtendente, cfg: ConfigDoAt
             : 'Pedido feito em parte ⏳',
       texto,
       link: 'https://hub-prog.vercel.app/ideias',
+      ideiaId: i.id,
     });
   }
   return novos.length;

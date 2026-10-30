@@ -606,6 +606,7 @@ export type Database = {
           error: string | null
           external_id: string | null
           id: string
+          ideia_id: string | null
           lead_id: string | null
           status: string | null
           texto: string
@@ -618,6 +619,7 @@ export type Database = {
           error?: string | null
           external_id?: string | null
           id?: string
+          ideia_id?: string | null
           lead_id?: string | null
           status?: string | null
           texto: string
@@ -630,6 +632,7 @@ export type Database = {
           error?: string | null
           external_id?: string | null
           id?: string
+          ideia_id?: string | null
           lead_id?: string | null
           status?: string | null
           texto?: string

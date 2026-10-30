@@ -250,6 +250,8 @@ export type MensagemRecebida = {
   reacao: boolean;
   /** Ação do botão tocado (id do botão interativo ou payload do botão do modelo); null se não foi botão. */
   botaoId: string | null;
+  /** Id da mensagem que esta responde (o "Responder" do WhatsApp); null se não é resposta. */
+  respondeA: string | null;
 };
 
 /**
@@ -287,6 +289,8 @@ type CorpoDoWebhook = {
           text?: { body?: string };
           button?: { text?: string; payload?: string };
           interactive?: { button_reply?: { id?: string; title?: string }; list_reply?: { id?: string; title?: string } };
+          /** Presente quando a mensagem é uma resposta ("Responder") a outra: id da mensagem respondida. */
+          context?: { id?: string };
           image?: Midia;
           document?: Midia & { filename?: string };
           audio?: Midia & { voice?: boolean };
@@ -377,6 +381,7 @@ export function lerWebhook(corpo: unknown): { mensagens: MensagemRecebida[]; sta
           midia,
           reacao: m.type === 'reaction',
           botaoId: m.interactive?.button_reply?.id ?? m.interactive?.list_reply?.id ?? m.button?.payload ?? null,
+          respondeA: m.context?.id ?? null,
         });
       }
       for (const s of v.statuses ?? []) {

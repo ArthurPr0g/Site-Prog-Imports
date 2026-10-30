@@ -34,6 +34,7 @@ export async function pedirConserto(db: DbDoAtendente, origem: 'alarme' | 'ensai
       'Banco: SÓ o servidor MCP prog-supabase-arthurmatos003, project ref oduimaztcoxbvtlsjjcy. Nada de SQL destrutivo (DROP, TRUNCATE, DELETE/UPDATE sem WHERE).',
       'Investigue a causa (logs da Vercel, tabelas ia_*, código), corrija, rode npm run build e só faça commit e push se passar; confira o deploy READY.',
       'Não mande nada a cliente, não mexa em senha, chave ou pagamento. Se a causa for algo que só o Arthur faz (recarregar crédito, aprovar na Meta, logar em algum lugar), não force: escreva "Aguardando você: ..." com o passo exato.',
+      'Se não conseguir resolver, termine com "Aguardando você:" e até 3 opções numeradas (1, 2, 3), curtas: o Arthur responde a mensagem no WhatsApp com o número, um texto ou um áudio, e a resposta volta como continuação deste pedido.',
       'Termine com um resumo BREVE (no máximo 4 linhas, vai para o WhatsApp do Arthur): o que era, o que corrigiu (commit) e se o problema sumiu.',
     ].join('\n'),
   });

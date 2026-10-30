@@ -72,12 +72,14 @@ export async function avisarArthur(
      */
     opcoes?: { id: string; titulo: string }[];
     pergunta?: string;
+    /** Pedido da fila que este aviso conclui (0109): responder o aviso no WhatsApp continua esse pedido. */
+    ideiaId?: string | null;
   }
 ): Promise<void> {
   try {
     const dono = await lerDono(db);
     const link = a.link ?? linkDaConversa(a.conversaId ?? null);
-    const base = { titulo: a.titulo, texto: a.texto, conversation_id: a.conversaId ?? null, lead_id: a.leadId ?? null };
+    const base = { titulo: a.titulo, texto: a.texto, conversation_id: a.conversaId ?? null, lead_id: a.leadId ?? null, ideia_id: a.ideiaId ?? null };
 
     if (dono.whatsapp && whatsappConfigurado() && a.opcoes?.length) {
       const pergunta = a.pergunta ? `\n\n❓ ${a.pergunta}` : '';
