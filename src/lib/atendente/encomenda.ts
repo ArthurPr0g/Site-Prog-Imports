@@ -551,7 +551,7 @@ async function iniciar(db: DbDoAtendente, encomendaId: string, de: string | null
   // 4. Chama o cliente: dentro das 24 h a própria Lia escreve; fora, só o modelo aprovado.
   const assunto = e.assunto ?? (await assuntoDoPedido(db, e.instrucoes));
   if (!e.assunto) await db.from('encomendas').update({ assunto }).eq('id', e.id);
-  const link = `${SITE_URL}/admin/captacao?aba=atendimento&conversa=${conversaId}`;
+  const link = `${SITE_URL}/admin/atendimento?conversa=${conversaId}`;
   const desligada = cfg.active ? '' : '\n\n⚠️ A Lia está *desligada* no painel: ligue para ela responder quando o cliente escrever.';
   const { data: conv } = await db.from('ia_conversations').select('contact_id').eq('id', conversaId).maybeSingle();
   const numero = conv?.contact_id ?? tel;

@@ -45,7 +45,7 @@ export async function tratarDecisao(db: DbDoAtendente, m: MensagemRecebida): Pro
       return void (await enviarTexto(de, status === 'aprovado' ? `✅ Desconto de ${Number(p.percent)}% aprovado. A Lia já volta ao cliente.` : '❌ Desconto negado. A Lia oferece outra saída ao cliente.'));
     }
     case 'conv': {
-      const link = `${SITE_URL}/admin/captacao?aba=atendimento&conversa=${id}`;
+      const link = `${SITE_URL}/admin/atendimento?conversa=${id}`;
       if (valor === 'assumir') {
         await db.from('ia_conversations').update({ mode: 'humano', needs_human: false }).eq('id', id);
         return void (await enviarTexto(de, `🙋 Conversa com você: a Lia parou de responder. Responda pelo painel:\n${link}`));

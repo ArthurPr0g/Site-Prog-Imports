@@ -5,6 +5,10 @@
 /** Telas da Prog Soluções (serviços: sites, sistemas, marca). O resto do /admin é a gestão da loja. */
 export const ROTAS_DA_PROG_SOLUCOES = [
   '/admin/captacao',
+  '/admin/dashboards',
+  '/admin/atendimento',
+  '/admin/vendedores',
+  '/admin/lia',
   '/admin/pos-venda',
   '/admin/gastos',
   '/admin/time',

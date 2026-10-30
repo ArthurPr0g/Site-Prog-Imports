@@ -183,7 +183,7 @@ export async function abrirPrestacaoDoSinal(
     `Prazo: até ${prazoDias} dias úteis contados do material completo (textos, fotos e acessos). Entrega prevista aqui é estimada a partir de hoje.`,
     `Pasta no OneDrive: 05 - Negócios > 1 - Prog Soluções > 2 - Clientes > ${nomeDaPasta({ empresa: lead.name, responsavel })}`,
     `Diagnóstico: ${SITE_URL}/diagnostico/${lead.public_token}`,
-    ...(conversa ? [`Conversa com a Lia: ${SITE_URL}/admin/captacao?aba=atendimento&conversa=${conversa.id}`] : []),
+    ...(conversa ? [`Conversa com a Lia: ${SITE_URL}/admin/atendimento?conversa=${conversa.id}`] : []),
     ...(lead.website ? [`Site atual: ${lead.website}`] : []),
     ...(lead.instagram ? [`Instagram: ${lead.instagram}`] : []),
     ...((lead.reasons ?? []).length ? ['', 'O que o diagnóstico apontou:', ...(lead.reasons ?? []).map((m) => `• ${m}`)] : []),

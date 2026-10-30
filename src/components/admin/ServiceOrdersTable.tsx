@@ -147,7 +147,7 @@ function OrigemDaCaptacao({ origem }: { origem: OrigemDaPrestacao }) {
         </span>
       )}
       {origem.conversaId && (
-        <a href={`/admin/captacao?aba=atendimento&conversa=${origem.conversaId}`} className={chip}>
+        <a href={`/admin/atendimento?conversa=${origem.conversaId}`} className={chip}>
           Conversa
         </a>
       )}

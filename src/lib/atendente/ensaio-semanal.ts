@@ -259,14 +259,14 @@ async function relatar(db: DbDoAtendente, cfg: ConfigDoAtendente, rodada: string
     await avisarArthur(db, cfg, {
       titulo: '🧪 O ensaio da Lia não rodou',
       texto: `Motivo: ${motivos}.${/créditos/.test(motivos) ? ' Recarregue em https://console.anthropic.com/settings/billing e o ensaio roda de novo na próxima segunda (ou peça ao Claude para rodar agora).' : ''}`,
-      link: `${SITE_URL}/admin/captacao?aba=atendimento`,
+      link: `${SITE_URL}/admin/atendimento`,
     });
     return 'relatado';
   }
   await avisarArthur(db, cfg, {
     titulo: aprovadas === linhas.length ? '🧪 Ensaio da Lia: tudo certo' : '🧪 Ensaio da Lia: tem o que melhorar',
     texto: `\n${aprovadas} de ${linhas.length} perfis aprovados · nota média ${media.toFixed(1)}\n\n${linhasTexto.join('\n')}`,
-    link: `${SITE_URL}/admin/captacao?aba=atendimento`,
+    link: `${SITE_URL}/admin/atendimento`,
   });
   return 'relatado';
 }

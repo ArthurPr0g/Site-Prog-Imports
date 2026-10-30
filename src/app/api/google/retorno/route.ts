@@ -9,7 +9,7 @@ import { SITE_URL } from '@/lib/seo';
 // refresh token e guarda (tabela integracoes, só o servidor lê).
 
 export async function GET(req: NextRequest) {
-  const voltar = (r: string) => NextResponse.redirect(`${SITE_URL}/admin/captacao?aba=atendimento&google=${r}`);
+  const voltar = (r: string) => NextResponse.redirect(`${SITE_URL}/admin/atendimento&google=${r}`);
   if (!(await requireAdmin())) return NextResponse.redirect(`${SITE_URL}/entrar?next=/admin/captacao`);
   const jar = await cookies();
   const estado = jar.get('google_estado')?.value;

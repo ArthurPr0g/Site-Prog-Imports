@@ -53,7 +53,7 @@ function rotuloDoLink(link: string): string {
 }
 
 const linkDaConversa = (conversaId: string | null) =>
-  conversaId ? `${SITE_URL}/admin/captacao?aba=atendimento&conversa=${conversaId}` : `${SITE_URL}/admin/captacao?aba=atendimento`;
+  conversaId ? `${SITE_URL}/admin/atendimento?conversa=${conversaId}` : `${SITE_URL}/admin/atendimento`;
 
 /** Avisa o Arthur pelo melhor canal disponível e registra o aviso. Nunca lança erro. */
 export async function avisarArthur(

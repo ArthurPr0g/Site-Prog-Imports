@@ -874,7 +874,7 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
       const ev = (await agendaConectada(db))
         ? await criarEventoNaAgenda(db, {
             titulo,
-            descricao: `Marcada pela ${cfg.personaName} no WhatsApp.\nConversa: ${SITE_URL}/admin/captacao?aba=atendimento&conversa=${conversaId}`,
+            descricao: `Marcada pela ${cfg.personaName} no WhatsApp.\nConversa: ${SITE_URL}/admin/atendimento?conversa=${conversaId}`,
             inicio,
             fim,
             emailCliente: emailValido,

@@ -8,7 +8,7 @@ const ROBO_DE_PREVIA = /whatsapp|facebookexternalhit|facebot|telegrambot|slackbo
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (/^\/admin\/(captacao|pos-venda|gastos|time)/.test(pathname) && ROBO_DE_PREVIA.test(request.headers.get('user-agent') ?? '')) {
+  if (/^\/admin\/(captacao|pos-venda|gastos|time|dashboards|atendimento|vendedores|lia)/.test(pathname) && ROBO_DE_PREVIA.test(request.headers.get('user-agent') ?? '')) {
     const url = request.nextUrl.clone();
     url.pathname = '/previa/prog-solucoes';
     url.search = `?p=${pathname.split('/')[2]}`;

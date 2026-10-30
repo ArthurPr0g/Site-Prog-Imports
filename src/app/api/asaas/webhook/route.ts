@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     const cfg = await lerConfig(db);
     const empresa = cob.leads?.name ?? 'cliente';
     const valor = `R$ ${Number(cob.valor).toFixed(2).replace('.', ',')}`;
-    const painel = `${SITE_URL}/admin/captacao?aba=atendimento${cob.conversation_id ? `&conversa=${cob.conversation_id}` : ''}`;
+    const painel = `${SITE_URL}/admin/atendimento${cob.conversation_id ? `&conversa=${cob.conversation_id}` : ''}`;
     if (pagouAgora) {
       // Sinal pago: a venda vira Prestação de serviço para o Arthur começar.
       const prestacao = cob.parcela === 'sinal' ? await abrirPrestacaoDoSinal(db, cob.id) : null;

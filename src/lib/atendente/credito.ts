@@ -71,7 +71,7 @@ export async function retomarDepoisDoCredito(db: DbDoAtendente, cfg: ConfigDoAte
     await avisarArthur(db, cfg, {
       titulo: '✅ Créditos da IA de volta',
       texto: count ? `A Lia já está retomando ${count} conversa(s) que ficaram paradas, de onde pararam.` : 'A Lia, a pesquisa e o ensaio voltaram a funcionar.',
-      link: `${SITE_URL}/admin/captacao?aba=atendimento`,
+      link: `${SITE_URL}/admin/atendimento`,
     });
   }
 

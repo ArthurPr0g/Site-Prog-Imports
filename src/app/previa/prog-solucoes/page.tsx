@@ -16,6 +16,26 @@ const PAGINAS: Record<string, { titulo: string; sub: string; descricao: string }
     sub: 'IA, mensagens e custos da operação',
     descricao: 'Painel da Prog Soluções: quanto custa a operação e cada venda.',
   },
+  dashboards: {
+    titulo: 'Dashboards · Prog Soluções',
+    sub: 'Números, meta, funil e resultados',
+    descricao: 'Painel da Prog Soluções: dinheiro na mesa, meta, funil, placar e resultados da Lia.',
+  },
+  atendimento: {
+    titulo: 'Atendimento · Prog Soluções',
+    sub: 'Conversas da Lia no WhatsApp',
+    descricao: 'Painel da Prog Soluções: conversas da Lia com os clientes.',
+  },
+  vendedores: {
+    titulo: 'Vendedores · Prog Soluções',
+    sub: 'Links, leads e placar',
+    descricao: 'Painel da Prog Soluções: vendedores e os leads de cada um.',
+  },
+  lia: {
+    titulo: 'Lia · Prog Soluções',
+    sub: 'Atendente de IA',
+    descricao: 'Painel da Prog Soluções: situação, simulador e configuração da Lia.',
+  },
   time: {
     titulo: 'Time e fluxo · Prog Soluções',
     sub: 'Agentes, processo e funções',

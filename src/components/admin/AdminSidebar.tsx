@@ -11,6 +11,9 @@ import {
   ClipboardList,
   Users,
   Workflow,
+  MessagesSquare,
+  UserRoundCheck,
+  Bot,
   Tag,
   Layers,
   GalleryHorizontalEnd,
@@ -100,13 +103,25 @@ const NAV: NavGroup[] = [
 
 // Área da Prog Soluções (sites, sistemas, marca), separada da loja de importados a pedido do dono
 // (30/10/2026): mesmo login e rotas sob /admin, mas menu, marca e cores próprios (design "Noite azul").
+// Menu da Prog Soluções reorganizado em 30/10/2026 (pedido do Arthur): Dashboards e Atendimento em páginas
+// próprias, Vendedores fora da Captação e a configuração da Lia numa página só dela.
 const NAV_SOLUCOES: NavGroup[] = [
+  {
+    group: 'Visão geral',
+    items: [{ href: '/admin/dashboards', label: 'Dashboards', Icon: LayoutDashboard }],
+  },
   {
     group: 'Comercial',
     items: [
       { href: '/admin/captacao', label: 'Captação', Icon: Magnet },
+      { href: '/admin/atendimento', label: 'Atendimento', Icon: MessagesSquare },
+      { href: '/admin/vendedores', label: 'Vendedores', Icon: UserRoundCheck },
       { href: '/admin/pos-venda', label: 'Pós-venda', Icon: ClipboardCheck },
     ],
+  },
+  {
+    group: 'Lia (IA)',
+    items: [{ href: '/admin/lia', label: 'Lia', Icon: Bot }],
   },
   {
     group: 'Projetos',

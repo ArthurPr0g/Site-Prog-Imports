@@ -78,7 +78,14 @@ export function CaptacaoPanel({
   pedidos,
   clientes: clientesLista,
   kits,
+  pagina = 'captacao',
 }: {
+  /**
+   * Menu novo da Prog Soluções (30/10/2026): o mesmo painel serve várias páginas, cada uma com a sua parte.
+   * captacao = Lista, Foco, Quadro, Mapa e Buscas; dashboards = números, meta, relatório, placar e Lia;
+   * atendimento = conversas; vendedores = links dos vendedores; lia = configuração e simulador da Lia.
+   */
+  pagina?: 'captacao' | 'dashboards' | 'atendimento' | 'vendedores' | 'lia';
   leads: Lead[];
   /** Nome → preço de todos os serviços do catálogo (únicos e mensalidades). */
   catalogo: [string, number][];
@@ -140,13 +147,24 @@ export function CaptacaoPanel({
   }, [router]);
 
   const [abaSalva, setAbaSalva] = usePreferencia(CHAVE_ABA, 'lista');
-  const aba: Aba = ABAS.some(([a]) => a === abaSalva) ? (abaSalva as Aba) : 'lista';
+  const abasDaPagina = pagina === 'captacao' ? ABAS.filter(([a]) => ['lista', 'foco', 'quadro', 'mapa', 'buscas'].includes(a)) : [];
+  const ABA_FIXA: Record<string, Aba> = { dashboards: 'relatorio', atendimento: 'atendimento', vendedores: 'vendedores', lia: 'atendimento' };
+  const aba: Aba =
+    pagina !== 'captacao' ? ABA_FIXA[pagina] : abasDaPagina.some(([a]) => a === abaSalva) ? (abaSalva as Aba) : 'lista';
   const mudarAba = (a: Aba) => setAbaSalva(a);
-  // Link do aviso por e-mail da atendente: ?aba=atendimento abre a aba.
+  // Links antigos (?aba=atendimento, relatorio, vendedores) vão para as páginas novas; os outros abrem a aba.
   useEffect(() => {
-    const pedida = new URLSearchParams(window.location.search).get('aba');
+    if (pagina !== 'captacao') return;
+    const q = new URLSearchParams(window.location.search);
+    const pedida = q.get('aba');
+    const nova: Record<string, string> = { atendimento: '/admin/atendimento', relatorio: '/admin/dashboards', vendedores: '/admin/vendedores' };
+    if (pedida && nova[pedida]) {
+      q.delete('aba');
+      router.replace(`${nova[pedida]}${q.toString() ? `?${q}` : ''}`);
+      return;
+    }
     if (pedida && ABAS.some(([a]) => a === pedida)) setAbaSalva(pedida);
-  }, [setAbaSalva]);
+  }, [setAbaSalva, pagina, router]);
   const valorDoLead = useCallback(
     (id: string) => {
       const l = leadsPorId.get(id);
@@ -273,7 +291,7 @@ export function CaptacaoPanel({
   const filtrar = (e: FiltroEtapa) => {
     setEtapa(e);
     setLimite(POR_PAGINA);
-    if (aba !== 'lista' && aba !== 'foco') mudarAba('lista');
+    if (pagina === 'captacao' && aba !== 'lista' && aba !== 'foco') mudarAba('lista');
   };
 
   // Leads de teste (ex.: o do Felipe para a Lia) não entram no relatório nem no placar.
@@ -283,6 +301,7 @@ export function CaptacaoPanel({
     // tema-apple: cores de sistema, profundidade e aurora (globals.css).
     <div className="tema-apple [color-scheme:dark]">
       <div className="aurora" aria-hidden />
+      {pagina === 'dashboards' && (
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="col-span-2 grid gap-3 lg:col-span-4 xl:grid-cols-2">
         <ValorNaMesa
@@ -322,8 +341,9 @@ export function CaptacaoPanel({
           rodape={`${semCentavos(ind.valorFechados30)} + ${semCentavos(ind.mensalFechados30)}/mês pela tabela`}
         />
       </div>
+      )}
 
-      {(ind.quentes > 0 || ind.paraHoje > 0) && (
+      {pagina === 'captacao' && (ind.quentes > 0 || ind.paraHoje > 0) && (
         <div className="mb-4 grid gap-2.5 sm:grid-cols-2">
           {ind.quentes > 0 && (
             <button
@@ -346,7 +366,7 @@ export function CaptacaoPanel({
         </div>
       )}
 
-      {total > 0 && (
+      {pagina === 'captacao' && total > 0 && (
         <div className="mb-4 rounded-[18px] border border-border bg-card p-4 sm:p-5">
           <div className="mb-2.5 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">Funil</div>
           <div className="flex flex-wrap gap-2">
@@ -370,9 +390,10 @@ export function CaptacaoPanel({
         </div>
       )}
 
-      {/* Abas */}
+      {/* Abas (só na Captação; as outras páginas mostram uma parte só) */}
+      {abasDaPagina.length > 0 && (
       <div className="mb-3.5 flex gap-1 overflow-x-auto border-b border-border">
-        {ABAS.map(([a, nome]) => (
+        {abasDaPagina.map(([a, nome]) => (
           <button
             key={a}
             onClick={() => mudarAba(a)}
@@ -395,8 +416,9 @@ export function CaptacaoPanel({
           </button>
         ))}
       </div>
+      )}
 
-      {aba !== 'buscas' && aba !== 'relatorio' && aba !== 'vendedores' && aba !== 'atendimento' && (
+      {((pagina === 'captacao' && aba !== 'buscas') || pagina === 'vendedores') && (
         <div className="mb-3.5 flex flex-wrap items-center gap-2.5">
           <div className="relative min-w-[220px] flex-1">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-fg-faded" />
@@ -563,10 +585,16 @@ export function CaptacaoPanel({
         />
       )}
       {aba === 'mapa' && <Mapa leads={filtrados} estimativa={estimativa} agora={agora} />}
-      {aba === 'relatorio' && <Relatorio leads={leadsReais} estimativa={estimativa} cotacoes={cotacoes} agora={agoraDaMeta} />}
+      {aba === 'relatorio' && (
+        <div className="space-y-4">
+          <Relatorio leads={leadsReais} estimativa={estimativa} cotacoes={cotacoes} agora={agoraDaMeta} />
+          <Atendimento parte="painel" kits={kits} leads={leads} valorDoLead={valorDoLead} aoAbrirLead={(id) => setFichaDe(id)} cotacaoDolar={cotacoes.USD} />
+        </div>
+      )}
       {aba === 'buscas' && <Buscas pedidos={pedidos} />}
       {aba === 'atendimento' && (
         <Atendimento
+          parte={pagina === 'lia' ? 'lia' : 'inbox'}
           kits={kits}
           leads={leads}
           valorDoLead={valorDoLead}

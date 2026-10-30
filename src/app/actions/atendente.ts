@@ -55,7 +55,7 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
     supabase
       .from('ia_conversations')
       .select(
-        '*, leads(name, status, first_contact_at, replied_at, closed_at, diag_last_view_at, discovery, cobrancas(parcela, valor, link, pago_em, status, created_at)), ia_messages(body, created_at)'
+        '*, leads(name, status, source, origem_contato, first_contact_at, replied_at, closed_at, diag_last_view_at, discovery, cobrancas(parcela, valor, link, pago_em, status, created_at)), ia_messages(body, created_at)'
       )
       // Conversas do simulador ficam só na seção "Testar a Lia".
       .not('contact_id', 'like', 'simulador:%')
@@ -124,6 +124,9 @@ export async function painelDoAtendenteAction(): Promise<PainelDoAtendente | nul
         descoberta: (v.leads?.discovery ?? {}) as RespostasDoChecklist,
         gastoUsd: gastoPorConversa.get(v.id) ?? 0,
         isTest: v.is_test,
+        esperandoLia: !!v.ia_pendente_desde,
+        origemDoContato: v.leads?.origem_contato ?? null,
+        fonte: v.leads?.source ?? null,
         marcos: {
           contatado: v.leads?.first_contact_at ?? null,
           respondeu: v.leads?.replied_at ?? null,
@@ -556,4 +559,19 @@ export async function enviarEmailDeTesteAction(paraLista: string): Promise<Actio
   return okResult(
     `2 versões (bonita e só texto) enviadas para ${destinos.join(', ')}, com o e-mail de ${item.leads.name}. Veja em qual pasta cada uma caiu.`
   );
+}
+
+/**
+ * Exclui uma conversa de TESTE e as mensagens dela (pedido do Arthur em 30/10/2026: os chats de teste do
+ * Felipe ficavam na lista). Só apaga se a conversa estiver marcada como teste; conversa de cliente não sai.
+ */
+export async function excluirConversaDeTesteAction(conversaId: string): Promise<{ ok: boolean; message: string }> {
+  const supabase = await adminClient();
+  if (!supabase) return { ok: false, message: 'Sem permissão.' };
+  const { data: c } = await supabase.from('ia_conversations').select('is_test, contact_name').eq('id', conversaId).maybeSingle();
+  if (!c) return { ok: false, message: 'Conversa não encontrada.' };
+  if (!c.is_test) return { ok: false, message: 'Só dá para excluir conversa de teste.' };
+  const { error } = await supabase.from('ia_conversations').delete().eq('id', conversaId).eq('is_test', true);
+  if (error) return { ok: false, message: friendlyDbError(error, 'Não foi possível excluir.') };
+  return { ok: true, message: `Conversa de teste "${c.contact_name ?? 'sem nome'}" excluída.` };
 }

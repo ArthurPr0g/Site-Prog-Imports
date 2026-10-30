@@ -243,7 +243,7 @@ function LinhaDaReuniao({
         </a>
       )}
       {r.conversaId && (
-        <a href={`/admin/captacao?aba=atendimento&conversa=${r.conversaId}`} className="font-bold text-accent">
+        <a href={`/admin/atendimento?conversa=${r.conversaId}`} className="font-bold text-accent">
           Conversa
         </a>
       )}

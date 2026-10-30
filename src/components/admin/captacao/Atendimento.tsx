@@ -6,7 +6,7 @@
 // visível; o placar usa os leads do painel (relidos a cada minuto).
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { Bell, Bot, CalendarDays, Mail, CheckCircle2, CircleAlert, FlaskConical, GraduationCap, Hand, MessageCircle, Send, Settings, Sparkles, Trophy, UserRound } from 'lucide-react';
+import { Bell, Bot, CalendarDays, Mail, CheckCircle2, CircleAlert, FlaskConical, GraduationCap, Hand, MessageCircle, Search, Send, Settings, Sparkles, Trash2, Trophy, UserRound } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { LEAD_STATUS_LABEL, type Lead } from '@/lib/captacao';
 import { TrilhaDaVenda, BarraDaEtapa } from './TrilhaDaVenda';
@@ -33,6 +33,7 @@ import {
   salvarConfigAtendenteAction,
   orientarLiaAction,
   enviarEmailDeTesteAction,
+  excluirConversaDeTesteAction,
 } from '@/app/actions/atendente';
 import { inputClass, semCentavos } from './comum';
 import { ResultadosDaLiaPainel, TestarALia } from './LiaResultadosETeste';
@@ -74,7 +75,13 @@ export function Atendimento({
   valorDoLead,
   aoAbrirLead,
   cotacaoDolar,
+  parte = 'inbox',
 }: {
+  /**
+   * Qual parte mostrar (menu novo da Prog Soluções, 30/10/2026): 'inbox' = página Atendimento (só as conversas),
+   * 'painel' = placar e resultados da Lia (Dashboards), 'lia' = situação, simulador, lições e configuração (página Lia).
+   */
+  parte?: 'inbox' | 'painel' | 'lia';
   /** Dólar do dia (mercado), para mostrar o gasto com IA em reais. null = sem cotação. */
   cotacaoDolar: number | null;
   kits: KitDoVendedor[];
@@ -89,7 +96,9 @@ export function Atendimento({
   const [aberta, setAberta] = useState<string | null>(() =>
     typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('conversa')
   );
-  const [filtro, setFiltro] = useState<'todas' | 'precisa' | 'comigo'>('todas');
+  const [filtro, setFiltro] = useState<'todas' | 'precisa' | 'comigo' | 'esperando' | 'novos'>('todas');
+  const [busca, setBusca] = useState('');
+  const [verTestes, setVerTestes] = useState(false);
   // A conversa aberta fica no endereço (?conversa=): atualizar a página volta para ela.
   useEffect(() => {
     const u = new URL(window.location.href);
@@ -131,19 +140,79 @@ export function Atendimento({
     return placar([...porChave.values()], leads.filter((l) => !l.teste), valorDoLead);
   }, [kits, leads, valorDoLead]);
 
-  const conversas = (painel?.conversas ?? []).filter((c) =>
-    filtro === 'precisa' ? c.needsHuman : filtro === 'comigo' ? c.mode === 'humano' : true
-  );
+  const todas = painel?.conversas ?? [];
+  const termo = busca.trim().toLowerCase();
+  const conversas = todas.filter((c) => {
+    if (!verTestes && c.isTest && c.id !== aberta) return false;
+    if (filtro === 'precisa' && !c.needsHuman) return false;
+    if (filtro === 'comigo' && c.mode !== 'humano') return false;
+    if (filtro === 'esperando' && !c.esperandoLia) return false;
+    if (filtro === 'novos' && c.fonte !== 'whatsapp_direto') return false;
+    if (termo && ![c.leadName, c.contactName, c.contactId, c.ultimaMensagem].some((x) => x?.toLowerCase().includes(termo))) return false;
+    return true;
+  });
   const aguardando = (painel?.pedidos ?? []).filter((p) => p.status === 'aguardando');
-  const precisam = (painel?.conversas ?? []).filter((c) => c.needsHuman).length;
+  const reais = todas.filter((c) => !c.isTest);
+  const precisam = reais.filter((c) => c.needsHuman).length;
+  const esperando = reais.filter((c) => c.esperandoLia).length;
+  const novos = reais.filter((c) => c.fonte === 'whatsapp_direto').length;
+  const testes = todas.filter((c) => c.isTest).length;
+  const naoLidas = reais.reduce((n, c) => n + (c.unread || 0), 0);
+  // "Hoje" pela hora da última leitura do painel (render puro, sem Date.now).
+  const hojeISO = lidoEm ? new Date(lidoEm - 3 * 3600_000).toISOString().slice(0, 10) : '';
+  const ativasHoje = reais.filter((c) => c.lastInboundAt && new Date(new Date(c.lastInboundAt).getTime() - 3 * 3600_000).toISOString().slice(0, 10) === hojeISO).length;
+
+  // Dashboards: placar de quem converte e resultados da Lia (abrir uma conversa leva para o Atendimento).
+  if (parte === 'painel')
+    return (
+      <div className="space-y-4">
+        <Placar linhas={linhas} lidoEm={lidoEm} />
+        <ResultadosDaLiaPainel cotacaoDolar={cotacaoDolar} aoAbrir={(id) => (window.location.href = `/admin/atendimento?conversa=${id}`)} />
+      </div>
+    );
+
+  // Página da Lia: situação, simulador, lições e configuração.
+  if (parte === 'lia')
+    return (
+      <div className="space-y-4">
+        {painel ? (
+          <Situacao painel={painel} cotacaoDolar={cotacaoDolar} />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-4" aria-busy="true">
+            {[0, 1, 2, 3].map((i) => (
+              <Esqueleto key={i} className="h-[86px]" />
+            ))}
+          </div>
+        )}
+        <TestarALia leads={leads} />
+        {painel && <Aprendizados licoes={painel.licoes} aoMudar={reler} />}
+        {painel && <Configuracao inicial={painel.config} aoSalvar={reler} />}
+      </div>
+    );
 
   return (
     <div className="space-y-4">
-      <Placar linhas={linhas} lidoEm={lidoEm} />
-
-      <ResultadosDaLiaPainel cotacaoDolar={cotacaoDolar} aoAbrir={setAberta} />
-
-      {painel && <Situacao painel={painel} cotacaoDolar={cotacaoDolar} />}
+      {/* Resumo do atendimento: cada número é um atalho de filtro. */}
+      <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-5">
+        {(
+          [
+            ['Ativas hoje', ativasHoje, 'todas', 'text-accent'],
+            ['Não lidas', naoLidas, 'todas', 'text-accent'],
+            ['Precisam de você', precisam, 'precisa', 'text-error'],
+            ['Esperando a Lia', esperando, 'esperando', 'text-warning'],
+            ['Contatos novos', novos, 'novos', 'text-success'],
+          ] as const
+        ).map(([rotulo, n, f, cor]) => (
+          <button
+            key={rotulo}
+            onClick={() => setFiltro(f)}
+            className={`rounded-[16px] border bg-card px-3.5 py-3 text-left transition-transform hover:-translate-y-0.5 ${filtro === f && f !== 'todas' ? 'border-accent/60' : 'border-border'}`}
+          >
+            <span className="block text-[11px] font-bold uppercase tracking-[.06em] text-fg-faded">{rotulo}</span>
+            <span className={`block text-[24px] font-extrabold tabular-nums ${n ? cor : 'text-fg-tertiary'}`}>{painel ? n : '–'}</span>
+          </button>
+        ))}
+      </section>
 
       {aguardando.length > 0 && (
         <section className="rounded-[18px] border border-accent/50 bg-accent/[.06] p-4 sm:p-5">
@@ -163,12 +232,23 @@ export function Atendimento({
           <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">
             <MessageCircle size={13} /> Conversas no WhatsApp
           </div>
-          <div className="flex gap-1.5 text-[12px] font-bold">
+          <div className="flex flex-wrap items-center gap-1.5 text-[12px] font-bold">
+            <label className="flex min-w-[180px] items-center gap-1.5 rounded-full border border-border-strong px-3 py-1">
+              <Search size={12} className="text-fg-faded" />
+              <input
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Buscar nome, número ou mensagem"
+                className="w-full bg-transparent text-[12px] font-normal outline-none placeholder:text-fg-faded"
+              />
+            </label>
             {(
               [
                 ['todas', 'Todas'],
                 ['precisa', `Precisam de você${precisam ? ` (${precisam})` : ''}`],
                 ['comigo', 'Com você'],
+                ['esperando', `Esperando a Lia${esperando ? ` (${esperando})` : ''}`],
+                ['novos', 'Contatos novos'],
               ] as const
             ).map(([k, t]) => (
               <button
@@ -179,6 +259,15 @@ export function Atendimento({
                 {t}
               </button>
             ))}
+            {testes > 0 && (
+              <button
+                onClick={() => setVerTestes((v) => !v)}
+                className={`flex items-center gap-1 rounded-full px-3 py-1 ${verTestes ? 'bg-fg-faded/20 text-fg' : 'border border-border-strong text-fg-tertiary'}`}
+                title="Conversas de teste ficam escondidas; mostre para ver ou excluir"
+              >
+                <FlaskConical size={12} /> {verTestes ? 'Esconder testes' : `Testes (${testes})`}
+              </button>
+            )}
           </div>
         </div>
         {!painel ? (
@@ -204,11 +293,13 @@ export function Atendimento({
           </div>
         ) : conversas.length === 0 ? (
           <div className="p-3 text-[13px] text-fg-tertiary">
-            Nenhuma conversa ainda. Elas aparecem aqui quando um lead chama a atendente no WhatsApp.
+            {todas.length === 0
+              ? 'Nenhuma conversa ainda. Elas aparecem aqui quando um lead chama a atendente no WhatsApp.'
+              : 'Nenhuma conversa com esse filtro.'}
           </div>
         ) : (
           <div className="grid gap-3 lg:grid-cols-[minmax(0,320px)_1fr]">
-            <ul className={`max-h-[560px] space-y-1 overflow-y-auto ${aberta ? 'hidden lg:block' : ''}`}>
+            <ul className={`max-h-[560px] space-y-1 overflow-y-auto lg:max-h-[calc(100vh-300px)] lg:min-h-[480px] ${aberta ? 'hidden lg:block' : ''}`}>
               {conversas.map((c) => (
                 <li key={c.id}>
                   <ItemDaConversa c={c} ativa={aberta === c.id} aoAbrir={() => setAberta(c.id)} cotacaoDolar={cotacaoDolar} />
@@ -235,11 +326,6 @@ export function Atendimento({
         )}
       </section>
 
-      <TestarALia leads={leads} />
-
-      {painel && <Aprendizados licoes={painel.licoes} aoMudar={reler} />}
-
-      {painel && <Configuracao inicial={painel.config} aoSalvar={reler} />}
     </div>
   );
 }
@@ -680,11 +766,15 @@ function ItemDaConversa({
         <span className="tabular-nums" title="Quanto a IA já gastou nesta conversa">
           IA gastou {gasto(c.gastoUsd, cotacaoDolar)}
         </span>
-        {c.isTest && (
-          <span className="flex items-center gap-1 rounded-full bg-fg-faded/12 px-1.5 py-0.5 font-bold">
-            <FlaskConical size={10} /> teste
-          </span>
-        )}
+        <span className="flex items-center gap-1">
+          {c.esperandoLia && <span className="rounded-full bg-warning/15 px-1.5 py-0.5 font-bold text-warning">esperando a Lia</span>}
+          {c.fonte === 'whatsapp_direto' && <span className="rounded-full bg-success/15 px-1.5 py-0.5 font-bold text-success">novo</span>}
+          {c.isTest && (
+            <span className="flex items-center gap-1 rounded-full bg-fg-faded/12 px-1.5 py-0.5 font-bold">
+              <FlaskConical size={10} /> teste
+            </span>
+          )}
+        </span>
       </div>
     </button>
   );
@@ -714,6 +804,7 @@ function Conversa({
   const [texto, setTexto] = useState('');
   // Responder como Arthur (a IA para) ou orientar a Lia (ela responde seguindo a instrução).
   const [modoDoTexto, setModoDoTexto] = useState<'arthur' | 'lia'>('arthur');
+  const [excluindo, setExcluindo] = useState(false);
   const [pending, start] = useTransition();
   const toast = useToast();
   const fim = useRef<HTMLDivElement>(null);
@@ -787,6 +878,28 @@ function Conversa({
             className="rounded-control border border-border-strong px-2.5 py-1 text-[12px] font-bold"
           >
             Ficha do lead
+          </button>
+        )}
+        {conversa?.isTest && (
+          <button
+            disabled={pending}
+            onClick={() => {
+              if (!excluindo) return setExcluindo(true);
+              start(async () => {
+                const r = await seguro(() => excluirConversaDeTesteAction(id), (m) => toast({ ok: false, message: m }));
+                if (!r) return;
+                toast(r);
+                if (r.ok) {
+                  aoVoltar();
+                  aoMudar();
+                }
+              });
+            }}
+            onBlur={() => setExcluindo(false)}
+            className={`flex items-center gap-1 rounded-control px-2.5 py-1 text-[12px] font-bold ${excluindo ? 'bg-error text-page' : 'border border-error/50 text-error'}`}
+            title="Exclui esta conversa de teste e as mensagens dela"
+          >
+            <Trash2 size={13} /> {excluindo ? 'Confirmar exclusão' : 'Excluir teste'}
           </button>
         )}
         {conversa?.needsHuman && (

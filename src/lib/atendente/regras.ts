@@ -321,6 +321,12 @@ export type ConversaDoPainel = {
   gastoUsd: number;
   /** Lead de teste ou simulador: fora do placar, do custo e do aprendizado. */
   isTest: boolean;
+  /** Sem resposta da Lia por falta de crédito; ela retoma sozinha (0108). */
+  esperandoLia: boolean;
+  /** Como o contato que chamou primeiro disse que chegou (0107). */
+  origemDoContato: string | null;
+  /** source do lead (indicacao_dono, whatsapp_direto, captação...). */
+  fonte: string | null;
   /** Datas de cada passo do lead (trilha da venda no painel, relida a cada 10 s). */
   marcos: {
     contatado: string | null;
