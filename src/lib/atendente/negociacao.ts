@@ -458,7 +458,17 @@ async function continuarSessao(db: DbDoAtendente, s: Sessao, m: MensagemRecebida
 async function localizar(db: DbDoAtendente, s: Sessao, nome: string | null): Promise<void> {
   const lista = await candidatos(db, nome);
   const ativos = lista.filter((k) => k.ativo);
-  const unico = nome ? (ativos.length === 1 ? ativos[0] : ativos.length === 0 && lista.length === 1 ? lista[0] : null) : null;
+  // Um só bate com o nome inteiro (ex.: "TESTE Reunião" × "TESTE Contato novo"): esse é o candidato.
+  const inteiros = ativos.filter((k) => (k.pontos ?? 0) >= 2.9);
+  const unico = nome
+    ? ativos.length === 1
+      ? ativos[0]
+      : inteiros.length === 1
+        ? inteiros[0]
+        : ativos.length === 0 && lista.length === 1
+          ? lista[0]
+          : null
+    : null;
   if (unico) {
     await atualizar(db, s.id, { status: 'confirmando', candidatos: [unico] as unknown as Json, expira_em: validade(VALIDADE_DA_ESCOLHA_MS) });
     const r = await enviarComOpcoes(
