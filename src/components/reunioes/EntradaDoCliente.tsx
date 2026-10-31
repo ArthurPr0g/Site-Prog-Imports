@@ -136,7 +136,7 @@ export function EntradaDoCliente({
         <header className="flex items-center justify-between">
           <Marca />
           <span className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1 text-[12px] text-[#D7DAE0]">
-            <span className="h-2 w-2 rounded-full bg-[#5FD37F] shadow-[0_0_8px_#5FD37F]" /> Gravando
+            <span className="h-2 w-2 rounded-full bg-[#5FD37F] shadow-[0_0_8px_#5FD37F]" /> Reunião gravada
           </span>
         </header>
         <section className={`grid min-h-0 flex-1 gap-3 ${outros.length > 1 ? 'grid-rows-2 sm:grid-cols-2 sm:grid-rows-1' : ''}`}>
