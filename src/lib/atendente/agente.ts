@@ -504,6 +504,13 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
       const descricao = String(entrada.descricao ?? '').trim().slice(0, 3000);
       if (!descricao) return 'Descreva o ajuste exato antes.';
       if (!entrada.simples) return 'Ainda há dúvida: pergunte ao cliente o que falta (uma pergunta curta, com opções se der). Não prometa prazo.';
+      // Print com a indicação de onde mexer (pedido do Arthur, 31/10/2026): sem ele, a Lia pede antes de registrar.
+      const prints = await printsDoAjuste(db, conversaId);
+      if (!prints.length && !entrada.sem_print)
+        return 'Antes de registrar, peça ao cliente um print da tela com a indicação de onde quer a mudança (pode circular, pôr uma seta ou dizer qual parte) e, se der, o link da página. Explique que é para fazer certinho de primeira. Se ele não puder mandar, use pedir_ajuste com sem_print=true.';
+      const blocoPrints = prints.length
+        ? `\n\nPrints que o cliente mandou (links válidos por 7 dias; baixe e OLHE cada um antes de mexer, para achar o lugar exato):\n${prints.map((u, i) => `${i + 1}. ${u}`).join('\n')}`
+        : '';
       if (!pj.servicoId) {
         await chamarArthur(db, cfg, conversaId, `Pediu um ajuste (projeto sem serviço cadastrado no Pós-venda): ${descricao}`, 'Ajuste pedido pelo cliente');
         return 'Ajuste registrado. Diga ao cliente o que vai mudar e que a equipe faz e avisa por aqui assim que estiver no ar.';
@@ -524,7 +531,7 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
       }
       const texto =
         `[Ajuste pedido pelo cliente ${pj.cliente} — pasta exclusiva: ${pj.pasta}]\n` +
-        `Pedido do cliente (pela Lia; pode ter vindo de um print): ${descricao}\n\n` +
+        `Pedido do cliente (pela Lia): ${descricao}${blocoPrints}\n\n` +
         'Regras: faça SOMENTE esse ajuste e SOMENTE dentro desta pasta. Não abra, leia nem altere nenhuma outra pasta ou projeto. ' +
         'Se o ajuste for maior do que parece, ambíguo, mexer em dados, pagamentos, login ou em algo que o cliente não pediu, NÃO faça: termine com a linha PENDENTE explicando. ' +
         'Siga o CLAUDE.md da pasta (se houver); rode o build e publique como o projeto publica (git push/deploy). ' +
@@ -1028,12 +1035,16 @@ function blocoDoProjeto(
 const FERRAMENTA_AJUSTE: Anthropic.Beta.BetaTool = {
   name: 'pedir_ajuste',
   description:
-    'Cliente com projeto pediu um ajuste no projeto dele (texto ou print). Use depois de entender exatamente o que mudar. simples=true só se for pequeno, claro e sem dúvida (trocar texto, foto, cor, link, horário, telefone, ordem de itens...). Se faltar informação, NÃO use: pergunte ao cliente antes.',
+    'Cliente com projeto pediu um ajuste no projeto dele. Antes de usar, peça um print com a indicação de onde mexer (os prints que ele mandar vão junto para quem faz o ajuste). Use depois de entender exatamente o que mudar. simples=true só se for pequeno, claro e sem dúvida (trocar texto, foto, cor, link, horário, telefone, ordem de itens...). Se faltar informação, NÃO use: pergunte ao cliente antes.',
   input_schema: {
     type: 'object',
     properties: {
-      descricao: { type: 'string', description: 'O ajuste exato, com o texto/valor novo e onde fica (página, seção). Se veio print, descreva o que o print mostra.' },
+      descricao: { type: 'string', description: 'O ajuste exato, com o texto/valor novo e onde fica (página, seção, link). Se veio print, descreva o que o print mostra e o que ele indicou.' },
       simples: { type: 'boolean', description: 'true = pequeno, claro e sem dúvida; false = grande, arriscado ou ainda com dúvida.' },
+      sem_print: {
+        type: 'boolean',
+        description: 'true só se o cliente não conseguir mandar print ou se o pedido já for inequívoco sem ele (ex.: "troque o telefone do rodapé para X"). Na dúvida, peça o print.',
+      },
     },
     required: ['descricao', 'simples'],
     additionalProperties: false,
@@ -1125,6 +1136,32 @@ type ProjetoDoCliente = {
   temMensal: boolean;
   posEntrega: PosEntrega;
 };
+
+/**
+ * Prints que o cliente mandou nas últimas 24 h, guardados no bucket privado "clientes" e devolvidos como links
+ * assinados de 7 dias, para o Leo (Claude Code no PC) ver exatamente onde mexer (31/10/2026). No máximo 4.
+ */
+async function printsDoAjuste(db: DbDoAtendente, conversaId: string): Promise<string[]> {
+  const { data: imagens } = await db
+    .from('ia_messages')
+    .select('media_id, media_mime')
+    .eq('conversation_id', conversaId)
+    .eq('direction', 'in')
+    .eq('media_type', 'image')
+    .not('media_id', 'is', null)
+    .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    .order('created_at', { ascending: false })
+    .limit(4);
+  const links: string[] = [];
+  for (const img of (imagens ?? []).reverse()) {
+    const caminho = `ajustes/${conversaId}/${img.media_id}.${(img.media_mime ?? '').includes('png') ? 'png' : 'jpg'}`;
+    const arquivo = await baixarMidia(img.media_id!);
+    if (arquivo) await db.storage.from('clientes').upload(caminho, arquivo.dados, { contentType: arquivo.mime || 'image/jpeg', upsert: true });
+    const { data } = await db.storage.from('clientes').createSignedUrl(caminho, 7 * 24 * 60 * 60);
+    if (data?.signedUrl) links.push(data.signedUrl);
+  }
+  return links;
+}
 
 /** Projeto ativo do lead da conversa (nunca o que o cliente digita: cada cliente só mexe no próprio projeto). */
 async function projetoDoCliente(db: DbDoAtendente, leadId: string | null): Promise<ProjetoDoCliente | null> {
@@ -1330,7 +1367,7 @@ async function responder(conversaId: string, avisoInterno?: string): Promise<str
   const blocoCliente = projetoCliente
     ? `
 
-CLIENTE COM PROJETO (${projetoCliente.cliente}): ele já é cliente. Se pedir mudança no projeto (texto, foto, cor, link, horário...), entenda exatamente o que mudar (veja o print, se mandar) e use pedir_ajuste. Rodadas de ajuste: ${projetoCliente.usadas} de ${projetoCliente.incluidas} usadas. Se tiver dúvida, pergunte antes. Nunca fale de outro cliente nem de outro projeto.${posEntrega ? `\n\n${posEntrega}` : ''}`
+CLIENTE COM PROJETO (${projetoCliente.cliente}): ele já é cliente. Se pedir mudança no projeto (texto, foto, cor, link, horário, algum detalhe visual...), ANTES de registrar peça um print da tela com a indicação de onde mexer (pode circular, pôr uma seta ou dizer "é esse botão aqui") e, se der, o link da página. Explique em uma frase que é para fazer certinho de primeira. Se ele já mandou print e indicou o lugar, não peça de novo. Com o print e o que mudar bem claros, use pedir_ajuste. Rodadas de ajuste: ${projetoCliente.usadas} de ${projetoCliente.incluidas} usadas. Se tiver dúvida, pergunte antes. Nunca fale de outro cliente nem de outro projeto.${posEntrega ? `\n\n${posEntrega}` : ''}`
     : '';
 
   const contexto = contextoDaConversa({
