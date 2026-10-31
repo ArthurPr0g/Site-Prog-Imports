@@ -94,7 +94,7 @@ function SiteDoLead({ l }: { l: LeadDoKit }) {
         href={/^https?:/i.test(l.website!) ? l.website! : `https://${l.website}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 break-all text-[14px] font-bold text-[#64d2ff] underline decoration-[#64d2ff]/40 underline-offset-4"
+        className="inline-flex items-center gap-1.5 break-all text-[14px] font-bold text-[#91B7FE] underline decoration-[#91B7FE]/40 underline-offset-4"
       >
         {dominio} <ExternalLink size={13} className="flex-shrink-0" />
       </a>
@@ -104,7 +104,7 @@ function SiteDoLead({ l }: { l: LeadDoKit }) {
         <ul className="mt-2 space-y-1.5 text-[13px]">
           {achados.map((a) => (
             <li key={a} className="leading-snug">
-              <b className={ACHADO_DO_SITE[a].ruim ? 'text-[#ff9f0a]' : 'text-[#30d158]'}>{ACHADO_DO_SITE[a].texto}</b>
+              <b className={ACHADO_DO_SITE[a].ruim ? 'text-[#ff9f0a]' : 'text-[#5FD37F]'}>{ACHADO_DO_SITE[a].texto}</b>
               <span className="text-fg-tertiary">: {ACHADO_DO_SITE[a].como}.</span>
             </li>
           ))}
@@ -120,7 +120,7 @@ function SiteDoLead({ l }: { l: LeadDoKit }) {
           href={whois}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border-strong px-3 py-1.5 text-[12.5px] font-bold text-fg-secondary hover:border-[#0a84ff] hover:text-[#64d2ff]"
+          className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border-strong px-3 py-1.5 text-[12.5px] font-bold text-fg-secondary hover:border-[#81AAF7] hover:text-[#91B7FE]"
         >
           <Search size={13} /> Ver o dono e a validade do domínio
         </a>

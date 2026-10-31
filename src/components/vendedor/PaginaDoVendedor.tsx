@@ -223,7 +223,7 @@ export function PaginaDoVendedor({
   ];
 
   return (
-    <main className="tema-apple mx-auto min-h-screen max-w-[1280px] overflow-x-clip px-4 py-6 [color-scheme:dark] sm:px-6 sm:py-8">
+    <main className="tema-apple ds-prog mx-auto min-h-screen max-w-[1280px] overflow-x-clip px-4 py-6 [color-scheme:dark] sm:px-6 sm:py-8">
       <div className="aurora" aria-hidden />
       <header className="mb-5">
         <div className="text-[12px] font-extrabold uppercase tracking-[.14em] text-accent">Prog Soluções · área do vendedor</div>
@@ -239,10 +239,10 @@ export function PaginaDoVendedor({
         <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           {(
             [
-              ['Contatados', progresso.contatados, ` de ${progresso.total}`, '#0a84ff'],
-              ['Em conversa', progresso.conversas, '', '#64d2ff'],
+              ['Contatados', progresso.contatados, ` de ${progresso.total}`, '#81AAF7'],
+              ['Em conversa', progresso.conversas, '', '#91B7FE'],
               ['Querem proposta', progresso.propostas, '', '#ff9f0a'],
-              ['Checklists feitos', progresso.checklists, '', '#30d158'],
+              ['Checklists feitos', progresso.checklists, '', '#5FD37F'],
             ] as const
           ).map(([rotulo, valor, resto, cor], i) => (
             <motion.div
