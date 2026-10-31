@@ -1,5 +1,6 @@
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { GastosPanel } from '@/components/admin/GastosPanel';
+import { DadosDeTeste } from '@/components/admin/DadosDeTeste';
 
 // Gastos (pedido do dono em 30/10/2026): tudo o que a operação da Lia e da captação custa (IA, mensagens
 // da Meta, transcrição e custos fixos), onde e com o quê, com os parâmetros editáveis. Os dados são lidos
@@ -13,6 +14,10 @@ export default function AdminGastosPage() {
         <AdminPageHeader title="Gastos" subtitle="Quanto custa a operação: IA, mensagens da Meta, transcrição e custos fixos, e quanto custou cada venda." />
       </div>
       <GastosPanel />
+      {/* Lixeira de testes (31/10/2026): o Arthur apaga os registros de teste por aqui. */}
+      <div className="tema-apple gastos relative z-[1] [color-scheme:dark]">
+        <DadosDeTeste />
+      </div>
     </div>
   );
 }

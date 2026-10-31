@@ -6,8 +6,30 @@
 // Desde 31/10 também para clientes: quem manda áudio recebe áudio (agente.ts, modo 'quando-preciso').
 // A voz é natural, mas a Lia continua sem dizer que é pessoa: confirma que é assistente se perguntarem.
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { dbDoAtendente } from '@/lib/atendente/db';
+
 const VOZ_PADRAO = 'RGymW84CSmfVugnA5tvA'; // Roberta - Smooth and Confident (pt-BR)
 const MODELO = 'eleven_multilingual_v2';
+// Créditos acima de 95% no ciclo (0116, consumo.ts): para os clientes, o Flash v2.5, que gasta metade por caractere.
+const MODELO_ECONOMICO = 'eleven_flash_v2_5';
+
+let economia: { ate: number; ligada: boolean } | null = null;
+/** O relógio liga ia_config.elevenlabs.economico ao passar de 95% dos créditos; lido no máximo 1x por minuto. */
+async function vozEconomicaLigada(): Promise<boolean> {
+  if (economia && economia.ate > Date.now()) return economia.ligada;
+  let ligada = false;
+  try {
+    // A coluna é nova (0116) e ainda não está nos tipos gerados.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (dbDoAtendente() as unknown as SupabaseClient<any>).from('ia_config').select('elevenlabs').eq('id', true).maybeSingle();
+    ligada = !!data?.elevenlabs?.economico;
+  } catch {
+    ligada = false;
+  }
+  economia = { ate: Date.now() + 60_000, ligada };
+  return ligada;
+}
 const LIMITE = 700; // ~45 s de fala; o resto do texto segue escrito
 
 export const vozConfigurada = () => !!process.env.ELEVENLABS_API_KEY;
@@ -59,12 +81,14 @@ export function falaDoTesteDeVoz(): { fala: string; texto: string } {
 }
 
 /** Gera a fala em Ogg/Opus. Devolve null se não houver chave, se o texto não tiver o que falar ou se falhar.
- *  `expressivo`: eleven_v3, que interpreta marcações como [laughs] (o texto vai como está, sem limpar). */
-export async function falar(texto: string, expressivo = false): Promise<Buffer | null> {
+ *  `expressivo`: eleven_v3, que interpreta marcações como [laughs] (o texto vai como está, sem limpar).
+ *  `paraCliente`: com os créditos acima de 95% no ciclo, usa o modelo econômico (a voz do Arthur não muda). */
+export async function falar(texto: string, expressivo = false, paraCliente = false): Promise<Buffer | null> {
   const chave = process.env.ELEVENLABS_API_KEY;
   const fala = expressivo ? texto.trim() : textoFalavel(texto);
   if (!chave || fala.length < 2) return null;
   const voz = process.env.ELEVENLABS_VOZ_DONO || VOZ_PADRAO;
+  const modelo = paraCliente && !expressivo && (await vozEconomicaLigada()) ? MODELO_ECONOMICO : MODELO;
   try {
     const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voz}?output_format=opus_48000_32`, {
       method: 'POST',
@@ -74,7 +98,7 @@ export async function falar(texto: string, expressivo = false): Promise<Buffer |
           ? { text: fala, model_id: 'eleven_v3' }
           : {
               text: fala,
-              model_id: MODELO,
+              model_id: modelo,
               voice_settings: { stability: 0.45, similarity_boost: 0.8, style: 0.25, use_speaker_boost: true },
             }
       ),

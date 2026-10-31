@@ -20,6 +20,26 @@ const PERIODOS: [Periodo, string][] = [
 const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
 const usd = (v: number) => `US$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: v < 1 ? 3 : 2, maximumFractionDigits: v < 1 ? 3 : 2 })}`;
 const mil = (v: number) => v.toLocaleString('pt-BR');
+const megas = (b: number) => `${(b / 1024 ** 2).toLocaleString('pt-BR', { maximumFractionDigits: b < 10 * 1024 ** 2 ? 1 : 0 })} MB`;
+const NOME_DO_BUCKET: Record<string, string> = {
+  'product-images': 'Fotos dos produtos',
+  diagnosticos: 'Diagnósticos (prints)',
+  'collection-images': 'Coleções',
+  'category-images': 'Categorias',
+  'studio-art': 'Estúdio',
+  signatures: 'Assinaturas',
+  clientes: 'Arquivos dos clientes',
+  reunioes: 'Áudios das reuniões',
+};
+
+/** Barra de uso (0 a 100%), mesma cor da barra das reuniões. */
+function Medidor({ pct }: { pct: number }) {
+  return (
+    <div className="mt-2 h-[12px] overflow-hidden rounded-full bg-white/5">
+      <div className="barra-cor g-barra h-full rounded-full" style={{ width: `${Math.min(100, Math.max(pct > 0 ? 1 : 0, pct))}%` }} />
+    </div>
+  );
+}
 
 /** Contador que sobe até o valor (desliga com movimento reduzido). */
 function useContador(alvo: number, ms = 900) {
@@ -559,6 +579,73 @@ export function GastosPanel() {
           <p className="mt-3 text-[12.5px] text-fg-faded">Nenhuma reunião na sala este mês.</p>
         )}
       </Cartao>
+
+      {/* Créditos do ElevenLabs e armazenamento do Supabase (0116): planos com teto, lidos agora. */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Cartao atraso={520}>
+          <Titulo Icon={Mic} dica="pela API do ElevenLabs, agora">
+            Voz da Lia (ElevenLabs)
+          </Titulo>
+          {d.voz ? (
+            <>
+              <div className="flex flex-wrap items-baseline justify-between gap-2 text-[13px]">
+                <span>
+                  <b className="text-[18px] tabular-nums text-fg">{mil(d.voz.usados)}</b> de {mil(d.voz.limite)} créditos usados
+                </span>
+                <span className={d.voz.pct >= 95 ? 'text-error' : d.voz.pct >= 80 ? 'text-warning' : 'text-fg-tertiary'}>{d.voz.pct.toFixed(1)}%</span>
+              </div>
+              <Medidor pct={d.voz.pct} />
+              <p className="mt-1.5 text-[11.5px] text-fg-faded">
+                {d.voz.renovaEm ? `Renova em ${new Date(d.voz.renovaEm).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' })}. ` : ''}
+                Plano {d.voz.plano || '–'}, dividido entre você e os clientes. Avisos no WhatsApp a 80% e 95%; acima de 95%, a voz para os clientes usa o modelo mais barato (Flash v2.5).
+              </p>
+              {d.voz.economico && <p className="mt-1.5 text-[12px] font-bold text-warning">Voz dos clientes no modelo econômico até o ciclo renovar.</p>}
+            </>
+          ) : (
+            <p className="text-[12.5px] text-fg-faded">Não deu para ler os créditos agora (chave do ElevenLabs ausente ou a API não respondeu).</p>
+          )}
+        </Cartao>
+        <Cartao atraso={540}>
+          <Titulo Icon={Gauge} dica="plano grátis do Supabase">
+            Armazenamento
+          </Titulo>
+          {d.armazenamento ? (
+            <>
+              <div className="flex flex-wrap items-baseline justify-between gap-2 text-[13px]">
+                <span>
+                  Arquivos: <b className="text-[18px] tabular-nums text-fg">{megas(d.armazenamento.arquivos)}</b> de 1 GB
+                </span>
+                <span className={d.armazenamento.pctArquivos >= 80 ? 'text-warning' : 'text-fg-tertiary'}>{d.armazenamento.pctArquivos.toFixed(1)}%</span>
+              </div>
+              <Medidor pct={d.armazenamento.pctArquivos} />
+              <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2 text-[13px]">
+                <span>
+                  Banco: <b className="tabular-nums text-fg">{megas(d.armazenamento.banco)}</b> de 500 MB
+                </span>
+                <span className={d.armazenamento.pctBanco >= 80 ? 'text-warning' : 'text-fg-tertiary'}>{d.armazenamento.pctBanco.toFixed(1)}%</span>
+              </div>
+              <Medidor pct={d.armazenamento.pctBanco} />
+              <table className="mt-3 w-full text-[12.5px]">
+                <tbody>
+                  {d.armazenamento.buckets.map((b) => (
+                    <tr key={b.bucket} className="border-t border-white/5">
+                      <td className="py-1 pr-2 text-fg-secondary">{NOME_DO_BUCKET[b.bucket] ?? b.bucket}</td>
+                      <td className="py-1 text-right tabular-nums text-fg-tertiary">{mil(b.objetos)} arq.</td>
+                      <td className="py-1 text-right tabular-nums">{megas(b.bytes)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="mt-2 text-[11.5px] text-fg-faded">
+                Aviso no WhatsApp a 80%. Áudios de reunião e prints de ajuste com mais de 60 dias vão para a pasta do cliente no OneDrive (tarefa do PC) e saem daqui
+                {d.armazenamento.arquivados.quantos > 0 ? `: ${mil(d.armazenamento.arquivados.quantos)} arquivado(s), ${megas(d.armazenamento.arquivados.bytes)} liberados.` : '.'}
+              </p>
+            </>
+          ) : (
+            <p className="text-[12.5px] text-fg-faded">Não deu para ler o armazenamento agora.</p>
+          )}
+        </Cartao>
+      </div>
 
       {/* Configurações editáveis */}
       <Cartao atraso={540}>

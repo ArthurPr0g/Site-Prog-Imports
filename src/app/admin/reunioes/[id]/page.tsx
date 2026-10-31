@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import { requireAdmin } from '@/lib/auth';
 import { dbDoAtendente } from '@/lib/atendente/db';
@@ -46,6 +47,15 @@ export default async function SalaDeReuniaoPage({ params }: { params: Promise<{ 
         : Promise.resolve({ data: null }),
     pastaDoCliente(db, r.lead_id),
   ]);
+  // Áudio que o PC arquivou (0116): saiu do Storage e ficou na pasta do cliente no OneDrive.
+  const { data: arquivado } = r.audio_path
+    ? await (db as unknown as SupabaseClient<any>) // eslint-disable-line @typescript-eslint/no-explicit-any -- tabela da 0116 fora dos tipos gerados
+        .from('arquivos_arquivados')
+        .select('onedrive_path, local_path')
+        .eq('bucket', 'reunioes')
+        .eq('caminho', r.audio_path)
+        .maybeSingle()
+    : { data: null };
 
   const escolha = escolhaDoJson(lead?.pacote);
   const pacote = escolha
@@ -72,6 +82,7 @@ export default async function SalaDeReuniaoPage({ params }: { params: Promise<{ 
     trechos: (Array.isArray(r.trechos) ? r.trechos : []) as Trecho[],
     resumo: r.resumo,
     temAudio: !!r.audio_path,
+    audioArquivado: (arquivado as { onedrive_path: string | null; local_path: string } | null)?.onedrive_path ?? (arquivado as { local_path: string } | null)?.local_path ?? null,
     videoArquivo: r.video_arquivo,
     minutos: r.minutos_participante === null ? null : Number(r.minutos_participante),
     custoUsd: Number(r.custo_usd ?? 0),

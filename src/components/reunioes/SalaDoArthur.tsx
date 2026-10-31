@@ -67,6 +67,8 @@ export type DadosDaSala = {
   trechos: Trecho[];
   resumo: string | null;
   temAudio: boolean;
+  /** Caminho no OneDrive quando o áudio já foi arquivado pelo PC e saiu do Storage (0116). */
+  audioArquivado?: string | null;
   videoArquivo: string | null;
   minutos: number | null;
   custoUsd: number;
@@ -646,7 +648,9 @@ export function SalaDoArthur({ d }: { d: DadosDaSala }) {
             {encerrada && (d.videoArquivo || d.temAudio) && !arquivos && (
               <div className="mt-2 grid gap-2 text-[13px] text-[#A3A8B2]">
                 {d.videoArquivo && <span>Vídeo: {d.videoArquivo}</span>}
+                {d.temAudio && d.audioArquivado && <span>Áudio arquivado no OneDrive: {d.audioArquivado}</span>}
                 {d.temAudio &&
+                  !d.audioArquivado &&
                   (audioUrl ? (
                     <audio controls src={audioUrl} className="w-full" />
                   ) : (

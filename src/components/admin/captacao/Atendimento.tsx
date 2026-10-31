@@ -63,6 +63,8 @@ async function seguro<T>(f: () => Promise<T>, aoFalhar?: (msg: string) => void):
     return undefined;
   }
 }
+/** Origens de quem chega direto à Lia, sem estar na lista dela. */
+const FONTES_DIRETAS = ['whatsapp_direto', 'portfolio', 'indicacao_dono'];
 const pct = (v: number | null) => (v === null ? '–' : `${Math.round(v * 100)}%`);
 /** Gasto da IA em dólar e, com a cotação do dia, em reais. */
 const gasto = (usd: number, cotacao: number | null) =>
@@ -142,9 +144,16 @@ export function Atendimento({
       v.leadIds.push(...k.leadIds);
       porChave.set(chave, v);
     }
+    // Lia: também os leads que ela atende de fato fora da lista (conversa real ligada a lead que chegou
+    // direto pelo WhatsApp, pelo portfólio ou por indicação do dono).
+    const lia = porChave.get('ia');
+    if (lia)
+      lia.leadIdsDiretos = (painel?.conversas ?? [])
+        .filter((c) => !c.isTest && c.leadId && c.fonte && FONTES_DIRETAS.includes(c.fonte))
+        .map((c) => c.leadId!);
     // Lead de teste não conta no placar.
     return placar([...porChave.values()], leads.filter((l) => !l.teste), valorDoLead);
-  }, [kits, leads, valorDoLead]);
+  }, [kits, leads, valorDoLead, painel]);
 
   const todas = painel?.conversas ?? [];
   const termo = busca.trim().toLowerCase();
@@ -366,6 +375,11 @@ function Placar({ linhas, lidoEm }: { linhas: ReturnType<typeof placar>; lidoEm:
                 : 'Nenhum fechamento ainda'}
               {` · ${l.emNegociacao} em negociação · ${l.perdidos} perdidos`}
             </div>
+            {l.ia && (
+              <div className="mt-1 text-[12px] text-fg-tertiary">
+                {l.leads} leads: {l.daLista} da lista · {l.diretos} chegaram direto
+              </div>
+            )}
           </div>
         ))}
       </div>

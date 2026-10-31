@@ -3,6 +3,7 @@
 // onde e com o quê, e os parâmetros editáveis. Gasto de IA é fato (ia_usage); Meta e transcrição são
 // contagem real de mensagens/áudios × o preço configurado; custos fixos são os que o Arthur cadastra.
 import { revalidatePath } from 'next/cache';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth';
 import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/action-result';
@@ -13,6 +14,7 @@ import { TIME, type ChaveDoAgente } from '@/lib/agentes/time';
 import { dbDoAtendente } from '@/lib/atendente/db';
 import { LIMITES_PADRAO, limitesDe, type LimitesDasReunioes } from '@/lib/reunioes/comum';
 import { usoDoMes, inicioDoMes } from '@/lib/reunioes/sala';
+import { creditosDaVoz, usoDoArmazenamento, LIMITE_ARQUIVOS, LIMITE_BANCO, type CreditosDaVoz, type UsoDoArmazenamento } from '@/lib/atendente/consumo';
 
 export type CustoFixo = { id: string; nome: string; valor_brl: number; periodo: 'mensal' | 'anual'; categoria: string };
 /**
@@ -73,6 +75,10 @@ export type Gastos = {
     trava: number;
     lista: { id: string; titulo: string; inicio: string; meio: string | null; minutos: number | null; usd: number }[];
   };
+  /** Créditos do ElevenLabs (voz da Lia), lidos da API agora; economico = voz dos clientes no Flash v2.5. (0116) */
+  voz: (CreditosDaVoz & { economico: boolean; avisos: Record<string, string> }) | null;
+  /** Armazenamento do Supabase (plano grátis) e o que já foi arquivado no OneDrive. (0116) */
+  armazenamento: (UsoDoArmazenamento & { limiteArquivos: number; limiteBanco: number; arquivados: { quantos: number; bytes: number } }) | null;
 };
 
 const PADRAO: ConfigDeCustos = {
@@ -263,7 +269,29 @@ export async function gastosAction(periodo: Periodo = 'mes'): Promise<Gastos | n
     leads: listaLeads.slice(0, 10),
     creditos: await creditosDaApi(db, config.recargas ?? [], dolar),
     reunioes: await reunioesDoMes(),
+    ...(await vozEArmazenamento()),
     agentes: gastoPorAgente(iaUsd, noPeriodo.length, noPeriodo.reduce((s, u) => s + u.input_tokens + u.output_tokens + u.cache_read_tokens + u.cache_write_tokens, 0), execucoes ?? []),
+  };
+}
+
+/** Créditos da voz (API do ElevenLabs) e uso do Storage/banco (função uso_do_armazenamento, 0116). */
+async function vozEArmazenamento(): Promise<Pick<Gastos, 'voz' | 'armazenamento'>> {
+  const srv = dbDoAtendente();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- colunas e tabela da 0116 ainda fora dos tipos gerados
+  const solto = srv as unknown as SupabaseClient<any>;
+  const [c, u, { data: cfg }, { data: arq }] = await Promise.all([
+    creditosDaVoz(),
+    usoDoArmazenamento(srv),
+    solto.from('ia_config').select('elevenlabs').eq('id', true).maybeSingle(),
+    solto.from('arquivos_arquivados').select('bytes').limit(5000),
+  ]);
+  const estado = (cfg?.elevenlabs ?? {}) as { economico?: boolean; avisos?: Record<string, string> };
+  const lista = (arq ?? []) as { bytes: number }[];
+  return {
+    voz: c ? { ...c, economico: !!estado.economico, avisos: estado.avisos ?? {} } : null,
+    armazenamento: u
+      ? { ...u, limiteArquivos: LIMITE_ARQUIVOS, limiteBanco: LIMITE_BANCO, arquivados: { quantos: lista.length, bytes: lista.reduce((s, a) => s + Number(a.bytes), 0) } }
+      : null,
   };
 }
 

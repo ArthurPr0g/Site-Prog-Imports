@@ -24,6 +24,7 @@ import { lembrarReunioes } from '@/lib/atendente/lembrete-reuniao';
 import { cuidarDosContatosDoPortfolio } from '@/lib/atendente/portfolio';
 import { sincronizarDecisoes } from '@/lib/atendente/central-decisoes';
 import { antesDasReunioes } from '@/lib/atendente/antes-da-reuniao';
+import { cuidarDosCreditosDaVoz, cuidarDoArmazenamento } from '@/lib/atendente/consumo';
 
 // Relógio do atendente: o pg_cron do Supabase chama a cada minuto (migration
 // 0067) com o segredo ATENDENTE_TICK_SECRET. Cada chamada:
@@ -40,6 +41,8 @@ import { antesDasReunioes } from '@/lib/atendente/antes-da-reuniao';
 // 10. modelos de mensagem da Meta (0094): cria e acompanha a aprovação; lembrete de reunião ao cliente ~2 h antes.
 // 11. (0105) batida do relógio + alarme de saúde a cada 10 min; "Bom dia" às 8h (substitui o resumo do pós-venda
 //     das 9h); pós-entrega: acompanhamento de 7/30/90 dias, avaliação, portfólio e oferta de manutenção.
+// 12. (0116) créditos do ElevenLabs a cada 15 min (avisos de 80%/95% e voz econômica para clientes) e
+//     armazenamento do Supabase 1x por hora (aviso de 80%).
 // 13. (0117) central de decisões (cards e limpeza), resumo do cliente 15 min antes da reunião e lembrete ao cliente
 //     10 min antes; aviso de modelo aprovado/recusado pela Meta (dentro de garantirModelos).
 
@@ -69,7 +72,10 @@ export async function POST(req: NextRequest) {
   const decisoes = await sincronizarDecisoes(db).catch((e) => (console.error('[tick] decisões', e), 0));
   const antesDaReuniao = await antesDasReunioes(db, cfg).catch((e) => (console.error('[tick] antes da reunião', e), null));
   const bomDiaEnviado = await bomDia(db, cfg);
-  if (!cfg.active) return NextResponse.json({ ok: true, ativo: false, decisoes, antesDaReuniao, arquivos, modeloDoAviso, promptsAvisados, modelos, saude, bomDiaEnviado });
+  // Créditos da voz e armazenamento: valem mesmo com a atendente desligada (avisos ao Arthur).
+  const voz = await cuidarDosCreditosDaVoz(db).catch(() => null);
+  const armazenamento = await cuidarDoArmazenamento(db).catch(() => null);
+  if (!cfg.active) return NextResponse.json({ ok: true, ativo: false, decisoes, antesDaReuniao, voz: voz?.pct ?? null, armazenamento: armazenamento?.pctArquivos ?? null, arquivos, modeloDoAviso, promptsAvisados, modelos, saude, bomDiaEnviado });
 
   // (0108) crédito da Anthropic voltou? retoma as conversas que ficaram esperando.
   const retomadasPorCredito = await retomarDepoisDoCredito(db, cfg);
@@ -88,7 +94,7 @@ export async function POST(req: NextRequest) {
   const lembretesDeReuniao = await lembrarReunioes(db);
   // (0111) formulário do portfólio: conclui a preparação, responde quem esperou 10 min, chama quem aguardava o modelo.
   const portfolio = await cuidarDosContatosDoPortfolio(db);
-  return NextResponse.json({ ok: true, decisoes, antesDaReuniao, portfolio, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas, posEntrega, design, retomadasPorCredito, promptsAvisados, saude, bomDiaEnviado, modelos, encomendas, retomadas, lembretesDeReuniao });
+  return NextResponse.json({ ok: true, decisoes, antesDaReuniao, voz: voz?.pct ?? null, armazenamento: armazenamento?.pctArquivos ?? null, portfolio, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas, posEntrega, design, retomadasPorCredito, promptsAvisados, saude, bomDiaEnviado, modelos, encomendas, retomadas, lembretesDeReuniao });
 }
 
 async function resolverDescontos(db: DbDoAtendente): Promise<number> {

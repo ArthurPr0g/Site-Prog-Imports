@@ -124,7 +124,7 @@ export async function relatorioDaCaptacao(db: DbDoAtendente, cfg: ConfigDoAtende
     '🎯 *Meta do semestre*',
     `• Realizado: ${reais(m.realizado)} de ${reais(m.valor)} (${pct(m.realizado)})`,
     linhaDoMes,
-    `• Projeção até o fim: ${reais(m.projecao)} (${pct(m.projecao)} da meta)`,
+    `• A receber: ${reais(m.contratado)} em mensalidades já fechadas`,
     `• Em negociação: ${n(emNegociacao.length)} lead${emNegociacao.length === 1 ? '' : 's'}, ~${reais(emNegociacao.reduce((s, l) => s + l.unico, 0))} + ${reais(emNegociacao.reduce((s, l) => s + l.mensal, 0))}/mês`,
     '',
     `🤖 *Custo da ${cfg.personaName}*`,

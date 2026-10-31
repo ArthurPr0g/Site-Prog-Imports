@@ -1,20 +1,18 @@
 'use client';
 
 // Gráfico da meta da Captação (R$ 100 mil de nov a abr): barras de meta e de
-// realizado por mês, linhas acumuladas da meta e do realizado, projeção até o
-// fim e o marcador de "hoje". Usado no painel e na página do vendedor.
+// realizado por mês, linhas acumuladas da meta e do realizado e o marcador de
+// "hoje". Sem projeção por "% de chance" (pedido do Arthur, 31/10/2026): só fatos. Usado no painel e na página do vendedor.
 // Conta e decisões em src/lib/meta-captacao.ts.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Target, TrendingUp, Wallet } from 'lucide-react';
+import { Target, Wallet } from 'lucide-react';
 import { META, type ResumoDaMeta } from '@/lib/meta-captacao';
 import { NumeroAnimado, SUAVE, reais } from './NumeroAnimado';
 
 const COR_REALIZADO = '#0a84ff';
 const COR_META = 'var(--color-fg-tertiary)';
-const COR_BOA = 'var(--color-success)';
-const COR_ALERTA = '#ff8a5c';
 
 const eixo = (v: number) => (v === 0 ? '0' : `${Math.round(v / 1000)} mil`);
 const pct = (v: number) => `${Math.round(v)}%`;
@@ -48,20 +46,18 @@ export function GraficoDaMeta({
   const calmo = useReducedMotion();
   const [caixa, W] = useLargura<HTMLDivElement>();
   const [foco, setFoco] = useState<number | null>(null);
-  const { meses, atual, valor, realizado, projecao, contratado } = resumo;
+  const { meses, atual, valor, realizado, contratado } = resumo;
   const n = meses.length;
   const H = W < 480 ? 196 : 228;
   const pad = { l: 46, r: 16, t: 22, b: 28 };
   const tHoje =
     atual < 0 ? 0 : atual >= n ? n : atual + (resumo.agora - meses[atual].inicio) / (meses[atual].fim - meses[atual].inicio);
-  const bateMeta = projecao >= valor;
-  const corProjecao = bateMeta ? COR_BOA : COR_ALERTA;
   const progresso = (realizado / valor) * 100;
 
   const g = useMemo(() => {
     const larg = Math.max(1, W - pad.l - pad.r);
     const alt = H - pad.t - pad.b;
-    const topo = Math.max(valor, projecao, realizado) * 1.08;
+    const topo = Math.max(valor, realizado) * 1.08;
     const passo = topo <= 125_000 ? 25_000 : topo <= 250_000 ? 50_000 : 100_000;
     const yMax = Math.ceil(topo / passo) * passo;
     const x = (t: number) => pad.l + (t / n) * larg;
@@ -92,7 +88,7 @@ export function GraficoDaMeta({
     };
     // pad é constante: fora das dependências de propósito.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [W, H, meses, valor, projecao, realizado, tHoje, n, atual]);
+  }, [W, H, meses, valor, realizado, tHoje, n, atual]);
 
   const barra = Math.max(4, Math.min(16, g.colW * 0.28));
   const mesAtual = atual >= 0 && atual < n ? meses[atual] : null;
@@ -141,7 +137,7 @@ export function GraficoDaMeta({
         </motion.span>
       </div>
 
-      {/* Barra do total, com o brilho correndo e a marca da projeção */}
+      {/* Barra do total, com o brilho correndo */}
       <div className="relative mt-2 h-2.5 overflow-hidden rounded-full bg-fg-faded/15">
         <motion.div
           className="barra-cor relative h-full overflow-hidden rounded-full shadow-[0_0_12px_rgba(10,132,255,.6)]"
@@ -157,18 +153,9 @@ export function GraficoDaMeta({
             />
           )}
         </motion.div>
-        {projecao > realizado && projecao < valor && (
-          <motion.span
-            className="absolute inset-y-0 w-[3px] rounded-full"
-            style={{ background: corProjecao, left: `${(projecao / valor) * 100}%` }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: calmo ? 0 : 1.2 }}
-          />
-        )}
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <Numero
           rotulo={mesAtual ? `Meta de ${mesAtual.rotulo}` : atual < 0 ? 'Começa em 1º/11' : 'Período encerrado'}
           valor={mesAtual ? mesAtual.meta : atual < 0 ? meses[0].meta : realizado}
@@ -181,13 +168,6 @@ export function GraficoDaMeta({
           }
         />
         <Numero
-          rotulo="Projeção até abr"
-          valor={projecao}
-          cor={corProjecao}
-          icone={<TrendingUp size={12} />}
-          rodape={`${Math.round((projecao / valor) * 100)}% da meta`}
-        />
-        <Numero
           rotulo="A receber"
           valor={contratado}
           icone={<Wallet size={12} />}
@@ -198,7 +178,7 @@ export function GraficoDaMeta({
       {/* Gráfico */}
       <div ref={caixa} className="relative mt-3" style={{ height: H }}>
         {W > 0 && (
-          <svg width={W} height={H} className="block overflow-visible" role="img" aria-label={`Meta de ${reais(valor)}: ${reais(realizado)} realizados, projeção de ${reais(projecao)}`}>
+          <svg width={W} height={H} className="block overflow-visible" role="img" aria-label={`Meta de ${reais(valor)}: ${reais(realizado)} realizados`}>
             <defs>
               <linearGradient id="meta-area" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#0a84ff" stopOpacity={0.4} />
@@ -288,7 +268,7 @@ export function GraficoDaMeta({
               );
             })}
 
-            {/* Acumulados: meta (tracejada), realizado (com área) e projeção */}
+            {/* Acumulados: meta (tracejada) e realizado (com área) */}
             <motion.path
               d={g.meta}
               fill="none"
@@ -316,36 +296,6 @@ export function GraficoDaMeta({
               animate={{ d: g.real, pathLength: 1 }}
               transition={{ duration: calmo ? 0 : 1.3, delay: calmo ? 0 : 0.3, ease: SUAVE }}
             />
-            {atual < n && (
-              <motion.line
-                x1={g.x(tHoje)}
-                y1={g.y(realizado)}
-                x2={g.x(n)}
-                y2={g.y(projecao)}
-                stroke={corProjecao}
-                strokeWidth={2}
-                strokeDasharray="6 5"
-                strokeLinecap="round"
-                initial={{ opacity: 0 }}
-                animate={calmo ? { opacity: 1 } : { opacity: 1, strokeDashoffset: [0, -22] }}
-                transition={{
-                  opacity: { duration: 0.6, delay: calmo ? 0 : 1.2 },
-                  strokeDashoffset: { duration: 1.1, repeat: Infinity, ease: 'linear' },
-                }}
-              />
-            )}
-            {atual < n && (
-              <motion.circle
-                cx={g.x(n)}
-                cy={g.y(projecao)}
-                r={4}
-                fill={corProjecao}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: calmo ? 0 : 1.5, type: 'spring', stiffness: 260, damping: 14 }}
-              />
-            )}
-
             {/* Hoje */}
             <line x1={g.x(tHoje)} x2={g.x(tHoje)} y1={pad.t - 6} y2={g.base} stroke="var(--color-fg-faded)" strokeDasharray="2 3" />
             <text x={g.x(tHoje)} y={pad.t - 9} textAnchor="middle" className="fill-fg-tertiary text-[10px] font-bold uppercase">
@@ -412,15 +362,10 @@ export function GraficoDaMeta({
         <Legenda cor={COR_META} tracejada>
           Meta acumulada
         </Legenda>
-        <Legenda cor={corProjecao} tracejada>
-          Projeção
-        </Legenda>
       </div>
       <p className="mt-2 text-[11px] leading-snug text-fg-faded">
         Meta com rampa 25/50/75/100% (cota cheia a partir de fev); o que faltar num mês é redistribuído nos seguintes.
-        Projeção = realizado + mensalidades já fechadas + funil × chance de cada etapa (proposta{' '}
-        {pct(resumo.chances.proposta * 100)}, reunião {pct(resumo.chances.reuniao * 100)}, respondeu{' '}
-        {pct(resumo.chances.respondeu * 100)}, contatado {pct(resumo.chances.contatado * 100)}).
+        A receber = mensalidades de clientes já fechados que ainda vão entrar até abril.
       </p>
     </motion.div>
   );

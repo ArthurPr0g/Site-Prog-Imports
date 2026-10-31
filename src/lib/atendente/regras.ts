@@ -233,7 +233,11 @@ export function empresaDoTexto(texto: string): string | null {
 
 /* ------------------------------------------------------------ placar */
 
-export type Vendedor = { chave: string; nome: string; ia: boolean; leadIds: string[] };
+/**
+ * leadIdsDiretos (só a Lia, 31/10/2026): leads que ela atende de fato sem estarem na lista dela (chegaram direto
+ * pelo WhatsApp, pelo portfólio ou por indicação do dono). Contam no placar dela, com a quebra lista × direto.
+ */
+export type Vendedor = { chave: string; nome: string; ia: boolean; leadIds: string[]; leadIdsDiretos?: string[] };
 
 export type LinhaDoPlacar = {
   chave: string;
@@ -252,6 +256,9 @@ export type LinhaDoPlacar = {
   taxaResposta: number | null;
   taxaFechamento: number | null;
   ultimoFechamento: string | null;
+  /** Quebra dos leads: da lista (link do vendedor) e os que chegaram direto (só a Lia). */
+  daLista: number;
+  diretos: number;
 };
 
 const PASSOU_DA_REUNIAO: LeadStatus[] = ['reuniao', 'proposta', 'fechado'];
@@ -269,7 +276,13 @@ export function placar(
   const porId = new Map(leads.map((l) => [l.id, l]));
   return vendedores
     .map((v) => {
-      const meus = v.leadIds.map((id) => porId.get(id)).filter((l): l is NonNullable<typeof l> => !!l);
+      const daLista = v.leadIds.map((id) => porId.get(id)).filter((l): l is NonNullable<typeof l> => !!l);
+      const naLista = new Set(daLista.map((l) => l.id));
+      const diretos = [...new Set(v.leadIdsDiretos ?? [])]
+        .filter((id) => !naLista.has(id))
+        .map((id) => porId.get(id))
+        .filter((l): l is NonNullable<typeof l> => !!l);
+      const meus = [...daLista, ...diretos];
       const contatados = meus.filter((l) => l.firstContactAt || l.status !== 'novo').length;
       const responderam = meus.filter((l) => l.repliedAt || EM_NEGOCIACAO.includes(l.status) || l.status === 'fechado').length;
       const fechados = meus.filter((l) => l.status === 'fechado');
@@ -291,6 +304,8 @@ export function placar(
         taxaResposta: contatados ? responderam / contatados : null,
         taxaFechamento: contatados ? fechados.length / contatados : null,
         ultimoFechamento: fechamentos.at(-1) ?? null,
+        daLista: daLista.length,
+        diretos: diretos.length,
       };
     })
     .sort((a, b) => b.fechados - a.fechados || b.valorFechado - a.valorFechado || b.responderam - a.responderam);

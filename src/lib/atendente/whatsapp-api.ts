@@ -93,7 +93,8 @@ export async function enviarVoz(para: string, ogg: Buffer): Promise<ResultadoDoE
 /** Manda a versão falada antes da mensagem (só no contexto de voz). Se falhar, a mensagem escrita segue igual. */
 async function falarAntes(para: string, texto: string): Promise<ResultadoDoEnvio | null> {
   if (!falaCom(para)) return null;
-  const ogg = await falar(texto);
+  // Cliente = modo 'quando-preciso' (o Arthur é 'sempre'): só a voz dos clientes vai para o modelo econômico.
+  const ogg = await falar(texto, false, vozDoDono.getStore()?.modo === 'quando-preciso');
   if (!ogg) return null;
   const r = await enviarVoz(para, ogg);
   if (!r.ok) console.error('[voz] envio falhou', r.erro);
