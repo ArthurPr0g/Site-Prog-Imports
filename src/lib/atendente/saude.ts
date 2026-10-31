@@ -5,7 +5,8 @@
 //  - modelo da Meta recusado, ou em análise há mais de 24 h;
 //  - pedidos do Claude esperando na fila há mais de 1h30 (PC e nuvem não pegaram);
 //  - gasto da IA disparou (mais de US$ 3 na última hora) ou passou de 80% do teto do mês;
-//  - avisos ao Arthur ou mensagens aos clientes falhando (3+ na última hora).
+//  - avisos ao Arthur ou mensagens aos clientes falhando (3+ na última hora);
+//  - Meta recusando modelo por falta de forma de pagamento (alarme próprio, só o Arthur resolve).
 // Cada alarme sai uma vez e só repete depois de 12 h se continuar. Só no servidor.
 
 import type { DbDoAtendente } from './db';
@@ -82,7 +83,7 @@ export async function problemasAtuais(db: DbDoAtendente, cfg: ConfigDoAtendente,
   if (teto > 0 && mes >= 0.8 * teto) problemas.push({ chave: `gasto_80:${new Date().toISOString().slice(0, 7)}`, texto: `💸 A IA já usou US$ ${mes.toFixed(2)} de US$ ${teto.toFixed(0)} do teto do mês (${Math.round((mes / teto) * 100)}%). No teto, ela para de responder.` });
 
   // 5. Envios falhando.
-  const [{ count: avisosFalhos }, { count: msgsFalhas }] = await Promise.all([
+  const [{ count: avisosFalhos }, { count: msgsFalhas }, { count: semPagamento }] = await Promise.all([
     db.from('ia_avisos').select('id', { count: 'exact', head: true }).eq('status', 'failed').gte('created_at', desde(1)),
     // Conversas de teste (número falso, simulador) falham de propósito: não contam para o alarme (30/10/2026).
     db
@@ -92,6 +93,8 @@ export async function problemasAtuais(db: DbDoAtendente, cfg: ConfigDoAtendente,
       .eq('status', 'failed')
       .eq('ia_conversations.is_test', false)
       .gte('created_at', desde(1)),
+    // Meta recusando modelo por falta de forma de pagamento (31/10/2026): só o Arthur resolve, com o passo exato.
+    db.from('ia_avisos').select('id', { count: 'exact', head: true }).eq('status', 'failed').ilike('error', '%eligibility payment%').gte('created_at', desde(1)),
   ]);
   // A IA não conseguiu responder (créditos da Anthropic acabaram, chave inválida, limite): a Lia está parada.
   const { data: falhasDaIa } = await db
@@ -112,7 +115,12 @@ export async function problemasAtuais(db: DbDoAtendente, cfg: ConfigDoAtendente,
       texto: `🚨 Sem créditos da Anthropic desde ${hora(semCredito.ia_sem_credito_desde)}${esperando ? `: ${esperando} conversa(s) esperando a Lia` : ''}. Nada se perde; ela retoma sozinha quando você recarregar: https://console.anthropic.com/settings/billing`,
     });
   }
-  if ((avisosFalhos ?? 0) >= 3) problemas.push({ chave: 'avisos_falhando', texto: `📵 ${avisosFalhos} avisos para você falharam na última hora.` });
+  if (semPagamento)
+    problemas.push({
+      chave: 'meta_sem_pagamento',
+      texto: `💳 A Meta recusou ${semPagamento} modelo(s) na última hora: a conta do WhatsApp Business está sem forma de pagamento. Texto dentro das 24 h funciona; fora delas, avisos e mensagens não saem. Adicione um cartão em business.facebook.com > Configurações de pagamento do WhatsApp.`,
+    });
+  if ((avisosFalhos ?? 0) - (semPagamento ?? 0) >= 3) problemas.push({ chave: 'avisos_falhando', texto: `📵 ${avisosFalhos} avisos para você falharam na última hora.` });
   if ((msgsFalhas ?? 0) >= 3) problemas.push({ chave: 'mensagens_falhando', texto: `📵 ${msgsFalhas} mensagens da Lia para clientes falharam na última hora.` });
 
   return { problemas, estado };

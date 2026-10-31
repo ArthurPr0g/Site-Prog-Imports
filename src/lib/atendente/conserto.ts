@@ -6,7 +6,7 @@ import type { DbDoAtendente } from './db';
 import { pedirAoAgente } from '@/lib/agentes/time';
 
 /** Problemas que só o Arthur resolve (recarregar crédito, esperar a Meta): avisa, mas não pede conserto. */
-export const SO_O_ARTHUR_RESOLVE = new Set(['ia_sem_credito', 'modelos_demorando']);
+export const SO_O_ARTHUR_RESOLVE = new Set(['ia_sem_credito', 'modelos_demorando', 'meta_sem_pagamento']);
 
 const HORA = 3600_000;
 
