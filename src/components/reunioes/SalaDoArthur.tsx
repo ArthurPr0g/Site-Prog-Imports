@@ -1,10 +1,12 @@
 'use client';
 
-// Sala do Arthur (Fase 1, 31/10/2026). Vídeo no centro, painel do lead à esquerda, transcrição ao vivo embaixo
-// do vídeo e a coluna do Copiloto (Fase 2, "em breve") com o espaço dos botões de ação (Fase 3).
+// Sala do Arthur (31/10/2026). Vídeo no centro, painel do lead e anotações à esquerda, transcrição ao vivo embaixo
+// do vídeo, e à direita o Copiloto (Fase 2: balões da IA, só ele vê) e as Ações (Fase 3: sinal, proposta,
+// desconto, próxima reunião, case, fechou).
 //
 // Gravar = três coisas ao mesmo tempo, todas no navegador do Arthur (gravacao.ts):
-//   * trechos de ~15 s de cada lado → /api/reunioes/<id>/trecho → Groq → transcrição ao vivo;
+//   * a mistura em fatias de ~15 s + a energia de cada lado → /api/reunioes/<id>/trecho → Groq → transcrição ao
+//     vivo com quem falou (um áudio só: metade do limite grátis da Groq de antes);
 //   * áudio completo (opus 32 kbps) → Storage do Supabase (bucket privado "reunioes") ao encerrar;
 //   * vídeo da composição da sala → pasta do cliente em "1 - Clientes" (OneDrive) ou download automático.
 // Plano B (Meet): o Arthur compartilha a aba do Meet com o áudio; o áudio da aba é o lado do cliente e o vídeo é a aba.
@@ -18,15 +20,10 @@ import {
   Download,
   ExternalLink,
   FolderOpen,
-  Mic,
-  MicOff,
   PhoneOff,
   RefreshCw,
-  Sparkles,
   Square,
   Video,
-  VideoOff,
-  Zap,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { createClient } from '@/lib/supabase/client';
@@ -40,9 +37,13 @@ import {
   registrarArquivosAction,
   reprocessarReuniaoAction,
 } from '@/app/actions/reunioes';
-import { dataDoArquivo, mmss, nomeDeArquivo, transcricaoEmTexto, type Trecho } from '@/lib/reunioes/comum';
-import { useChamada, Quadro, Som, nomeDe, audioDe } from './chamada';
-import { baixar, Compositor, Fatiador, GravadorDeArquivo, MesaDeSom, mimeDeVideo } from './gravacao';
+import { dataDoArquivo, mmss, nomeDeArquivo, transcricaoEmTexto, type Balao, type Trecho } from '@/lib/reunioes/comum';
+import { copilotoAction, dispensarBalaoAction, salvarAnotacoesAction } from '@/app/actions/sala';
+import { useChamada, Som, nomeDe, audioDe, telaDe } from './chamada';
+import { Barra, Chat, Palco, SeloDaRede } from './controles';
+import { Copiloto } from './Copiloto';
+import { Acoes, type PedidoDeAcao } from './Acoes';
+import { baixar, Compositor, Fatiador, GravadorDeArquivo, MesaDeSom, mimeDeVideo, type Energia } from './gravacao';
 import {
   arquivoParaEscrever,
   ehBrave,
@@ -65,6 +66,9 @@ export type DadosDaSala = {
   meet: string | null;
   consentimentoEm: string | null;
   trechos: Trecho[];
+  baloes: Balao[];
+  anotacoes: string | null;
+  pendentes: number;
   resumo: string | null;
   temAudio: boolean;
   /** Caminho no OneDrive quando o áudio já foi arquivado pelo PC e saiu do Storage (0116). */
@@ -142,11 +146,11 @@ function PainelDoLead({ d }: { d: DadosDaSala }) {
         <Linha rotulo="Google" valor={l.google} />
         <div className="mt-2 flex flex-wrap gap-2">
           {l.diagnostico && (
-            <a href={l.diagnostico} target="_blank" rel="noreferrer" className="flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12.5px]">
+            <a href={l.diagnostico} target="_blank" rel="noreferrer" className="flex h-10 items-center gap-1.5 rounded-full border px-3 text-[12.5px]">
               <ExternalLink size={13} /> Diagnóstico
             </a>
           )}
-          <Link href={`/admin/captacao?lead=${l.id}`} className="flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12.5px]">
+          <Link href={`/admin/captacao?lead=${l.id}`} className="flex h-10 items-center gap-1.5 rounded-full border px-3 text-[12.5px]">
             Ficha na Captação
           </Link>
         </div>
@@ -205,9 +209,44 @@ function Transcricao({ trechos, ao_vivo }: { trechos: Trecho[]; ao_vivo: boolean
   );
 }
 
+
+/** Anotações do Arthur durante a reunião: salvam sozinhas e entram no relato da negociação ao encerrar. */
+function Anotacoes({ id, inicial }: { id: string; inicial: string | null }) {
+  const [texto, setTexto] = useState(inicial ?? '');
+  const [estado, setEstado] = useState<'salvo' | 'mudou' | 'salvando'>('salvo');
+  useEffect(() => {
+    if (estado !== 'mudou') return;
+    const t = setTimeout(async () => {
+      setEstado('salvando');
+      await salvarAnotacoesAction(id, texto);
+      setEstado((e) => (e === 'salvando' ? 'salvo' : e));
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [texto, estado, id]);
+  return (
+    <Bloco titulo="Anotações">
+      <textarea
+        value={texto}
+        onChange={(e) => {
+          setTexto(e.target.value);
+          setEstado('mudou');
+        }}
+        maxLength={20000}
+        rows={5}
+        placeholder="Só você vê. Entram no resumo da reunião ao encerrar."
+        className="w-full resize-y rounded-[14px] border border-white/[0.14] bg-white/[0.03] p-3 text-[16px] leading-relaxed text-[#ECEEF1] outline-none focus:border-[#81AAF7] sm:text-[13.5px]"
+      />
+      <p className="mt-1 text-[11.5px] text-[#6D727C]">{estado === 'salvo' ? 'Salvo' : estado === 'salvando' ? 'Salvando…' : 'Editando'}</p>
+    </Bloco>
+  );
+}
+
+const hhmm = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+
 export function SalaDoArthur({ d }: { d: DadosDaSala }) {
   const toast = useToast();
-  const { call, pessoas, estado, aviso, entrar, sair } = useChamada();
+  const c = useChamada();
+  const { pessoas, estado, aviso, entrar, sair, enviarRecado } = c;
   const [trechos, setTrechos] = useState<Trecho[]>(d.trechos);
   const [encerrada, setEncerrada] = useState(d.salaStatus === 'encerrada');
   const [meetAberto, setMeetAberto] = useState<string | null>(null);
@@ -221,12 +260,23 @@ export function SalaDoArthur({ d }: { d: DadosDaSala }) {
   const [falhas, setFalhas] = useState(0);
   const [processo, setProcesso] = useState({ status: d.processamento, resumo: d.resumo, minutos: d.minutos, custo: d.custoUsd });
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [mic, setMic] = useState(true);
-  const [cam, setCam] = useState(true);
+  const [consentimento, setConsentimento] = useState<string | null>(d.consentimentoEm);
+  const [chatAberto, setChatAberto] = useState(false);
+  const [lidas, setLidas] = useState(0);
+  // Transcrição: envios em andamento e o último "limite batido" (para o aviso discreto de atraso).
+  const [emAndamento, setEmAndamento] = useState(0);
+  const [adiadoEm, setAdiadoEm] = useState<number | null>(null);
+  const [guardados, setGuardados] = useState(d.pendentes);
+  // Copiloto
+  const [baloes, setBaloes] = useState<Balao[]>(d.baloes);
+  const [pensando, setPensando] = useState(false);
+  const [erroDoCopiloto, setErroDoCopiloto] = useState<string | null>(null);
+  const [pedido, setPedido] = useState<PedidoDeAcao>(null);
+  const copiloto = useRef({ ultimoTotal: d.trechos.length, ultimaVez: 0, indo: false });
 
   // Peças da gravação (fora do estado do React: não redesenham a tela).
   const mesa = useRef<MesaDeSom | null>(null);
-  const fatiadores = useRef<Fatiador[]>([]);
+  const fatiador = useRef<Fatiador | null>(null);
   const gravAudio = useRef<GravadorDeArquivo | null>(null);
   const gravVideo = useRef<GravadorDeArquivo | null>(null);
   const compositor = useRef<Compositor | null>(null);
@@ -257,6 +307,16 @@ export function SalaDoArthur({ d }: { d: DadosDaSala }) {
     return () => window.removeEventListener('beforeunload', f);
   }, [gravando]);
 
+  // Consentimento: o cliente pode aceitar antes de o Arthur entrar (ou com a sala aberta). Confere a cada 10 s.
+  useEffect(() => {
+    if (encerrada || consentimento) return;
+    const t = setInterval(async () => {
+      const e = await estadoDaReuniaoAction(d.id);
+      if (e?.consentimento_em) setConsentimento(e.consentimento_em);
+    }, 10_000);
+    return () => clearInterval(t);
+  }, [encerrada, consentimento, d.id]);
+
   // Áudio da chamada no mixer: o microfone do Arthur (faixa local da Daily) e cada pessoa remota.
   useEffect(() => {
     const m = mesa.current;
@@ -270,27 +330,82 @@ export function SalaDoArthur({ d }: { d: DadosDaSala }) {
     m.manterSo(chaves);
   }, [pessoas, d.meio, meetAberto]);
 
+  // O selo do cliente mostra "Gravando" só quando o Arthur grava de verdade (avisa quem entra depois também).
+  const outros = pessoas.filter((p) => !p.local);
+  useEffect(() => {
+    if (estado === 'dentro') enviarRecado({ tipo: 'estado', gravando });
+  }, [gravando, outros.length, estado, enviarRecado]);
+
   const enviarTrecho = useCallback(
-    (audio: Blob, quem: 'arthur' | 'cliente', t: number) => {
+    (audio: Blob, t: number, energia: Energia) => {
       const f = new FormData();
-      f.append('audio', audio, `${quem}-${Math.round(t)}.webm`);
-      f.append('quem', quem);
+      f.append('audio', audio, `mistura-${Math.round(t)}.webm`);
       f.append('t', String(t));
+      f.append('energia', JSON.stringify(energia));
+      setEmAndamento((n) => n + 1);
       const p = fetch(`/api/reunioes/${d.id}/trecho`, { method: 'POST', body: f })
         .then(async (r) => {
           if (!r.ok) throw new Error(String(r.status));
-          const j = (await r.json()) as { trecho: Trecho | null };
-          if (!j.trecho) return;
+          const j = (await r.json()) as { trechos?: Trecho[]; adiado?: boolean; guardado?: boolean };
+          if (j.adiado) {
+            setAdiadoEm(Date.now());
+            if (j.guardado) setGuardados((n) => n + 1);
+            else setFalhas((n) => n + 1);
+            return;
+          }
+          if (!j.trechos?.length) return;
           // Ref na hora: o fim da gravação lê a transcrição logo depois do último envio.
-          trechosRef.current = [...trechosRef.current, j.trecho];
+          trechosRef.current = [...trechosRef.current, ...j.trechos];
           setTrechos(trechosRef.current);
         })
         .catch(() => setFalhas((n) => n + 1))
-        .finally(() => envios.current.delete(p));
+        .finally(() => {
+          envios.current.delete(p);
+          setEmAndamento((n) => Math.max(0, n - 1));
+        });
       envios.current.add(p);
     },
     [d.id],
   );
+
+  // Copiloto: a cada trecho novo (no máximo um pedido a cada 20 s, um por vez), a IA lê a conversa.
+  useEffect(() => {
+    const k = copiloto.current;
+    if (trechos.length <= k.ultimoTotal || k.indo || encerrada) return;
+    const espera = Math.max(0, 20_000 - (Date.now() - k.ultimaVez));
+    const t = setTimeout(async () => {
+      if (k.indo) return;
+      k.indo = true;
+      k.ultimoTotal = trechosRef.current.length;
+      k.ultimaVez = Date.now();
+      setPensando(true);
+      try {
+        const r = await copilotoAction(d.id);
+        setBaloes(r.baloes);
+        setErroDoCopiloto(r.erro ?? null);
+      } catch {
+        setErroDoCopiloto('O copiloto não respondeu agora.');
+      } finally {
+        k.indo = false;
+        setPensando(false);
+      }
+    }, espera);
+    return () => clearTimeout(t);
+  }, [trechos.length, encerrada, d.id]);
+
+  const dispensar = (balaoId: string) => {
+    setBaloes((b) => b.map((x) => (x.id === balaoId ? { ...x, dispensado: true } : x)));
+    void dispensarBalaoAction(d.id, balaoId);
+  };
+
+  // Aviso discreto de atraso: limite batido há menos de 2 min, ou 3+ trechos esperando resposta.
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    if (!gravando) return;
+    const t = setInterval(() => setAgora(Date.now()), 15_000);
+    return () => clearInterval(t);
+  }, [gravando]);
+  const atrasada = gravando && ((adiadoEm !== null && agora - adiadoEm < 120_000) || emAndamento >= 3);
 
   const entrarNaSala = () =>
     startEntrar(async () => {
@@ -352,13 +467,16 @@ export function SalaDoArthur({ d }: { d: DadosDaSala }) {
         videoTrack = aba.getVideoTracks()[0] ?? null;
       } else {
         for (const p of pessoas) m.ligar(p.local ? 'mic' : p.session_id, p.local ? 'arthur' : 'cliente', audioDe(p));
-        const c = new Compositor(() => {
-          const agora = pessoasRef.current;
-          const ordem = [...agora.filter((p) => !p.local), ...agora.filter((p) => p.local)];
-          return ordem.map((p) => ({ video: videos.current.get(p.session_id) ?? null, nome: p.local ? 'Arthur · Prog Soluções' : nomeDe(p, 'Cliente') }));
+        const comp = new Compositor(() => {
+          const atuais = pessoasRef.current;
+          const ordem = [...atuais.filter((p) => !p.local), ...atuais.filter((p) => p.local)];
+          const nome = (p: (typeof ordem)[number]) => (p.local ? 'Arthur · Prog Soluções' : nomeDe(p, 'Cliente'));
+          // Tela compartilhada entra primeiro na gravação (modo apresentação).
+          const telas = ordem.filter((p) => telaDe(p)).map((p) => ({ video: videos.current.get(`${p.session_id}-tela`) ?? null, nome: `Tela de ${nome(p)}` }));
+          return [...telas, ...ordem.map((p) => ({ video: videos.current.get(p.session_id) ?? null, nome: nome(p) }))];
         });
-        compositor.current = c;
-        videoTrack = c.iniciar(15);
+        compositor.current = comp;
+        videoTrack = comp.iniciar(15);
       }
     } catch (e) {
       m.fechar();
@@ -367,8 +485,8 @@ export function SalaDoArthur({ d }: { d: DadosDaSala }) {
       return void toast({ ok: false, message: e instanceof Error && e.name === 'NotAllowedError' ? 'Permissão negada: a gravação não começou.' : 'Não foi possível começar a gravação.' });
     }
 
-    fatiadores.current = (['arthur', 'cliente'] as const).map((lado) => new Fatiador(m, lado, inicio, enviarTrecho));
-    fatiadores.current.forEach((f) => f.iniciar());
+    fatiador.current = new Fatiador(m, inicio, enviarTrecho);
+    fatiador.current.iniciar();
     gravAudio.current = new GravadorDeArquivo(m.mistura.stream, 'audio/webm;codecs=opus', { audioBitsPerSecond: 32000 });
     gravAudio.current.iniciar();
     const mimeVideo = mimeDeVideo();
@@ -385,7 +503,7 @@ export function SalaDoArthur({ d }: { d: DadosDaSala }) {
   const pararGravacao = async (): Promise<void> => {
     if (!mesa.current) return;
     setFinalizando('Fechando a gravação');
-    fatiadores.current.forEach((f) => f.parar());
+    fatiador.current?.parar();
     compositor.current?.parar();
     const [audio, video] = await Promise.all([gravAudio.current?.parar() ?? null, gravVideo.current?.parar() ?? null]);
     extras.current.forEach((s) => s.getTracks().forEach((t) => t.stop()));
@@ -464,24 +582,30 @@ export function SalaDoArthur({ d }: { d: DadosDaSala }) {
     toast({ ok: true, message: 'Link do cliente copiado.' });
   };
 
-  const alternarMic = () => {
-    call?.setLocalAudio(!mic);
-    setMic(!mic);
-  };
-  const alternarCam = () => {
-    call?.setLocalVideo(!cam);
-    setCam(!cam);
-  };
-
   const dentro = estado === 'dentro';
-  const outros = pessoas.filter((p) => !p.local);
   const aoVideo = useCallback((id: string, el: HTMLVideoElement | null) => {
     if (el) videos.current.set(id, el);
     else videos.current.delete(id);
   }, []);
+  const recebidas = c.mensagens.filter((m) => !m.minha).length;
+  const naoLidas = chatAberto ? 0 : Math.max(0, recebidas - lidas);
+  const alternarChat = () => {
+    setChatAberto((a) => !a);
+    setLidas(recebidas);
+  };
+  const { enviarMensagem } = c;
+  // Ações e copiloto mandam links no chat da reunião (o cliente abre na hora).
+  const noChat = useCallback(
+    (texto: string) => {
+      if (!dentro) return;
+      enviarMensagem(texto, 'Arthur · Prog Soluções');
+      setChatAberto(true);
+    },
+    [dentro, enviarMensagem],
+  );
 
   return (
-    <div className="tema-apple relative z-[1] min-h-screen [color-scheme:dark]">
+    <div className="tema-apple relative z-[1] min-h-screen overflow-x-clip [color-scheme:dark]">
       <div className="aurora aurora-suave" aria-hidden />
       {finalizando && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-[#08080A]/80">
@@ -494,7 +618,7 @@ export function SalaDoArthur({ d }: { d: DadosDaSala }) {
       {/* Cabeçalho com os botões da reunião */}
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <Link href="/admin/reunioes" className="mb-1 flex items-center gap-1 text-[12.5px] text-[#8B919B] hover:text-[#F4F5F7]">
+          <Link href="/admin/reunioes" className="mb-1 flex min-h-10 items-center gap-1 text-[12.5px] text-[#8B919B] hover:text-[#F4F5F7]">
             <ArrowLeft size={14} /> Reuniões
           </Link>
           <h1 className="truncate font-display text-[22px] font-semibold tracking-[-0.02em] sm:text-[26px]">{d.lead?.nome ?? d.titulo}</h1>
@@ -503,13 +627,19 @@ export function SalaDoArthur({ d }: { d: DadosDaSala }) {
             {' · '}
             {modoMeet ? 'Google Meet (plano B)' : 'sala própria'}
             {' · '}
-            {d.consentimentoEm ? 'cliente aceitou a gravação' : 'cliente ainda não aceitou a gravação'}
+            {consentimento ? <span className="text-[#5FD37F]">Cliente aceitou a gravação às {hhmm(consentimento)}</span> : 'cliente ainda não aceitou a gravação'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {dentro && <SeloDaRede rede={c.rede} reconectando={c.reconectando} />}
           {gravando && (
             <span className="flex items-center gap-1.5 rounded-full bg-[#C2413B]/15 px-3 py-1.5 text-[12.5px] text-[#F2A7A7]">
               <Circle size={10} className="fill-current" /> Gravando
+            </span>
+          )}
+          {atrasada && (
+            <span title="O limite grátis da transcrição apertou: os trechos ficam guardados e entram no fim." className="rounded-full bg-[#E8B44C]/12 px-3 py-1.5 text-[12px] text-[#F1D08A]">
+              Transcrição atrasada
             </span>
           )}
           {d.linkCliente && (
@@ -535,66 +665,72 @@ export function SalaDoArthur({ d }: { d: DadosDaSala }) {
         </div>
       </header>
 
-      <div className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)_280px]">
-        <aside className="order-2 xl:order-1">
+      <div className="grid gap-4 xl:grid-cols-[290px_minmax(0,1fr)_330px]">
+        <aside className="order-3 grid min-w-0 content-start gap-3 xl:order-1">
           <PainelDoLead d={d} />
+          {!encerrada && <Anotacoes id={d.id} inicial={d.anotacoes} />}
         </aside>
 
-        <main className="order-1 grid content-start gap-4 xl:order-2">
-          {/* Vídeo */}
-          <section className="relative grid aspect-video max-h-[62vh] w-full overflow-hidden rounded-[24px] border border-white/[0.09] bg-[#0B0C10]">
-            {encerrada ? (
-              <div className="grid place-items-center p-6 text-center text-[14px] text-[#A3A8B2]">Reunião encerrada.</div>
-            ) : modoMeet ? (
-              <div className="grid place-items-center p-6 text-center">
-                <div className="max-w-[440px] text-[14px] leading-relaxed text-[#D7DAE0]">
-                  <p className="mb-3">
-                    Hoje a reunião é pelo Google Meet. Abra o Meet, depois toque em <b>Iniciar gravação</b> e compartilhe a aba do Meet <b>com o áudio da guia</b>:
-                    a transcrição usa o seu microfone e o áudio da aba.
-                  </p>
-                  {(meetAberto || d.meet) && (
-                    <a href={meetAberto || d.meet || '#'} target="_blank" rel="noreferrer" className="bg-accent inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold">
-                      <ExternalLink size={14} /> Abrir o Meet
-                    </a>
-                  )}
-                  {!meetAberto && !d.meet && <p className="text-[#F2A7A7]">A reunião não tem link do Meet: crie um na sua agenda e mande ao cliente.</p>}
+        <main className="order-1 grid min-w-0 content-start gap-4 xl:order-2">
+          {/* Vídeo (com o chat ao lado quando aberto) */}
+          <section className={`grid min-w-0 gap-3 ${chatAberto && dentro ? 'lg:grid-cols-[minmax(0,1fr)_300px]' : ''}`}>
+            <div className="relative grid aspect-video max-h-[62vh] w-full overflow-hidden rounded-[24px] border border-white/[0.09] bg-[#0B0C10]">
+              {encerrada ? (
+                <div className="grid place-items-center p-6 text-center text-[14px] text-[#A3A8B2]">Reunião encerrada.</div>
+              ) : modoMeet ? (
+                <div className="grid place-items-center p-6 text-center">
+                  <div className="max-w-[440px] text-[14px] leading-relaxed text-[#D7DAE0]">
+                    <p className="mb-3">
+                      Hoje a reunião é pelo Google Meet. Abra o Meet, depois toque em <b>Iniciar gravação</b> e compartilhe a aba do Meet <b>com o áudio da guia</b>:
+                      a transcrição usa o seu microfone e o áudio da aba.
+                    </p>
+                    {(meetAberto || d.meet) && (
+                      <a href={meetAberto || d.meet || '#'} target="_blank" rel="noreferrer" className="bg-accent inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold">
+                        <ExternalLink size={14} /> Abrir o Meet
+                      </a>
+                    )}
+                    {!meetAberto && !d.meet && <p className="text-[#F2A7A7]">A reunião não tem link do Meet: crie um na sua agenda e mande ao cliente.</p>}
+                  </div>
                 </div>
-              </div>
-            ) : dentro ? (
-              <div className={`grid min-h-0 gap-2 p-2 ${pessoas.length > 1 ? 'grid-cols-2' : ''}`}>
-                {[...outros, ...pessoas.filter((p) => p.local)].map((p) => (
-                  <Quadro key={p.session_id} p={p} nome={p.local ? 'Você' : nomeDe(p, 'Cliente')} aoVideo={aoVideo} />
-                ))}
-              </div>
-            ) : (
-              <div className="grid place-items-center p-6 text-center">
-                <div>
-                  {aviso && <p className="mb-3 max-w-[420px] text-[13.5px] text-[#F2A7A7]">{aviso}</p>}
-                  <button onClick={entrarNaSala} disabled={entrando || estado === 'entrando'} className="bg-accent flex h-[52px] items-center gap-2 rounded-full px-6 text-[15px] font-semibold disabled:opacity-60">
-                    <Video size={18} /> {entrando || estado === 'entrando' ? 'Abrindo a sala…' : 'Entrar na sala'}
-                  </button>
+              ) : dentro ? (
+                <div className="min-h-0 p-2">
+                  <Palco pessoas={pessoas} falando={c.falando} nomeDoLocal="Você" nomePadrao="Cliente" aoVideo={aoVideo} />
                 </div>
-              </div>
-            )}
-            {pessoas.map((p) => (
-              <Som key={`som-${p.session_id}`} p={p} />
-            ))}
-            {dentro && !encerrada && (
-              <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-2">
-                <button onClick={alternarMic} aria-label="Microfone" className="grid h-10 w-10 place-items-center rounded-full border bg-[#08080A]/70">
-                  {mic ? <Mic size={17} /> : <MicOff size={17} />}
-                </button>
-                <button onClick={alternarCam} aria-label="Câmera" className="grid h-10 w-10 place-items-center rounded-full border bg-[#08080A]/70">
-                  {cam ? <Video size={17} /> : <VideoOff size={17} />}
-                </button>
+              ) : (
+                <div className="grid place-items-center p-6 text-center">
+                  <div>
+                    {aviso && <p className="mb-3 max-w-[420px] text-[13.5px] text-[#F2A7A7]">{aviso}</p>}
+                    <button onClick={entrarNaSala} disabled={entrando || estado === 'entrando'} className="bg-accent flex h-[52px] items-center gap-2 rounded-full px-6 text-[15px] font-semibold disabled:opacity-60">
+                      <Video size={18} /> {entrando || estado === 'entrando' ? 'Abrindo a sala…' : 'Entrar na sala'}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {pessoas.map((p) => (
+                <Som key={`som-${p.session_id}`} p={p} />
+              ))}
+              {c.reconectando && (
+                <div className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-[#08080A]/80 px-4 py-1.5 text-[12.5px] text-[#F1D08A]">Reconectando…</div>
+              )}
+            </div>
+            {chatAberto && dentro && (
+              <div className="h-[320px] lg:h-auto">
+                <Chat mensagens={c.mensagens} enviar={(t) => enviarMensagem(t, 'Arthur · Prog Soluções')} fechar={() => setChatAberto(false)} vazio="Mande links, a proposta ou o que o cliente pedir. Ele vê na hora." />
               </div>
             )}
           </section>
 
+          {dentro && !encerrada && <Barra c={c} chatAberto={chatAberto} aoChat={alternarChat} naoLidas={naoLidas} />}
+
           {dentro && outros.length === 0 && !encerrada && (
-            <p className="text-[13px] text-[#A3A8B2]">Esperando o cliente. Mande o link a ele (botão “Copiar link do cliente”).</p>
+            <p className="text-[13px] text-[#A3A8B2]">Esperando o cliente. Quem já está na sala de espera entra sozinho agora que você abriu a sala.</p>
           )}
-          {falhas > 0 && <p className="text-[12.5px] text-[#F2A7A7]">{falhas} trecho(s) não transcritos (rede ou limite da Groq). O áudio completo continua gravando.</p>}
+          {(falhas > 0 || guardados > 0) && (
+            <p className="text-[12.5px] text-[#A3A8B2]">
+              {guardados > 0 && `${guardados} trecho(s) guardados por causa do limite grátis da transcrição: entram na transcrição ao encerrar. `}
+              {falhas > 0 && <span className="text-[#F2A7A7]">{falhas} trecho(s) não transcritos (rede). O áudio completo continua gravando.</span>}
+            </p>
+          )}
 
           <Transcricao trechos={trechos} ao_vivo={gravando} />
 
@@ -614,7 +750,7 @@ export function SalaDoArthur({ d }: { d: DadosDaSala }) {
                 <span className="text-[#A3A8B2]">Nenhuma pasta ligada: escolha a pasta “1 - Clientes”.</span>
               )}
               {!semSeletor && (
-                <button onClick={ligarPasta} className="flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12.5px]">
+                <button onClick={ligarPasta} className="flex h-10 items-center gap-1.5 rounded-full border px-3 text-[12.5px]">
                   Escolher pasta das gravações
                 </button>
               )}
@@ -648,13 +784,11 @@ export function SalaDoArthur({ d }: { d: DadosDaSala }) {
             {encerrada && (d.videoArquivo || d.temAudio) && !arquivos && (
               <div className="mt-2 grid gap-2 text-[13px] text-[#A3A8B2]">
                 {d.videoArquivo && <span>Vídeo: {d.videoArquivo}</span>}
-                {d.temAudio && d.audioArquivado && <span>Áudio arquivado no OneDrive: {d.audioArquivado}</span>}
                 {d.temAudio &&
-                  !d.audioArquivado &&
                   (audioUrl ? (
                     <audio controls src={audioUrl} className="w-full" />
                   ) : (
-                    <button onClick={async () => setAudioUrl(await ouvirAudioAction(d.id))} className="flex h-8 w-fit items-center gap-1.5 rounded-full border px-3 text-[12.5px]">
+                    <button onClick={async () => setAudioUrl(await ouvirAudioAction(d.id))} className="flex h-10 w-fit items-center gap-1.5 rounded-full border px-3 text-[12.5px]">
                       Ouvir o áudio
                     </button>
                   ))}
@@ -681,7 +815,7 @@ export function SalaDoArthur({ d }: { d: DadosDaSala }) {
                       toast(r);
                       if (r.ok) setProcesso((p) => ({ ...p, status: 'processando' }));
                     }}
-                    className="flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12.5px]"
+                    className="flex h-10 items-center gap-1.5 rounded-full border px-3 text-[12.5px]"
                   >
                     <RefreshCw size={13} /> Processar de novo
                   </button>
@@ -691,20 +825,18 @@ export function SalaDoArthur({ d }: { d: DadosDaSala }) {
           )}
         </main>
 
-        {/* Fase 2 (copiloto com balões) e Fase 3 (botões de ação, como a cobrança do sinal) entram aqui. */}
-        <aside className="order-3 grid content-start gap-3">
-          <Bloco titulo="Copiloto">
-            <div className="grid place-items-center gap-2 py-8 text-center">
-              <Sparkles size={22} className="text-[#9BA1AB]" />
-              <p className="text-[13.5px] text-[#A3A8B2]">Em breve: sugestões da IA durante a conversa.</p>
-            </div>
-          </Bloco>
-          <Bloco titulo="Ações">
-            <div className="grid place-items-center gap-2 py-6 text-center">
-              <Zap size={20} className="text-[#9BA1AB]" />
-              <p className="text-[13px] text-[#8B919B]">Em breve: cobrar o sinal e outros atalhos da venda.</p>
-            </div>
-          </Bloco>
+        {/* Fase 2 (copiloto com balões) e Fase 3 (botões de ação). */}
+        <aside className="order-2 grid min-w-0 content-start gap-3 xl:order-3">
+          <Copiloto
+            baloes={baloes}
+            pensando={pensando}
+            erro={erroDoCopiloto}
+            ativo={gravando || trechos.length > 0}
+            dispensar={dispensar}
+            aoUsarPacote={(ref) => setPedido({ qual: 'proposta', ref })}
+            aoMandarCase={(slug) => setPedido({ qual: 'case', ref: { slug } })}
+          />
+          {!encerrada || d.lead ? <Acoes id={d.id} aberta={pedido} setAberta={setPedido} aoChat={noChat} /> : null}
         </aside>
       </div>
     </div>

@@ -90,7 +90,7 @@ export async function prepararSala(db: DbDoAtendente, id: string): Promise<{ mei
     const base = Math.max(new Date(r.inicio).getTime(), Date.now());
     const expira = new Date(base + uso.limites.reunioes_duracao_max_min * 60_000);
     const nome = `prog-${id.slice(0, 8)}-${randomBytes(3).toString('hex')}`;
-    const s = await criarSalaDaily(nome, expira, uso.limites.reunioes_duracao_max_min);
+    const s = await criarSalaDaily(nome, expira, uso.limites.reunioes_duracao_max_min, uso.limites.reunioes_max_pessoas);
     if (s.ok) {
       await db
         .from('reunioes')

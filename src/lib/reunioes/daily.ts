@@ -31,7 +31,7 @@ async function chamar<T>(caminho: string, init?: RequestInit): Promise<{ ok: tru
 }
 
 /** Cria a sala privada com as travas de custo. Entra só quem tiver token (gerado pelo nosso servidor). */
-export async function criarSalaDaily(nome: string, expiraEm: Date, duracaoMaxMin: number) {
+export async function criarSalaDaily(nome: string, expiraEm: Date, duracaoMaxMin: number, maxPessoas: number) {
   return chamar<{ name: string; url: string }>('/rooms', {
     method: 'POST',
     body: JSON.stringify({
@@ -39,13 +39,16 @@ export async function criarSalaDaily(nome: string, expiraEm: Date, duracaoMaxMin
       privacy: 'private',
       properties: {
         exp: Math.floor(expiraEm.getTime() / 1000),
-        // Arthur + cliente + 1 (sócio do cliente, por exemplo).
-        max_participants: 3,
+        // Fase 2: configurável em Gastos › Configurações (padrão 6; a Daily aceita até 200).
+        max_participants: maxPessoas,
+        // Compartilhar tela (padrão da Daily já é true; explícito porque a sala depende disso).
+        enable_screenshare: true,
         eject_at_room_exp: true,
         eject_after_elapsed: duracaoMaxMin * 60,
         // Gravação e transcrição da Daily desligadas: grava o navegador do Arthur. enable_recording só aceita
         // os modos (cloud, local...); sem a propriedade, a sala não grava.
         enable_transcription_storage: false,
+        // O chat da sala é nosso (app messages da Daily); o chat pronto só existe no iframe da Daily.
         enable_chat: false,
         lang: 'pt-BR',
       },

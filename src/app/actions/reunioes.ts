@@ -235,9 +235,15 @@ export async function usoDasReunioesAction() {
 export type EntradaDoCliente =
   | { ok: true; meio: 'daily'; url: string; token: string }
   | { ok: true; meio: 'meet'; meet: string | null }
+  /** Sala de espera (Fase 2): o consentimento já ficou gravado; a página entra sozinha quando o Arthur abrir a sala. */
+  | { ok: true; meio: 'espera' }
   | { ok: false; message: string };
 
-/** "Concordo e entrar": grava o consentimento (o primeiro) e devolve a entrada. Só com o token forte. */
+/**
+ * "Concordo e entrar": grava o consentimento NA HORA do clique (o primeiro vale, mesmo antes de o Arthur entrar)
+ * e devolve a entrada. Arthur ainda fora (sala não está ao vivo): sala de espera, sem gastar minuto da Daily.
+ * Só com o token forte.
+ */
 export async function entrarComoClienteAction(token: string, nome: string): Promise<EntradaDoCliente> {
   if (!TOKEN.test(token)) return { ok: false, message: 'Link inválido.' };
   const d = dbDoAtendente();
@@ -248,9 +254,10 @@ export async function entrarComoClienteAction(token: string, nome: string): Prom
     .maybeSingle();
   if (!r || r.status === 'cancelada') return { ok: false, message: 'Esta reunião não existe mais. Fale com a Prog Soluções pelo WhatsApp.' };
   if (r.sala_status === 'encerrada') return { ok: false, message: 'Esta reunião já foi encerrada.' };
-  // Abre 30 min antes do horário: o link não vira uma sala aberta para qualquer hora.
-  if (new Date(r.inicio).getTime() - Date.now() > 30 * 60_000) return { ok: false, message: 'A sala abre 30 minutos antes do horário marcado.' };
   if (!r.consentimento_em) await d.from('reunioes').update({ consentimento_em: new Date().toISOString() }).eq('id', r.id).is('consentimento_em', null);
+  // Abre 30 min antes do horário: o link não vira uma sala aberta para qualquer hora.
+  if (new Date(r.inicio).getTime() - Date.now() > 30 * 60_000) return { ok: false, message: 'A sala abre 30 minutos antes do horário marcado. Sua concordância com a gravação já ficou registrada.' };
+  if (r.sala_meio === 'daily' && r.sala_status !== 'ao_vivo') return { ok: true, meio: 'espera' };
   if (r.sala_meio === 'daily' && r.sala_nome && r.sala_url && r.sala_expira_em) {
     if (new Date(r.sala_expira_em).getTime() < Date.now()) return { ok: false, message: 'O horário desta sala já passou. Fale com a Prog Soluções pelo WhatsApp.' };
     const { data: cfg } = await d.from('ia_config').select('custos').eq('id', true).maybeSingle();

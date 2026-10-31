@@ -679,6 +679,19 @@ export function GastosPanel() {
           <Campo rotulo="Reuniões: trava (%)" valor={cfg.reunioes_trava_pct} passo={1} onChange={(v) => alterar({ reunioes_trava_pct: v ?? 95 })} dica="Acima disso, vai pelo Meet" />
           <Campo rotulo="Daily: US$ por minuto extra" valor={cfg.reunioes_usd_minuto} passo={0.0001} onChange={(v) => alterar({ reunioes_usd_minuto: v ?? 0.004 })} dica="Vídeo: US$ 0,004 (out/2026)" />
           <Campo rotulo="Reunião: duração máxima (min)" valor={cfg.reunioes_duracao_max_min} passo={5} onChange={(v) => alterar({ reunioes_duracao_max_min: v ?? 120 })} dica="A Daily tira quem passar" />
+          <Campo
+            rotulo="Reunião: pessoas por sala"
+            valor={cfg.reunioes_max_pessoas}
+            passo={1}
+            onChange={(v) => alterar({ reunioes_max_pessoas: v ?? 6 })}
+            dica={(() => {
+              // Cada pessoa gasta os próprios minutos: 1 h com N pessoas = N × 60 min de participante.
+              const n = Math.max(2, Math.round(cfg.reunioes_max_pessoas || 6));
+              const porHora = n * 60;
+              const cabem = cfg.reunioes_minutos_gratis > 0 ? Math.floor(cfg.reunioes_minutos_gratis / porHora) : 0;
+              return `Sala cheia: 1 h gasta até ${mil(porHora)} min de participante (${cabem} h por mês no grátis). Com 2 pessoas, 120 min.`;
+            })()}
+          />
         </div>
 
         <div className="mt-5">

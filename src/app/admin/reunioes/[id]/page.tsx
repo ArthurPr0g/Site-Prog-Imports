@@ -8,10 +8,10 @@ import { LEAD_STATUS_LABEL, type LeadStatus } from '@/lib/captacao';
 import { URL_PUBLICA } from '@/lib/seo';
 import { linkDoCliente, pastaDoCliente, prepararSala } from '@/lib/reunioes/sala';
 import { SalaDoArthur, type DadosDaSala } from '@/components/reunioes/SalaDoArthur';
-import type { Trecho } from '@/lib/reunioes/comum';
+import { baloesVivos, type Balao, type Trecho } from '@/lib/reunioes/comum';
 
-// Sala do Arthur (Fase 1, 31/10/2026): vídeo no centro, painel do lead ao lado, transcrição ao vivo, a coluna
-// do Copiloto (Fase 2) e o espaço dos botões de ação (Fase 3). Lido pela chave do servidor, já com o admin
+// Sala do Arthur (31/10/2026): vídeo no centro, painel do lead ao lado, transcrição ao vivo, a coluna do Copiloto
+// (Fase 2: balões da IA) e os botões de ação (Fase 3). Lido pela chave do servidor, já com o admin
 // conferido (o layout do admin também confere).
 // Encerrar roda o processamento depois da resposta (after): transcrição, negociação, aviso e custo.
 export const maxDuration = 300;
@@ -27,7 +27,7 @@ export default async function SalaDeReuniaoPage({ params }: { params: Promise<{ 
   await prepararSala(db, id);
   const { data: r } = await db
     .from('reunioes')
-    .select('id, titulo, inicio, status, sala_status, sala_meio, sala_token, meet_link, consentimento_em, inicio_em, fim_em, trechos, resumo, audio_path, video_arquivo, minutos_participante, custo_usd, processamento, lead_id, conversation_id')
+    .select('id, titulo, inicio, status, sala_status, sala_meio, sala_token, meet_link, consentimento_em, inicio_em, fim_em, trechos, copiloto, anotacoes, trechos_pendentes, resumo, audio_path, video_arquivo, minutos_participante, custo_usd, processamento, lead_id, conversation_id')
     .eq('id', id)
     .maybeSingle();
   if (!r) notFound();
@@ -80,6 +80,9 @@ export default async function SalaDeReuniaoPage({ params }: { params: Promise<{ 
     meet: r.meet_link,
     consentimentoEm: r.consentimento_em,
     trechos: (Array.isArray(r.trechos) ? r.trechos : []) as Trecho[],
+    baloes: baloesVivos((Array.isArray(r.copiloto) ? r.copiloto : []) as Balao[]),
+    anotacoes: r.anotacoes,
+    pendentes: Array.isArray(r.trechos_pendentes) ? r.trechos_pendentes.length : 0,
     resumo: r.resumo,
     temAudio: !!r.audio_path,
     audioArquivado: (arquivado as { onedrive_path: string | null; local_path: string } | null)?.onedrive_path ?? (arquivado as { local_path: string } | null)?.local_path ?? null,

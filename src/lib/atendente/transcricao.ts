@@ -42,3 +42,52 @@ export async function transcrever(dados: Buffer, mime: string): Promise<string |
     return null;
   }
 }
+
+export type SegmentoTranscrito = { inicio: number; fim: number; texto: string };
+export type Transcrito =
+  | { ok: true; texto: string; segmentos: SegmentoTranscrito[]; segundos: number }
+  | { ok: false; limite: true; esperarSeg: number }
+  | { ok: false; limite: false };
+
+/**
+ * Transcrição com os segmentos e o tempo de cada um (sala de reunião, 31/10/2026): response_format verbose_json
+ * com timestamp_granularities[]=segment (console.groq.com/docs/speech-to-text). Diferente de transcrever(), diz
+ * quando foi o limite do plano (429, com o retry-after em segundos; console.groq.com/docs/rate-limits), para a
+ * sala guardar o trecho e transcrever depois em vez de perder.
+ */
+export async function transcreverComTempo(dados: Buffer, mime: string, dica?: string): Promise<Transcrito> {
+  const chave = process.env.TRANSCRICAO_API_KEY;
+  if (!chave) return { ok: false, limite: false };
+  const form = new FormData();
+  form.append('file', new Blob([new Uint8Array(dados)], { type: mime || 'audio/webm' }), mime.includes('ogg') ? 'audio.ogg' : 'audio.webm');
+  form.append('model', process.env.TRANSCRICAO_MODELO || MODELO_PADRAO);
+  form.append('response_format', 'verbose_json');
+  form.append('timestamp_granularities[]', 'segment');
+  form.append('language', 'pt');
+  form.append('prompt', `Prog Soluções, Arthur, site, sistema, loja virtual, proposta, sinal, Pix. ${dica ?? ''}`.slice(0, 600));
+  try {
+    const r = await fetch(process.env.TRANSCRICAO_URL || URL_PADRAO, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${chave}` },
+      body: form,
+      signal: AbortSignal.timeout(45000),
+    });
+    if (r.status === 429) {
+      const seg = Number(r.headers.get('retry-after'));
+      return { ok: false, limite: true, esperarSeg: Number.isFinite(seg) && seg > 0 ? Math.min(3600, Math.ceil(seg)) : 60 };
+    }
+    if (!r.ok) {
+      console.error('[reunioes] transcrição falhou', r.status, (await r.text()).slice(0, 300));
+      return { ok: false, limite: false };
+    }
+    const j = (await r.json()) as { text?: string; duration?: number; segments?: { start?: number; end?: number; text?: string; no_speech_prob?: number }[] };
+    const segmentos = (j.segments ?? [])
+      // Segmento que o próprio Whisper acha que é silêncio: costuma ser frase inventada.
+      .filter((s) => (s.text ?? '').trim() && (s.no_speech_prob ?? 0) < 0.8)
+      .map((s) => ({ inicio: Number(s.start ?? 0), fim: Number(s.end ?? s.start ?? 0), texto: String(s.text).trim() }));
+    return { ok: true, texto: (j.text ?? '').trim(), segmentos, segundos: Number(j.duration ?? 0) };
+  } catch (e) {
+    console.error('[reunioes] transcrição falhou', e);
+    return { ok: false, limite: false };
+  }
+}

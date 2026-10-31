@@ -4,7 +4,11 @@
 //
 // Áudio: Web Audio mistura o microfone do Arthur com o áudio de quem está na chamada. Há três saídas:
 //   * mistura  → áudio completo (opus 32 kbps, ~14 MB por hora) que vai ao Storage e entra no vídeo;
-//   * arthur / cliente → cada lado separado, fatiado a cada ~15 s para a transcrição ao vivo saber quem falou.
+//   * a mesma mistura, fatiada a cada ~15 s, para a transcrição ao vivo.
+// Fase 2 (31/10/2026): antes cada lado mandava a própria fatia, e 1 h de reunião gastava 7.200 s de áudio (o
+// limite por hora do plano grátis da Groq). Agora vai UM áudio só, misturado, e junto a energia de cada lado a
+// cada 200 ms: o servidor pede ao Whisper os segmentos com tempo e diz quem falou em cada um pelo lado que
+// tinha mais energia naquele intervalo. Metade do áudio, metade dos pedidos (no máximo 4 por minuto).
 // Fatias: um MediaRecorder novo a cada 15 s (cada arquivo sai completo, com cabeçalho, para o Whisper);
 // fatia sem voz (medida pelo volume) não é enviada, o que poupa o limite grátis da Groq e evita frase inventada.
 //
@@ -28,14 +32,12 @@ type Lado = 'arthur' | 'cliente';
 export class MesaDeSom {
   readonly ctx: AudioContext;
   readonly mistura: MediaStreamAudioDestinationNode;
-  readonly lados: Record<Lado, MediaStreamAudioDestinationNode>;
   readonly medidores: Record<Lado, AnalyserNode>;
   private fontes = new Map<string, { no: MediaStreamAudioSourceNode; trackId: string }>();
 
   constructor() {
     this.ctx = new AudioContext();
     this.mistura = this.ctx.createMediaStreamDestination();
-    this.lados = { arthur: this.ctx.createMediaStreamDestination(), cliente: this.ctx.createMediaStreamDestination() };
     this.medidores = { arthur: this.ctx.createAnalyser(), cliente: this.ctx.createAnalyser() };
     for (const l of ['arthur', 'cliente'] as Lado[]) this.medidores[l].fftSize = 1024;
   }
@@ -51,7 +53,6 @@ export class MesaDeSom {
     if (!track || track.readyState === 'ended') return;
     const no = this.ctx.createMediaStreamSource(new MediaStream([track]));
     no.connect(this.mistura);
-    no.connect(this.lados[lado]);
     no.connect(this.medidores[lado]);
     this.fontes.set(chave, { no, trackId: track.id });
   }
@@ -81,17 +82,19 @@ export class MesaDeSom {
   }
 }
 
-/** Fatiador de um lado: a cada FATIA_MS entrega um arquivo completo, só se houve voz. */
+/** Energia dos dois lados a cada 200 ms (0–100): [arthur, cliente]. */
+export type Energia = [number, number][];
+
+/** Fatiador da mistura: a cada FATIA_MS entrega um arquivo completo com a energia de cada lado, só se houve voz. */
 export class Fatiador {
-  private fatia: { rec: MediaRecorder; partes: Blob[]; voz: number; inicio: number } | null = null;
+  private fatia: { rec: MediaRecorder; partes: Blob[]; voz: number; inicio: number; energia: Energia } | null = null;
   private relogio: ReturnType<typeof setInterval> | null = null;
   private medidor: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private mesa: MesaDeSom,
-    private lado: Lado,
     private inicioDaReuniao: number,
-    private entregar: (audio: Blob, lado: Lado, segundos: number) => void,
+    private entregar: (audio: Blob, segundos: number, energia: Energia) => void,
   ) {}
 
   iniciar() {
@@ -100,18 +103,23 @@ export class Fatiador {
     this.relogio = setInterval(() => this.virar(true), FATIA_MS);
     // Volume a cada 200 ms: 3 medições acima do limiar (~0,6 s de fala) = fatia com voz.
     this.medidor = setInterval(() => {
-      if (this.fatia && this.mesa.volume(this.lado) > 0.015) this.fatia.voz++;
+      const f = this.fatia;
+      if (!f) return;
+      const a = this.mesa.volume('arthur');
+      const c = this.mesa.volume('cliente');
+      f.energia.push([Math.min(100, Math.round(a * 400)), Math.min(100, Math.round(c * 400))]);
+      if (Math.max(a, c) > 0.015) f.voz++;
     }, 200);
   }
 
   private novaFatia() {
-    const rec = new MediaRecorder(this.mesa.lados[this.lado].stream, { mimeType: MIME_AUDIO, audioBitsPerSecond: 24000 });
-    const f = { rec, partes: [] as Blob[], voz: 0, inicio: Date.now() };
+    const rec = new MediaRecorder(this.mesa.mistura.stream, { mimeType: MIME_AUDIO, audioBitsPerSecond: 24000 });
+    const f = { rec, partes: [] as Blob[], voz: 0, inicio: Date.now(), energia: [] as Energia };
     rec.ondataavailable = (e) => {
       if (e.data.size) f.partes.push(e.data);
     };
     rec.onstop = () => {
-      if (f.partes.length && f.voz >= 3) this.entregar(new Blob(f.partes, { type: 'audio/webm' }), this.lado, Math.max(0, (f.inicio - this.inicioDaReuniao) / 1000));
+      if (f.partes.length && f.voz >= 3) this.entregar(new Blob(f.partes, { type: 'audio/webm' }), Math.max(0, (f.inicio - this.inicioDaReuniao) / 1000), f.energia);
     };
     rec.start();
     this.fatia = f;

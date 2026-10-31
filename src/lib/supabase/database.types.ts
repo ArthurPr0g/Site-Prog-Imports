@@ -672,6 +672,10 @@ export type Database = {
           video_arquivo: string | null
           custo_usd: number
           processamento: string | null
+          copiloto: Json
+          acoes: Json
+          trechos_pendentes: Json
+          anotacoes: string | null
           lembrete_em: string | null
           tipo: string
           conversation_id: string | null
@@ -707,6 +711,10 @@ export type Database = {
           video_arquivo?: string | null
           custo_usd?: number
           processamento?: string | null
+          copiloto?: Json
+          acoes?: Json
+          trechos_pendentes?: Json
+          anotacoes?: string | null
           lembrete_em?: string | null
           tipo?: string
           conversation_id?: string | null
@@ -742,6 +750,10 @@ export type Database = {
           video_arquivo?: string | null
           custo_usd?: number
           processamento?: string | null
+          copiloto?: Json
+          acoes?: Json
+          trechos_pendentes?: Json
+          anotacoes?: string | null
           lembrete_em?: string | null
           tipo?: string
           conversation_id?: string | null
@@ -1650,6 +1662,7 @@ export type Database = {
       ia_usage: {
         Row: {
           lead_id: string | null
+          reuniao_id: string | null
           finalidade: string | null
           cache_read_tokens: number
           cache_write_tokens: number
@@ -1663,6 +1676,7 @@ export type Database = {
         }
         Insert: {
           lead_id?: string | null
+          reuniao_id?: string | null
           finalidade?: string | null
           cache_read_tokens?: number
           cache_write_tokens?: number
@@ -1676,6 +1690,7 @@ export type Database = {
         }
         Update: {
           lead_id?: string | null
+          reuniao_id?: string | null
           finalidade?: string | null
           cache_read_tokens?: number
           cache_write_tokens?: number
@@ -3947,6 +3962,8 @@ export type Database = {
     }
     Functions: {
       reuniao_acrescentar_trecho: { Args: { p_id: string; p_trecho: Json }; Returns: undefined }
+      reuniao_registrar_acao: { Args: { p_id: string; p_acao: Json }; Returns: undefined }
+      reuniao_guardar_pendente: { Args: { p_id: string; p_item: Json }; Returns: undefined }
       keepalive: { Args: never; Returns: string }
       validar_cupom: { Args: { p_codigo: string }; Returns: number | null }
       vitrine_settings: {
