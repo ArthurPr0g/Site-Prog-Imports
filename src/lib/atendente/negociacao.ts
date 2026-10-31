@@ -652,7 +652,7 @@ Regras:
 - escopo: o que o cliente quer construir (tipo de projeto e principais funções).
 - orcamento e prazo: só se foram citados (com os números ditos).
 - decisoes: o que ficou decidido.
-- proximos_passos: cada um com quem faz ("arthur", "cliente", "lia" ou o nome de outra pessoa), o que, e quando (se dito).
+- proximos_passos: tudo o que alguém ficou de fazer (inclusive o que também está em decisoes, ex.: "Arthur manda a proposta até segunda"), cada um com quem faz ("arthur", "cliente", "lia" ou o nome de outra pessoa), o que, e quando (se dito).
 - nova_etapa: "reuniao" se a reunião aconteceu e ainda não há proposta combinada; "proposta" se ficou combinado mandar/apresentar proposta ou orçamento, ou se já foi apresentado; "perdido" só se o cliente desistiu claramente; "manter" na dúvida. Nunca "fechado" (o fechamento passa pelo pagamento).
 - briefing: só os campos que o relato responde (mesmos nomes do briefing da Lia). Listas como listas.
 - aviso_para_lia: o que a Lia precisa saber para retomar a conversa com o cliente já sabendo de tudo, em 2 a 5 linhas, sem repetir para o cliente o que é interno (valores internos, opiniões do Arthur).
