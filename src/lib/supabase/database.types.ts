@@ -819,6 +819,9 @@ export type Database = {
           proximo_passo: string | null
           proximo_prazo: string | null
           proximo_responsavel: string | null
+          itens: Json
+          valor_mensal: number | null
+          proximo_origem: string | null
           updated_at: string
           valor_proposta: number | null
         }
@@ -839,6 +842,9 @@ export type Database = {
           proximo_passo?: string | null
           proximo_prazo?: string | null
           proximo_responsavel?: string | null
+          itens?: Json
+          valor_mensal?: number | null
+          proximo_origem?: string | null
           updated_at?: string
           valor_proposta?: number | null
         }
@@ -859,6 +865,9 @@ export type Database = {
           proximo_passo?: string | null
           proximo_prazo?: string | null
           proximo_responsavel?: string | null
+          itens?: Json
+          valor_mensal?: number | null
+          proximo_origem?: string | null
           updated_at?: string
           valor_proposta?: number | null
         }

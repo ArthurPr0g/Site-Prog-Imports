@@ -11,7 +11,9 @@ import { type ActionResult, okResult, errResult, friendlyDbError } from '@/lib/a
 import type { TablesUpdate } from '@/lib/supabase/database.types';
 import type { LeadStatus, Pais } from '@/lib/captacao';
 import { estimar, tabelaBRL, TABELA_USD, moedaDoPais, type Moeda } from '@/lib/precos-captacao';
-import { simular } from '@/lib/simulador';
+import { simular, NOMES } from '@/lib/simulador';
+import { CASES } from '@/lib/cases-portfolio';
+import { registrarVendaAction } from '@/app/actions/pos-venda';
 import { escolhaDoJson } from '@/lib/pos-venda';
 import { CHECKLIST, respondidas } from '@/lib/checklist-descoberta';
 import {
@@ -29,6 +31,10 @@ import {
   type PassoManual,
   type Pendencia,
   type ProximoPasso,
+  escolhaDosItens,
+  itensDoJson,
+  sugestoesDaReuniao,
+  type ItemDoPacote,
 } from '@/lib/pre-venda';
 
 async function admin() {
@@ -69,6 +75,8 @@ export type LeadDaPreVenda = {
   sinal: { valor: number; pagoEm: string | null; status: string } | null;
   passos: PassoCalculado[];
   proximo: ProximoPasso | null;
+  /** Próximos passos da última reunião registrada (para aceitar com um toque). */
+  sugestoes: { oQue: string; quem: string | null; prazo: string | null; reuniaoEm: string }[];
   /** Última vez que algo aconteceu com o lead (base do alerta de parado). */
   ultimoMovimento: string | null;
   prevenda: {
@@ -77,6 +85,9 @@ export type LeadDaPreVenda = {
     proximoPasso: string | null;
     proximoResponsavel: string | null;
     proximoPrazo: string | null;
+    proximoOrigem: string | null;
+    itens: ItemDoPacote[];
+    valorMensal: number | null;
     pasta: string | null;
     briefingUrl: string | null;
     designSystemUrl: string | null;
@@ -96,7 +107,32 @@ export type PainelDaPreVenda = {
   etapaDesatualizada: { id: string; nome: string; etapa: string }[];
   /** false = a tabela `prevenda` (0114) ainda não existe no banco: a tela mostra só o automático. */
   tabelaPronta: boolean;
+  /** Catálogo para montar o pacote, por moeda (BRL do internal_services; USD da tabela do portfólio). */
+  catalogo: Record<Moeda, ItemDoCatalogo[]>;
+  /** Cases do portfólio para citar como referência ("igual ao da VitaliTI"). */
+  portfolio: { slug: string; nome: string; tipo: string }[];
 };
+
+export type ItemDoCatalogo = { nome: string; categoria: string; preco: number; mensal: number };
+
+/** Mensalidade que acompanha cada produto do catálogo (nomes de 0045–0049); marca e avulsos não têm. */
+function mensalDoServico(nome: string, preco: Map<string, number>): number {
+  if (nome.startsWith('Site ')) return preco.get('Mensalidade Site') ?? 0;
+  if (nome.startsWith('Loja ')) return preco.get('Mensalidade Loja') ?? 0;
+  const g = nome.match(/^Sistema de Gestão (\S+)/);
+  return g ? (preco.get(`Mensalidade Gestão ${g[1]}`) ?? 0) : 0;
+}
+
+function catalogoUSD(): ItemDoCatalogo[] {
+  const n = NOMES.USD;
+  const t = TABELA_USD;
+  return [
+    ...n.site.map((nome, i) => ({ nome, categoria: 'Site', preco: t.site[i][0], mensal: t.site[i][1] })),
+    ...n.loja.map((nome, i) => ({ nome, categoria: 'Loja', preco: t.loja[i][0], mensal: t.loja[i][1] })),
+    ...n.erp.map((nome, i) => ({ nome, categoria: 'Sistema de gestão', preco: t.erp[i][0], mensal: t.erp[i][1] })),
+    ...n.marca.map((nome, i) => ({ nome, categoria: 'Marca', preco: t.marca[i], mensal: 0 })),
+  ];
+}
 
 const maior = (...ds: (string | null | undefined)[]) =>
   ds.filter((d): d is string => !!d).reduce<string | null>((m, d) => (m === null || d > m ? d : m), null);
@@ -117,7 +153,7 @@ export async function painelDaPreVendaAction(): Promise<PainelDaPreVenda | null>
       .order('last_message_at', { ascending: false, nullsFirst: false })
       .limit(500),
     supabase.from('leads').select(colunas).in('status', ['contatado', 'respondeu', 'reuniao', 'proposta']).limit(1000),
-    supabase.from('internal_services').select('name, price').eq('active', true),
+    supabase.from('internal_services').select('name, price, category').eq('active', true).order('price'),
     supabase.from('projetos').select('lead_id, cliente, status').not('lead_id', 'is', null),
   ]);
 
@@ -166,9 +202,20 @@ export async function painelDaPreVendaAction(): Promise<PainelDaPreVenda | null>
   const tabBRL = tabelaBRL(new Map((servicos ?? []).map((s) => [s.name, Number(s.price)])));
   const agora = Date.now();
 
+  // Combos e mensalidades não entram como item: o combo é regra de preço e a mensalidade vem com o produto.
+  const precos = new Map((servicos ?? []).map((s) => [s.name, Number(s.price)]));
+  const catalogo: Record<Moeda, ItemDoCatalogo[]> = {
+    BRL: (servicos ?? [])
+      .filter((s) => !['Combo', 'Mensalidade'].includes(s.category ?? ''))
+      .map((s) => ({ nome: s.name, categoria: s.category ?? 'Outros', preco: Number(s.price), mensal: mensalDoServico(s.name, precos) })),
+    USD: catalogoUSD(),
+  };
+
   return {
     tabelaPronta,
     etapaDesatualizada,
+    catalogo,
+    portfolio: Object.values(CASES).map((c) => ({ slug: c.slug, nome: c.titulo, tipo: c.tipo })),
     leads: leads.map((l): LeadDaPreVenda => {
       const pais = (l.country === 'US' ? 'US' : 'BR') as Pais;
       const moeda = moedaDoPais(pais);
@@ -285,9 +332,10 @@ export async function painelDaPreVendaAction(): Promise<PainelDaPreVenda | null>
         sinal,
         passos,
         proximo: proximoPasso(
-          { passo: p?.proximo_passo ?? null, quem: p?.proximo_responsavel ?? null, prazo: p?.proximo_prazo ?? null },
+          { passo: p?.proximo_passo ?? null, quem: p?.proximo_responsavel ?? null, prazo: p?.proximo_prazo ?? null, origem: p?.proximo_origem ?? null },
           atualizacoes
         ),
+        sugestoes: sugestoesDaReuniao(atualizacoes),
         ultimoMovimento: maior(conv?.last_message_at, l.last_contact_at, l.replied_at, l.first_contact_at, atualizacoes.at(-1)?.em, p?.updated_at, reuniaoFeita, l.created_at),
         prevenda: {
           existe: !!p,
@@ -295,6 +343,9 @@ export async function painelDaPreVendaAction(): Promise<PainelDaPreVenda | null>
           proximoPasso: p?.proximo_passo ?? null,
           proximoResponsavel: p?.proximo_responsavel ?? null,
           proximoPrazo: p?.proximo_prazo ?? null,
+          proximoOrigem: p?.proximo_origem ?? null,
+          itens: itensDoJson(p?.itens),
+          valorMensal: p?.valor_mensal === null || p?.valor_mensal === undefined ? null : Number(p.valor_mensal),
           pasta: p?.pasta ?? null,
           briefingUrl: p?.briefing_url ?? null,
           designSystemUrl: p?.design_system_url ?? null,
@@ -319,6 +370,9 @@ export type AlteracaoDaPreVenda = Partial<{
   proximoPasso: string | null;
   proximoResponsavel: string | null;
   proximoPrazo: string | null;
+  proximoOrigem: string | null;
+  itens: ItemDoPacote[];
+  valorMensal: number | null;
   pasta: string | null;
   briefingUrl: string | null;
   designSystemUrl: string | null;
@@ -359,6 +413,9 @@ export async function salvarPreVendaAction(leadId: string, a: AlteracaoDaPreVend
   if (a.proximoPasso !== undefined) c.proximo_passo = texto(a.proximoPasso, 500);
   if (a.proximoResponsavel !== undefined) c.proximo_responsavel = texto(a.proximoResponsavel, 80);
   if (a.proximoPrazo !== undefined) c.proximo_prazo = data(a.proximoPrazo);
+  if (a.proximoOrigem !== undefined) c.proximo_origem = a.proximoOrigem && /^(manual|reuniao:\d{4}-\d{2}-\d{2})$/.test(a.proximoOrigem) ? a.proximoOrigem : null;
+  if (a.itens !== undefined) c.itens = itensDoJson(a.itens);
+  if (a.valorMensal !== undefined) c.valor_mensal = valor(a.valorMensal);
   if (a.pasta !== undefined) c.pasta = texto(a.pasta, 300);
   if (a.briefingUrl !== undefined) c.briefing_url = url(a.briefingUrl);
   if (a.designSystemUrl !== undefined) c.design_system_url = url(a.designSystemUrl);
@@ -374,4 +431,33 @@ export async function salvarPreVendaAction(leadId: string, a: AlteracaoDaPreVend
   if (error) return errResult(friendlyDbError(error, 'Não foi possível salvar a pré-venda.'));
   revalidatePath('/admin/pre-venda');
   return okResult('Pré-venda salva.');
+}
+
+/* ------------------------------------------------------------ fechou: registra a venda no Pós-venda */
+
+/**
+ * "Fechou → Pós-venda" sem digitar de novo: usa o pacote montado aqui (ou o escolhido na conversa), o valor
+ * único e a mensalidade combinados e chama o mesmo registro de venda do Pós-venda (registrarVendaAction):
+ * lead vira "fechado" e nasce o projeto com os serviços, prazos e rodadas. Não cria cobrança nem avisa o cliente.
+ */
+export async function fecharVendaDaPreVendaAction(leadId: string): Promise<ActionResult> {
+  const supabase = await admin();
+  if (!supabase) return errResult('Sem permissão.');
+  const [{ data: lead }, { data: p }] = await Promise.all([
+    supabase.from('leads').select('id, name, country, pacote').eq('id', leadId).maybeSingle(),
+    supabase.from('prevenda').select('itens, valor_proposta, valor_mensal').eq('lead_id', leadId).maybeSingle(),
+  ]);
+  if (!lead) return errResult('Lead não encontrado.');
+  const montado = escolhaDosItens(itensDoJson(p?.itens));
+  const escolha = montado?.escolha ?? escolhaDoJson(lead.pacote);
+  if (!escolha) return errResult('Inclua no pacote um site, loja ou sistema do catálogo (ou registre a venda direto no Pós-venda).');
+  return registrarVendaAction({
+    leadId,
+    cliente: '',
+    escolha,
+    vendidoPor: 'Arthur',
+    moeda: lead.country === 'US' ? 'USD' : 'BRL',
+    valor: p?.valor_proposta === null || p?.valor_proposta === undefined ? null : Number(p.valor_proposta),
+    mensal: p?.valor_mensal === null || p?.valor_mensal === undefined ? null : Number(p.valor_mensal),
+  });
 }

@@ -176,6 +176,8 @@ export async function registrarVendaAction(v: {
   vendidoPor: string;
   moeda: 'BRL' | 'USD';
   valor: number | null;
+  /** Mensalidade combinada (vazio = a da tabela do pacote). Vem da Pré-venda. */
+  mensal?: number | null;
 }): Promise<ActionResult> {
   const supabase = await admin();
   if (!supabase) return errResult('Sem permissão.');
@@ -184,6 +186,7 @@ export async function registrarVendaAction(v: {
   const tabela = v.moeda === 'USD' ? TABELA_USD : tabelaBRL(new Map((servicos ?? []).map((s) => [s.name, Number(s.price)])));
   const prop = calcularProposta(v.escolha, tabela, 0, await prazosDoCatalogo(db));
   const valor = v.valor && v.valor > 0 ? v.valor : prop.total;
+  const mensal = typeof v.mensal === 'number' && v.mensal >= 0 ? v.mensal : prop.mensal;
   let cliente = v.cliente.trim();
   if (v.leadId) {
     const { data: l } = await supabase.from('leads').select('name, closed_at').eq('id', v.leadId).maybeSingle();
@@ -196,7 +199,7 @@ export async function registrarVendaAction(v: {
         status: 'fechado',
         closed_at: l.closed_at ?? agora,
         closed_value: valor,
-        closed_monthly: prop.mensal,
+        closed_monthly: mensal,
         closed_currency: v.moeda,
         pacote: v.escolha as never,
         next_contact: null,
@@ -213,7 +216,7 @@ export async function registrarVendaAction(v: {
     escolha: v.escolha,
     moeda: v.moeda,
     valor,
-    mensal: prop.mensal,
+    mensal,
   });
   if ('erro' in r) return errResult(r.erro);
   revalidar();

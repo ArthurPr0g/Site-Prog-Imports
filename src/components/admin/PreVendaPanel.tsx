@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   AlarmClock,
   ArrowRight,
@@ -29,11 +30,32 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { AppLoader } from '@/brand/loaders/AppLoader';
-import { painelDaPreVendaAction, salvarPreVendaAction, type AlteracaoDaPreVenda, type LeadDaPreVenda, type PainelDaPreVenda } from '@/app/actions/pre-venda';
+import {
+  fecharVendaDaPreVendaAction,
+  painelDaPreVendaAction,
+  salvarPreVendaAction,
+  type AlteracaoDaPreVenda,
+  type LeadDaPreVenda,
+  type PainelDaPreVenda,
+} from '@/app/actions/pre-venda';
 import { updateLeadAction } from '@/app/actions/leads';
 import { LEAD_STATUS_LABEL, type LeadStatus } from '@/lib/captacao';
 import { formatMoeda } from '@/lib/precos-captacao';
-import { alertasDoLead, ETAPAS_DA_PRE_VENDA, type Alerta, type EstadoPasso, type EtapaDaPreVenda, type PassoCalculado, type Pendencia } from '@/lib/pre-venda';
+import { NOMES } from '@/lib/simulador';
+import {
+  alertasDoLead,
+  descontoSobre,
+  escolhaDosItens,
+  ETAPAS_DA_PRE_VENDA,
+  precoCheioDosItens,
+  RESPONSAVEIS,
+  type Alerta,
+  type EstadoPasso,
+  type EtapaDaPreVenda,
+  type ItemDoPacote,
+  type PassoCalculado,
+  type Pendencia,
+} from '@/lib/pre-venda';
 import { haQuanto, hojeISO, inputClass, usePreferencia } from '@/components/admin/captacao/comum';
 
 const NOME_DA_COLUNA: Record<EtapaDaPreVenda, string> = {
@@ -266,7 +288,19 @@ export function PreVendaPanel() {
         ))}
       </section>
 
-      {lead && <Detalhe key={lead.id} l={lead} alertas={alertasDe(lead)} agora={agora} tabelaPronta={painel.tabelaPronta} onFechar={() => setAberto(null)} onMudou={reler} />}
+      {lead && (
+        <Detalhe
+          key={lead.id}
+          l={lead}
+          alertas={alertasDe(lead)}
+          agora={agora}
+          tabelaPronta={painel.tabelaPronta}
+          catalogo={painel.catalogo[lead.pais === 'US' ? 'USD' : 'BRL']}
+          portfolio={painel.portfolio}
+          onFechar={() => setAberto(null)}
+          onMudou={reler}
+        />
+      )}
     </div>
   );
 }
@@ -430,6 +464,8 @@ function Detalhe({
   alertas,
   agora,
   tabelaPronta,
+  catalogo,
+  portfolio,
   onFechar,
   onMudou,
 }: {
@@ -437,16 +473,23 @@ function Detalhe({
   alertas: Alerta[];
   agora: number;
   tabelaPronta: boolean;
+  catalogo: PainelDaPreVenda['catalogo']['BRL'];
+  portfolio: PainelDaPreVenda['portfolio'];
   onFechar: () => void;
   onMudou: () => void;
 }) {
   const toast = useToast();
+  const router = useRouter();
   const [pending, start] = useTransition();
   const pv = l.prevenda;
+  const moeda = l.pais === 'US' ? 'USD' : 'BRL';
+  const [confirmarVenda, setConfirmarVenda] = useState(false);
   const [f, setF] = useState({
     proximoPasso: pv.proximoPasso ?? '',
-    proximoResponsavel: pv.proximoResponsavel ?? '',
+    proximoResponsavel: quemNormalizado(pv.proximoResponsavel, l.nome),
     proximoPrazo: pv.proximoPrazo ?? '',
+    proximoOrigem: pv.proximoOrigem ?? '',
+    valorMensal: pv.valorMensal === null ? '' : String(pv.valorMensal),
     pasta: pv.pasta ?? '',
     briefingUrl: pv.briefingUrl ?? '',
     designSystemUrl: pv.designSystemUrl ?? '',
@@ -482,25 +525,57 @@ function Detalhe({
   }
   const numero = (s: string) => (s.trim() ? Number(s.replace(/\./g, '').replace(',', '.')) : null);
 
+  // Pacote montado aqui (itens gravados na hora) e o preço cheio deles.
+  const itens = pv.itens;
+  const cheio = precoCheioDosItens(itens);
+  const temItens = itens.some((i) => i.tipo !== 'portfolio');
+  // Sem itens montados, o preço cheio de referência é o do pacote escolhido na conversa (ou sugerido).
+  const cheioUnico = temItens ? cheio.unico : (l.pacote?.total ?? 0);
+  const cheioMensal = temItens ? cheio.mensal : (l.pacote?.mensal ?? 0);
+
+  function camposAtuais(): AlteracaoDaPreVenda {
+    const combinado = numero(f.valorProposta);
+    const d = descontoSobre(cheioUnico, combinado);
+    return {
+      proximoPasso: f.proximoPasso,
+      proximoResponsavel: f.proximoResponsavel === 'Outro' ? null : f.proximoResponsavel,
+      proximoPrazo: f.proximoPrazo || null,
+      proximoOrigem: f.proximoPasso.trim() ? f.proximoOrigem || 'manual' : null,
+      pasta: f.pasta,
+      briefingUrl: f.briefingUrl,
+      designSystemUrl: f.designSystemUrl,
+      prototipoUrl: f.prototipoUrl,
+      propostaUrl: f.propostaUrl,
+      // Desconto guardado = diferença entre o preço cheio e o combinado (só quando é desconto de fato).
+      desconto: d && d.valor > 0 ? d.valor : null,
+      valorProposta: combinado,
+      valorMensal: numero(f.valorMensal),
+      propostaEnviadaEm: f.propostaEnviadaEm || null,
+      prazoPrometido: f.prazoPrometido || null,
+      observacoes: f.observacoes,
+    };
+  }
   function salvarCampos() {
-    salvar(
-      {
-        proximoPasso: f.proximoPasso,
-        proximoResponsavel: f.proximoResponsavel,
-        proximoPrazo: f.proximoPrazo || null,
-        pasta: f.pasta,
-        briefingUrl: f.briefingUrl,
-        designSystemUrl: f.designSystemUrl,
-        prototipoUrl: f.prototipoUrl,
-        propostaUrl: f.propostaUrl,
-        desconto: numero(f.desconto),
-        valorProposta: numero(f.valorProposta),
-        propostaEnviadaEm: f.propostaEnviadaEm || null,
-        prazoPrometido: f.prazoPrometido || null,
-        observacoes: f.observacoes,
-      },
-      true
-    );
+    salvar(camposAtuais(), true);
+  }
+
+  function aceitarSugestao(s: { oQue: string; quem: string | null; prazo: string | null; reuniaoEm: string }, editar: boolean) {
+    const novo = { proximoPasso: s.oQue, proximoResponsavel: quemNormalizado(s.quem, l.nome), proximoPrazo: s.prazo ?? '', proximoOrigem: `reuniao:${s.reuniaoEm}` };
+    setF({ ...f, ...novo });
+    if (!editar) salvar({ ...novo, proximoPrazo: novo.proximoPrazo || null }, true);
+  }
+
+  const gravarItens = (novos: ItemDoPacote[]) => salvar({ itens: novos });
+
+  function registrarVenda() {
+    start(async () => {
+      // Grava o que está na tela antes (valor e mensalidade digitados e ainda não salvos).
+      const s = await salvarPreVendaAction(l.id, camposAtuais());
+      if (!s.ok) return void toast(s);
+      const r = await fecharVendaDaPreVendaAction(l.id).catch(() => ({ ok: false, message: 'Falha de conexão.' }));
+      toast(r);
+      if (r.ok) router.push('/admin/pos-venda');
+    });
   }
 
   function mudarPasso(p: PassoCalculado) {
@@ -520,7 +595,19 @@ function Detalhe({
   }
 
   const ultimaReuniao = l.reunioes.at(-1) ?? null;
-  const desconto = numero(f.desconto) ?? 0;
+  const descUnico = descontoSobre(cheioUnico, numero(f.valorProposta));
+  const descMensal = descontoSobre(cheioMensal, numero(f.valorMensal));
+  const venda = escolhaDosItens(itens);
+  const nomes = NOMES[moeda];
+  const pacoteDaVenda = venda
+    ? [
+        nomes[venda.escolha.produto][venda.escolha.nivel],
+        venda.escolha.comGestao ? nomes.erp[venda.escolha.nivelGestao] : null,
+        venda.escolha.marca ? nomes.marca[venda.escolha.marca - 1] : null,
+      ].filter(Boolean)
+    : l.pacote?.origem === 'escolhido'
+      ? l.pacote.itens
+      : null;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm" onClick={onFechar}>
@@ -551,51 +638,139 @@ function Detalhe({
             </div>
           )}
 
-          {/* Ações rápidas */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {l.conversa && <Acao href={`/admin/atendimento?conversa=${l.conversa.id}`} Icon={MessageCircle} rotulo="Abrir a conversa" />}
-            <Acao href={`/admin/captacao?lead=${l.id}`} Icon={FileText} rotulo="Ficha na Captação" />
+          {/* Ações rápidas: cada botão diz o que acontece por trás (feedback do Arthur, 31/10/2026). */}
+          <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:grid-cols-3">
+            {l.conversa && (
+              <Acao
+                href={`/admin/atendimento?conversa=${l.conversa.id}`}
+                Icon={MessageCircle}
+                rotulo="Abrir a conversa"
+                ajuda="Abre o WhatsApp com a Lia. Não envia nada."
+                detalhe="Abre esta conversa na página Atendimento: histórico, resumo da Lia, modo (IA ou você) e o campo para responder. Abrir não manda mensagem nem muda o modo."
+              />
+            )}
+            <Acao
+              href={`/admin/captacao?lead=${l.id}`}
+              Icon={FileText}
+              rotulo="Ficha na Captação"
+              ajuda="Abre a ficha completa do lead. Só abre."
+              detalhe="Abre a ficha do lead na Captação: dados, etapa, notas, próximo contato, diagnóstico e proposta do ERP. Abrir não altera nada."
+            />
             {ultimaReuniao ? (
-              <Acao href={`/admin/reunioes/${ultimaReuniao.id}`} Icon={Video} rotulo="Abrir a sala" />
+              <Acao
+                href={`/admin/reunioes/${ultimaReuniao.id}`}
+                Icon={Video}
+                rotulo="Abrir a sala"
+                ajuda="Garante a sala da Daily (ou Meet). O link não vai sozinho."
+                detalhe="Abre a sala da última reunião deste lead. Ao abrir, se a sala da Daily ainda não existe ou já venceu, cria uma nova; se a Daily não estiver configurada ou os minutos grátis do mês estiverem na trava, usa o Google Meet. Não manda o link ao cliente: copie o link do cliente na sala."
+              />
             ) : (
-              <Acao href="/admin/reunioes" Icon={Video} rotulo="Marcar reunião" />
+              <Acao
+                href="/admin/reunioes"
+                Icon={Video}
+                rotulo="Marcar reunião"
+                ajuda="Vai para Reuniões; lá você cria. Não convida o cliente."
+                detalhe="Abre a página Reuniões. Em Nova reunião você escolhe este lead e o horário (ou agora): a reunião nasce com sala própria na Daily (ou Google Meet no plano B). Não cria convite na agenda nem manda o link ao cliente: copie o link do cliente e mande você ou peça à Lia."
+              />
             )}
             <a
               href={`/diagnostico/${l.publicToken}?previa=1`}
               target="_blank"
               rel="noreferrer"
-              className="flex min-h-11 items-center gap-2 rounded-[14px] border border-border-strong px-3 text-[13px] font-semibold text-fg-secondary hover:text-fg"
+              title="Abre a página de diagnóstico que o cliente recebe, em modo prévia: a sua visita não é contada, então o contador de visitas e o aviso de lead quente (que chega no seu WhatsApp) não disparam. O número entre parênteses são as visitas do cliente."
+              aria-label="Diagnóstico. Abre a página de diagnóstico do cliente em modo prévia, sem contar a sua visita nem disparar o aviso de lead quente."
+              className="flex min-h-11 flex-col justify-center gap-0.5 rounded-[14px] border border-border-strong px-3 py-2 text-[13px] font-semibold text-fg-secondary hover:text-fg"
             >
-              <ExternalLink size={15} /> Diagnóstico{l.diagViews ? ` (${l.diagViews} visitas)` : ''}
+              <span className="flex items-center gap-2">
+                <ExternalLink size={15} className="shrink-0" /> <span className="truncate">Diagnóstico{l.diagViews ? ` (${l.diagViews} visitas)` : ''}</span>
+              </span>
+              <span className="text-[11px] font-normal leading-snug text-fg-faded">Prévia: sua visita não conta nem gera aviso.</span>
             </a>
-            <label className="flex min-h-11 items-center gap-2 rounded-[14px] border border-border-strong px-3 text-[13px] text-fg-secondary">
-              Etapa
-              <select
-                value={l.etapa}
-                disabled={pending}
-                onChange={(e) => mudarEtapa(e.target.value as LeadStatus)}
-                className="min-w-0 flex-1 bg-transparent font-semibold text-fg outline-none"
-              >
-                {(['contatado', 'respondeu', 'reuniao', 'proposta', 'perdido'] as LeadStatus[]).map((s) => (
-                  <option key={s} value={s} className="bg-[#12141A]">
-                    {LEAD_STATUS_LABEL[s]}
-                  </option>
-                ))}
-                {l.etapa === 'novo' && (
-                  <option value="novo" className="bg-[#12141A]">
-                    Novo
-                  </option>
-                )}
-              </select>
-            </label>
-            <Link
-              href="/admin/pos-venda"
-              title="No Pós-venda: Registrar venda e buscar este lead. A cobrança do sinal não é criada daqui."
-              className="flex min-h-11 items-center justify-center gap-1.5 rounded-[14px] bg-[#F2F3F5] px-3 text-[13px] font-semibold text-[#08080A]"
+            <label
+              title="Muda a etapa do lead no funil da Captação e a coluna aqui. A primeira passagem grava a data de contato e de resposta (base da taxa de resposta do placar nos Dashboards); voltar a etapa não apaga essas datas. Sair de Contatado encerra os e-mails de retorno automáticos da Lia. Perdido limpa o próximo contato (sai dos retornos vencidos) e conta como perdido no placar. Lead que estava na lista de um vendedor sai dela e outro entra no lugar. Nada é enviado ao cliente."
+              className="flex min-h-11 flex-col justify-center gap-0.5 rounded-[14px] border border-border-strong px-3 py-1.5 text-[13px] text-fg-secondary"
             >
-              Fechou: abrir no Pós-venda <ArrowRight size={15} />
-            </Link>
+              <span className="flex items-center gap-2">
+                Etapa
+                <select
+                  value={l.etapa}
+                  disabled={pending}
+                  onChange={(e) => mudarEtapa(e.target.value as LeadStatus)}
+                  aria-label="Mudar etapa. Muda o funil e o placar da Captação; sair de Contatado encerra os e-mails de retorno da Lia; Perdido limpa o próximo contato. Nada vai ao cliente."
+                  className="min-h-9 min-w-0 flex-1 bg-transparent font-semibold text-fg outline-none"
+                >
+                  {(['contatado', 'respondeu', 'reuniao', 'proposta', 'perdido'] as LeadStatus[]).map((s) => (
+                    <option key={s} value={s} className="bg-[#12141A]">
+                      {LEAD_STATUS_LABEL[s]}
+                    </option>
+                  ))}
+                  {l.etapa === 'novo' && (
+                    <option value="novo" className="bg-[#12141A]">
+                      Novo
+                    </option>
+                  )}
+                </select>
+              </span>
+              <span className="text-[11px] leading-snug text-fg-faded">Muda funil e placar. Nada vai ao cliente.</span>
+            </label>
+            <button
+              onClick={() => setConfirmarVenda((v) => !v)}
+              aria-expanded={confirmarVenda}
+              title="Mostra o que será registrado antes de confirmar: o lead vira Fechado (com valor, mensalidade e pacote) e o projeto nasce no Pós-venda com serviços, rodadas e prazo. Não cria a cobrança do sinal e não avisa o cliente."
+              aria-label="Fechou: registrar no Pós-venda. Antes de confirmar, mostra o que será criado: lead Fechado e projeto no Pós-venda. Não cria cobrança nem avisa o cliente."
+              className="flex min-h-11 flex-col justify-center gap-0.5 rounded-[14px] bg-[#F2F3F5] px-3 py-2 text-left text-[13px] font-semibold text-[#08080A]"
+            >
+              <span className="flex items-center gap-1.5">
+                Fechou → Pós-venda <ArrowRight size={15} />
+              </span>
+              <span className="text-[11px] font-normal leading-snug text-[#3A3D44]">Cria o projeto. Sem cobrança, sem aviso.</span>
+            </button>
           </div>
+
+          {confirmarVenda && (
+            <div className="rounded-[16px] border border-[oklch(74%_.12_262/.4)] bg-[oklch(72%_.1_262/.08)] p-4 text-[13px] text-fg-secondary">
+              <div className="mb-1.5 text-[14px] font-semibold text-fg">Registrar a venda no Pós-venda</div>
+              {pacoteDaVenda ? (
+                <>
+                  <p>
+                    <b className="text-fg">Pacote:</b> {pacoteDaVenda.join(' + ')}
+                    {venda && venda.fora.length > 0 && <span className="text-fg-tertiary"> (fora do projeto, só fica aqui: {venda.fora.join(', ')})</span>}
+                  </p>
+                  <p>
+                    <b className="text-fg">Valor único:</b> {numero(f.valorProposta) !== null ? formatMoeda(numero(f.valorProposta)!, moeda) : 'preço da tabela do pacote'}
+                    {' · '}
+                    <b className="text-fg">Mensalidade:</b> {numero(f.valorMensal) !== null ? formatMoeda(numero(f.valorMensal)!, moeda) : 'a da tabela'}
+                  </p>
+                  <ul className="mt-2 list-disc space-y-0.5 pl-5 text-[12.5px]">
+                    <li>O lead vira Fechado, com valor, mensalidade, moeda e pacote (entra no placar como venda).</li>
+                    <li>Nasce o projeto no Pós-venda com os serviços do pacote, rodadas de ajuste e suporte do guia, prazo do catálogo e entrega prevista em dias úteis.</li>
+                    <li>
+                      <b className="text-fg">Não</b> cria a cobrança do sinal (peça ao Téo), não manda nada ao cliente e não abre a pasta nem chama a Bia.
+                    </li>
+                  </ul>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      disabled={pending || !tabelaPronta}
+                      onClick={registrarVenda}
+                      className="h-11 rounded-full bg-[#F2F3F5] px-4 text-[13.5px] font-semibold text-[#08080A] disabled:opacity-50"
+                    >
+                      {pending ? 'Registrando' : 'Registrar venda e abrir o Pós-venda'}
+                    </button>
+                    <Link href="/admin/pos-venda" className="flex h-11 items-center rounded-full border border-border-strong px-4 text-[13px] font-semibold text-fg-secondary">
+                      Preencher à mão
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p>Inclua no pacote (abaixo) um site, loja ou sistema do catálogo para registrar daqui sem digitar de novo.</p>
+                  <Link href="/admin/pos-venda" className="mt-2 inline-flex h-11 items-center rounded-full border border-border-strong px-4 text-[13px] font-semibold text-fg-secondary">
+                    Registrar à mão no Pós-venda
+                  </Link>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Trilha */}
           <Secao titulo="Trilha da pré-venda" dica={tabelaPronta ? 'Toque para marcar; "auto" volta ao que os dados dizem.' : undefined}>
@@ -647,20 +822,135 @@ function Detalhe({
             </ol>
           </Secao>
 
-          {/* Próximo passo */}
-          <Secao titulo="Próximo passo" dica={l.proximo?.origem === 'reuniao' ? 'Vindo da última reunião registrada; escreva aqui para fixar outro.' : undefined}>
-            {l.proximo && (
-              <p className="mb-2 text-[13.5px] text-fg-secondary">
-                {l.proximo.oQue}
-                {l.proximo.quem ? ` · ${l.proximo.quem}` : ''}
-                {l.proximo.prazo ? ` · até ${dataBR(l.proximo.prazo)}` : ''}
+          {/* Próximo passo (redesenho do feedback de 31/10/2026): o quê, quem (escolha rápida) e até quando. */}
+          <Secao titulo="Próximo passo: o que precisa acontecer agora para avançar">
+            <p className="mb-2.5 text-[12.5px] leading-snug text-fg-tertiary">
+              Uma ação só, com quem faz e até quando. Aparece no card do lead e avisa quando o prazo vence.
+            </p>
+
+            {/* Sugestão da reunião ainda não aceita */}
+            {l.proximo?.origem === 'reuniao' && !l.proximo.aceito && (
+              <div className="mb-3 rounded-[14px] border border-[oklch(74%_.12_262/.35)] bg-[oklch(72%_.1_262/.08)] px-3 py-2.5">
+                <div className="text-[11.5px] font-semibold text-[#B1D2FF]">Sugerido pela reunião de {dataBR(l.proximo.reuniaoEm)}</div>
+                <p className="mt-0.5 text-[13.5px] text-fg">{l.proximo.oQue}</p>
+                <p className="text-[12px] text-fg-tertiary">
+                  {[l.proximo.quem, l.proximo.prazo && `até ${dataBR(l.proximo.prazo)}`].filter(Boolean).join(' · ') || 'Sem responsável nem prazo'}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    disabled={pending || !tabelaPronta}
+                    onClick={() => aceitarSugestao(l.sugestoes[0], false)}
+                    className="h-10 rounded-full bg-[#F2F3F5] px-4 text-[13px] font-semibold text-[#08080A] disabled:opacity-50"
+                  >
+                    Aceitar
+                  </button>
+                  <button
+                    disabled={!tabelaPronta}
+                    onClick={() => aceitarSugestao(l.sugestoes[0], true)}
+                    className="h-10 rounded-full border border-border-strong px-4 text-[13px] font-semibold text-fg-secondary"
+                  >
+                    Editar antes
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* De onde veio o que está gravado */}
+            {l.proximo?.aceito && (
+              <p className="mb-2 text-[11.5px] text-fg-faded">
+                {l.proximo.origem === 'reuniao' ? `Veio da reunião de ${dataBR(l.proximo.reuniaoEm)} (aceito)` : 'Escrito por você'}
               </p>
             )}
-            <div className="grid gap-2 sm:grid-cols-[1fr_140px_160px]">
-              <input {...campo('proximoPasso')} placeholder="O quê" className={inputClass} />
-              <input {...campo('proximoResponsavel')} placeholder="Quem" className={inputClass} />
-              <input type="date" {...campo('proximoPrazo')} className={inputClass} aria-label="Prazo" />
+
+            <div className="grid gap-3">
+              <Rotulado rotulo="O quê">
+                <input
+                  value={f.proximoPasso}
+                  onChange={(e) => setF({ ...f, proximoPasso: e.target.value })}
+                  placeholder="Ex.: mandar a proposta com o valor"
+                  className={`${inputClass} w-full`}
+                />
+              </Rotulado>
+
+              <div className="grid gap-1 text-[11.5px] text-fg-tertiary">
+                Quem faz
+                <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Quem faz o próximo passo">
+                  {RESPONSAVEIS.map((r) => (
+                    <Chip key={r} ativo={f.proximoResponsavel === r} onClick={() => setF({ ...f, proximoResponsavel: f.proximoResponsavel === r ? '' : r })}>
+                      {r}
+                    </Chip>
+                  ))}
+                  <Chip
+                    ativo={!!f.proximoResponsavel && !(RESPONSAVEIS as readonly string[]).includes(f.proximoResponsavel)}
+                    onClick={() => setF({ ...f, proximoResponsavel: (RESPONSAVEIS as readonly string[]).includes(f.proximoResponsavel) || !f.proximoResponsavel ? 'Outro' : '' })}
+                  >
+                    Outro
+                  </Chip>
+                </div>
+                {!!f.proximoResponsavel && !(RESPONSAVEIS as readonly string[]).includes(f.proximoResponsavel) && (
+                  <input
+                    value={f.proximoResponsavel === 'Outro' ? '' : f.proximoResponsavel}
+                    onChange={(e) => setF({ ...f, proximoResponsavel: e.target.value || 'Outro' })}
+                    placeholder="Nome de quem faz"
+                    className={`${inputClass} mt-1 w-full`}
+                    autoFocus
+                  />
+                )}
+              </div>
+
+              <div className="grid gap-1 text-[11.5px] text-fg-tertiary">
+                Até quando
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {(
+                    [
+                      ['Hoje', 0],
+                      ['Amanhã', 1],
+                      ['Em 3 dias', 3],
+                    ] as const
+                  ).map(([r, n]) => {
+                    const d = somarDias(hojeISO(), n);
+                    return (
+                      <Chip key={r} ativo={f.proximoPrazo === d} onClick={() => setF({ ...f, proximoPrazo: f.proximoPrazo === d ? '' : d })}>
+                        {r}
+                      </Chip>
+                    );
+                  })}
+                  <input
+                    type="date"
+                    value={f.proximoPrazo}
+                    onChange={(e) => setF({ ...f, proximoPrazo: e.target.value })}
+                    className={`${inputClass} min-h-10 w-[160px]`}
+                    aria-label="Escolher a data do prazo"
+                  />
+                </div>
+              </div>
             </div>
+
+            {/* Os outros passos combinados na reunião, para usar com um toque */}
+            {l.sugestoes.length > 1 && (
+              <div className="mt-3">
+                <div className="mb-1 text-[11.5px] text-fg-faded">Outros passos combinados na reunião de {dataBR(l.sugestoes[0].reuniaoEm)}</div>
+                <ul className="grid gap-1">
+                  {l.sugestoes.map((s, i) =>
+                    s.oQue === f.proximoPasso ? null : (
+                      <li key={i}>
+                        <button
+                          onClick={() => aceitarSugestao(s, true)}
+                          className="flex min-h-10 w-full items-center gap-2 rounded-[12px] px-2 text-left text-[12.5px] text-fg-secondary hover:bg-white/[0.03]"
+                        >
+                          <Plus size={14} className="shrink-0 text-fg-tertiary" />
+                          <span className="min-w-0">
+                            {s.quem ? <b className="text-fg">{s.quem}: </b> : null}
+                            {s.oQue}
+                            {s.prazo ? ` (até ${dataBR(s.prazo)})` : ''}
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  )}
+                </ul>
+              </div>
+            )}
           </Secao>
 
           {/* Pendências do cliente */}
@@ -717,34 +1007,100 @@ function Detalhe({
             </div>
           </Secao>
 
-          {/* Valores */}
-          <Secao titulo="Valores" dica="Preço cheio do catálogo; sem chance de fechar, só o combinado.">
-            {l.pacote ? (
+          {/* Pacote e valor do projeto (feedback de 31/10/2026): itens do catálogo, avulsos e referências do portfólio. */}
+          <Secao titulo="Pacote e valor do projeto">
+            <p className="mb-2.5 text-[12.5px] leading-snug text-fg-tertiary">
+              Monte o que vai ser feito, digite o valor combinado e veja a diferença para o preço cheio. O Fechou → Pós-venda usa estes dados.
+            </p>
+
+            {!temItens && l.pacote && (
               <div className="mb-2 rounded-[14px] bg-white/[0.03] px-3 py-2.5 text-[13px]">
                 <div className="text-fg-tertiary">
-                  Pacote {l.pacote.origem === 'escolhido' ? 'escolhido' : 'sugerido pela Captação'}: {l.pacote.itens.join(' + ')}
+                  Pacote {l.pacote.origem === 'escolhido' ? 'escolhido na conversa' : 'sugerido pela Captação'}: {l.pacote.itens.join(' + ')}
                 </div>
                 <div className="mt-0.5 text-fg">
-                  Preço cheio <b>{formatMoeda(l.pacote.total, l.pacote.moeda)}</b>
+                  Preço do simulador <b>{formatMoeda(l.pacote.total, l.pacote.moeda)}</b>
                   {l.pacote.mensal > 0 && <> + {formatMoeda(l.pacote.mensal, l.pacote.moeda)}/mês</>}
-                  {desconto > 0 && (
-                    <span className="text-fg-secondary">
-                      {' '}
-                      · com o desconto {formatMoeda(Math.max(0, l.pacote.total - desconto), l.pacote.moeda)}
-                    </span>
-                  )}
                 </div>
+                {tabelaPronta && (
+                  <button
+                    disabled={pending}
+                    onClick={() =>
+                      gravarItens(
+                        l.pacote!.itens
+                          .map((n) => catalogo.find((c) => c.nome === n))
+                          .filter((c): c is NonNullable<typeof c> => !!c)
+                          .map((c) => ({ tipo: 'catalogo' as const, nome: c.nome, preco: c.preco, mensal: c.mensal }))
+                      )
+                    }
+                    className="mt-2 h-10 rounded-full border border-border-strong px-3.5 text-[12.5px] font-semibold text-fg-secondary"
+                  >
+                    Usar este pacote como ponto de partida
+                  </button>
+                )}
               </div>
-            ) : (
-              <p className="mb-2 text-[13px] text-fg-faded">Pacote não definido: escolha na conversa ou no simulador da Captação.</p>
             )}
-            <div className="grid grid-cols-2 gap-2">
-              <Rotulado rotulo="Desconto combinado">
-                <input inputMode="decimal" {...campo('desconto')} placeholder="0" className={`${inputClass} w-full`} />
-              </Rotulado>
-              <Rotulado rotulo="Valor da proposta enviada">
-                <input inputMode="decimal" {...campo('valorProposta')} placeholder="0" className={`${inputClass} w-full`} />
-              </Rotulado>
+
+            {/* Itens montados */}
+            {itens.length > 0 && (
+              <ul className="mb-2 grid gap-1">
+                {itens.map((it, i) => (
+                  <li key={`${it.nome}-${i}`} className="flex min-h-10 items-center gap-2 rounded-[12px] bg-white/[0.03] pl-3">
+                    <span className="min-w-0 flex-1 text-[13px]">
+                      {it.tipo === 'portfolio' ? (
+                        <span className="text-fg-secondary">
+                          <span className="text-fg-faded">Referência: </span>igual ao da {it.nome}
+                        </span>
+                      ) : (
+                        <>
+                          <span className="text-fg">{it.nome}</span>
+                          {it.tipo === 'avulso' && <span className="text-fg-faded"> (avulso)</span>}
+                          <span className="block text-[12px] text-fg-tertiary">
+                            {formatMoeda(it.preco, moeda)}
+                            {it.mensal > 0 && ` + ${formatMoeda(it.mensal, moeda)}/mês`}
+                          </span>
+                        </>
+                      )}
+                    </span>
+                    <button
+                      disabled={pending || !tabelaPronta}
+                      onClick={() => gravarItens(itens.filter((_, j) => j !== i))}
+                      aria-label={`Tirar ${it.nome} do pacote`}
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-fg-faded hover:text-error"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {tabelaPronta && <IncluirNoPacote catalogo={catalogo} portfolio={portfolio} moeda={moeda} pending={pending} onIncluir={(it) => gravarItens([...itens, it])} />}
+
+            {/* Valores: cheio × combinado × diferença */}
+            <div className="mt-3 grid gap-2 rounded-[14px] border border-border p-3">
+              <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-[13px]">
+                <span className="text-fg-tertiary">Preço cheio do catálogo{temItens ? ' (soma, sem desconto de combo)' : l.pacote ? ' (simulador)' : ''}</span>
+                <b className="text-right tabular-nums text-fg">
+                  {cheioUnico > 0 ? formatMoeda(cheioUnico, moeda) : '–'}
+                  {cheioMensal > 0 && <span className="block text-[12px] font-normal text-fg-secondary">+ {formatMoeda(cheioMensal, moeda)}/mês</span>}
+                </b>
+              </div>
+              <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2">
+                <Rotulado rotulo="Seu valor: único">
+                  <input inputMode="decimal" {...campo('valorProposta')} placeholder={cheioUnico ? String(cheioUnico) : '0'} className={`${inputClass} w-full`} />
+                </Rotulado>
+                <Rotulado rotulo="Seu valor: mensalidade">
+                  <input inputMode="decimal" {...campo('valorMensal')} placeholder={cheioMensal ? String(cheioMensal) : '0'} className={`${inputClass} w-full`} />
+                </Rotulado>
+              </div>
+              <div className="grid gap-0.5 text-[13px]">
+                <Diferenca rotulo="Diferença no valor único" d={descUnico} moeda={moeda} />
+                <Diferenca rotulo="Diferença na mensalidade" d={descMensal} moeda={moeda} />
+              </div>
+            </div>
+
+            <div className="mt-2 grid grid-cols-1 gap-2 min-[400px]:grid-cols-2">
               <Rotulado rotulo="Proposta enviada em">
                 <input type="date" {...campo('propostaEnviadaEm')} className={`${inputClass} w-full`} />
               </Rotulado>
@@ -906,10 +1262,19 @@ function Rotulado({ rotulo, children }: { rotulo: string; children: React.ReactN
   );
 }
 
-function Acao({ href, Icon, rotulo }: { href: string; Icon: typeof Video; rotulo: string }) {
+/** Botão de ação com o que acontece por trás: linha curta visível (celular e computador), tooltip e aria-label com o detalhe. */
+function Acao({ href, Icon, rotulo, ajuda, detalhe }: { href: string; Icon: typeof Video; rotulo: string; ajuda: string; detalhe: string }) {
   return (
-    <Link href={href} className="flex min-h-11 items-center gap-2 rounded-[14px] border border-border-strong px-3 text-[13px] font-semibold text-fg-secondary hover:text-fg">
-      <Icon size={15} className="shrink-0" /> <span className="truncate">{rotulo}</span>
+    <Link
+      href={href}
+      title={detalhe}
+      aria-label={`${rotulo}. ${detalhe}`}
+      className="flex min-h-11 flex-col justify-center gap-0.5 rounded-[14px] border border-border-strong px-3 py-2 text-[13px] font-semibold text-fg-secondary hover:text-fg"
+    >
+      <span className="flex items-center gap-2">
+        <Icon size={15} className="shrink-0" /> <span className="truncate">{rotulo}</span>
+      </span>
+      <span className="text-[11px] font-normal leading-snug text-fg-faded">{ajuda}</span>
     </Link>
   );
 }
@@ -941,5 +1306,162 @@ function CampoLink({
       </span>
       <input {...input} placeholder={texto ? '1 - Clientes\\Nome - Empresa' : 'https://'} className={`${inputClass} w-full min-w-0`} />
     </label>
+  );
+}
+
+/* ------------------------------------------------------------ próximo passo e pacote: peças */
+
+/** "Arthur" da reunião vira "Eu (Arthur)"; o nome do lead vira "Cliente"; o resto fica como "Outro". */
+function quemNormalizado(quem: string | null, nomeDoLead: string): string {
+  const q = quem?.trim() ?? '';
+  if (!q) return '';
+  const baixo = q.toLowerCase();
+  if (baixo === 'arthur' || baixo === 'eu' || baixo.startsWith('eu (')) return 'Eu (Arthur)';
+  if (baixo === 'cliente' || baixo === nomeDoLead.trim().toLowerCase().split(' ')[0]) return 'Cliente';
+  if (/\b(duda|nina)\b/.test(baixo)) return 'Duda/Nina';
+  return RESPONSAVEIS.find((r) => r.toLowerCase() === baixo) ?? q;
+}
+
+/** AAAA-MM-DD + n dias (meio-dia, sem pular de dia no horário de verão). */
+function somarDias(iso: string, n: number): string {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function Chip({ ativo, onClick, children }: { ativo: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={ativo}
+      onClick={onClick}
+      className={`h-10 rounded-full px-3.5 text-[13px] font-semibold ${ativo ? 'bg-[oklch(72%_.1_262/.22)] text-[#B1D2FF] ring-1 ring-[#81AAF7]/60' : 'border border-border-strong text-fg-secondary'}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Diferenca({ rotulo, d, moeda }: { rotulo: string; d: { valor: number; pct: number } | null; moeda: 'BRL' | 'USD' }) {
+  if (!d) return null;
+  const pct = `${Math.abs(d.pct).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
+  return (
+    <div className="flex flex-wrap justify-between gap-x-3">
+      <span className="text-fg-tertiary">{rotulo}</span>
+      <b className={`tabular-nums ${d.valor > 0 ? 'text-[#ffb36b]' : d.valor < 0 ? 'text-success' : 'text-fg-secondary'}`}>
+        {d.valor > 0
+          ? `desconto de ${formatMoeda(d.valor, moeda)} (${pct})`
+          : d.valor < 0
+            ? `acima do cheio em ${formatMoeda(-d.valor, moeda)} (${pct})`
+            : 'igual ao preço cheio'}
+      </b>
+    </div>
+  );
+}
+
+/** Incluir no pacote: item do catálogo, item avulso (módulo etc., com valor digitado) ou referência do portfólio. */
+function IncluirNoPacote({
+  catalogo,
+  portfolio,
+  moeda,
+  pending,
+  onIncluir,
+}: {
+  catalogo: PainelDaPreVenda['catalogo']['BRL'];
+  portfolio: PainelDaPreVenda['portfolio'];
+  moeda: 'BRL' | 'USD';
+  pending: boolean;
+  onIncluir: (it: ItemDoPacote) => void;
+}) {
+  const [modo, setModo] = useState<'catalogo' | 'avulso' | 'portfolio'>('catalogo');
+  const [escolhido, setEscolhido] = useState('');
+  const [nome, setNome] = useState('');
+  const [valor, setValor] = useState('');
+  const categorias = [...new Set(catalogo.map((c) => c.categoria))];
+
+  function incluir() {
+    if (modo === 'catalogo') {
+      const c = catalogo.find((x) => x.nome === escolhido);
+      if (!c) return;
+      onIncluir({ tipo: 'catalogo', nome: c.nome, preco: c.preco, mensal: c.mensal });
+      setEscolhido('');
+    } else if (modo === 'portfolio') {
+      const p = portfolio.find((x) => x.slug === escolhido);
+      if (!p) return;
+      onIncluir({ tipo: 'portfolio', slug: p.slug, nome: p.nome });
+      setEscolhido('');
+    } else {
+      const v = Number(valor.replace(/\./g, '').replace(',', '.'));
+      if (!nome.trim() || !Number.isFinite(v) || v < 0) return;
+      onIncluir({ tipo: 'avulso', nome: nome.trim(), preco: v, mensal: 0 });
+      setNome('');
+      setValor('');
+    }
+  }
+
+  return (
+    <div className="grid gap-2 rounded-[14px] border border-dashed border-border-strong p-2.5">
+      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="O que incluir">
+        <Chip ativo={modo === 'catalogo'} onClick={() => {
+            setModo('catalogo');
+            setEscolhido('');
+          }}>
+          Do catálogo
+        </Chip>
+        <Chip ativo={modo === 'avulso'} onClick={() => setModo('avulso')}>
+          Item avulso
+        </Chip>
+        <Chip ativo={modo === 'portfolio'} onClick={() => {
+            setModo('portfolio');
+            setEscolhido('');
+          }}>
+          Referência do portfólio
+        </Chip>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {modo === 'catalogo' && (
+          <select value={escolhido} onChange={(e) => setEscolhido(e.target.value)} className={`${inputClass} min-h-11 min-w-0 flex-1 basis-[200px]`} aria-label="Produto ou serviço do catálogo">
+            <option value="">Escolha um produto ou serviço</option>
+            {categorias.map((cat) => (
+              <optgroup key={cat} label={cat}>
+                {catalogo
+                  .filter((c) => c.categoria === cat)
+                  .map((c) => (
+                    <option key={c.nome} value={c.nome}>
+                      {c.nome}: {formatMoeda(c.preco, moeda)}
+                      {c.mensal > 0 ? ` + ${formatMoeda(c.mensal, moeda)}/mês` : ''}
+                    </option>
+                  ))}
+              </optgroup>
+            ))}
+          </select>
+        )}
+        {modo === 'portfolio' && (
+          <select value={escolhido} onChange={(e) => setEscolhido(e.target.value)} className={`${inputClass} min-h-11 min-w-0 flex-1 basis-[200px]`} aria-label="Case do portfólio">
+            <option value="">Igual ao de qual cliente?</option>
+            {portfolio.map((p) => (
+              <option key={p.slug} value={p.slug}>
+                {p.nome} ({p.tipo})
+              </option>
+            ))}
+          </select>
+        )}
+        {modo === 'avulso' && (
+          <>
+            <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: módulo de agendamento" className={`${inputClass} min-w-0 flex-1 basis-[180px]`} aria-label="Nome do item avulso" />
+            <input value={valor} onChange={(e) => setValor(e.target.value)} inputMode="decimal" placeholder="Valor" className={`${inputClass} w-[110px]`} aria-label="Valor do item avulso" />
+          </>
+        )}
+        <button
+          type="button"
+          disabled={pending || (modo === 'avulso' ? !nome.trim() || !valor.trim() : !escolhido)}
+          onClick={incluir}
+          className="flex h-11 items-center gap-1.5 rounded-full border border-border-strong px-4 text-[13px] font-semibold text-fg-secondary disabled:opacity-40"
+        >
+          <Plus size={16} /> Incluir
+        </button>
+      </div>
+    </div>
   );
 }
