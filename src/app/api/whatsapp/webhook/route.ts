@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse, after } from 'next/server';
 import { dbDoAtendente, type DbDoAtendente } from '@/lib/atendente/db';
-import { assinaturaValida, baixarMidia, lerWebhook, marcarLidaEDigitando, type MensagemRecebida } from '@/lib/atendente/whatsapp-api';
+import { assinaturaValida, baixarMidia, comVozPara, lerWebhook, marcarLidaEDigitando, type MensagemRecebida } from '@/lib/atendente/whatsapp-api';
 import { transcrever, transcricaoConfigurada } from '@/lib/atendente/transcricao';
 import { responderConversa } from '@/lib/atendente/agente';
 import { empresaDoTexto } from '@/lib/atendente/regras';
@@ -102,9 +102,11 @@ export async function POST(req: NextRequest) {
         });
       } else if (!m.reacao) {
         // Qualquer outra coisa (texto ou áudio) é ideia ou prompt para o Claude Code (0088).
+        // Áudio dele: a resposta da Lia também sai em áudio, na voz dela (31/10/2026, ver voz.ts).
         after(async () => {
           await marcarLidaEDigitando(m.id);
-          await anotarDoDono(db, m);
+          if (m.midia?.tipo === 'audio') await comVozPara(m.de, () => anotarDoDono(db, m));
+          else await anotarDoDono(db, m);
         });
       }
       continue;

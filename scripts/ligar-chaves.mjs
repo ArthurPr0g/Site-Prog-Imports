@@ -3,6 +3,7 @@
 // Nada é impresso. Usado pelos atalhos "Ligar Asaas de verdade" e "Ligar Google Agenda".
 //   node scripts/ligar-chaves.mjs asaas     -> ASAAS_API_KEY (produção) + ASAAS_AMBIENTE=producao + webhook novo
 //   node scripts/ligar-chaves.mjs google    -> GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET
+//   node scripts/ligar-chaves.mjs elevenlabs -> ELEVENLABS_API_KEY (voz da Lia)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { createInterface } from 'node:readline';
@@ -61,8 +62,19 @@ if (qual === 'asaas') {
   }
   gravar('GOOGLE_CLIENT_ID', id, false);
   gravar('GOOGLE_CLIENT_SECRET', segredo);
+} else if (qual === 'elevenlabs') {
+  // Voz da Lia (31/10/2026): ElevenLabs. Confere a chave na API antes de gravar (sem imprimir nada dela).
+  console.log('\nElevenLabs (voz da Lia)');
+  console.log('No ElevenLabs: Desenvolvedores > Chaves de API > Criar chave. Copie e cole aqui.\n');
+  const chave = await perguntar('Cole a chave de API do ElevenLabs e aperte Enter: ', true);
+  const r = await fetch('https://api.elevenlabs.io/v1/voices', { headers: { 'xi-api-key': chave } }).catch(() => null);
+  if (!r || !r.ok) {
+    console.log(`\nO ElevenLabs recusou essa chave (${r ? r.status : 'sem conexão'}). Confira se copiou inteira e se ela tem permissão de Vozes. Nada foi gravado.`);
+    process.exit(1);
+  }
+  gravar('ELEVENLABS_API_KEY', chave);
 } else {
-  console.log('Uso: node scripts/ligar-chaves.mjs asaas | google');
+  console.log('Uso: node scripts/ligar-chaves.mjs asaas | google | elevenlabs');
   process.exit(1);
 }
 console.log('\nPronto. Avise o Claude no chat: "gravei". Ele publica de novo para a Vercel usar as chaves novas.');

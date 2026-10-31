@@ -9,6 +9,8 @@
 //   da 1.001ª em diante a Meta cobra (sem cartão cadastrado, não entrega).
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { falar } from '@/lib/atendente/voz';
 
 const VERSAO = process.env.WHATSAPP_GRAPH_VERSION || 'v23.0';
 // Trocável só para teste local (servidor falso que registra os envios).
@@ -38,8 +40,59 @@ async function chamar(corpo: Record<string, unknown>): Promise<Response> {
   });
 }
 
+/* ------------------------------------------------------------ voz para o Arthur (31/10/2026) */
+
+// Quando o Arthur manda ÁUDIO, o webhook roda a resposta dentro de `comVozPara(numero, ...)`: tudo o que for
+// enviado a esse número nesse meio-tempo sai também como mensagem de voz (voz da Roberta, ver voz.ts).
+// Texto sem link vira só áudio; com link, botões ou opções, o áudio vai antes e a mensagem escrita continua.
+const vozDoDono = new AsyncLocalStorage<{ fim8: string }>();
+const fim8 = (n: string) => n.replace(/\D/g, '').slice(-8);
+
+export function comVozPara<T>(numero: string, fn: () => Promise<T>): Promise<T> {
+  return vozDoDono.run({ fim8: fim8(numero) }, fn);
+}
+
+const falaCom = (para: string) => {
+  const c = vozDoDono.getStore();
+  return !!c && fim8(para) === c.fim8;
+};
+
+/** Sobe o Ogg/Opus para a Meta e manda como mensagem de voz (onda + velocidade, como áudio gravado). */
+export async function enviarVoz(para: string, ogg: Buffer): Promise<ResultadoDoEnvio> {
+  if (!whatsappConfigurado()) return { ok: false, erro: 'WhatsApp não configurado' };
+  try {
+    const form = new FormData();
+    form.append('messaging_product', 'whatsapp');
+    form.append('type', 'audio/ogg');
+    form.append('file', new Blob([new Uint8Array(ogg)], { type: 'audio/ogg' }), 'lia.ogg');
+    const up = await fetch(`${BASE}/${VERSAO}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/media`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` },
+      body: form,
+    });
+    const j = (await up.json()) as { id?: string; error?: { message?: string } };
+    if (!up.ok || !j.id) return { ok: false, erro: j.error?.message ?? `upload HTTP ${up.status}` };
+    return await respostaDoEnvio(await chamar({ recipient_type: 'individual', to: para, type: 'audio', audio: { id: j.id, voice: true } }));
+  } catch (e) {
+    return { ok: false, erro: e instanceof Error ? e.message : 'falha de rede' };
+  }
+}
+
+/** Manda a versão falada antes da mensagem (só no contexto de voz). Devolve o envio do áudio ou null. */
+async function falarAntes(para: string, texto: string): Promise<ResultadoDoEnvio | null> {
+  if (!falaCom(para)) return null;
+  const ogg = await falar(texto);
+  if (!ogg) return null;
+  const r = await enviarVoz(para, ogg);
+  if (!r.ok) console.error('[voz] envio falhou', r.erro);
+  return r.ok ? r : null;
+}
+
 export async function enviarTexto(para: string, texto: string): Promise<ResultadoDoEnvio> {
   if (!whatsappConfigurado()) return { ok: false, erro: 'WhatsApp não configurado' };
+  const voz = await falarAntes(para, texto);
+  // Sem link, o áudio basta (o Arthur ouve como uma pessoa falando); com link, o texto segue para ele tocar.
+  if (voz && !/https?:\/\//.test(texto)) return voz;
   try {
     const r = await chamar({ recipient_type: 'individual', to: para, type: 'text', text: { body: texto, preview_url: true } });
     const j = (await r.json()) as { messages?: { id: string }[]; error?: { message?: string } };
@@ -68,6 +121,7 @@ async function respostaDoEnvio(r: Response): Promise<ResultadoDoEnvio> {
  */
 export async function enviarComLink(para: string, texto: string, url: string, rotulo: string): Promise<ResultadoDoEnvio> {
   if (!whatsappConfigurado()) return { ok: false, erro: 'WhatsApp não configurado' };
+  await falarAntes(para, texto);
   try {
     return await respostaDoEnvio(
       await chamar({
@@ -90,6 +144,7 @@ export async function enviarComOpcoes(para: string, texto: string, opcoes: strin
   // ids: ação de cada botão (ex.: "desc:ok:<id>"), que volta no webhook em botaoId (decisões do Arthur, 0095).
   const id = (i: number) => ids?.[i]?.slice(0, 256) || `op${i}`;
   if (!whatsappConfigurado()) return { ok: false, erro: 'WhatsApp não configurado' };
+  await falarAntes(para, texto);
   const corpo = { text: texto.slice(0, 1024) };
   const interactive =
     opcoes.length <= 3
