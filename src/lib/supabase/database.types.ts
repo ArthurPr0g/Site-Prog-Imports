@@ -1738,6 +1738,63 @@ export type Database = {
         }
         Relationships: []
       }
+      negociacao_sessoes: {
+        Row: {
+          id: string
+          criado_em: string
+          atualizado_em: string
+          expira_em: string
+          dono: string
+          status: string
+          pedido: string | null
+          nome_falado: string | null
+          candidatos: Json | null
+          lead_id: string | null
+          conversation_id: string | null
+          conteudo: string | null
+          ultima_parte_em: string | null
+          mensagens: string[]
+          resultado: Json | null
+          erro: string | null
+        }
+        Insert: {
+          id?: string
+          criado_em?: string
+          atualizado_em?: string
+          expira_em?: string
+          dono: string
+          status?: string
+          pedido?: string | null
+          nome_falado?: string | null
+          candidatos?: Json | null
+          lead_id?: string | null
+          conversation_id?: string | null
+          conteudo?: string | null
+          ultima_parte_em?: string | null
+          mensagens?: string[]
+          resultado?: Json | null
+          erro?: string | null
+        }
+        Update: {
+          id?: string
+          criado_em?: string
+          atualizado_em?: string
+          expira_em?: string
+          dono?: string
+          status?: string
+          pedido?: string | null
+          nome_falado?: string | null
+          candidatos?: Json | null
+          lead_id?: string | null
+          conversation_id?: string | null
+          conteudo?: string | null
+          ultima_parte_em?: string | null
+          mensagens?: string[]
+          resultado?: Json | null
+          erro?: string | null
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           briefing: Json
@@ -1797,6 +1854,7 @@ export type Database = {
           replied_at: string | null
           responsible_name: string | null
           asaas_customer_id: string | null
+          atualizacoes_do_dono: Json | null
           closed_value: number | null
           closed_monthly: number | null
           closed_currency: string | null
@@ -1871,6 +1929,7 @@ export type Database = {
           replied_at?: string | null
           responsible_name?: string | null
           asaas_customer_id?: string | null
+          atualizacoes_do_dono?: Json | null
           closed_value?: number | null
           closed_monthly?: number | null
           closed_currency?: string | null
@@ -1945,6 +2004,7 @@ export type Database = {
           replied_at?: string | null
           responsible_name?: string | null
           asaas_customer_id?: string | null
+          atualizacoes_do_dono?: Json | null
           closed_value?: number | null
           closed_monthly?: number | null
           closed_currency?: string | null

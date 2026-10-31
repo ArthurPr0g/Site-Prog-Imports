@@ -17,6 +17,7 @@ import { baixarMidia, enviarComOpcoes, enviarTexto, JANELA_MS, type MensagemRece
 import { enviarModeloAoCliente } from './modelos';
 import { transcrever, transcricaoConfigurada } from './transcricao';
 import { tratarEncomenda } from './encomenda';
+import { tratarNegociacao } from './negociacao';
 import { rotuloDoAgente, pedirAoAgente, pedidoDeVistoria, pedidoParaOAgente, type ChaveDoAgente } from '@/lib/agentes/time';
 
 /** "Claude, ..." / "prompt: ..." / "para o Claude: ..." no começo da mensagem. No áudio, o Whisper
@@ -144,7 +145,7 @@ export async function mandarCodigoDasIdeias(db: DbDoAtendente, para: string): Pr
 }
 
 /** Grava a mensagem do Arthur como ideia/prompt e responde no WhatsApp. */
-export async function anotarDoDono(db: DbDoAtendente, m: MensagemRecebida): Promise<void> {
+export async function anotarDoDono(db: DbDoAtendente, m: MensagemRecebida, opcoes: { semNegociacao?: boolean } = {}): Promise<void> {
   let bruto = m.texto?.trim() ?? '';
   let origem: 'whatsapp' | 'whatsapp_audio' = 'whatsapp';
   if (m.midia?.tipo === 'audio') {
@@ -184,6 +185,8 @@ export async function anotarDoDono(db: DbDoAtendente, m: MensagemRecebida): Prom
       return;
     }
   }
+  // "Atualiza a negociação do Matheus" / relato da reunião (0112): sessão própria, antes do "Lia, ..." do encomenda.
+  if (!opcoes.semNegociacao && bruto && !m.reacao && (await tratarNegociacao(db, m, bruto, origem))) return;
   // Contato de cliente ou "Lia, faça todo o projeto..." (0093): a Lia chama a pessoa, não vira ideia.
   if (bruto && !m.reacao && (await tratarEncomenda(db, m.de, bruto))) return;
   // Foto/arquivo sem legenda, figurinha, reação: não há o que anotar.

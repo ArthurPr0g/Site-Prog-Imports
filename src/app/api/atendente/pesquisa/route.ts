@@ -4,6 +4,7 @@ import { lerConfig } from '@/lib/atendente/agente';
 import { pesquisarProximo } from '@/lib/atendente/pesquisa';
 import { baterRelogio, verificarSaude } from '@/lib/atendente/saude';
 import { passoDoEnsaio } from '@/lib/atendente/ensaio-semanal';
+import { processarRelatosParados } from '@/lib/atendente/negociacao';
 
 // Relógio da pesquisa do lead (migration 0095): o pg_cron chama a cada 2 min com o segredo do relógio.
 // Responde na hora (o pg_net espera só 5 s) e pesquisa depois, em segundo plano: a busca web leva de 30 s
@@ -24,6 +25,8 @@ export async function POST(req: NextRequest) {
     await verificarSaude(db, cfg, 'pesquisa');
     await pesquisarProximo(db, cfg);
     await passoDoEnsaio(db, cfg);
+    // Relato de reunião do Arthur que ficou sem processar (0112): rede de segurança do webhook.
+    await processarRelatosParados(db);
   });
   return NextResponse.json({ ok: true });
 }

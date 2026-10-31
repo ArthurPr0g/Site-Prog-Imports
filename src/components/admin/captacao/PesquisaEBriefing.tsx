@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { pesquisaEBriefingAction, type PesquisaDoPainel } from '@/app/actions/projeto';
+import { LEAD_STATUS_LABEL, type LeadStatus } from '@/lib/captacao';
 
 const SITUACAO: Record<string, string> = { a_confirmar: '❔ a confirmar', confirmado: '✅ confirmado', corrigido: '✏️ corrigido', descartado: '❌ não é' };
 const PAGAMENTO: Record<string, string> = {
@@ -24,10 +25,56 @@ export function PesquisaEBriefing({ leadId }: { leadId: string }) {
       vivo = false;
     };
   }, [leadId]);
-  if (!d || (!d.status && !d.itens.length && !Object.keys(d.briefing).length && !d.financeiro)) return null;
+  if (!d || (!d.status && !d.itens.length && !Object.keys(d.briefing).length && !d.financeiro && !d.atualizacoes.length)) return null;
+  const etapa = (e: string | null) => (e ? (LEAD_STATUS_LABEL[e as LeadStatus] ?? e) : '—');
 
   return (
     <div className="space-y-2 rounded-[10px] border border-border px-3 py-2 text-[12.5px] leading-snug">
+      {d.atualizacoes.length > 0 && (
+        <details open>
+          <summary className="cursor-pointer font-bold">🗓️ Atualização do dono (reuniões)</summary>
+          <ul className="mt-1 space-y-2">
+            {d.atualizacoes.map((a, k) => (
+              <li key={k}>
+                <div className="text-fg-tertiary">
+                  {new Date(a.em).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  {a.etapa_depois && a.etapa_depois !== a.etapa_antes ? ` · etapa ${etapa(a.etapa_antes)} → ${etapa(a.etapa_depois)}` : ''}
+                </div>
+                <p className="whitespace-pre-line">{a.resumo}</p>
+                {a.escopo && (
+                  <div>
+                    <b>Escopo:</b> {a.escopo}
+                  </div>
+                )}
+                {(a.orcamento || a.prazo) && (
+                  <div>
+                    {a.orcamento && (
+                      <>
+                        <b>Orçamento:</b> {a.orcamento}{' '}
+                      </>
+                    )}
+                    {a.prazo && (
+                      <>
+                        <b>Prazo:</b> {a.prazo}
+                      </>
+                    )}
+                  </div>
+                )}
+                {a.decisoes?.length > 0 && (
+                  <div>
+                    <b>Decisões:</b> {a.decisoes.join(' · ')}
+                  </div>
+                )}
+                {a.proximos_passos?.length > 0 && (
+                  <div>
+                    <b>Próximos passos:</b> {a.proximos_passos.map((p) => `${p.quem}: ${p.o_que}${p.quando ? ` (${p.quando})` : ''}`).join(' · ')}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       {d.financeiro && (
         <div>
           <b>💰 Financeiro:</b> {d.financeiro.pagamento ? PAGAMENTO[d.financeiro.pagamento] : 'ainda não informado'}

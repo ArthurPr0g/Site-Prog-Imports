@@ -928,7 +928,7 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
 export const INSTAGRAM_DA_PROG = '@prog.arthur';
 const SO_PARA_VENDA_DE_PACOTE = new Set(['calcular_preco', 'enviar_proposta_pdf', 'pedir_desconto_extra']);
 
-const CAMPOS_DO_BRIEFING = new Map<string, string>([
+export const CAMPOS_DO_BRIEFING = new Map<string, string>([
   ['empresa_ou_ocupacao', 'Nome da empresa; se não tiver empresa, a ocupação em 1 a 3 palavras (ex.: "Clínica Sorriso", "Personal Trainer"). Vira o nome do projeto: "Pessoa - Empresa"'],
   ['instagram', 'Instagram que mais ajuda a criar o site (o da empresa ou o profissional da pessoa): @ ou link'],
   ['negocio', 'O negócio: o que faz, há quanto tempo, como funciona hoje'],
@@ -948,7 +948,7 @@ const CAMPOS_DO_BRIEFING = new Map<string, string>([
   ['observacoes', 'Qualquer outra coisa importante'],
 ]);
 
-const LISTAS_DO_BRIEFING = new Set(['funcoes', 'telas_ou_paginas', 'perfis_de_usuario', 'referencias', 'integracoes']);
+export const LISTAS_DO_BRIEFING = new Set(['funcoes', 'telas_ou_paginas', 'perfis_de_usuario', 'referencias', 'integracoes']);
 
 const FERRAMENTA_BRIEFING: Anthropic.Beta.BetaTool = {
   name: 'registrar_briefing',

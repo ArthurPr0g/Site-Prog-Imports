@@ -21,7 +21,8 @@ import { kitDoVendedor, textoDaFila, relatorioDoVendedor, PEDIDO_DE_FILA, PEDIDO
 // (after), esperando uns segundos: se o cliente mandar várias mensagens
 // seguidas, só a última dispara a resposta.
 
-export const maxDuration = 60;
+// 300: o relato da reunião (negociacao.ts) espera 1 min de silêncio e depois a IA processa.
+export const maxDuration = 300;
 
 const ESPERA_MS = 7000;
 
@@ -77,7 +78,8 @@ export async function POST(req: NextRequest) {
           await marcarLidaEDigitando(m.id);
           await tratarDecisao(db, m);
         });
-      } else if (PEDIDO_DE_RELATORIO.test(m.texto)) {
+      } else if (m.texto.length <= 120 && PEDIDO_DE_RELATORIO.test(m.texto)) {
+        // Só mensagem curta: um relato de reunião colado que cite "andamento" não pode virar o relatório.
         // "relatório" / "como está a captação?": responde ao dono com funil, meta e custo da IA.
         const para = m.de;
         after(async () => {

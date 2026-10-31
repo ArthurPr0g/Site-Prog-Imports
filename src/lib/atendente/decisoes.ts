@@ -8,6 +8,7 @@
 //   conv:assumir|lia:<conversa>       cliente chamou o Arthur
 //   proj:<chave>|outro:<ideia>        projeto de um pedido "Claude, ..." (0100)
 //   ind:sim|gratis|nao:<lead>         contato novo disse que foi indicado pelo Arthur (0107)
+//   neg:<ação>:<sessão>               atualizar a negociação de um cliente (0112, negociacao.ts)
 
 import type { DbDoAtendente } from './db';
 import { enviarTexto, type MensagemRecebida } from './whatsapp-api';
@@ -15,8 +16,9 @@ import { abrirProjetoDeCortesia, decidirEncomenda, decidirFinanceiro, responderD
 import { SITE_URL } from '@/lib/seo';
 import { responderConversa } from './agente';
 import { escolherProjeto } from './ideias';
+import { decidirNegociacao } from './negociacao';
 
-const ACAO = /^(enc|duv|pag|pagou|desc|conv|proj|ind):([a-z]+):([0-9a-f-]{36})$/;
+const ACAO = /^(enc|duv|pag|pagou|desc|conv|proj|ind|neg):([a-z]+):([0-9a-f-]{36})$/;
 
 export const ehDecisao = (m: MensagemRecebida) => !!m.botaoId && ACAO.test(m.botaoId);
 
@@ -28,6 +30,8 @@ export async function tratarDecisao(db: DbDoAtendente, m: MensagemRecebida): Pro
       return decidirEncomenda(db, id, valor === 'ok', de);
     case 'proj':
       return escolherProjeto(db, id, valor, null, de);
+    case 'neg':
+      return decidirNegociacao(db, valor, id, de);
     case 'duv':
       return responderDuvida(db, id, { letra: valor }, de);
     case 'pag':

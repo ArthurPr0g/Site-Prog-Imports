@@ -17,13 +17,27 @@ export type PesquisaDoPainel = {
   itens: { campo: string; valor: string; fonte?: string; situacao?: string; correcao?: string }[];
   briefing: Record<string, string | string[]>;
   financeiro: { pagamento: string | null; pagoOnde: string | null; valorTotal: number | null; asaas: string | null } | null;
+  /** Resumos das reuniões que o Arthur contou à Lia pelo WhatsApp (0112), do mais novo ao mais antigo. */
+  atualizacoes: AtualizacaoDoDono[];
+};
+
+export type AtualizacaoDoDono = {
+  em: string;
+  resumo: string;
+  escopo: string | null;
+  orcamento: string | null;
+  prazo: string | null;
+  decisoes: string[];
+  proximos_passos: { quem: string; o_que: string; quando?: string }[];
+  etapa_antes: string | null;
+  etapa_depois: string | null;
 };
 
 export async function pesquisaEBriefingAction(leadId: string): Promise<PesquisaDoPainel | null> {
   const supabase = await adminClient();
   if (!supabase) return null;
   const [{ data: l }, { data: e }] = await Promise.all([
-    supabase.from('leads').select('pesquisa, pesquisa_status, briefing').eq('id', leadId).maybeSingle(),
+    supabase.from('leads').select('pesquisa, pesquisa_status, briefing, atualizacoes_do_dono').eq('id', leadId).maybeSingle(),
     supabase
       .from('encomendas')
       .select('pagamento, pago_onde, valor_total, asaas_resumo')
@@ -41,6 +55,7 @@ export async function pesquisaEBriefingAction(leadId: string): Promise<PesquisaD
     itens: p?.itens ?? [],
     briefing: (l.briefing ?? {}) as Record<string, string | string[]>,
     financeiro: e ? { pagamento: e.pagamento, pagoOnde: e.pago_onde, valorTotal: e.valor_total, asaas: e.asaas_resumo } : null,
+    atualizacoes: (Array.isArray(l.atualizacoes_do_dono) ? (l.atualizacoes_do_dono as unknown as AtualizacaoDoDono[]) : []).slice().reverse(),
   };
 }
 
