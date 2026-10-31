@@ -45,7 +45,7 @@ export async function transcrever(dados: Buffer, mime: string): Promise<string |
 
 export type SegmentoTranscrito = { inicio: number; fim: number; texto: string };
 export type Transcrito =
-  | { ok: true; texto: string; segmentos: SegmentoTranscrito[]; segundos: number }
+  | { ok: true; texto: string; segmentos: SegmentoTranscrito[]; palavras: SegmentoTranscrito[]; segundos: number }
   | { ok: false; limite: true; esperarSeg: number }
   | { ok: false; limite: false };
 
@@ -62,7 +62,9 @@ export async function transcreverComTempo(dados: Buffer, mime: string, dica?: st
   form.append('file', new Blob([new Uint8Array(dados)], { type: mime || 'audio/webm' }), mime.includes('ogg') ? 'audio.ogg' : 'audio.webm');
   form.append('model', process.env.TRANSCRICAO_MODELO || MODELO_PADRAO);
   form.append('response_format', 'verbose_json');
+  // Segmentos e palavras: um trecho curto costuma vir num segmento só; as palavras dizem onde a voz trocou.
   form.append('timestamp_granularities[]', 'segment');
+  form.append('timestamp_granularities[]', 'word');
   form.append('language', 'pt');
   form.append('prompt', `Prog Soluções, Arthur, site, sistema, loja virtual, proposta, sinal, Pix. ${dica ?? ''}`.slice(0, 600));
   try {
@@ -80,12 +82,20 @@ export async function transcreverComTempo(dados: Buffer, mime: string, dica?: st
       console.error('[reunioes] transcrição falhou', r.status, (await r.text()).slice(0, 300));
       return { ok: false, limite: false };
     }
-    const j = (await r.json()) as { text?: string; duration?: number; segments?: { start?: number; end?: number; text?: string; no_speech_prob?: number }[] };
+    const j = (await r.json()) as {
+      text?: string;
+      duration?: number;
+      segments?: { start?: number; end?: number; text?: string; no_speech_prob?: number }[];
+      words?: { word?: string; start?: number; end?: number }[];
+    };
     const segmentos = (j.segments ?? [])
       // Segmento que o próprio Whisper acha que é silêncio: costuma ser frase inventada.
       .filter((s) => (s.text ?? '').trim() && (s.no_speech_prob ?? 0) < 0.8)
       .map((s) => ({ inicio: Number(s.start ?? 0), fim: Number(s.end ?? s.start ?? 0), texto: String(s.text).trim() }));
-    return { ok: true, texto: (j.text ?? '').trim(), segmentos, segundos: Number(j.duration ?? 0) };
+    const palavras = (j.words ?? [])
+      .filter((w) => (w.word ?? '').trim())
+      .map((w) => ({ inicio: Number(w.start ?? 0), fim: Number(w.end ?? w.start ?? 0), texto: String(w.word).trim() }));
+    return { ok: true, texto: (j.text ?? '').trim(), segmentos, palavras, segundos: Number(j.duration ?? 0) };
   } catch (e) {
     console.error('[reunioes] transcrição falhou', e);
     return { ok: false, limite: false };

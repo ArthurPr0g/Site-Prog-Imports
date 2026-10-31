@@ -146,9 +146,13 @@ export function lerEnergia(bruto: unknown): [number, number][] {
   }
 }
 
-/** Trechos de uma fatia transcrita (ao vivo ou no fim, com os pendentes). */
+/**
+ * Trechos de uma fatia transcrita (ao vivo ou no fim, com os pendentes). Com as palavras e o tempo de cada uma,
+ * quem falou é decidido palavra a palavra (energia de 0,3 s em volta) e trocas de 1 palavra só são ignoradas
+ * (ruído); sem palavras, vale segmento a segmento.
+ */
 export function trechosTranscritos(
-  res: { texto: string; segmentos: { inicio: number; fim: number; texto: string }[] },
+  res: { texto: string; segmentos: { inicio: number; fim: number; texto: string }[]; palavras?: { inicio: number; fim: number; texto: string }[] },
   energia: [number, number][],
   t: number,
   quemFixo: Trecho['quem'] | null,
@@ -156,6 +160,32 @@ export function trechosTranscritos(
   const segmentos = res.segmentos.filter((s) => !ALUCINACAO.test(s.texto));
   if (quemFixo && !energia.length)
     return segmentos.length ? [{ quem: quemFixo, t: Math.round(t), texto: segmentos.map((s) => s.texto).join(' ').slice(0, 4000) }] : [];
+  const palavras = res.palavras ?? [];
+  if (palavras.length && energia.length && segmentos.length) {
+    let anterior: Trecho['quem'] | null = null;
+    const corridas: { quem: Trecho['quem']; inicio: number; fim: number; palavras: string[] }[] = [];
+    for (const w of palavras) {
+      const quem = quemFalou(energia, Math.max(0, w.inicio - 0.3), w.fim + 0.3, anterior);
+      anterior = quem;
+      const u = corridas.at(-1);
+      if (u && u.quem === quem) {
+        u.palavras.push(w.texto);
+        u.fim = w.fim;
+      } else corridas.push({ quem, inicio: w.inicio, fim: w.fim, palavras: [w.texto] });
+    }
+    // Troca de uma palavra só no meio da fala de alguém: fica com quem estava falando.
+    const limpas: typeof corridas = [];
+    for (const c of corridas) {
+      const u = limpas.at(-1);
+      if (u && (c.palavras.length < 2 || u.quem === c.quem)) {
+        u.palavras.push(...c.palavras);
+        u.fim = c.fim;
+      } else limpas.push({ ...c, palavras: [...c.palavras] });
+    }
+    return limpas
+      .map((c) => ({ quem: c.quem, t: Math.round(t + c.inicio), texto: c.palavras.join(' ').replace(/\s+([,.!?;:])/g, '$1').slice(0, 4000) }))
+      .filter((x) => x.texto && !ALUCINACAO.test(x.texto));
+  }
   const r = trechosDaFatia(segmentos, energia, t);
   // Sem segmentos (alguns provedores não mandam): o texto todo, do lado com mais energia.
   if (!r.length && res.texto && !ALUCINACAO.test(res.texto)) return trechosDaFatia([{ inicio: 0, fim: 15, texto: res.texto }], energia, t);

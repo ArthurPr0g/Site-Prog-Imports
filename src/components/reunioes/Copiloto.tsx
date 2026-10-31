@@ -35,7 +35,10 @@ export function Copiloto({
   }, []);
   const vivos = baloesVivos(baloes, agora);
   const resumo = vivos.find((b) => b.tipo === 'resumo');
-  const outros = vivos.filter((b) => b.tipo !== 'resumo').sort((a, b) => b.em.localeCompare(a.em));
+  // Mais novos primeiro; das perguntas, só as 3 mais recentes (a coluna não vira lista).
+  const ordem = vivos.filter((b) => b.tipo !== 'resumo').sort((a, b) => b.em.localeCompare(a.em));
+  const perguntas = ordem.filter((b) => b.tipo === 'pergunta').slice(0, 3).map((b) => b.id);
+  const outros = ordem.filter((b) => b.tipo !== 'pergunta' || perguntas.includes(b.id));
 
   return (
     <section className="rounded-[20px] border border-white/[0.09] bg-[linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015))] p-4">
