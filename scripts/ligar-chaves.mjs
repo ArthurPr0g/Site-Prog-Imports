@@ -4,6 +4,7 @@
 //   node scripts/ligar-chaves.mjs asaas     -> ASAAS_API_KEY (produção) + ASAAS_AMBIENTE=producao + webhook novo
 //   node scripts/ligar-chaves.mjs google    -> GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET
 //   node scripts/ligar-chaves.mjs elevenlabs -> ELEVENLABS_API_KEY (voz da Lia)
+//   node scripts/ligar-chaves.mjs daily      -> DAILY_API_KEY (sala de reunião, progsolucoes.daily.co)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { createInterface } from 'node:readline';
@@ -73,8 +74,19 @@ if (qual === 'asaas') {
     process.exit(1);
   }
   gravar('ELEVENLABS_API_KEY', chave);
+} else if (qual === 'daily') {
+  // Sala de reunião da Prog Soluções (31/10/2026): Daily (videochamada). Confere a chave antes de gravar.
+  console.log('\nDaily (sala de reunião)');
+  console.log('No painel da Daily: Developers > API key. Copie e cole aqui.\n');
+  const chave = await perguntar('Cole a API key da Daily e aperte Enter: ', true);
+  const r = await fetch('https://api.daily.co/v1/', { headers: { Authorization: `Bearer ${chave}` } }).catch(() => null);
+  if (!r || !r.ok) {
+    console.log(`\nA Daily recusou essa chave (${r ? r.status : 'sem conexão'}). Confira se copiou inteira. Nada foi gravado.`);
+    process.exit(1);
+  }
+  gravar('DAILY_API_KEY', chave);
 } else {
-  console.log('Uso: node scripts/ligar-chaves.mjs asaas | google | elevenlabs');
+  console.log('Uso: node scripts/ligar-chaves.mjs asaas | google | elevenlabs | daily');
   process.exit(1);
 }
 console.log('\nPronto. Avise o Claude no chat: "gravei". Ele publica de novo para a Vercel usar as chaves novas.');
