@@ -188,6 +188,12 @@ export function CaptacaoPanel({
   // Ficha completa (a mesma do vendedor). Guarda o id: depois de salvar, a
   // atualização da página traz o lead novo e a ficha mostra na hora.
   const [fichaDe, setFichaDe] = useState<string | null>(null);
+  // Link da Pré-venda: ?lead=<id> abre a ficha desse lead. O endereço só existe no navegador.
+  useEffect(() => {
+    const pedido = new URLSearchParams(window.location.search).get('lead');
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- o endereço só existe no navegador
+    if (pedido) setFichaDe(pedido);
+  }, []);
   const [editandoModelos, setEditandoModelos] = useState(false);
 
   // Para hoje: retorno marcado à mão ou etapa da sequência vencida.

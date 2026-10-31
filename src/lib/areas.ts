@@ -10,6 +10,7 @@ export const ROTAS_DA_PROG_SOLUCOES = [
   '/admin/reunioes',
   '/admin/vendedores',
   '/admin/lia',
+  '/admin/pre-venda',
   '/admin/pos-venda',
   '/admin/gastos',
   '/admin/time',

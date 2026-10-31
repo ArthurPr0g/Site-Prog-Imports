@@ -33,6 +33,7 @@ import {
   Magnet,
   ClipboardCheck,
   PiggyBank,
+  Handshake,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { ehDaProgSolucoes } from '@/lib/areas';
@@ -119,6 +120,7 @@ const NAV_SOLUCOES: NavGroup[] = [
       { href: '/admin/atendimento', label: 'Atendimento', Icon: MessagesSquare },
       { href: '/admin/reunioes', label: 'Reuniões', Icon: Video },
       { href: '/admin/vendedores', label: 'Vendedores', Icon: UserRoundCheck },
+      { href: '/admin/pre-venda', label: 'Pré-venda', Icon: Handshake },
       { href: '/admin/pos-venda', label: 'Pós-venda', Icon: ClipboardCheck },
     ],
   },

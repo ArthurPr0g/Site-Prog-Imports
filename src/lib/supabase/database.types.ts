@@ -801,6 +801,77 @@ export type Database = {
         }
         Relationships: []
       }
+      prevenda: {
+        Row: {
+          briefing_url: string | null
+          created_at: string
+          desconto: number | null
+          design_system_url: string | null
+          lead_id: string
+          observacoes: string | null
+          passos: Json
+          pasta: string | null
+          pendencias: Json
+          prazo_prometido: string | null
+          proposta_enviada_em: string | null
+          proposta_url: string | null
+          prototipo_url: string | null
+          proximo_passo: string | null
+          proximo_prazo: string | null
+          proximo_responsavel: string | null
+          updated_at: string
+          valor_proposta: number | null
+        }
+        Insert: {
+          briefing_url?: string | null
+          created_at?: string
+          desconto?: number | null
+          design_system_url?: string | null
+          lead_id: string
+          observacoes?: string | null
+          passos?: Json
+          pasta?: string | null
+          pendencias?: Json
+          prazo_prometido?: string | null
+          proposta_enviada_em?: string | null
+          proposta_url?: string | null
+          prototipo_url?: string | null
+          proximo_passo?: string | null
+          proximo_prazo?: string | null
+          proximo_responsavel?: string | null
+          updated_at?: string
+          valor_proposta?: number | null
+        }
+        Update: {
+          briefing_url?: string | null
+          created_at?: string
+          desconto?: number | null
+          design_system_url?: string | null
+          lead_id?: string
+          observacoes?: string | null
+          passos?: Json
+          pasta?: string | null
+          pendencias?: Json
+          prazo_prometido?: string | null
+          proposta_enviada_em?: string | null
+          proposta_url?: string | null
+          prototipo_url?: string | null
+          proximo_passo?: string | null
+          proximo_prazo?: string | null
+          proximo_responsavel?: string | null
+          updated_at?: string
+          valor_proposta?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prevenda_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projetos: {
         Row: {
           site_url: string | null

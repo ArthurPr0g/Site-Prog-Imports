@@ -10,7 +10,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import {
   Bell, Bot, Brain, Check, Cloud, CodeXml, Copy, Eye, FlaskConical, FolderOpen, Hammer, LayoutDashboard, MessageCircle,
   Mic, Palette, Pause, PenTool, Play, RotateCcw, Rocket, Search, ShieldCheck, Smartphone, Sparkles, UserRound, Users,
-  Wallet, Workflow, Wrench, Zap,
+  Wallet, Workflow, Wrench, Zap, Handshake,
 } from 'lucide-react';
 
 type Icone = typeof Bot;
@@ -237,6 +237,7 @@ const FUNCOES: Funcao[] = [
   { grupo: 'painel', Icon: MessageCircle, titulo: 'Atendimento', texto: 'Conversas da Lia: busca, filtros (precisam de você, esperando a Lia, contatos novos), assumir, orientar e excluir testes.', href: '/admin/atendimento' },
   { grupo: 'painel', Icon: Users, titulo: 'Vendedores', texto: 'Links dos vendedores e os leads de cada um.', href: '/admin/vendedores' },
   { grupo: 'painel', Icon: Bot, titulo: 'Lia', texto: 'Situação, teste no simulador, lições aprendidas, modelos da Meta e configuração da atendente.', href: '/admin/lia' },
+  { grupo: 'painel', Icon: Handshake, titulo: 'Pré-venda', texto: 'Quem está sendo contatado ou negociando: trilha de passos, pendências do cliente, links, valores e alertas de prazo.', href: '/admin/pre-venda' },
   { grupo: 'painel', Icon: Workflow, titulo: 'Pós-venda', texto: 'Projetos, rodadas de ajuste, reuniões, pasta do código e site publicado.', href: '/admin/pos-venda' },
   { grupo: 'painel', Icon: Wallet, titulo: 'Gastos', texto: 'Quanto custa a operação e cada venda, com os valores editáveis.', href: '/admin/gastos' },
   { grupo: 'painel', Icon: Hammer, titulo: 'Prestação de serviço', texto: 'Cada venda paga vira um projeto em andamento aqui.', href: '/admin/prestacao-servico' },
