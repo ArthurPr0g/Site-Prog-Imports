@@ -13,7 +13,8 @@ import type { DbDoAtendente } from './db';
 import { custoDaChamada, type ConfigDoAtendente } from './regras';
 import { avisarArthur } from './avisos';
 import { buscarCotacaoMercado } from '@/lib/usd-rate';
-import { baixarMidia, enviarComOpcoes, enviarTexto, JANELA_MS, type MensagemRecebida } from './whatsapp-api';
+import { baixarMidia, enviarComOpcoes, enviarTexto, enviarVoz, semVoz, JANELA_MS, type MensagemRecebida } from './whatsapp-api';
+import { ehTesteDeVoz, falaDoTesteDeVoz, falar } from './voz';
 import { enviarModeloAoCliente } from './modelos';
 import { transcrever, transcricaoConfigurada } from './transcricao';
 import { tratarEncomenda } from './encomenda';
@@ -166,6 +167,15 @@ export async function anotarDoDono(db: DbDoAtendente, m: MensagemRecebida, opcoe
   // "Mandei errado, desconsidere" (30/10/2026): arquiva a última anotação dos últimos 30 min em vez de anotar o aviso.
   if (!m.reacao && pedeParaDesconsiderar(bruto)) {
     await desconsiderarUltima(db, m.de);
+    return;
+  }
+  // "Lia, só um teste para você responder com mensagem de voz" (31/10/2026): áudio brincalhão + o texto.
+  // O texto vai fora do modo voz (senão a fala normal sairia duplicada por cima do áudio especial).
+  if (!m.reacao && ehTesteDeVoz(bruto)) {
+    const { fala, texto } = falaDoTesteDeVoz();
+    const ogg = await falar(fala, true);
+    if (ogg) await enviarVoz(m.de, ogg);
+    await semVoz(() => enviarTexto(m.de, ogg ? texto : `${texto}\n\n(A voz não saiu agora: confira a chave do ElevenLabs.)`));
     return;
   }
   // Resposta (o "Responder" do WhatsApp) a um aviso de pedido concluído: continua aquele pedido (0109).

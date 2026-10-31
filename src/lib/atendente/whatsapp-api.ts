@@ -56,6 +56,11 @@ export function comVozPara<T>(numero: string, fn: () => Promise<T>, modo: ModoDo
   return vozDoDono.run({ fim8: fim8(numero), modo }, fn);
 }
 
+/** Sai do modo voz (para mandar só o texto quando o áudio já foi feito à parte, como no teste de voz). */
+export function semVoz<T>(fn: () => Promise<T>): Promise<T> {
+  return vozDoDono.exit(fn);
+}
+
 /** Valor, número, data ou link: coisa que o cliente precisa poder reler, então o texto acompanha o áudio. */
 const precisaEscrito = (texto: string) => /https?:\/\/|R\$|US\$|\d/.test(texto);
 
