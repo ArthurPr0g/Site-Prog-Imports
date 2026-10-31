@@ -9,10 +9,9 @@
 import type { DbDoAtendente } from '@/lib/atendente/db';
 import { URL_PUBLICA } from '@/lib/seo';
 
-// Eventos: ler a agenda para achar os horários livres e criar a reunião.
-// drive.file (31/10/2026, sala de reunião): só os arquivos que o próprio sistema cria no Drive (as gravações);
-// não dá acesso ao resto do Drive do Arthur.
-const ESCOPO = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file';
+// Só eventos: ler a agenda para achar os horários livres e criar a reunião.
+// (As gravações da sala de reunião vão para o OneDrive pela pasta sincronizada no PC, não pelo Google Drive.)
+const ESCOPO = 'https://www.googleapis.com/auth/calendar.events';
 const CHAVE = 'google_agenda';
 // Com www (30/10/2026): é o endereço cadastrado no cliente OAuth do Google e onde fica a sessão do painel.
 export const REDIRECT = `${URL_PUBLICA}/api/google/retorno`;
