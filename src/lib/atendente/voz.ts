@@ -3,7 +3,8 @@
 //
 // O ElevenLabs devolve Ogg/Opus mono 48 kHz (output_format opus_48000_*), que é exatamente o formato que a
 // Meta exige para mensagem de voz (voice: true), então não precisa de ffmpeg na Vercel. Conferido em 31/10.
-// Clientes continuam em texto: a voz é só para o número do Arthur.
+// Desde 31/10 também para clientes: quem manda áudio recebe áudio (agente.ts, modo 'quando-preciso').
+// A voz é natural, mas a Lia continua sem dizer que é pessoa: confirma que é assistente se perguntarem.
 
 const VOZ_PADRAO = 'RGymW84CSmfVugnA5tvA'; // Roberta - Smooth and Confident (pt-BR)
 const MODELO = 'eleven_multilingual_v2';

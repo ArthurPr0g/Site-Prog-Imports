@@ -45,12 +45,19 @@ async function chamar(corpo: Record<string, unknown>): Promise<Response> {
 // Quando o Arthur manda ÁUDIO, o webhook roda a resposta dentro de `comVozPara(numero, ...)`: tudo o que for
 // enviado a esse número nesse meio-tempo sai também como mensagem de voz (voz da Roberta, ver voz.ts).
 // O áudio vai antes e a mensagem escrita sempre continua logo depois (para ler quando não der para ouvir).
-const vozDoDono = new AsyncLocalStorage<{ fim8: string }>();
+// Cliente (31/10/2026, o Arthur ligou a voz para eles): quando o CLIENTE manda áudio, a Lia responde em áudio.
+// Para o cliente o modo é 'quando-preciso': o texto só acompanha se tiver valor, número ou link (para reler);
+// para o Arthur é 'sempre'. Botões e links interativos sempre vão escritos (precisam ser tocados).
+type ModoDoTexto = 'sempre' | 'quando-preciso';
+const vozDoDono = new AsyncLocalStorage<{ fim8: string; modo: ModoDoTexto }>();
 const fim8 = (n: string) => n.replace(/\D/g, '').slice(-8);
 
-export function comVozPara<T>(numero: string, fn: () => Promise<T>): Promise<T> {
-  return vozDoDono.run({ fim8: fim8(numero) }, fn);
+export function comVozPara<T>(numero: string, fn: () => Promise<T>, modo: ModoDoTexto = 'sempre'): Promise<T> {
+  return vozDoDono.run({ fim8: fim8(numero), modo }, fn);
 }
+
+/** Valor, número, data ou link: coisa que o cliente precisa poder reler, então o texto acompanha o áudio. */
+const precisaEscrito = (texto: string) => /https?:\/\/|R\$|US\$|\d/.test(texto);
 
 const falaCom = (para: string) => {
   const c = vozDoDono.getStore();
@@ -79,18 +86,20 @@ export async function enviarVoz(para: string, ogg: Buffer): Promise<ResultadoDoE
 }
 
 /** Manda a versão falada antes da mensagem (só no contexto de voz). Se falhar, a mensagem escrita segue igual. */
-async function falarAntes(para: string, texto: string): Promise<void> {
-  if (!falaCom(para)) return;
+async function falarAntes(para: string, texto: string): Promise<ResultadoDoEnvio | null> {
+  if (!falaCom(para)) return null;
   const ogg = await falar(texto);
-  if (!ogg) return;
+  if (!ogg) return null;
   const r = await enviarVoz(para, ogg);
   if (!r.ok) console.error('[voz] envio falhou', r.erro);
+  return r.ok ? r : null;
 }
 
 export async function enviarTexto(para: string, texto: string): Promise<ResultadoDoEnvio> {
   if (!whatsappConfigurado()) return { ok: false, erro: 'WhatsApp não configurado' };
-  // O áudio vai antes e o texto sempre segue (pedido do Arthur, 31/10/2026: para ler quando não der para ouvir).
-  await falarAntes(para, texto);
+  // O áudio vai antes e o texto segue (para o Arthur, sempre; para o cliente, só se tiver valor, número ou link).
+  const voz = await falarAntes(para, texto);
+  if (voz && vozDoDono.getStore()?.modo === 'quando-preciso' && !precisaEscrito(texto)) return voz;
   try {
     const r = await chamar({ recipient_type: 'individual', to: para, type: 'text', text: { body: texto, preview_url: true } });
     const j = (await r.json()) as { messages?: { id: string }[]; error?: { message?: string } };

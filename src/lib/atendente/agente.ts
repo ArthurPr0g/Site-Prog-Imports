@@ -7,7 +7,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { dbDoAtendente, type DbDoAtendente } from '@/lib/atendente/db';
-import { enviarTexto, enviarComOpcoes, enviarDocumento, baixarMidia, JANELA_MS } from '@/lib/atendente/whatsapp-api';
+import { enviarTexto, enviarComOpcoes, enviarDocumento, baixarMidia, comVozPara, JANELA_MS } from '@/lib/atendente/whatsapp-api';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { PrePropostaDocument } from '@/lib/pdf/pre-proposta';
 import { montarPreProposta } from '@/lib/pdf/montar-pre-proposta';
@@ -1563,6 +1563,7 @@ CLIENTE COM PROJETO (${projetoCliente.cliente}): ele já é cliente. Se pedir mu
     await chamarArthur(db, cfg, conversaId, `Resposta da IA barrada antes de sair (parecia expor informação interna): "${vazou.slice(0, 300)}". Veja a conversa e responda você.`, 'Resposta barrada');
     return 'resposta barrada';
   }
+  const clienteMandouAudio = (historico ?? []).find((m) => m.direction === 'in')?.media_type === 'audio';
   for (const [i, parte] of partes.entries()) {
     // Pausa de "quem está digitando" entre uma mensagem e outra (1,2 s a 4 s,
     // pelo tamanho), para não chegarem todas no mesmo segundo.
@@ -1571,11 +1572,13 @@ CLIENTE COM PROJETO (${projetoCliente.cliente}): ele já é cliente. Se pedir mu
     const marca = parte.match(/\[\[\s*opç(?:õ|o)es\s*:\s*([^\]]+)\]\]\s*$/i);
     const opcoes = marca ? marca[1].split('|').map((o) => o.trim()).filter(Boolean).slice(0, 10) : [];
     const texto = (marca ? parte.slice(0, marca.index).trim() : parte) || 'Escolha uma opção:';
+    const enviar = () => (opcoes.length >= 2 ? enviarComOpcoes(conversa.contact_id, texto, opcoes) : enviarTexto(conversa.contact_id, texto));
+    // Cliente que mandou áudio recebe áudio (voz da Lia, 31/10/2026); valores, links e botões seguem escritos.
     const env = simulado
       ? ({ ok: true, id: `simulado-${crypto.randomUUID()}` } as const)
-      : opcoes.length >= 2
-        ? await enviarComOpcoes(conversa.contact_id, texto, opcoes)
-        : await enviarTexto(conversa.contact_id, texto);
+      : clienteMandouAudio
+        ? await comVozPara(conversa.contact_id, enviar, 'quando-preciso')
+        : await enviar();
     const corpo = opcoes.length >= 2 ? `${texto}\n[opções: ${opcoes.join(' | ')}]` : texto;
     await registrar(db, conversaId, 'ia', corpo, env.ok ? { external_id: env.id, status: 'sent' } : { status: 'failed', error: env.erro });
     if (!env.ok) {
