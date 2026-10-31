@@ -325,27 +325,41 @@ export default async function DiagnosticoPage({
         </section>
       )}
 
-      <div className="entrar flex flex-col gap-3 sm:flex-row" style={entrada()}>
-        <a
-          href={linkWhatsApp(
-            d.vendedor?.whatsapp || WHATSAPP_NUMBER,
-            t.msg(d.name, d.vendedor?.whatsapp ? d.vendedor.nome.split(' ')[0] : 'Arthur')
-          )}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="cta-verde flex flex-1 items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-extrabold transition-all hover:-translate-y-0.5"
-        >
-          <MessageCircle size={17} /> {t.cta}
-        </a>
-        <a
-          href={t.portfolioUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex flex-1 items-center justify-center gap-2 rounded-full border border-border-strong bg-white/[.04] px-6 py-3.5 text-[15px] font-bold text-fg-secondary transition-all hover:-translate-y-0.5 hover:border-[#81AAF7] hover:text-[#B1D2FF]"
-        >
-          {t.portfolio} <ArrowUpRight size={16} />
-        </a>
-      </div>
+      {/* Fechamento em destaque (31/10/2026, pedido do Arthur: botões mais chamativos), no design system:
+          cartão elevado com a borda e a aura azul da marca; rounded-[999px] em vez de rounded-full para
+          escapar das regras genéricas de pílula do tema. */}
+      <section className="entrar diag-fechamento mb-2 rounded-[24px] p-5 sm:p-7" style={entrada()}>
+        <p className="font-[family-name:var(--font-sora)] text-[21px] font-semibold leading-snug tracking-[-0.03em] sm:text-[24px]">
+          {lang === 'en' ? 'Shall we turn this into results?' : 'Vamos transformar isso em resultado?'}
+        </p>
+        <p className="mt-1.5 text-[14px] text-fg-tertiary">
+          {lang === 'en' ? 'A quick chat on WhatsApp, no commitment.' : 'Uma conversa rápida no WhatsApp, sem compromisso.'}
+        </p>
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+          <a
+            href={linkWhatsApp(
+              d.vendedor?.whatsapp || WHATSAPP_NUMBER,
+              t.msg(d.name, d.vendedor?.whatsapp ? d.vendedor.nome.split(' ')[0] : 'Arthur')
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="diag-cta flex min-h-[56px] flex-[1.4] items-center justify-center gap-2.5 rounded-[999px] bg-[#F2F3F5] px-6 text-[16px] font-semibold text-[#08080A]"
+          >
+            <span className="grid h-7 w-7 place-items-center rounded-full bg-[#25D366] text-white">
+              <MessageCircle size={16} strokeWidth={2.4} />
+            </span>
+            {t.cta}
+          </a>
+          <a
+            href={t.portfolioUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="diag-cta-2 flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-[999px] border border-[#81AAF7]/60 bg-[#81AAF7]/[.10] px-6 text-[15.5px] font-semibold text-[#B1D2FF]"
+          >
+            {t.portfolio} <ArrowUpRight size={17} />
+          </a>
+        </div>
+      </section>
 
       <p className="mt-8 text-center text-[12px] text-fg-faded">{doMaps ? t.rodape : t.rodapeSemMaps}</p>
     </main>

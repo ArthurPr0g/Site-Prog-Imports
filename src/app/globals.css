@@ -940,3 +940,38 @@ textarea::placeholder {
   box-shadow: 0 0 0 3px rgba(129, 170, 247, 0.18);
 }
 .ds-prog ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); }
+
+/* Diagnóstico do cliente: bloco de fechamento em destaque (31/10/2026). Cartão elevado do design system com a
+   borda do ladrilho e a aura azul; o botão do WhatsApp ganha um halo azul que pulsa devagar (sem pulsar com
+   movimento reduzido). Curvas do design system: enter para hover. */
+.ds-prog .diag-fechamento {
+  position: relative;
+  border: 1px solid oklch(74% 0.12 262 / 0.4);
+  background:
+    radial-gradient(80% 90% at 50% -20%, rgba(129, 170, 247, 0.22), transparent 70%),
+    #12141A;
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.55);
+}
+.ds-prog a.diag-cta:not(:disabled) {
+  position: relative;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ds-prog .diag-cta::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  border: 2px solid rgba(129, 170, 247, 0.55);
+  animation: diag-halo 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  pointer-events: none;
+}
+@keyframes diag-halo {
+  0% { opacity: 0.9; transform: scale(0.98); }
+  70%, 100% { opacity: 0; transform: scale(1.08); }
+}
+.ds-prog .diag-cta:hover { background: #fff; transform: translateY(-2px); }
+.ds-prog a.diag-cta-2:not(:disabled) { transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s, border-color 0.15s; }
+.ds-prog .diag-cta-2:hover { background: rgba(129, 170, 247, 0.18); border-color: #81AAF7; transform: translateY(-2px); }
+@media (prefers-reduced-motion: reduce) {
+  .ds-prog .diag-cta::after { animation: none; opacity: 0; }
+}
