@@ -8,6 +8,8 @@ import { situacaoDoSite } from '@/lib/captacao';
 import { linkWhatsApp } from '@/lib/mensagens-lead';
 import { getCurrentUser } from '@/lib/auth';
 import { metadadosProgSolucoes } from '@/lib/prog-solucoes-seo';
+import { fontesDaMarca } from '@/brand/fontes';
+import { ProgMark } from '@/brand/ProgMark';
 
 // Diagnóstico de presença digital que vai no link da primeira mensagem da
 // Captação. Público por token, lido pela função lead_diagnostico (só campos
@@ -210,11 +212,17 @@ export default async function DiagnosticoPage({
   const entrada = () => ({ animationDelay: `${0.08 + ordem++ * 0.09}s` });
 
   return (
-    <div className="tema-apple min-h-screen overflow-x-clip bg-page [color-scheme:dark]">
+    // Design system Prog Soluções (31/10/2026): .ds-prog + fontes da marca (Sora, DM Sans) e o símbolo P.
+    <div className={`tema-apple ds-prog ${fontesDaMarca} min-h-screen overflow-x-clip bg-page [color-scheme:dark]`}>
     <div className="aurora aurora-suave" aria-hidden />
     <main className="mx-auto max-w-[720px] px-4 py-10 sm:px-6 sm:py-14">
       <div className="entrar mb-8" style={entrada()}>
-        <div className="text-[12px] font-extrabold uppercase tracking-[.14em] text-[#64d2ff]">Prog Soluções</div>
+        <div className="flex items-center gap-2.5">
+          <ProgMark s={28} />
+          <span className="font-[family-name:var(--font-sora)] text-[17px] tracking-[-0.03em] text-[#F4F5F7]">
+            <span className="font-semibold">Prog</span> <span className="font-normal text-[#A3A8B2]">Soluções</span>
+          </span>
+        </div>
         <h1 className="mt-2 font-display text-[30px] font-bold leading-tight tracking-[-.02em] sm:text-[40px]">
           {t.titulo}
         </h1>
@@ -280,7 +288,7 @@ export default async function DiagnosticoPage({
           <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-fg-faded">{t.concorrentes}</div>
           <p className="text-[14.5px] leading-relaxed">{t.concorrentesTexto(c.com_site, c.total, d.city)}</p>
           <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-fg-faded/15">
-            <div className="crescer h-full rounded-full bg-[#0a84ff]" style={{ width: `${Math.round((c.com_site / c.total) * 100)}%` }} />
+            <div className="crescer h-full rounded-full bg-[#81AAF7]" style={{ width: `${Math.round((c.com_site / c.total) * 100)}%` }} />
           </div>
           {c.nota_media !== null && (
             <p className="mt-3 text-[13px] text-fg-tertiary">
@@ -305,8 +313,8 @@ export default async function DiagnosticoPage({
       )}
 
       {recomendados.length > 0 && (
-        <section className="entrar mb-6 rounded-[22px] border border-[#0a84ff]/35 bg-card p-5 sm:p-6" style={entrada()}>
-          <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#64d2ff]">{t.recomendo}</div>
+        <section className="entrar mb-6 rounded-[22px] border border-[#81AAF7]/35 bg-card p-5 sm:p-6" style={entrada()}>
+          <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.08em] text-[#B1D2FF]">{t.recomendo}</div>
           <ul className="space-y-2.5">
             {recomendados.map((s) => (
               <li key={s} className="text-[14.5px] leading-relaxed">
@@ -333,7 +341,7 @@ export default async function DiagnosticoPage({
           href={t.portfolioUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex flex-1 items-center justify-center gap-2 rounded-full border border-border-strong bg-white/[.04] px-6 py-3.5 text-[15px] font-bold text-fg-secondary transition-all hover:-translate-y-0.5 hover:border-[#0a84ff] hover:text-[#64d2ff]"
+          className="flex flex-1 items-center justify-center gap-2 rounded-full border border-border-strong bg-white/[.04] px-6 py-3.5 text-[15px] font-bold text-fg-secondary transition-all hover:-translate-y-0.5 hover:border-[#81AAF7] hover:text-[#B1D2FF]"
         >
           {t.portfolio} <ArrowUpRight size={16} />
         </a>
