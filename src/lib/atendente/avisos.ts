@@ -45,6 +45,7 @@ async function lerDono(db: DbDoAtendente): Promise<Dono> {
 /** Rótulo do botão do aviso pelo destino do link (até 20 caracteres). */
 function rotuloDoLink(link: string): string {
   if (link.includes('/ideias')) return 'Abrir Ideias';
+  if (link.includes('/reunioes')) return 'Abrir reunião';
   if (link.includes('conversa=')) return 'Abrir conversa';
   if (link.includes('/gastos')) return 'Abrir Gastos';
   if (link.includes('/pos-venda')) return 'Abrir Pós-venda';

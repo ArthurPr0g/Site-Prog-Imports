@@ -12,6 +12,7 @@ import {
   Users,
   Workflow,
   MessagesSquare,
+  Video,
   UserRoundCheck,
   Bot,
   Tag,
@@ -116,6 +117,7 @@ const NAV_SOLUCOES: NavGroup[] = [
     items: [
       { href: '/admin/captacao', label: 'Captação', Icon: Magnet },
       { href: '/admin/atendimento', label: 'Atendimento', Icon: MessagesSquare },
+      { href: '/admin/reunioes', label: 'Reuniões', Icon: Video },
       { href: '/admin/vendedores', label: 'Vendedores', Icon: UserRoundCheck },
       { href: '/admin/pos-venda', label: 'Pós-venda', Icon: ClipboardCheck },
     ],

@@ -11,6 +11,8 @@ import type { Json } from '@/lib/supabase/database.types';
 import { MODELOS } from '@/lib/atendente/modelos';
 import { TIME, type ChaveDoAgente } from '@/lib/agentes/time';
 import { dbDoAtendente } from '@/lib/atendente/db';
+import { LIMITES_PADRAO, limitesDe, type LimitesDasReunioes } from '@/lib/reunioes/comum';
+import { usoDoMes, inicioDoMes } from '@/lib/reunioes/sala';
 
 export type CustoFixo = { id: string; nome: string; valor_brl: number; periodo: 'mensal' | 'anual'; categoria: string };
 /**
@@ -33,7 +35,7 @@ export type ConfigDeCustos = {
   modelos_por_projeto: number;
   fixos: CustoFixo[];
   recargas: RecargaDeCredito[];
-};
+} & LimitesDasReunioes;
 export type Periodo = 'mes' | '7d' | '30d' | 'tudo';
 type Fatia = { nome: string; usd: number };
 
@@ -62,6 +64,15 @@ export type Gastos = {
   agentes: { chave: string; nome: string; papel: string; cobranca: 'api' | 'assinatura'; usd: number; execucoes: number; semMedicao: number; tokens: number }[];
   /** Créditos da API: total recarregado, gasto medido da Lia desde a 1ª recarga e o saldo estimado. */
   creditos: { recargas: (RecargaDeCredito & { brl: number })[]; totalUsd: number; totalBrl: number; gastoUsd: number; saldoUsd: number; desde: string | null };
+  /** Sala de reunião (0113): minutos grátis da Daily no mês (pela API dela) e o custo de cada reunião. */
+  reunioes: {
+    minutos: number;
+    gratis: number;
+    pct: number;
+    medido: boolean;
+    trava: number;
+    lista: { id: string; titulo: string; inicio: string; meio: string | null; minutos: number | null; usd: number }[];
+  };
 };
 
 const PADRAO: ConfigDeCustos = {
@@ -77,6 +88,7 @@ const PADRAO: ConfigDeCustos = {
   modelos_por_projeto: 5,
   fixos: [],
   recargas: [],
+  ...LIMITES_PADRAO,
 };
 
 const FINALIDADE: Record<string, string> = {
@@ -87,6 +99,8 @@ const FINALIDADE: Record<string, string> = {
   organizar_ideia: 'Organizar ideias',
   organizar_prompt: 'Organizar prompts',
   aprender: 'Lia aprendendo',
+  reuniao: 'Reuniões (sala)',
+  negociacao_reuniao: 'Atualizar a negociação',
 };
 
 async function admin() {
@@ -248,7 +262,38 @@ export async function gastosAction(periodo: Periodo = 'mes'): Promise<Gastos | n
     estimativa: { usd: estPartes.reduce((s, p) => s + p.usd, 0), partes: estPartes, base: { porResposta, porPesquisa, medidoPorResposta: medidoResp, medidoPorPesquisa: medidoPesq } },
     leads: listaLeads.slice(0, 10),
     creditos: await creditosDaApi(db, config.recargas ?? [], dolar),
+    reunioes: await reunioesDoMes(),
     agentes: gastoPorAgente(iaUsd, noPeriodo.length, noPeriodo.reduce((s, u) => s + u.input_tokens + u.output_tokens + u.cache_read_tokens + u.cache_write_tokens, 0), execucoes ?? []),
+  };
+}
+
+/** Minutos da Daily no mês e as reuniões da sala no mês, com o custo de cada uma (IA + transcrição + Daily). */
+async function reunioesDoMes(): Promise<Gastos['reunioes']> {
+  const srv = dbDoAtendente();
+  const [uso, { data }] = await Promise.all([
+    usoDoMes(srv),
+    srv
+      .from('reunioes')
+      .select('id, titulo, inicio, sala_meio, minutos_participante, custo_usd, leads(name)')
+      .not('sala_meio', 'is', null)
+      .gte('inicio', inicioDoMes().toISOString())
+      .order('inicio', { ascending: false })
+      .limit(200),
+  ]);
+  return {
+    minutos: uso.minutos,
+    gratis: uso.limites.reunioes_minutos_gratis,
+    pct: uso.pct,
+    medido: uso.medido,
+    trava: uso.limites.reunioes_trava_pct,
+    lista: (data ?? []).map((r) => ({
+      id: r.id,
+      titulo: r.leads?.name ?? r.titulo,
+      inicio: r.inicio,
+      meio: r.sala_meio,
+      minutos: r.minutos_participante === null ? null : Number(r.minutos_participante),
+      usd: Number(r.custo_usd ?? 0),
+    })),
   };
 }
 
@@ -333,6 +378,7 @@ export async function salvarCustosAction(c: ConfigDeCustos, tetoUsd: number): Pr
         categoria: (f.categoria ?? '').trim().slice(0, 40) || 'Outros',
       })),
     recargas: [],
+    ...limitesDe(c),
   };
   // Recarga sem cotação ganha o dólar de hoje ao salvar: o valor em reais fica congelado no dia lançado.
   const cot = (c.recargas ?? []).some((r) => !(Number(r.dolar) > 0)) ? await buscarCotacaoMercado() : null;

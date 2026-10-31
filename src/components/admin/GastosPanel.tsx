@@ -5,7 +5,7 @@
 // magnitude. Cada gráfico tem dica ao passar o mouse e a tabela dos números logo abaixo.
 
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
-import { Bot, CalendarDays, CreditCard, Users, Coins, Gauge, MessageCircle, Mic, Plus, Receipt, Save, Settings2, Target, Trash2, TrendingUp, TriangleAlert, CircleCheck } from 'lucide-react';
+import { Video, Bot, CalendarDays, CreditCard, Users, Coins, Gauge, MessageCircle, Mic, Plus, Receipt, Save, Settings2, Target, Trash2, TrendingUp, TriangleAlert, CircleCheck } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { gastosAction, salvarCustosAction, type ConfigDeCustos, type CustoFixo, type Gastos, type Periodo, type RecargaDeCredito } from '@/app/actions/gastos';
 import { AppLoader } from '@/brand/loaders/AppLoader';
@@ -508,6 +508,58 @@ export function GastosPanel() {
         </Cartao>
       </div>
 
+      {/* Reuniões (sala própria, 0113): minutos grátis da Daily no mês e o custo de cada reunião. */}
+      <Cartao atraso={500}>
+        <Titulo Icon={Video} dica={d.reunioes.medido ? 'minutos de participante, pela API da Daily' : 'medido pelo sistema (a Daily não respondeu)'}>
+          Reuniões
+        </Titulo>
+        <div className="flex flex-wrap items-baseline justify-between gap-2 text-[13px]">
+          <span>
+            <b className="text-[18px] tabular-nums text-fg">{mil(Math.round(d.reunioes.minutos))}</b> de {mil(d.reunioes.gratis)} minutos grátis este mês
+          </span>
+          <span className={d.reunioes.pct >= d.reunioes.trava ? 'text-error' : d.reunioes.pct >= 70 ? 'text-warning' : 'text-fg-tertiary'}>
+            {d.reunioes.pct.toFixed(1)}%{d.reunioes.pct >= d.reunioes.trava ? ' · trava ligada: reuniões novas vão pelo Meet' : ''}
+          </span>
+        </div>
+        <div className="mt-2 h-[12px] overflow-hidden rounded-full bg-white/5">
+          <div className="barra-cor g-barra h-full rounded-full" style={{ width: `${Math.min(100, Math.max(d.reunioes.minutos > 0 ? 1 : 0, d.reunioes.pct))}%` }} />
+        </div>
+        <p className="mt-1.5 text-[11.5px] text-fg-faded">Trava em {d.reunioes.trava}%: a partir dela o mês não cria sala nova na Daily. Avisos no WhatsApp a {cfg.reunioes_aviso1_pct}% e {cfg.reunioes_aviso2_pct}%.</p>
+        {d.reunioes.lista.length > 0 ? (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[460px] text-[12.5px]">
+              <thead>
+                <tr className="text-left text-[11px] font-bold uppercase tracking-[.06em] text-fg-faded">
+                  <th className="pb-2">Reunião</th>
+                  <th className="pb-2 text-right">Minutos</th>
+                  <th className="pb-2 text-right">Dólar</th>
+                  <th className="pb-2 text-right">Real</th>
+                </tr>
+              </thead>
+              <tbody>
+                {d.reunioes.lista.map((r) => (
+                  <tr key={r.id} className="border-t border-white/5">
+                    <td className="py-1.5 pr-2">
+                      <a href={`/admin/reunioes/${r.id}`} className="text-fg hover:underline">{r.titulo}</a>
+                      <span className="block text-[11px] text-fg-tertiary">
+                        {new Date(r.inicio).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' })}
+                        {r.meio === 'meet' ? ' · pelo Meet' : ''}
+                      </span>
+                    </td>
+                    <td className="py-1.5 text-right tabular-nums">{r.minutos === null ? '–' : mil(Math.round(r.minutos))}</td>
+                    <td className="py-1.5 text-right tabular-nums">{usd(r.usd)}</td>
+                    <td className="py-1.5 text-right font-bold tabular-nums text-fg">{brl(r.usd * d.dolar)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-2 text-[11.5px] text-fg-faded">Custo de cada reunião: IA do resumo + transcrição (preço por hora configurado) + minutos da Daily acima do grátis.</p>
+          </div>
+        ) : (
+          <p className="mt-3 text-[12.5px] text-fg-faded">Nenhuma reunião na sala este mês.</p>
+        )}
+      </Cartao>
+
       {/* Configurações editáveis */}
       <Cartao atraso={540}>
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -534,6 +586,12 @@ export function GastosPanel() {
           <Campo rotulo="Respostas da Lia por projeto" valor={cfg.respostas_por_projeto} passo={1} onChange={(v) => alterar({ respostas_por_projeto: v ?? 40 })} dica="Premissa da projeção" />
           <Campo rotulo="Pesquisas do lead por projeto" valor={cfg.pesquisas_por_projeto} passo={1} onChange={(v) => alterar({ pesquisas_por_projeto: v ?? 2 })} />
           <Campo rotulo="Mensagens modelo por projeto" valor={cfg.modelos_por_projeto} passo={1} onChange={(v) => alterar({ modelos_por_projeto: v ?? 5 })} />
+          <Campo rotulo="Reuniões: minutos grátis/mês" valor={cfg.reunioes_minutos_gratis} passo={100} onChange={(v) => alterar({ reunioes_minutos_gratis: v ?? 10000 })} dica="Plano da Daily: 10.000" />
+          <Campo rotulo="Reuniões: 1º aviso (%)" valor={cfg.reunioes_aviso1_pct} passo={1} onChange={(v) => alterar({ reunioes_aviso1_pct: v ?? 70 })} />
+          <Campo rotulo="Reuniões: 2º aviso (%)" valor={cfg.reunioes_aviso2_pct} passo={1} onChange={(v) => alterar({ reunioes_aviso2_pct: v ?? 90 })} />
+          <Campo rotulo="Reuniões: trava (%)" valor={cfg.reunioes_trava_pct} passo={1} onChange={(v) => alterar({ reunioes_trava_pct: v ?? 95 })} dica="Acima disso, vai pelo Meet" />
+          <Campo rotulo="Daily: US$ por minuto extra" valor={cfg.reunioes_usd_minuto} passo={0.0001} onChange={(v) => alterar({ reunioes_usd_minuto: v ?? 0.004 })} dica="Vídeo: US$ 0,004 (out/2026)" />
+          <Campo rotulo="Reunião: duração máxima (min)" valor={cfg.reunioes_duracao_max_min} passo={5} onChange={(v) => alterar({ reunioes_duracao_max_min: v ?? 120 })} dica="A Daily tira quem passar" />
         </div>
 
         <div className="mt-5">

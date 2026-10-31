@@ -878,26 +878,34 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
       const quem = l?.name ?? conv?.contact_name ?? `+${conv?.contact_id ?? ''}`;
       const assunto = String(entrada.assunto ?? '').trim().slice(0, 80) || 'projeto';
       const titulo = `Prog Soluções × ${quem}: ${assunto}${tipo !== 'descoberta' ? ` (${NOME_DO_TIPO[tipo]})` : ''}`;
+      // Sala de reunião própria (0113): a reunião nasce antes do evento, para o link da sala ir no convite.
+      // O Meet continua como plano B (no convite e na mensagem).
+      const { data: nova } = await db
+        .from('reunioes')
+        .insert({ lead_id: leadId, conversation_id: conversaId, titulo, inicio: inicio.toISOString(), fim: fim.toISOString(), email_cliente: emailValido, tipo })
+        .select('id')
+        .single();
+      const { prepararSala, linkDoCliente } = await import('@/lib/reunioes/sala');
+      const sala = nova ? await prepararSala(db, nova.id).catch(() => null) : null;
+      const { data: comLink } = nova ? await db.from('reunioes').select('sala_token').eq('id', nova.id).maybeSingle() : { data: null };
+      const linkSala = comLink?.sala_token ? linkDoCliente(comLink.sala_token) : null;
       const ev = (await agendaConectada(db))
         ? await criarEventoNaAgenda(db, {
             titulo,
-            descricao: `Marcada pela ${cfg.personaName} no WhatsApp.\nConversa: ${SITE_URL}/admin/atendimento?conversa=${conversaId}`,
+            descricao:
+              (linkSala ? `Sala da reunião (vídeo da Prog Soluções): ${linkSala}\nSe a sala não abrir, use o Google Meet deste convite.\n\n` : '') +
+              `Marcada pela ${cfg.personaName} no WhatsApp.\nConversa: ${SITE_URL}/admin/atendimento?conversa=${conversaId}`,
             inicio,
             fim,
             emailCliente: emailValido,
           })
         : null;
-      await db.from('reunioes').insert({
-        lead_id: leadId,
-        conversation_id: conversaId,
-        titulo,
-        inicio: inicio.toISOString(),
-        fim: fim.toISOString(),
-        email_cliente: emailValido,
-        google_event_id: ev?.ok ? ev.id : null,
-        meet_link: ev?.ok ? ev.meet : null,
-        tipo,
-      });
+      if (nova && ev?.ok) {
+        await db
+          .from('reunioes')
+          .update({ google_event_id: ev.id, meet_link: ev.meet, ...(sala?.meio === 'meet' ? { sala_url: ev.meet } : {}) })
+          .eq('id', nova.id);
+      }
       // Só a conversa de venda move o lead para "Reunião"; alinhamento e entrega são de quem já comprou.
       if (tipo === 'descoberta' && leadId && (!e.leadStatus || ORDEM.indexOf(e.leadStatus) < ORDEM.indexOf('reuniao'))) {
         await executar(e, 'mudar_etapa', { etapa: 'reuniao', motivo: `Reunião marcada para ${horarioPorExtenso(inicio)}`, responsavel: '' });
@@ -905,10 +913,19 @@ async function executar(e: Estado, nome: string, entrada: Record<string, unknown
       const quando = horarioPorExtenso(inicio) + (e.fuso ? ` em Brasília (${horarioNoFuso(inicio, e.fuso)} para o cliente)` : '');
       await avisarArthur(db, cfg, {
         titulo: `${tipo === 'descoberta' ? 'Reunião' : NOME_DO_TIPO[tipo].charAt(0).toUpperCase() + NOME_DO_TIPO[tipo].slice(1)} marcada pela Lia 📅`,
-        texto: `${quem}, ${quando} (${assunto}).${ev?.ok && ev.meet ? ` Meet: ${ev.meet}` : ev && !ev.ok ? ` Não entrou na sua agenda (${ev.erro}): crie você.` : ' Agenda não conectada: crie o evento você.'}`,
+        texto:
+          `${quem}, ${quando} (${assunto}).${nova ? ` Sala: ${SITE_URL}/admin/reunioes/${nova.id}${sala?.meio === 'meet' ? ' (pelo Meet: minutos da Daily no limite)' : ''}.` : ''}` +
+          `${ev?.ok && ev.meet ? ` Meet (plano B): ${ev.meet}` : ev && !ev.ok ? ` Não entrou na sua agenda (${ev.erro}): crie você.` : ' Agenda não conectada: crie o evento você.'}`,
         conversaId,
         leadId,
+        ...(nova ? { link: `${SITE_URL}/admin/reunioes/${nova.id}` } : {}),
       });
+      if (linkSala)
+        return (
+          `Reunião marcada: ${quando}. Link da sala da reunião (é por ele que o cliente entra, no celular ou no computador): ${linkSala}` +
+          `${ev?.ok && ev.meet ? ` Se a sala não abrir, o plano B é o Google Meet: ${ev.meet}` : ''}${ev?.ok && emailValido ? ` O convite foi para ${emailValido}.` : ''}` +
+          ' Passe o horário e o link da sala ao cliente (o Meet só como alternativa) e avise que a reunião é gravada para registrar o combinado.'
+        );
       if (ev?.ok)
         return `Reunião marcada: ${quando}.${ev.meet ? ` Link do Google Meet: ${ev.meet}` : ''}${emailValido ? ` O convite foi para ${emailValido}.` : ''} Passe o horário e o link ao cliente.`;
       return `Reunião registrada para ${quando}. O Arthur foi avisado e manda o link da chamada antes do horário. Confirme o horário com o cliente.`;

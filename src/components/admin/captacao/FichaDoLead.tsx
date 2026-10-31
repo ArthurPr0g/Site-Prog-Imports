@@ -7,7 +7,8 @@
 import { PesquisaEBriefing } from './PesquisaEBriefing';
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, MessageCircle } from 'lucide-react';
+import { FileText, MessageCircle, Video } from 'lucide-react';
+import { abrirSalaDoLeadAction } from '@/app/actions/reunioes';
 import { useToast } from '@/components/ui/Toast';
 import type { Lead } from '@/lib/captacao';
 import { situacaoDoSite } from '@/lib/captacao';
@@ -183,6 +184,7 @@ export function FichaDoLead({
   const router = useRouter();
   const toast = useToast();
   const [criando, startCriar] = useTransition();
+  const [abrindoSala, startSala] = useTransition();
   const porNome = useMemo(() => new Map(servicos.map((s) => [s.name, s])), [servicos]);
   const ficha = useMemo(() => comoLeadDoKit(lead, leads, porNome, tabBRL), [lead, leads, porNome, tabBRL]);
 
@@ -282,6 +284,20 @@ export function FichaDoLead({
           className="ml-2 mt-3 inline-flex items-center gap-1.5 rounded-control border border-accent/60 px-4 py-2.5 text-[13.5px] font-extrabold text-accent disabled:opacity-50"
         >
           <FileText size={15} /> {criando ? 'Criando…' : 'Criar proposta no ERP'}
+        </button>
+        {/* Sala de reunião (31/10/2026): reaproveita a reunião de hoje do lead ou cria uma agora. */}
+        <button
+          disabled={abrindoSala}
+          onClick={() =>
+            startSala(async () => {
+              const r = await abrirSalaDoLeadAction(lead.id);
+              if (!r.ok || !r.id) return void toast(r);
+              router.push(`/admin/reunioes/${r.id}`);
+            })
+          }
+          className="ml-2 mt-3 inline-flex items-center gap-1.5 rounded-control border border-accent/60 px-4 py-2.5 text-[13.5px] font-extrabold text-accent disabled:opacity-50"
+        >
+          <Video size={15} /> {abrindoSala ? 'Abrindo…' : 'Abrir sala de reunião'}
         </button>
         </>
       }

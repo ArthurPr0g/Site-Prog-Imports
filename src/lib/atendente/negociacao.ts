@@ -690,8 +690,12 @@ function ferramenta(): Anthropic.Tool {
   };
 }
 
-/** Processa o relato da sessão (uma vez: a sessão passa a 'processando' antes). */
-export async function processar(db: DbDoAtendente, id: string): Promise<void> {
+/**
+ * Processa o relato da sessão (uma vez: a sessão passa a 'processando' antes).
+ * `daSala` (sala de reunião, 0113): o relato é a transcrição da reunião; o uso de IA entra como finalidade
+ * 'reuniao' e, se a IA falhar, a sessão vai para 'erro' (a sala mostra "Processar de novo"), sem pedir "pronto".
+ */
+export async function processar(db: DbDoAtendente, id: string, opcoes: { daSala?: string } = {}): Promise<void> {
   const { data: trava } = await db
     .from('negociacao_sessoes')
     .update({ status: 'processando', atualizado_em: new Date().toISOString(), expira_em: validade(15 * 60_000) })
@@ -702,6 +706,11 @@ export async function processar(db: DbDoAtendente, id: string): Promise<void> {
   if (!trava) return;
   const s = trava;
   const voltar = async (erro: string, msg: string) => {
+    if (opcoes.daSala) {
+      await atualizar(db, id, { status: 'erro', erro: erro.slice(0, 1000) });
+      await enviarTexto(s.dono, `⚠️ Não consegui processar a transcrição da reunião agora (${erro}). Abra a reunião no painel e toque em *Processar de novo*:\n${opcoes.daSala}`);
+      return;
+    }
     await atualizar(db, id, { status: 'aguardando_conteudo', erro: erro.slice(0, 1000), expira_em: validade(VALIDADE_DO_RELATO_MS) });
     await enviarTexto(s.dono, msg);
   };
@@ -752,7 +761,7 @@ export async function processar(db: DbDoAtendente, id: string): Promise<void> {
     let uso: Anthropic.ToolUseBlock | undefined;
     for (let volta = 0; volta < 2 && !uso; volta++) {
       const r = await new Anthropic().messages.create({ model: MODELO_PROCESSAR, max_tokens: 3000, system: REGRAS, tools: [t], messages: mensagens });
-      await registrarUso(db, r, 'negociacao_reuniao', s.lead_id);
+      await registrarUso(db, r, opcoes.daSala ? 'reuniao' : 'negociacao_reuniao', s.lead_id);
       uso = r.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use' && b.name === t.name);
       if (!uso) mensagens.push({ role: 'assistant', content: r.content }, { role: 'user', content: 'Agora chame registrar_reuniao com a atualização.' });
     }
@@ -787,7 +796,7 @@ export async function processar(db: DbDoAtendente, id: string): Promise<void> {
       if (etapaAntes !== 'perdido' && etapaAntes !== 'nao_contatar' && ORDEM.indexOf(alvo) > iA) etapaDepois = alvo;
     }
     const nota =
-      `[${hoje} · reunião, relato do Arthur] ${saida.resumo.replace(/\s+/g, ' ').trim()}` +
+      `[${hoje} · reunião, ${opcoes.daSala ? 'transcrição da sala' : 'relato do Arthur'}] ${saida.resumo.replace(/\s+/g, ' ').trim()}` +
       (passos.length ? ` | Próximos passos: ${passos.map(linhaPasso).join('; ')}` : '');
     const historicoDono = Array.isArray(lead.atualizacoes_do_dono) ? (lead.atualizacoes_do_dono as unknown[]) : [];
     const registro = {

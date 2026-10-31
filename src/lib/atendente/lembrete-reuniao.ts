@@ -6,12 +6,13 @@ import type { DbDoAtendente } from './db';
 import { enviarComOpcoes, JANELA_MS } from './whatsapp-api';
 import { enviarModeloAoCliente } from './modelos';
 import { SIMULADOR } from './agente';
+import { linkDoCliente } from '@/lib/reunioes/sala';
 
 export async function lembrarReunioes(db: DbDoAtendente): Promise<number> {
   const agora = Date.now();
   const { data } = await db
     .from('reunioes')
-    .select('id, inicio, meet_link, conversation_id, titulo, leads(name)')
+    .select('id, inicio, meet_link, sala_token, conversation_id, titulo, leads(name)')
     .eq('status', 'marcada')
     .is('lembrete_em', null)
     .not('conversation_id', 'is', null)
@@ -26,7 +27,8 @@ export async function lembrarReunioes(db: DbDoAtendente): Promise<number> {
     if (!c || c.contact_id.startsWith(SIMULADOR) || c.contact_id.includes('#')) continue;
     const nome = (c.contact_name ?? r.leads?.name ?? '').trim().split(/\s+/)[0] || 'tudo bem';
     const quando = new Date(r.inicio).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-    const link = r.meet_link ?? 'o link vai por aqui antes da reunião';
+    // Sala própria (0113) primeiro; o Meet fica de plano B.
+    const link = r.sala_token ? linkDoCliente(r.sala_token) : (r.meet_link ?? 'o link vai por aqui antes da reunião');
     const janela = !!c.last_inbound_at && agora - new Date(c.last_inbound_at).getTime() < JANELA_MS - 5 * 60_000;
     if (janela) {
       const texto = `Oi, ${nome}! 📅 Lembrete da sua reunião com o Arthur, da Prog Soluções:\n\n🗓️ ${quando}\n🔗 ${link}\n\nAté já!`;

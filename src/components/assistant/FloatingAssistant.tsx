@@ -147,7 +147,7 @@ export function FloatingAssistant() {
   }, [messages, open]);
 
   // Diagnóstico e página do vendedor são da Prog Soluções, não da loja.
-  if (pathname?.startsWith('/admin') || pathname?.startsWith('/diagnostico') || pathname?.startsWith('/vendedor')) return null;
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/diagnostico') || pathname?.startsWith('/vendedor') || pathname?.startsWith('/reuniao')) return null;
 
   async function send() {
     const text = input.trim();
