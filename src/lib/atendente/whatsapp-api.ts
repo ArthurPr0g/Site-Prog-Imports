@@ -44,7 +44,7 @@ async function chamar(corpo: Record<string, unknown>): Promise<Response> {
 
 // Quando o Arthur manda ÁUDIO, o webhook roda a resposta dentro de `comVozPara(numero, ...)`: tudo o que for
 // enviado a esse número nesse meio-tempo sai também como mensagem de voz (voz da Roberta, ver voz.ts).
-// Texto sem link vira só áudio; com link, botões ou opções, o áudio vai antes e a mensagem escrita continua.
+// O áudio vai antes e a mensagem escrita sempre continua logo depois (para ler quando não der para ouvir).
 const vozDoDono = new AsyncLocalStorage<{ fim8: string }>();
 const fim8 = (n: string) => n.replace(/\D/g, '').slice(-8);
 
@@ -78,21 +78,19 @@ export async function enviarVoz(para: string, ogg: Buffer): Promise<ResultadoDoE
   }
 }
 
-/** Manda a versão falada antes da mensagem (só no contexto de voz). Devolve o envio do áudio ou null. */
-async function falarAntes(para: string, texto: string): Promise<ResultadoDoEnvio | null> {
-  if (!falaCom(para)) return null;
+/** Manda a versão falada antes da mensagem (só no contexto de voz). Se falhar, a mensagem escrita segue igual. */
+async function falarAntes(para: string, texto: string): Promise<void> {
+  if (!falaCom(para)) return;
   const ogg = await falar(texto);
-  if (!ogg) return null;
+  if (!ogg) return;
   const r = await enviarVoz(para, ogg);
   if (!r.ok) console.error('[voz] envio falhou', r.erro);
-  return r.ok ? r : null;
 }
 
 export async function enviarTexto(para: string, texto: string): Promise<ResultadoDoEnvio> {
   if (!whatsappConfigurado()) return { ok: false, erro: 'WhatsApp não configurado' };
-  const voz = await falarAntes(para, texto);
-  // Sem link, o áudio basta (o Arthur ouve como uma pessoa falando); com link, o texto segue para ele tocar.
-  if (voz && !/https?:\/\//.test(texto)) return voz;
+  // O áudio vai antes e o texto sempre segue (pedido do Arthur, 31/10/2026: para ler quando não der para ouvir).
+  await falarAntes(para, texto);
   try {
     const r = await chamar({ recipient_type: 'individual', to: para, type: 'text', text: { body: texto, preview_url: true } });
     const j = (await r.json()) as { messages?: { id: string }[]; error?: { message?: string } };
