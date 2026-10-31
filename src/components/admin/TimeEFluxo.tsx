@@ -33,7 +33,7 @@ type Agente = {
   papel: string;
   fase: Fase;
   Icon: Icone;
-  onde: 'WhatsApp' | 'Claude Code' | 'Claude Design';
+  onde: 'WhatsApp' | 'Claude Code' | 'Design no Claude';
   automatico?: string;
   faz: string[];
   naoFaz: string;
@@ -57,20 +57,20 @@ const TIME: Agente[] = [
   {
     chave: 'bia', nome: 'Bia', papel: 'Abertura do projeto', fase: 'design', Icon: FolderOpen, onde: 'Claude Code',
     automatico: 'Quando o sinal é pago',
-    faz: ['Cria a pasta do cliente com o BRIEFING.md', 'Junta o que a Captação sabe dele', 'Deixa prontos os pedidos da Duda e da Nina'],
-    naoFaz: 'Criar banco de dados do cliente sem você pedir.',
+    faz: ['Cria a pasta do cliente com o BRIEFING.md', 'Junta o que a Captação sabe dele', 'Prepara os pedidos e, com o seu OK, dispara a Duda e a Nina no Claude'],
+    naoFaz: 'Criar o design na conta da LM ou banco do cliente sem você pedir.',
   },
   {
-    chave: 'duda', nome: 'Duda', papel: 'Identidade visual', fase: 'design', Icon: Palette, onde: 'Claude Design',
-    faz: ['Paleta, fontes e componentes da marca', 'Regras de uso do logo do cliente'],
+    chave: 'duda', nome: 'Duda', papel: 'Identidade visual', fase: 'design', Icon: Palette, onde: 'Design no Claude',
+    faz: ['Cria o Design System do cliente no Claude', 'Paleta, fontes, componentes e uso do logo', 'Ajusta pelos seus comentários no link'],
     naoFaz: 'Desenhar as telas (isso é com a Nina).',
-    comando: 'Cole o PEDIDO-DUDA.md no Claude Design',
+    comando: 'Claude, Bia, dispara a Duda e a Nina do <cliente>',
   },
   {
-    chave: 'nina', nome: 'Nina', papel: 'Protótipo das telas', fase: 'design', Icon: PenTool, onde: 'Claude Design',
-    faz: ['Protótipo navegável de todas as telas', 'Pacote de handoff para o Rafa construir'],
-    naoFaz: 'Construir o site de verdade.',
-    comando: 'Cole o PEDIDO-NINA.md no Claude Design',
+    chave: 'nina', nome: 'Nina', papel: 'Protótipo das telas', fase: 'design', Icon: PenTool, onde: 'Design no Claude',
+    faz: ['Desenha as telas no Design do Claude, com o Design System da Duda', 'Ajusta pelos seus comentários no link', 'O Rafa lê o protótipo aprovado direto, sem ZIP'],
+    naoFaz: 'Começar sem a identidade aprovada ou construir o site de verdade.',
+    comando: 'Aprovado, segue a Nina do <cliente>',
   },
   {
     chave: 'rafa', nome: 'Rafa', papel: 'Construção', fase: 'construcao', Icon: Hammer, onde: 'Claude Code',
@@ -155,14 +155,15 @@ const ETAPAS: Etapa[] = [
   },
   {
     titulo: 'Identidade e protótipo', fase: 'design', quem: ['duda', 'nina'],
-    voce: 'Copia os pedidos no Pós-venda e cola no Claude Design',
+    voce: 'Pede "Bia, dispara a Duda e a Nina" (conta pessoal) e aprova pelos links',
     auto: 'Liberados só com descoberta confirmada',
-    texto: 'A Duda define cores, fontes e componentes. A Nina desenha as telas navegáveis e gera o pacote de handoff.',
+    volta: 'Comentou? A Duda ou a Nina ajusta no mesmo link',
+    texto: 'Tudo dentro do Claude: a Duda cria o Design System do cliente e a Nina desenha as telas no Design. Você abre os links, comenta e aprova; nada vai para a construção sem o seu OK.',
   },
   {
     titulo: 'Construção', fase: 'construcao', quem: ['rafa'],
     voce: '"Claude, Rafa, constrói o projeto do X"',
-    texto: 'O Rafa transforma o protótipo em site de verdade, com repositório privado e prévia publicada na Vercel.',
+    texto: 'O Rafa lê o protótipo aprovado direto do Claude (sem ZIP) e o transforma em site de verdade, com repositório privado e prévia publicada na Vercel.',
   },
   {
     titulo: 'Vistoria completa', fase: 'qualidade', quem: ['vera', 'nico', 'iris', 'tito'], paralelo: true,

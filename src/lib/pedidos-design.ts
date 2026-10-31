@@ -1,7 +1,18 @@
 // Pedidos do Claude Design (Duda e Nina) só depois das etapas anteriores (pedido do Arthur em 30/10/2026).
 // Regra única, usada pelo painel do Pós-venda e pelo relógio (que pede à Bia a versão final dos pedidos).
 
-export type PedidosDesign = { pedido_em?: string; prontos_em?: string; avisado_em?: string; duda?: string; nina?: string };
+export type PedidosDesign = {
+  pedido_em?: string;
+  prontos_em?: string;
+  avisado_em?: string;
+  duda?: string;
+  nina?: string;
+  /** Caminho integrado (31/10/2026): links dos artifacts no Claude (Design System da Duda e Design da Nina). */
+  duda_link?: string;
+  nina_link?: string;
+  /** O Arthur aprovou o protótipo da Nina: o Rafa pode construir. */
+  aprovado_em?: string;
+};
 
 export type EtapasDoDesign = {
   /** A Bia abriu o projeto (pasta do cliente criada). */

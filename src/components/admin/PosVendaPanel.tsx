@@ -7,7 +7,7 @@
 // incluído vira orçamento.
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
-import { CalendarDays, CheckCircle2, Circle, ClipboardList, Copy, FileText, History, Palette, Plus, Repeat } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Circle, ClipboardList, Copy, ExternalLink, FileText, History, Palette, Plus, Repeat } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import {
   painelDoPosVendaAction,
@@ -644,6 +644,8 @@ function DetalheDoProjeto({
  * Pedidos do Claude Design (pedido do Arthur em 30/10/2026): só ficam para copiar depois das etapas
  * anteriores (projeto aberto, financeiro resolvido, descoberta confirmada pelo cliente). A Bia gera a
  * versão final quando as três estão ok.
+ * Caminho integrado (31/10/2026): com o pedido do Arthur na conta pessoal, a Bia cria o Design System (Duda) e o
+ * Design (Nina) no próprio Claude e grava os links aqui; copiar e colar no Claude Design virou o caminho manual.
  */
 function ClaudeDesign({ p, aoMudar }: { p: ProjetoDoPainel; aoMudar: () => void }) {
   const toast = useToast();
@@ -656,7 +658,7 @@ function ClaudeDesign({ p, aoMudar }: { p: ProjetoDoPainel; aoMudar: () => void 
   ];
   const copiar = (texto: string, quem: string) =>
     navigator.clipboard?.writeText(texto).then(
-      () => toast({ ok: true, message: `Pedido da ${quem} copiado. Cole no Claude Design.` }),
+      () => toast({ ok: true, message: `Pedido da ${quem} copiado. Cole no Claude Design (caminho manual).` }),
       () => toast({ ok: false, message: 'Não consegui copiar. Tente de novo.' }),
     );
   return (
@@ -675,6 +677,28 @@ function ClaudeDesign({ p, aoMudar }: { p: ProjetoDoPainel; aoMudar: () => void 
       </ol>
       {d.prontos ? (
         <div className="flex flex-wrap gap-2">
+          {(d.dudaLink || d.ninaLink) && (
+            <div className="flex w-full flex-wrap items-center gap-2">
+              {d.dudaLink && (
+                <a href={d.dudaLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-[12.5px] font-extrabold text-page">
+                  <ExternalLink size={13} /> Abrir identidade da Duda
+                </a>
+              )}
+              {d.ninaLink && (
+                <a href={d.ninaLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 rounded-full border border-accent/60 px-3 py-1.5 text-[12.5px] font-extrabold text-accent">
+                  <ExternalLink size={13} /> Abrir protótipo da Nina
+                </a>
+              )}
+              <span className="self-center text-[11.5px] text-fg-faded">
+                {d.aprovadoEm ? `✅ Protótipo aprovado em ${new Date(d.aprovadoEm).toLocaleDateString('pt-BR')}: pode chamar o Rafa.` : 'Abra, comente e aprove no próprio link.'}
+              </span>
+            </div>
+          )}
+          {!d.dudaLink && (
+            <p className="w-full text-[12px] text-fg-tertiary">
+              No Claude Code, na sua <b>conta pessoal</b>: “Bia, dispara a Duda e a Nina do {p.cliente}”. Ou copie e cole no Claude Design (manual):
+            </p>
+          )}
           {d.duda && (
             <button onClick={() => copiar(d.duda!, 'Duda')} className="flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-[12.5px] font-extrabold text-page">
               <Copy size={13} /> Copiar pedido da Duda (identidade)
@@ -685,7 +709,7 @@ function ClaudeDesign({ p, aoMudar }: { p: ProjetoDoPainel; aoMudar: () => void 
               <Copy size={13} /> Copiar pedido da Nina (telas)
             </button>
           )}
-          <span className="self-center text-[11.5px] text-fg-faded">Primeiro a Duda; quando ela terminar, a Nina.</span>
+          {!d.dudaLink && <span className="self-center text-[11.5px] text-fg-faded">Primeiro a Duda; quando ela terminar, a Nina.</span>}
         </div>
       ) : d.liberado ? (
         <p className="text-[12.5px] text-fg-tertiary">⏳ Tudo certo: a Bia está preparando a versão final dos pedidos{d.pedidoEm ? '' : ' (entra na fila em até 1 minuto)'}. Te aviso no WhatsApp quando estiverem prontos.</p>

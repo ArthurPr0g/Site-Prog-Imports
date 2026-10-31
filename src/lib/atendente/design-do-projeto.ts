@@ -47,7 +47,7 @@ export async function cuidarDosPedidosDeDesign(db: DbDoAtendente, cfg: ConfigDoA
         pedido: [
           `PEDIDOS FINAIS DO CLAUDE DESIGN do projeto ${p.cliente} (id ${p.id}). As etapas anteriores estão ok: projeto aberto, financeiro resolvido e descoberta confirmada pelo cliente.`,
           `Pasta: ${p.pasta}`,
-          'Siga a seção "Pedidos finais do Claude Design" das suas instruções: atualize o BRIEFING.md com tudo o que a Lia levantou e o cliente confirmou, gere a versão final de PEDIDO-DUDA.md e PEDIDO-NINA.md e grave os dois textos em projetos.pedidos_design (duda, nina, prontos_em).',
+          'Siga a seção "Pedidos finais do Claude Design" das suas instruções: atualize o BRIEFING.md com tudo o que a Lia levantou e o cliente confirmou, gere a versão final de PEDIDO-DUDA.md e PEDIDO-NINA.md e grave os dois textos em projetos.pedidos_design (duda, nina, prontos_em). Não crie os artifacts de design por aqui (a fila roda na conta da LM): o Arthur dispara a Duda e a Nina na conta pessoal.',
         ].join('\n'),
       });
       return 1;
@@ -56,7 +56,7 @@ export async function cuidarDosPedidosDeDesign(db: DbDoAtendente, cfg: ConfigDoA
       await db.from('projetos').update({ pedidos_design: { ...pedidos, avisado_em: new Date().toISOString() } as unknown as Json }).eq('id', p.id);
       await avisarArthur(db, cfg, {
         titulo: `🎨 Pedidos do Claude Design prontos: ${p.cliente}`,
-        texto: 'Todas as etapas anteriores estão ok. No Pós-venda, abra o projeto e toque em *Copiar pedido da Duda*; cole no Claude Design. Quando a Duda terminar, copie o da Nina.',
+        texto: 'Todas as etapas anteriores estão ok. Numa sessão do Claude Code na *conta pessoal*, peça: _Bia, dispara a Duda e a Nina do ' + p.cliente + '_. Ela cria o Design System e o Design no Claude e te manda os links para comentar e aprovar. (Manual: copiar os pedidos no Pós-venda e colar no Claude Design.)',
         link: `${SITE_URL}/admin/pos-venda`,
       });
       return 1;

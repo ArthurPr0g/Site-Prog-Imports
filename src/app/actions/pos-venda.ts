@@ -63,7 +63,15 @@ export type ProjetoDoPainel = {
   }[];
   reunioes: { id: string; titulo: string; inicio: string; link: string | null; rodadaId: string | null; ata: string | null }[];
   /** Pedidos do Claude Design (0106): só liberados depois das etapas anteriores. */
-  design: EtapasDoDesign & { pedidoEm: string | null; duda: string | null; nina: string | null };
+  design: EtapasDoDesign & {
+    pedidoEm: string | null;
+    duda: string | null;
+    nina: string | null;
+    /** Caminho integrado: links dos artifacts no Claude e a aprovação do Arthur. */
+    dudaLink: string | null;
+    ninaLink: string | null;
+    aprovadoEm: string | null;
+  };
 };
 
 export async function painelDoPosVendaAction(): Promise<{ projetos: ProjetoDoPainel[]; orcamentos: { id: string; titulo: string }[] } | null> {
@@ -139,7 +147,7 @@ export async function painelDoPosVendaAction(): Promise<{ projetos: ProjetoDoPai
           .filter((r) => r.status === 'marcada')
           .sort((a, b) => a.inicio.localeCompare(b.inicio))
           .map((r) => ({ id: r.id, titulo: r.titulo, inicio: r.inicio, link: r.meet_link, rodadaId: r.rodada_id, ata: r.ata })),
-        design: { ...etapas, pedidoEm: pedidos.pedido_em ?? null, duda: etapas.prontos ? (pedidos.duda ?? null) : null, nina: etapas.prontos ? (pedidos.nina ?? null) : null },
+        design: { ...etapas, pedidoEm: pedidos.pedido_em ?? null, duda: etapas.prontos ? (pedidos.duda ?? null) : null, nina: etapas.prontos ? (pedidos.nina ?? null) : null, dudaLink: pedidos.duda_link ?? null, ninaLink: pedidos.nina_link ?? null, aprovadoEm: pedidos.aprovado_em ?? null },
       };
     }),
   };

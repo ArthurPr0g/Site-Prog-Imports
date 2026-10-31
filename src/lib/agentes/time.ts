@@ -12,7 +12,7 @@ export type ChaveDoAgente = 'lia' | 'teo' | 'bia' | 'duda' | 'nina' | 'rafa' | '
 export type Agente = {
   nome: string;
   papel: string;
-  onde: 'Lia (servidor)' | 'Claude Code' | 'Claude Design';
+  onde: 'Lia (servidor)' | 'Claude Code' | 'Design no Claude';
   /** Nome do subagente no Claude Code (arquivo agentes/claude-code/<subagente>.md). */
   subagente?: string;
 };
@@ -21,8 +21,8 @@ export const TIME: Record<ChaveDoAgente, Agente> = {
   lia: { nome: 'Lia', papel: 'atendimento e venda', onde: 'Lia (servidor)' },
   teo: { nome: 'Téo', papel: 'cobranças', onde: 'Claude Code', subagente: 'teo-cobrancas' },
   bia: { nome: 'Bia', papel: 'abertura do projeto', onde: 'Claude Code', subagente: 'bia-abertura' },
-  duda: { nome: 'Duda', papel: 'identidade visual', onde: 'Claude Design' },
-  nina: { nome: 'Nina', papel: 'protótipo das telas', onde: 'Claude Design' },
+  duda: { nome: 'Duda', papel: 'identidade visual', onde: 'Design no Claude' },
+  nina: { nome: 'Nina', papel: 'protótipo das telas', onde: 'Design no Claude' },
   rafa: { nome: 'Rafa', papel: 'construção', onde: 'Claude Code', subagente: 'rafa-construcao' },
   vera: { nome: 'Vera', papel: 'vistoria', onde: 'Claude Code', subagente: 'vera-vistoria' },
   nico: { nome: 'Nico', papel: 'revisão de código', onde: 'Claude Code', subagente: 'nico-revisao' },

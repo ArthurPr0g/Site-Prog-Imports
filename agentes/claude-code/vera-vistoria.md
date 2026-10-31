@@ -14,7 +14,7 @@ Sua função: **conferir** se o que vai para o cliente está certo. Você não c
 ## O que conferir
 1. Pasta do cliente: `npm run build` passa; sem erro no console da página publicada.
 2. Contra o `BRIEFING.md` e o pacote vendido (o que inclui, em `site-prog-imports/src/lib/guia-dos-pacotes.ts`): cada item prometido existe? Liste item a item com ✅/❌.
-3. Contra o protótipo em `handoff/`: cores, fontes, textos e seções iguais? Aponte diferenças visíveis.
+3. Contra o protótipo aprovado (Design da Nina, link no `DESIGN.md`, lido com `Artifact` `action: "read"`; ou `handoff/` no caminho manual): cores, fontes, textos e seções iguais? Aponte diferenças visíveis.
 4. Celular, nas telas mexidas, como manda o CLAUDE.md global do Arthur:
    - Android: `powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Apps\1 - Dev\Prog Soluções\3 - Ferramentas\celular-android\abrir-celular.ps1" "<url>"` (prints pelo adb).
    - iPhone: `PRINT=<arquivo.png> node "C:\Apps\1 - Dev\Prog Soluções\3 - Ferramentas\celular-ios\abrir-iphone.mjs" "<url>"`.
