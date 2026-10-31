@@ -8,6 +8,7 @@ import { AvisoDeVersaoNova } from '@/components/admin/VersaoNova';
 import { SplashLoader } from '@/brand/loaders/SplashLoader';
 import { CHAVE_SPLASH, CLASSE_SPLASH_VISTO } from '@/brand/loaders/sessao';
 import { fontesDaMarca } from '@/brand/fontes';
+import { contarDecisoesPendentes } from '@/app/actions/decisoes';
 
 // Roda antes da primeira pintura: se o splash já passou nesta sessão, o CSS
 // esconde o overlay na hora (sem piscar a tela preta a cada recarga).
@@ -37,6 +38,8 @@ export const viewport: Viewport = {
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await requireAdmin();
   if (!admin) redirect('/entrar?next=/admin');
+  // Contador do item "Decisões" no menu da Prog Soluções (0117).
+  const decisoes = await contarDecisoesPendentes();
 
   return (
     // As fontes da marca (Sora, DM Sans) só existem no admin; `contents` não
@@ -47,7 +50,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <RegistrarAppAdmin />
       <PuxarParaAtualizar />
       <AvisoDeVersaoNova />
-      <AdminShell>{children}</AdminShell>
+      <AdminShell contadores={{ '/admin/decisoes': decisoes }}>{children}</AdminShell>
     </div>
   );
 }

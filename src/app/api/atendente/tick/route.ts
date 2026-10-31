@@ -22,6 +22,8 @@ import { enviarEncomendasPendentes, retomarEncomendas } from '@/lib/atendente/en
 import { garantirModelos } from '@/lib/atendente/modelos';
 import { lembrarReunioes } from '@/lib/atendente/lembrete-reuniao';
 import { cuidarDosContatosDoPortfolio } from '@/lib/atendente/portfolio';
+import { sincronizarDecisoes } from '@/lib/atendente/central-decisoes';
+import { antesDasReunioes } from '@/lib/atendente/antes-da-reuniao';
 
 // Relógio do atendente: o pg_cron do Supabase chama a cada minuto (migration
 // 0067) com o segredo ATENDENTE_TICK_SECRET. Cada chamada:
@@ -38,6 +40,8 @@ import { cuidarDosContatosDoPortfolio } from '@/lib/atendente/portfolio';
 // 10. modelos de mensagem da Meta (0094): cria e acompanha a aprovação; lembrete de reunião ao cliente ~2 h antes.
 // 11. (0105) batida do relógio + alarme de saúde a cada 10 min; "Bom dia" às 8h (substitui o resumo do pós-venda
 //     das 9h); pós-entrega: acompanhamento de 7/30/90 dias, avaliação, portfólio e oferta de manutenção.
+// 13. (0117) central de decisões (cards e limpeza), resumo do cliente 15 min antes da reunião e lembrete ao cliente
+//     10 min antes; aviso de modelo aprovado/recusado pela Meta (dentro de garantirModelos).
 
 export const maxDuration = 60;
 
@@ -60,8 +64,12 @@ export async function POST(req: NextRequest) {
   const promptsAvisados = await avisarPromptsTerminados(db, cfg);
   // Bom dia e alarme valem mesmo com a atendente desligada (são para o Arthur, não para clientes).
   const saude = await verificarSaude(db, cfg, 'tick');
+  // (0117) central de decisões: cria os cards que faltam e tira os resolvidos; resumo do cliente ao Arthur 15 min
+  // antes da reunião e lembrete ao cliente 10 min antes (reunião já marcada: vale com a atendente desligada).
+  const decisoes = await sincronizarDecisoes(db).catch((e) => (console.error('[tick] decisões', e), 0));
+  const antesDaReuniao = await antesDasReunioes(db, cfg).catch((e) => (console.error('[tick] antes da reunião', e), null));
   const bomDiaEnviado = await bomDia(db, cfg);
-  if (!cfg.active) return NextResponse.json({ ok: true, ativo: false, arquivos, modeloDoAviso, promptsAvisados, modelos, saude, bomDiaEnviado });
+  if (!cfg.active) return NextResponse.json({ ok: true, ativo: false, decisoes, antesDaReuniao, arquivos, modeloDoAviso, promptsAvisados, modelos, saude, bomDiaEnviado });
 
   // (0108) crédito da Anthropic voltou? retoma as conversas que ficaram esperando.
   const retomadasPorCredito = await retomarDepoisDoCredito(db, cfg);
@@ -80,7 +88,7 @@ export async function POST(req: NextRequest) {
   const lembretesDeReuniao = await lembrarReunioes(db);
   // (0111) formulário do portfólio: conclui a preparação, responde quem esperou 10 min, chama quem aguardava o modelo.
   const portfolio = await cuidarDosContatosDoPortfolio(db);
-  return NextResponse.json({ ok: true, portfolio, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas, posEntrega, design, retomadasPorCredito, promptsAvisados, saude, bomDiaEnviado, modelos, encomendas, retomadas, lembretesDeReuniao });
+  return NextResponse.json({ ok: true, decisoes, antesDaReuniao, portfolio, descontos, emails, arquivos, licoes, modeloDoAviso, lembretes, leadsQuentes, modeloDaFila, filas, posEntrega, design, retomadasPorCredito, promptsAvisados, saude, bomDiaEnviado, modelos, encomendas, retomadas, lembretesDeReuniao });
 }
 
 async function resolverDescontos(db: DbDoAtendente): Promise<number> {

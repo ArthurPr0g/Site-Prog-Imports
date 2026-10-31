@@ -1,6 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
+import { after } from 'next/server';
+import { dbDoAtendente } from '@/lib/atendente/db';
+import { lerConfig } from '@/lib/atendente/agente';
+import { avisarQueEstaOlhando } from '@/lib/atendente/lead-quente';
 import { Check, X, Minus, Star, MessageCircle, ArrowUpRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { WHATSAPP_NUMBER } from '@/lib/constants';
@@ -193,7 +197,18 @@ export default async function DiagnosticoPage({
   const ua = (await headers()).get('user-agent') ?? '';
   if (!previa && ua && !ROBO.test(ua)) {
     const usuario = await getCurrentUser();
-    if (usuario?.role !== 'admin') await supabase.rpc('lead_registrar_visita', { p_token: token });
+    if (usuario?.role !== 'admin') {
+      await supabase.rpc('lead_registrar_visita', { p_token: token });
+      // "Fulano está olhando o diagnóstico agora" (0117): depois da resposta, sem atrasar a página.
+      after(async () => {
+        try {
+          const db = dbDoAtendente();
+          await avisarQueEstaOlhando(db, await lerConfig(db), token);
+        } catch (e) {
+          console.error('[diagnostico] aviso de abertura', e);
+        }
+      });
+    }
   }
 
   const lang = d.country === 'US' ? 'en' : 'pt';

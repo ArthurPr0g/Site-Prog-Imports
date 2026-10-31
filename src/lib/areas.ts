@@ -6,6 +6,7 @@
 export const ROTAS_DA_PROG_SOLUCOES = [
   '/admin/captacao',
   '/admin/dashboards',
+  '/admin/decisoes',
   '/admin/atendimento',
   '/admin/reunioes',
   '/admin/vendedores',

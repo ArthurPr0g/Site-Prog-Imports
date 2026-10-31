@@ -7,6 +7,7 @@
 import type { DbDoAtendente } from '@/lib/atendente/db';
 import type { ConfigDoAtendente } from '@/lib/atendente/regras';
 import { avisarArthur } from '@/lib/atendente/avisos';
+import { linkDaFicha, semTipos } from '@/lib/atendente/central-decisoes';
 
 const ESPERA_MS = 15 * 60_000;
 const ATE_MS = 12 * 3600_000;
@@ -72,4 +73,32 @@ export async function avisarLeadsQuentes(db: DbDoAtendente, cfg: ConfigDoAtenden
     avisados++;
   }
   return avisados;
+}
+
+/**
+ * "👀 Fulano está olhando o diagnóstico agora" (pedido de 31/10/2026, 0117): na hora da abertura (a página do
+ * diagnóstico chama depois de contar a visita), a primeira vez e depois no máximo 1 aviso a cada 6 h por lead.
+ * A marca (diag_olhando_aviso_em) é gravada só se a última tiver mais de 6 h: duas aberturas juntas avisam uma vez.
+ * O aviso de lead quente (15 min sem chamar) continua separado.
+ */
+export async function avisarQueEstaOlhando(db: DbDoAtendente, cfg: ConfigDoAtendente, token: string): Promise<boolean> {
+  const { data: l } = await db.from('leads').select('id, name, city, phone, source, status, diag_views').eq('public_token', token).maybeSingle();
+  if (!l || (l.source ?? '').startsWith('teste') || l.status === 'nao_contatar') return false;
+  const agora = new Date();
+  const seisHoras = new Date(agora.getTime() - 6 * 3600_000).toISOString();
+  const { data: marcado } = await semTipos(db)
+    .from('leads')
+    .update({ diag_olhando_aviso_em: agora.toISOString() })
+    .eq('id', l.id)
+    .or(`diag_olhando_aviso_em.is.null,diag_olhando_aviso_em.lt.${seisHoras}`)
+    .select('id');
+  if (!marcado?.length) return false;
+  const vezes = l.diag_views > 1 ? ` (${l.diag_views}ª abertura)` : ' (primeira abertura)';
+  await avisarArthur(db, cfg, {
+    titulo: `👀 ${l.name} está olhando o diagnóstico agora`,
+    texto: `${l.name}${l.city ? ` (${l.city})` : ''} abriu o diagnóstico às ${agora.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })}${vezes}.${l.phone ? ` Telefone: ${l.phone}.` : ''}`,
+    leadId: l.id,
+    link: linkDaFicha(l.id),
+  });
+  return true;
 }

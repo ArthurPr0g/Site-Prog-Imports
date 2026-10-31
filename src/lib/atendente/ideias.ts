@@ -19,6 +19,7 @@ import { enviarModeloAoCliente } from './modelos';
 import { transcrever, transcricaoConfigurada } from './transcricao';
 import { tratarEncomenda } from './encomenda';
 import { tratarNegociacao } from './negociacao';
+import { registrarPedidoAguardando, resolverDecisao } from './central-decisoes';
 import { rotuloDoAgente, pedirAoAgente, pedidoDeVistoria, pedidoParaOAgente, type ChaveDoAgente } from '@/lib/agentes/time';
 
 /** "Claude, ..." / "prompt: ..." / "para o Claude: ..." no começo da mensagem. No áudio, o Whisper
@@ -271,16 +272,45 @@ export async function anotarDoDono(db: DbDoAtendente, m: MensagemRecebida, opcoe
 async function continuarPedido(db: DbDoAtendente, m: MensagemRecebida, bruto: string, origem: 'whatsapp' | 'whatsapp_audio'): Promise<boolean> {
   const { data: aviso } = await db.from('ia_avisos').select('ideia_id').eq('external_id', m.respondeA!).not('ideia_id', 'is', null).limit(1).maybeSingle();
   if (!aviso?.ideia_id) return false;
+  const r = await gravarContinuacao(db, aviso.ideia_id, bruto, origem, m.id);
+  if (r === null) return false;
+  if (!r.ok) {
+    await enviarTexto(m.de, 'Não consegui pôr a continuação na fila agora. Tenta de novo em instantes?');
+    return true;
+  }
+  const eco = bruto.length > 500 ? bruto.slice(0, 497) + '…' : bruto;
+  await enviarTexto(
+    m.de,
+    `🤖 *Continuação na fila* ✅${origem === 'whatsapp_audio' ? ' 🎙️' : ''}\n📌 *${r.nome}*\n\n🗣️ ${eco}\n\n📲 Te aviso quando começar e quando terminar.`,
+  );
+  return true;
+}
+
+/**
+ * Grava a continuação de um pedido (resposta do Arthur ao "Aguardando você"), pelo WhatsApp ou pela central de
+ * decisões (origem 'hub', 0117). null = o pedido não existe. O card do pedido sai da lista da central.
+ */
+export async function gravarContinuacao(
+  db: DbDoAtendente,
+  ideiaId: string,
+  bruto: string,
+  origem: 'whatsapp' | 'whatsapp_audio' | 'hub',
+  externalId: string,
+): Promise<{ ok: boolean; nome: string; id?: string } | null> {
   const { data: i } = await db
     .from('ideias')
     .select('id, titulo, texto, resultado, falta, agente, projeto, pasta_exclusiva')
-    .eq('id', aviso.ideia_id)
+    .eq('id', ideiaId)
     .maybeSingle();
-  if (!i) return false;
+  if (!i) return null;
   const nome = i.titulo || (i.texto.length > 60 ? i.texto.slice(0, 57) + '…' : i.texto);
   const feito = (i.resultado ?? '').replace(/\[(PC|Nuvem)\]\s*/g, '').trim();
+  const comoRespondeu =
+    origem === 'hub'
+      ? 'pela central de decisões do painel'
+      : `${origem === 'whatsapp_audio' ? 'por áudio (transcrito)' : 'por escrito'} ao aviso de conclusão no WhatsApp`;
   const texto = [
-    `Continuação de um pedido anterior: o Arthur respondeu ${origem === 'whatsapp_audio' ? 'por áudio (transcrito)' : 'por escrito'} ao aviso de conclusão no WhatsApp.`,
+    `Continuação de um pedido anterior: o Arthur respondeu ${comoRespondeu}.`,
     '',
     `Pedido anterior:\n${i.texto.slice(0, 3000)}`,
     '',
@@ -289,7 +319,7 @@ async function continuarPedido(db: DbDoAtendente, m: MensagemRecebida, bruto: st
     '',
     `Resposta do Arthur (siga isto; um número é uma das opções numeradas acima):\n${bruto}`,
   ].join('\n');
-  const { error } = await db.from('ideias').upsert(
+  const { data: nova, error } = await db.from('ideias').upsert(
     {
       tipo: 'prompt',
       origem,
@@ -300,21 +330,17 @@ async function continuarPedido(db: DbDoAtendente, m: MensagemRecebida, bruto: st
       projeto: i.projeto,
       agente: i.agente,
       pasta_exclusiva: i.pasta_exclusiva,
-      external_id: m.id,
+      external_id: externalId,
     },
     { onConflict: 'external_id', ignoreDuplicates: true },
-  );
+  ).select('id');
   if (error) {
     console.error('[ideias] falha ao gravar continuação', error);
-    await enviarTexto(m.de, 'Não consegui pôr a continuação na fila agora. Tenta de novo em instantes?');
-    return true;
+    return { ok: false, nome };
   }
-  const eco = bruto.length > 500 ? bruto.slice(0, 497) + '…' : bruto;
-  await enviarTexto(
-    m.de,
-    `🤖 *Continuação na fila* ✅${origem === 'whatsapp_audio' ? ' 🎙️' : ''}\n📌 *${nome}*\n\n🗣️ ${eco}\n\n📲 Te aviso quando começar e quando terminar.`,
-  );
-  return true;
+  // Pelo WhatsApp, o card do pedido sai da lista; pela central, quem marca "enviada" é a própria central.
+  if (origem !== 'hub') await resolverDecisao(db, { ideiaId }, { por: 'whatsapp', resposta: bruto });
+  return { ok: true, nome, id: nova?.[0]?.id };
 }
 
 /** "mandei errado", "desconsidere", "ignora a última", "foi engano"... (mensagem curta). */
@@ -454,7 +480,10 @@ export async function avisarPromptsTerminados(db: DbDoAtendente, cfg: ConfigDoAt
       i.status === 'feito'
         ? `${quem}📝 *Pedido:* ${pedido}\n\n🛠️ *O que fiz:* ${limpo}\n\n${naNuvem ? '☁️ Feito na nuvem' : '💻 Feito no PC'}${custo}${vistoria}${responder}`
         : `${quem}📝 *Pedido:* ${pedido}\n\n☁️ *Já feito na nuvem:* ${limpo}\n\n💻 *Fica para o PC terminar:* ${(i.falta ?? '').trim().slice(0, 600)}`;
+    // "Aguardando você" (0117): vira card na central de decisões e o botão do aviso abre o card.
+    const decisaoId = /Aguardando você:/.test(i.resultado ?? '') ? await registrarPedidoAguardando(db, i) : null;
     await avisarArthur(db, cfg, {
+      decisaoId,
       // Conserto automático de alarme/ensaio (30/10/2026): o Arthur pediu mensagem própria na conclusão.
       titulo:
         i.agente === 'conserto'

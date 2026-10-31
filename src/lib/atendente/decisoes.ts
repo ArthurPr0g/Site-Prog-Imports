@@ -17,14 +17,20 @@ import { SITE_URL } from '@/lib/seo';
 import { responderConversa } from './agente';
 import { escolherProjeto } from './ideias';
 import { decidirNegociacao } from './negociacao';
+import { chaveDoBotao, resolverDecisao, semTipos } from './central-decisoes';
 
 const ACAO = /^(enc|duv|pag|pagou|desc|conv|proj|ind|neg):([a-z]+):([0-9a-f-]{36})$/;
 
 export const ehDecisao = (m: MensagemRecebida) => !!m.botaoId && ACAO.test(m.botaoId);
 
-export async function tratarDecisao(db: DbDoAtendente, m: MensagemRecebida): Promise<void> {
+export async function tratarDecisao(db: DbDoAtendente, m: MensagemRecebida, por: 'whatsapp' | 'painel' = 'whatsapp'): Promise<void> {
   const [, tipo, valor, id] = m.botaoId!.match(ACAO)!;
   const de = m.de;
+  // Central de decisões (0117): o card sai da lista e guarda a opção escolhida.
+  const chave = chaveDoBotao(m.botaoId!);
+  const { data: card } = await semTipos(db).from('decisoes').select('opcoes').eq('chave', chave).eq('status', 'pendente').maybeSingle();
+  const escolhida = ((card?.opcoes ?? []) as { id: string; titulo: string }[]).find((o) => o.id === m.botaoId)?.titulo ?? valor;
+  await resolverDecisao(db, { chave }, { por, resposta: escolhida });
   switch (tipo) {
     case 'enc':
       return decidirEncomenda(db, id, valor === 'ok', de);

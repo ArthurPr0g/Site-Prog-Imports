@@ -14,6 +14,7 @@ import { enviarTexto, enviarComOpcoes, enviarComLink, enviarModelo, criarModelo,
 import { modeloAprovado } from '@/lib/atendente/modelos';
 import { enviarEmail, emailConfigurado } from '@/lib/atendente/email';
 import { SITE_URL } from '@/lib/seo';
+import { chaveDoBotao, linkDaCentral, linksDoContexto, registrarDecisao, tipoDoBotao } from '@/lib/atendente/central-decisoes';
 
 export const MODELO_DO_AVISO = 'aviso_ao_arthur';
 
@@ -44,6 +45,7 @@ async function lerDono(db: DbDoAtendente): Promise<Dono> {
 
 /** Rótulo do botão do aviso pelo destino do link (até 20 caracteres). */
 function rotuloDoLink(link: string): string {
+  if (link.includes('/decisoes')) return 'Abrir decisões';
   if (link.includes('/ideias')) return 'Abrir Ideias';
   if (link.includes('/reunioes')) return 'Abrir reunião';
   if (link.includes('conversa=')) return 'Abrir conversa';
@@ -75,11 +77,33 @@ export async function avisarArthur(
     pergunta?: string;
     /** Pedido da fila que este aviso conclui (0109): responder o aviso no WhatsApp continua esse pedido. */
     ideiaId?: string | null;
+    /** Card já criado na central de decisões (0117): o botão do aviso vira "Abrir decisões" no card. */
+    decisaoId?: string | null;
   }
 ): Promise<void> {
   try {
     const dono = await lerDono(db);
-    const link = a.link ?? linkDaConversa(a.conversaId ?? null);
+    // Decisão com botões (0117): vira card na central, com as mesmas opções, e o aviso ganha "Abrir decisões".
+    let decisaoId = a.decisaoId ?? null;
+    if (!decisaoId && a.opcoes?.length) {
+      const { tipo, origem } = tipoDoBotao(a.opcoes[0].id);
+      let cliente: string | null = null;
+      if (a.leadId) cliente = (await db.from('leads').select('name').eq('id', a.leadId).maybeSingle()).data?.name ?? null;
+      decisaoId = await registrarDecisao(db, {
+        chave: chaveDoBotao(a.opcoes[0].id),
+        tipo,
+        origem,
+        titulo: a.titulo,
+        resumo: a.texto,
+        pergunta: a.pergunta ?? null,
+        contexto: { cliente, links: linksDoContexto(a.conversaId, a.leadId) },
+        opcoes: a.opcoes,
+        conversaId: a.conversaId ?? null,
+        leadId: a.leadId ?? null,
+        ideiaId: a.ideiaId ?? null,
+      });
+    }
+    const link = decisaoId && !a.opcoes?.length ? linkDaCentral(decisaoId) : (a.link ?? linkDaConversa(a.conversaId ?? null));
     const base = { titulo: a.titulo, texto: a.texto, conversation_id: a.conversaId ?? null, lead_id: a.leadId ?? null, ideia_id: a.ideiaId ?? null };
 
     if (dono.whatsapp && whatsappConfigurado() && a.opcoes?.length) {
@@ -92,7 +116,11 @@ export async function avisarArthur(
           a.opcoes.map((o) => o.id),
         );
         await db.from('ia_avisos').insert({ ...base, via: 'texto', ...(r.ok ? { external_id: r.id, status: 'sent' } : { status: 'failed', error: r.erro }) });
-        if (r.ok) return;
+        if (r.ok) {
+          // Os botões rápidos continuam; o card da central vem logo abaixo, com contexto e resposta livre.
+          if (decisaoId) await enviarComLink(dono.whatsapp, '📋 Também está na *central de decisões*, com o contexto e espaço para responder do seu jeito.', linkDaCentral(decisaoId), 'Abrir decisões');
+          return;
+        }
       }
       if (a.opcoes.length >= 2 && (await modeloAprovado(db, 'decisao_arthur'))) {
         const r = await enviarModelo(dono.whatsapp, 'decisao_arthur', [`${a.titulo}: ${a.texto} ${a.pergunta ?? ''}`.trim()], [a.opcoes[0].id, a.opcoes[1].id]);
@@ -104,7 +132,13 @@ export async function avisarArthur(
     if (dono.whatsapp && whatsappConfigurado()) {
       if (Date.now() < dono.janelaAte) {
         // Botão "Abrir" no lugar do link colado (a prévia automática vinha borrada); sem botão, texto com o link.
-        let r = await enviarComLink(dono.whatsapp, `🔔 *${a.titulo}*\n${a.texto}`, link, rotuloDoLink(link));
+        // A mensagem com botão aceita até 1024 caracteres: texto maior (ex.: Bom dia) vai inteiro e o botão logo depois.
+        const corpo = `🔔 *${a.titulo}*\n${a.texto}`;
+        let r =
+          corpo.length <= 1024
+            ? await enviarComLink(dono.whatsapp, corpo, link, rotuloDoLink(link))
+            : await enviarTexto(dono.whatsapp, corpo);
+        if (r.ok && corpo.length > 1024) await enviarComLink(dono.whatsapp, '👇 Para abrir no painel:', link, rotuloDoLink(link));
         if (!r.ok) r = await enviarTexto(dono.whatsapp, `🔔 *${a.titulo}*\n${a.texto}\n\n${link}`);
         await db.from('ia_avisos').insert({ ...base, via: 'texto', ...(r.ok ? { external_id: r.id, status: 'sent' } : { status: 'failed', error: r.erro }) });
         if (r.ok) return;

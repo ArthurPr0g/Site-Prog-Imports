@@ -268,15 +268,17 @@ export async function statusDoModelo(wabaId: string, nome: string): Promise<stri
 }
 
 /** Status e categoria do modelo na Meta (a Meta pode trocar UTILITY por MARKETING, que custa mais). */
-export async function infoDoModelo(wabaId: string, nome: string): Promise<{ status: string; categoria: string } | null> {
+export async function infoDoModelo(wabaId: string, nome: string): Promise<{ status: string; categoria: string; motivo: string | null } | null> {
   try {
-    const r = await fetch(`${BASE}/${VERSAO}/${wabaId}/message_templates?name=${encodeURIComponent(nome)}&fields=name,status,category`, {
+    const r = await fetch(`${BASE}/${VERSAO}/${wabaId}/message_templates?name=${encodeURIComponent(nome)}&fields=name,status,category,rejected_reason`, {
       headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` },
       signal: AbortSignal.timeout(15000),
     });
-    const j = (await r.json()) as { data?: { name: string; status: string; category?: string }[] };
+    const j = (await r.json()) as { data?: { name: string; status: string; category?: string; rejected_reason?: string }[] };
     const t = j.data?.find((x) => x.name === nome);
-    return t ? { status: t.status, categoria: t.category ?? '' } : null;
+    // rejected_reason vem "NONE" quando não há motivo.
+    const motivo = t?.rejected_reason && t.rejected_reason !== 'NONE' ? t.rejected_reason : null;
+    return t ? { status: t.status, categoria: t.category ?? '', motivo } : null;
   } catch {
     return null;
   }

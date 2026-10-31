@@ -10,6 +10,9 @@
 import type { DbDoAtendente } from './db';
 import type { Json } from '@/lib/supabase/database.types';
 import { criarModelo, enviarModelo, infoDoModelo, whatsappConfigurado, type ResultadoDoEnvio } from './whatsapp-api';
+import { avisarArthur } from './avisos';
+import { registrarDecisao, semTipos } from './central-decisoes';
+import { SITE_URL } from '@/lib/seo';
 
 export type ModeloDoCliente = {
   nome: string;
@@ -143,6 +146,7 @@ export async function garantirModelos(db: DbDoAtendente): Promise<number> {
   const giro = pendentes.length ? Math.floor(Date.now() / 60_000) % pendentes.length : 0;
   const fila = [...novos, ...pendentes.slice(giro), ...pendentes.slice(0, giro)];
   let mudou = 0;
+  const mudancas: { nome: string; status: string; motivo: string | null }[] = [];
   for (const m of fila.slice(0, 4)) {
     const info = await infoDoModelo(c.waba_id, m.nome);
     let status = info?.status ?? null;
@@ -164,12 +168,77 @@ export async function garantirModelos(db: DbDoAtendente): Promise<number> {
       status = r.ok ? (r.status ?? 'PENDING') : `ERRO: ${r.erro}`.slice(0, 200);
     }
     if (status && status !== atual[m.nome]) {
+      if (FINAIS.has(status)) mudancas.push({ nome: m.nome, status, motivo: info?.motivo ?? null });
       atual[m.nome] = status;
       mudou++;
     }
   }
   if (mudou) await db.from('ia_config').update({ modelos: atual as Json, modelos_categoria: categorias as Json }).eq('id', true);
+  for (const x of mudancas) await avisarMudancaDoModelo(db, x.nome, x.status, x.motivo);
   return mudou;
+}
+
+/** O que cada modelo aprovado destrava (para o aviso de aprovação). */
+const DESTRAVA: Record<string, string> = {
+  contato_indicacao: 'a Lia já pode mandar a primeira mensagem a quem você indicar ("Lia, faça todo o projeto"), mesmo sem a pessoa ter escrito antes',
+  contato_portfolio: 'a Lia já pode chamar sozinha quem preencheu o formulário do portfólio e não escreveu no WhatsApp (depois da pesquisa e do pré-briefing)',
+  retomar_conversa: 'a Lia já pode retomar, uma vez, o cliente indicado que parou de responder há 2 dias',
+  lembrete_reuniao: 'o lembrete da reunião chega ao cliente mesmo com a janela de 24 h fechada',
+  briefing_pendente: 'a Lia já pode cobrar material do cliente (logo, fotos, acessos) fora da janela de 24 h',
+  etapa_para_aprovar: 'a Lia já pode mandar uma etapa pronta para o cliente aprovar fora da janela de 24 h',
+  novidade_projeto: 'a Lia já pode mandar novidades do andamento do projeto fora da janela de 24 h',
+  projeto_entregue: 'a Lia já pode avisar a entrega do projeto fora da janela de 24 h',
+  acompanhamento: 'o acompanhamento de 7, 30 e 90 dias depois da entrega já pode sair',
+  autorizacao_portfolio: 'a Lia já pode pedir autorização para mostrar o projeto no portfólio',
+  decisao_arthur: 'as decisões com botão (desconto, assumir conversa, chamar cliente) chegam a você mesmo com a janela de 24 h fechada',
+};
+
+/**
+ * Aviso de mudança de status de um modelo (0117): aprovado, recusado ou desativado pela Meta. Uma vez por
+ * mudança (ia_config.modelos_avisados guarda o último status avisado de cada modelo). Recusado vira card na
+ * central de decisões.
+ */
+export async function avisarMudancaDoModelo(db: DbDoAtendente, nome: string, status: string, motivo: string | null): Promise<void> {
+  const { data: c } = await semTipos(db).from('ia_config').select('modelos_avisados').eq('id', true).maybeSingle();
+  const avisados = { ...((c?.modelos_avisados ?? {}) as Record<string, string>) };
+  if (avisados[nome] === status) return;
+  avisados[nome] = status;
+  // Marca antes: o próximo minuto não repete.
+  await semTipos(db).from('ia_config').update({ modelos_avisados: avisados }).eq('id', true);
+  const { lerConfig } = await import('./agente');
+  const cfg = await lerConfig(db);
+  const m = MODELOS.find((x) => x.nome === nome);
+  if (status === 'APPROVED') {
+    await avisarArthur(db, cfg, {
+      titulo: `✅ A Meta aprovou o modelo ${nome}`,
+      texto: `O que ele destrava: ${DESTRAVA[nome] ?? m?.quando ?? 'o envio desta mensagem fora da janela de 24 h'}.`,
+      link: `${SITE_URL}/admin/lia`,
+    });
+    return;
+  }
+  const verbo = status === 'REJECTED' ? 'recusou' : 'desativou';
+  const porque = motivo ? `Motivo da Meta: ${motivo}.` : 'A Meta não informou o motivo.';
+  const decisaoId = await registrarDecisao(db, {
+    chave: `modelo:${nome}:${status}`,
+    tipo: 'modelo',
+    origem: 'Meta (modelo de mensagem)',
+    titulo: `A Meta ${verbo} o modelo ${nome}`,
+    resumo: `${porque}${m ? ` Uso do modelo: ${m.quando}.` : ''}${m ? `
+
+Texto enviado à Meta:
+${m.corpo}` : ''}`,
+    pergunta: 'Peço ao Claude para reescrever e mandar de novo, ou deixa assim?',
+    contexto: { links: [{ rotulo: 'Modelos na Meta', url: 'https://business.facebook.com/wa/manage/message-templates/' }] },
+    opcoes: [
+      { id: 'painel:prompt', titulo: 'Reescrever e reenviar' },
+      { id: 'painel:ok', titulo: 'Deixar assim' },
+    ],
+  });
+  await avisarArthur(db, cfg, {
+    titulo: `❌ A Meta ${verbo} o modelo ${nome}`,
+    texto: porque,
+    decisaoId,
+  });
 }
 
 /** Texto como o cliente vê (para o histórico da conversa, que a Lia lê). */

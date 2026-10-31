@@ -34,6 +34,7 @@ import {
   ClipboardCheck,
   PiggyBank,
   Handshake,
+  ListChecks,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { ehDaProgSolucoes } from '@/lib/areas';
@@ -111,7 +112,11 @@ const NAV: NavGroup[] = [
 const NAV_SOLUCOES: NavGroup[] = [
   {
     group: 'Visão geral',
-    items: [{ href: '/admin/dashboards', label: 'Dashboards', Icon: LayoutDashboard }],
+    items: [
+      { href: '/admin/dashboards', label: 'Dashboards', Icon: LayoutDashboard },
+      // Central de decisões (0117): o contador vem do layout (decisões pendentes).
+      { href: '/admin/decisoes', label: 'Decisões', Icon: ListChecks },
+    ],
   },
   {
     group: 'Comercial',
@@ -205,7 +210,16 @@ const COLLAPSED_WIDTH = 76;
 const EXPANDED_WIDTH = 248;
 const SPRING = { type: 'spring' as const, stiffness: 260, damping: 32, mass: 0.7 };
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
+/** Número ao lado do item (ex.: decisões pendentes). */
+function Contador({ n, recolhido }: { n?: number; recolhido?: boolean }) {
+  if (!n) return null;
+  if (recolhido) return <span className="absolute right-2 top-1.5 h-2 w-2 rounded-full bg-[#81AAF7]" aria-label={`${n} pendente(s)`} />;
+  return (
+    <span className="ml-auto rounded-md bg-[oklch(72%_.1_262/.18)] px-1.5 py-0.5 font-mono text-[11px] font-medium text-[#B1D2FF]">{n > 99 ? '99+' : n}</span>
+  );
+}
+
+export function AdminShell({ children, contadores = {} }: { children: React.ReactNode; contadores?: Record<string, number> }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -267,6 +281,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   >
                     <item.Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={2} />
                     {item.label}
+                    <Contador n={contadores[item.href]} />
                   </Link>
                 );
               })}
@@ -329,7 +344,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                     key={item.href}
                     href={item.href}
                     title={item.pendente ? `${item.label} — ainda não construída` : item.label}
-                    className={classeDoItem(active, item.pendente, solucoes)}
+                    className={`${classeDoItem(active, item.pendente, solucoes)} relative`}
                   >
                     <item.Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={2} />
                     <AnimatePresence>
@@ -345,6 +360,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                         </motion.span>
                       )}
                     </AnimatePresence>
+                    <Contador n={contadores[item.href]} recolhido={!hovered} />
                   </Link>
                 );
               })}

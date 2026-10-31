@@ -24,6 +24,7 @@ import type { Json } from '@/lib/supabase/database.types';
 import { asaasConfigurado, procurarPagamentos } from '@/lib/pagamentos/asaas';
 import { criarProjetoDaVenda, escolhaDoJson } from '@/lib/pos-venda';
 import { pedirAoAgente } from '@/lib/agentes/time';
+import { registrarDecisao } from './central-decisoes';
 
 /** "Lia, ..." no começo (o Whisper às vezes escreve "Lía" ou põe "oi" antes). */
 const CHAMA_A_LIA = /^\s*(?:(?:oi|ol[aá]|ei)[\s,!]*)?l[ií]a\b[\s,:;.!\-–—]*/i;
@@ -243,11 +244,22 @@ function curto(t: string): string {
   return (c.lastIndexOf(' ') > 8 ? c.slice(0, c.lastIndexOf(' ')) : c).replace(/[,;:\s]+$/, '');
 }
 
-async function perguntarDuvida(de: string, id: string, nome: string | null, duvidas: Duvida[]): Promise<void> {
+async function perguntarDuvida(db: DbDoAtendente, de: string, id: string, nome: string | null, duvidas: Duvida[]): Promise<void> {
   const k = duvidas.findIndex((d) => d.resposta === null);
   if (k < 0) return;
   const d = duvidas[k];
   const texto = `❓ *Antes de chamar ${nome ?? 'a pessoa'}* (${k + 1}/${duvidas.length}):\n\n${d.pergunta}\n\n✍️ Se nenhuma opção servir, é só escrever a resposta.`;
+  // Central de decisões (0117): a dúvida também vira card (botão ou resposta livre pela tela).
+  await registrarDecisao(db, {
+    chave: `duv:${id}`,
+    tipo: 'duvida',
+    origem: 'Pedido seu à Lia',
+    titulo: `Dúvida antes de chamar ${nome ?? 'a pessoa'} (${k + 1}/${duvidas.length})`,
+    resumo: d.pergunta,
+    pergunta: 'Escolha uma opção ou escreva a resposta.',
+    contexto: { cliente: nome },
+    opcoes: d.opcoes.map((o, j) => ({ id: `duv:${LETRAS[j]}:${id}`, titulo: o })),
+  });
   const r = d.opcoes.length
     ? await enviarComOpcoes(de, texto, d.opcoes, d.opcoes.map((_, j) => `duv:${LETRAS[j]}:${id}`))
     : await enviarTexto(de, texto);
@@ -266,7 +278,7 @@ export async function responderDuvida(db: DbDoAtendente, id: string, resposta: {
   duvidas[k].resposta = valor.slice(0, 1000);
   const instrucoes = `${e.instrucoes ?? ''}\n[Arthur respondeu] ${duvidas[k].pergunta} → ${duvidas[k].resposta}`.slice(0, 8000);
   await db.from('encomendas').update({ duvidas: duvidas as unknown as Json, instrucoes }).eq('id', id);
-  if (duvidas.some((d) => d.resposta === null)) await perguntarDuvida(de, id, e.nome, duvidas);
+  if (duvidas.some((d) => d.resposta === null)) await perguntarDuvida(db, de, id, e.nome, duvidas);
   else await pedirConfirmacao(db, id, de);
 }
 
@@ -389,7 +401,7 @@ export async function pedirConfirmacao(db: DbDoAtendente, id: string, de: string
     e.assunto = lido.assunto;
     if (lido.duvidas.length) {
       await db.from('encomendas').update({ status: 'aguardando_resposta' }).eq('id', id);
-      await perguntarDuvida(de, id, e.nome, lido.duvidas);
+      await perguntarDuvida(db, de, id, e.nome, lido.duvidas);
       return;
     }
   }
@@ -404,6 +416,19 @@ export async function pedirConfirmacao(db: DbDoAtendente, id: string, de: string
   const texto =
     `🧐 *Confere antes de eu chamar:*\n\n👤 ${e.nome ?? 'sem nome'}\n📱 ${formatar(e.telefone)}\n🎯 Assunto: ${assunto}\n💰 Financeiro: ${rotuloDoFinanceiro(e)}\n📝 Seu pedido: ${pedido}\n\n` +
     'Eu vou pesquisar a pessoa/empresa na internet e no Google Maps, chamar no WhatsApp e fazer toda a descoberta.';
+  await registrarDecisao(db, {
+    chave: `enc:${id}`,
+    tipo: 'encomenda',
+    origem: 'Pedido seu à Lia',
+    titulo: `Confirmar antes de a Lia chamar ${e.nome ?? formatar(e.telefone)}`,
+    resumo: `Assunto: ${assunto}. Financeiro: ${rotuloDoFinanceiro(e)}. Seu pedido: ${pedido}`,
+    pergunta: 'A Lia pesquisa a pessoa, chama no WhatsApp e faz a descoberta.',
+    contexto: { cliente: e.nome, valores: [`Telefone: ${formatar(e.telefone)}`] },
+    opcoes: [
+      { id: `enc:ok:${id}`, titulo: 'Pode chamar' },
+      { id: `enc:nao:${id}`, titulo: 'Cancelar' },
+    ],
+  });
   const r = await enviarComOpcoes(de, texto, ['Pode chamar', 'Cancelar'], [`enc:ok:${id}`, `enc:nao:${id}`]);
   if (!r.ok) await enviarTexto(de, `${texto}\n\nResponda *sim* para eu chamar ou *cancela*.`);
 }
@@ -634,6 +659,19 @@ export async function decidirFinanceiro(db: DbDoAtendente, acao: string, valorDa
     } else if (pagamento === 'depois') {
       await enviarTexto(de, `👍 Sem problema. Quando souber, me manda *Lia, valor 3500* e me diga se já houve pagamento.`);
     } else {
+      await registrarDecisao(db, {
+        chave: `pagou:${id}`,
+        tipo: 'financeiro',
+        origem: 'Lia (financeiro)',
+        titulo: `Onde ${quem} pagou?`,
+        resumo: `${pagamento === 'sinal' ? 'Sinal (50%) pago' : 'Pago 100%'}: falta dizer onde foi o pagamento.`,
+        contexto: { cliente: quem },
+        opcoes: [
+          { id: `pagou:asaas:${id}`, titulo: 'Asaas' },
+          { id: `pagou:pix:${id}`, titulo: 'Pix direto' },
+          { id: `pagou:cartao:${id}`, titulo: 'Cartão ou outro' },
+        ],
+      });
       const r = await enviarComOpcoes(
         de,
         `✅ Anotado: ${pagamento === 'sinal' ? 'sinal (50%) pago' : 'pago 100%'}.\n\n🏦 Onde foi o pagamento?`,
